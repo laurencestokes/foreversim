@@ -1,0 +1,80 @@
+name: Build Race Arena
+
+# Ranks every race on each DPS spec's community builds and commits the tier lists to
+# ui/app/race_arena/results.json, which the race tier list page renders without simulating
+# anything in the browser.
+#
+# The same cache story as the build arena (build_arena.yml): the committed file is the cache, the
+# commit that produced it is the key, and a run of this workflow is the only thing that writes it.
+# Manual only, like that one - the lists only move when a racial, a build or the environment does,
+# and whoever changes one of those is the person who knows to rerun them.
+on:
+    workflow_dispatch:
+
+# Each run commits to the branch it was run on, so two racing would reject the loser as a non fast
+# forward. Queued rather than cancelled: a cancelled run leaves the lists describing a sim nobody
+# is running any more.
+concurrency:
+    group: build-race-arena
+    cancel-in-progress: false
+
+jobs:
+    race-arena:
+        permissions:
+            contents: write
+        runs-on: ubuntu-latest
+        # About a quarter of an hour on 16 threads, so roughly an hour on a hosted runner's four.
+        timeout-minutes: 150
+        steps:
+            # The branch it was dispatched on, and it pushes back to that branch.
+            - name: Checkout
+              uses: actions/checkout@v5
+
+            - name: Install Go
+              uses: actions/setup-go@v6
+              with:
+                  go-version: 1.25.x
+
+            - name: Install Protoc
+              uses: arduino/setup-protoc@v3
+              with:
+                  version: 3.x
+                  repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Install Protoc Go plugin
+              run: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+
+            # The protos are generated, not committed, and sim/web embeds the built site through
+            # binary_dist; the stub stands in for it. Without both, loading ./sim/... fails.
+            - name: Generate the protos and the dist stub
+              run: make sim/core/proto/api.pb.go binary_dist/dist.go
+
+            # Named packages rather than ./sim/... : sim/web is a server with no tests of this kind.
+            # The pattern also matches the priests' TestRaceArenaShadow and TestRaceArenaSmite.
+            - name: Run the race arena
+              run: go test --tags=with_db -timeout 140m -count=1 -v -run TestRaceArena $(go list ./sim/... | grep -v '/sim/web')
+              env:
+                  RACE_ARENA_OUT: ${{ github.workspace }}/race-arena-out
+
+            - name: Merge and score
+              run: go run ./tools/race_arena race-arena-out ui/app/race_arena/results.json
+
+            - name: Commit
+              run: |
+                  git add ui/app/race_arena/results.json
+                  if git diff --cached --quiet; then
+                    echo "The tier lists have not moved"
+                    exit 0
+                  fi
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git commit -m "chore(race-arena): rebuild the tier lists"
+                  for attempt in 1 2 3 4 5; do
+                    if git push; then
+                      exit 0
+                    fi
+                    echo "push rejected, rebasing on ${{ github.ref_name }} (attempt $attempt)"
+                    git pull --rebase origin ${{ github.ref_name }}
+                  done
+                  echo "could not push after five attempts"
+                  exit 1
