@@ -154,10 +154,11 @@ func (generator *bulkSimCandidateGenerator) initSelectedItems() error {
 		option := bulkSimCandidateOption{
 			spec: googleProto.Clone(selectedItem).(*proto.ItemSpec),
 			item: core.NewItem(core.ItemSpec{
-				ID:           selectedItem.GetId(),
-				RandomSuffix: selectedItem.GetRandomSuffix(),
-				Enchant:      selectedItem.GetEnchant(),
-				Gems:         slices.Clone(selectedItem.GetGems()),
+				ID:                 selectedItem.GetId(),
+				RandomSuffix:       selectedItem.GetRandomSuffix(),
+				Enchant:            selectedItem.GetEnchant(),
+				Gems:               slices.Clone(selectedItem.GetGems()),
+				WeaponTypeOverride: selectedItem.GetWeaponTypeOverride(),
 			}),
 		}
 

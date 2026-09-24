@@ -168,6 +168,10 @@ type Item struct {
 	RandomSuffix RandomSuffix
 	Gems         []Gem
 	Enchant      Enchant
+	// Debug relabel of this weapon's type; see NewItem. WeaponType above already reflects
+	// the override (that's what all engine logic should read). This is kept only so the
+	// override survives a round trip back through ToItemSpecProto.
+	WeaponTypeOverride proto.WeaponType
 
 	//Internal use
 	TempEnchant    int32
@@ -207,6 +211,7 @@ func (item *Item) ToItemSpecProto() *proto.ItemSpec {
 		MetaGemDisabled: slices.ContainsFunc(item.Gems, func(gem Gem) bool {
 			return gem.Disabled && gem.Color == proto.GemColor_GemColorMeta
 		}),
+		WeaponTypeOverride: item.WeaponTypeOverride,
 	}
 
 	return itemSpec
@@ -273,6 +278,9 @@ type ItemSpec struct {
 	Enchant         int32
 	Gems            []int32
 	MetaGemDisabled bool
+	// Debug relabel of the weapon's type; see NewItem. Unset/WeaponTypeUnknown means
+	// use the item's own type.
+	WeaponTypeOverride proto.WeaponType
 }
 
 type Equipment [NumItemSlots]Item
@@ -473,11 +481,12 @@ func ProtoToEquipmentSpec(es *proto.EquipmentSpec) EquipmentSpec {
 	var coreEquip EquipmentSpec
 	for i, item := range es.Items {
 		coreEquip[i] = ItemSpec{
-			ID:              item.Id,
-			RandomSuffix:    item.RandomSuffix,
-			Enchant:         item.Enchant,
-			Gems:            item.Gems,
-			MetaGemDisabled: item.MetaGemDisabled,
+			ID:                 item.Id,
+			RandomSuffix:       item.RandomSuffix,
+			Enchant:            item.Enchant,
+			Gems:               item.Gems,
+			MetaGemDisabled:    item.MetaGemDisabled,
+			WeaponTypeOverride: item.WeaponTypeOverride,
 		}
 	}
 	return coreEquip
@@ -503,6 +512,21 @@ func NewItem(itemSpec ItemSpec) Item {
 	item.WeaponDamageMax = scalingOptions.WeaponDamageMax
 	item.WeaponDamageMin = scalingOptions.WeaponDamageMin
 	item.RandPropPoints = scalingOptions.RandPropPoints
+
+	// Debug relabel of the weapon's type: stats, damage and effects are untouched, only the
+	// type tag that type-keyed effects (racials, talents, ability requirements) key on
+	// changes. Hand type is not touched, so a two-hander relabelled Sword stays two-handed.
+	// Off-hand items and shields are excluded on both ends since they aren't "weapon type"
+	// specializations in the usual sense and would confuse dual-wield/hand-type logic.
+	if itemSpec.WeaponTypeOverride != proto.WeaponType_WeaponTypeUnknown &&
+		item.Type == proto.ItemType_ItemTypeWeapon &&
+		item.WeaponType != proto.WeaponType_WeaponTypeOffHand &&
+		item.WeaponType != proto.WeaponType_WeaponTypeShield &&
+		itemSpec.WeaponTypeOverride != proto.WeaponType_WeaponTypeOffHand &&
+		itemSpec.WeaponTypeOverride != proto.WeaponType_WeaponTypeShield {
+		item.WeaponTypeOverride = itemSpec.WeaponTypeOverride
+		item.WeaponType = itemSpec.WeaponTypeOverride
+	}
 
 	if itemSpec.RandomSuffix != 0 {
 		if randomSuffix, ok := randomSuffixesByID[itemSpec.RandomSuffix]; ok {

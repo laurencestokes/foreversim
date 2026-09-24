@@ -770,6 +770,10 @@ message ItemSpec {
 	// Set by the UI when the socketed meta gem's requirements are not met. The gem stays in its
 	// socket so the item's socket bonus still applies, but contributes no stats and no effect.
 	bool meta_gem_disabled = 5;
+	// Debug relabel of a weapon's type (e.g. sword displayed/treated as axe) for comparing
+	// type-keyed effects like racials; stats and procs are unchanged. Unset/WeaponTypeUnknown
+	// means use the item's own type.
+	WeaponType weapon_type_override = 6;
 }
 
 
