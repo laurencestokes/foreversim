@@ -3,8 +3,8 @@ package shaman
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -58,12 +58,12 @@ func (shaman *Shaman) applyElementalWeapons() {
 	points := shaman.Talents.ElementalWeapons
 	shaman.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.ElementalWeapons.EffectAt(0).FractionAt(points),
+		FloatValue: spellData.ElementalWeapons.EffectAt(1).FractionAt(points),
 		ClassMask:  SpellMaskRockbiterWeapon,
 	})
 	shaman.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.ElementalWeapons.EffectAt(1).FractionAt(points),
+		FloatValue: spellData.ElementalWeapons.EffectAt(2).FractionAt(points),
 		ClassMask:  SpellMaskFlametongueWeapon | SpellMaskFrostbrandWeapon,
 	})
 }
@@ -78,14 +78,14 @@ func (shaman *Shaman) applyFlurry() {
 		Duration: 500 * time.Millisecond,
 	}
 
-	flurryBuff := spellData.FlurryTriggered.HighestRank()
+	flurryBuff := spellData.FlurryTriggered.Highest()
 	attackSpeed := spellData.Flurry.MultiplierAt(shaman.Talents.Flurry)
 
 	flurryAura := shaman.RegisterAura(core.Aura{
-		ActionID:  core.ActionID{SpellID: flurryBuff.SpellID},
+		ActionID:  core.ActionID{SpellID: flurryBuff.ID},
 		Label:     "Flurry",
-		Duration:  flurryBuff.Duration,
-		MaxStacks: flurryBuff.ProcCharges,
+		Duration:  flurryBuff.Duration(),
+		MaxStacks: int32(flurryBuff.ProcCharges),
 	}).AttachMultiplyMeleeSpeed(attackSpeed)
 
 	shaman.MakeProcTriggerAura(core.ProcTrigger{
@@ -129,7 +129,7 @@ func (shaman *Shaman) applyMentalQuickness() {
 	// TBC's Mental Quickness turned attack power into spell damage and cut instant costs. Forever's
 	// (30812) does neither: it states Intellect to spell damage and Intellect to spell healing.
 	shaman.AddStatDependency(stats.Intellect, stats.SpellDamage,
-		spellData.MentalQuickness.Effect(shared.A_MOD_SPELL_DAMAGE_OF_STAT_PERCENT, 126).FractionAt(shaman.Talents.MentalQuickness))
+		spellData.MentalQuickness.Effect(dbcenums.A_MOD_SPELL_DAMAGE_OF_STAT_PERCENT, 126).FractionAt(shaman.Talents.MentalQuickness))
 }
 
 func (shaman *Shaman) applyShamanisticFocus() {
@@ -148,7 +148,10 @@ func (shaman *Shaman) applySpiritWeapons() {
 	if !shaman.Talents.SpiritWeapons {
 		return
 	}
-	//TODO ? Threat related talent
+
+	// Client 16268: parry and -30% threat; its Rockbiter half (eff 1) has nothing to act on, the sim has no Rockbiter.
+	shaman.PseudoStats.CanParry = true
+	shaman.PseudoStats.ThreatMultiplier *= spellData.SpiritWeapons.Effect(dbcenums.A_MOD_THREAT, 127).MultiplierAt(1)
 }
 
 func (shaman *Shaman) applyStormstrike() {
@@ -196,7 +199,7 @@ func (shaman *Shaman) applyMentalDexterity() {
 	}
 
 	shaman.AddStatDependency(stats.Intellect, stats.AttackPower,
-		spellData.MentalDexterity.EffectAt(0).FractionAt(shaman.Talents.MentalDexterity))
+		spellData.MentalDexterity.EffectAt(1).FractionAt(shaman.Talents.MentalDexterity))
 }
 
 // applyImprovedGhostWolf implements Improved Ghost Wolf, new in Forever.
@@ -216,7 +219,7 @@ func (shaman *Shaman) applyAnticipation() {
 	}
 
 	shaman.AddStat(stats.DodgeRating, core.DodgeRatingPerDodgePercent*
-		spellData.Anticipation.Effect(shared.A_MOD_DODGE_PERCENT, 0).ValueAt(shaman.Talents.Anticipation))
+		spellData.Anticipation.Effect(dbcenums.A_MOD_DODGE_PERCENT, 0).ValueAt(shaman.Talents.Anticipation))
 }
 
 // applyToughness implements Toughness, new in Forever: more Stamina.
@@ -226,7 +229,7 @@ func (shaman *Shaman) applyToughness() {
 	}
 
 	shaman.MultiplyStat(stats.Stamina,
-		spellData.Toughness.Effect(shared.A_MOD_TOTAL_STAT_PERCENTAGE, 0).MultiplierAt(shaman.Talents.Toughness))
+		spellData.Toughness.Effect(dbcenums.A_MOD_TOTAL_STAT_PERCENTAGE, 0).MultiplierAt(shaman.Talents.Toughness))
 }
 
 // applyImprovedStormstrike implements Improved Stormstrike, new in Forever: a chance on Stormstrike
@@ -237,14 +240,14 @@ func (shaman *Shaman) applyImprovedStormstrike() {
 		return
 	}
 
-	chance := spellData.ImprovedStormstrike.EffectAt(0).FractionAt(shaman.Talents.ImprovedStormstrike)
-	buff := spellData.ImprovedStormstrikeTriggered.HighestRank()
-	regenRate := buff.Effect(shared.A_MOD_MANA_REGEN_INTERRUPT, 0).Value / 100
+	chance := spellData.ImprovedStormstrike.EffectAt(1).FractionAt(shaman.Talents.ImprovedStormstrike)
+	buff := spellData.ImprovedStormstrikeTriggered.Highest()
+	regenRate := buff.Effect(dbcenums.A_MOD_MANA_REGEN_INTERRUPT, 0).Percent()
 
 	focusAura := shaman.RegisterAura(core.Aura{
 		Label:    "Improved Stormstrike",
-		ActionID: core.ActionID{SpellID: buff.SpellID},
-		Duration: buff.Duration,
+		ActionID: core.ActionID{SpellID: buff.ID},
+		Duration: buff.Duration(),
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			shaman.PseudoStats.SpiritRegenRateCasting += regenRate
 		},
@@ -285,9 +288,9 @@ func (shaman *Shaman) applyMaelstromWeapon() {
 		return
 	}
 
-	buff := spellData.MaelstromWeaponTriggered.HighestRank()
+	buff := spellData.MaelstromWeaponTriggered.Highest()
 	maxStacks := int32(5)
-	perStack := spellData.MaelstromWeapon.EffectAt(0).FractionAt(shaman.Talents.MaelstromWeapon)
+	perStack := spellData.MaelstromWeapon.EffectAt(1).FractionAt(shaman.Talents.MaelstromWeapon)
 
 	ppmm := shaman.NewLegacyPPMManager(2*float64(shaman.Talents.MaelstromWeapon), core.ProcMaskMelee)
 
@@ -302,8 +305,8 @@ func (shaman *Shaman) applyMaelstromWeapon() {
 
 	aura := shaman.RegisterAura(core.Aura{
 		Label:     "Maelstrom Weapon",
-		ActionID:  core.ActionID{SpellID: buff.SpellID},
-		Duration:  buff.Duration,
+		ActionID:  core.ActionID{SpellID: buff.ID},
+		Duration:  buff.Duration(),
 		MaxStacks: maxStacks,
 		OnStacksChange: func(aura *core.Aura, sim *core.Simulation, oldStacks, newStacks int32) {
 			castMod.UpdateFloatValue(perStack * float64(newStacks))
@@ -343,22 +346,22 @@ func (shaman *Shaman) applyRageOfTheFarseer() {
 		return
 	}
 
-	rank := spellData.RageOfTheFarseer.HighestRank()
-	multiplier := 1 + rank.Effect(shared.A_MOD_MELEE_RANGED_HASTE_2, 0).Value/100
+	rank := spellData.RageOfTheFarseer.Highest()
+	multiplier := 1 + rank.Effect(dbcenums.A_MOD_MELEE_RANGED_HASTE_2, 0).Percent()
 
 	buffAura := shaman.RegisterAura(core.Aura{
 		Label:    "Rage of the Farseer",
-		ActionID: core.ActionID{SpellID: rank.SpellID},
-		Duration: rank.Duration,
+		ActionID: core.ActionID{SpellID: rank.ID},
+		Duration: rank.Duration(),
 	}).AttachMultiplyMeleeSpeed(multiplier).AttachMultiplyCastSpeed(multiplier)
 
 	spell := shaman.RegisterSpell(core.SpellConfig{
-		ActionID: core.ActionID{SpellID: rank.SpellID},
+		ActionID: core.ActionID{SpellID: rank.ID},
 		Flags:    core.SpellFlagNoOnCastComplete | core.SpellFlagAPL,
 		Cast: core.CastConfig{
 			CD: core.Cooldown{
 				Timer:    shaman.NewTimer(),
-				Duration: rank.Cooldown,
+				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
 			},
 		},
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {

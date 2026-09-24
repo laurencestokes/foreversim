@@ -1,9 +1,9 @@
 package priest
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -61,20 +61,20 @@ func (priest *Priest) Initialize() {
 	mindblastCDTimer := priest.NewTimer()
 	shadowWordDeathCDTimer := priest.NewTimer()
 
-	MindBlastRankMap.RegisterAll(func(rank shared.SpellData) {
+	MindBlastRankMap.Each(func(_ int32, rank *spelldata.Spell) {
 		priest.registerMindBlastSpell(rank, mindblastCDTimer)
 	})
-	ShadowWordPainRankMap.RegisterAll(priest.registerShadowWordPainSpell)
-	ShadowWordDeathRankMap.RegisterAll(func(rank shared.SpellData) {
+	ShadowWordPainRankMap.Each(func(_ int32, rank *spelldata.Spell) { priest.registerShadowWordPainSpell(rank) })
+	ShadowWordDeathRankMap.Each(func(_ int32, rank *spelldata.Spell) {
 		priest.registerShadowWordDeathSpell(rank, shadowWordDeathCDTimer)
 	})
-	SmiteRankMap.RegisterAll(priest.registerSmiteSpell)
-	HolyFireRankMap.RegisterAll(priest.registerHolyFireSpell)
+	SmiteRankMap.Each(func(_ int32, rank *spelldata.Spell) { priest.registerSmiteSpell(rank) })
+	HolyFireRankMap.Each(func(_ int32, rank *spelldata.Spell) { priest.registerHolyFireSpell(rank) })
 	priest.registerShadowfiendSpell()
 
 	if priest.Race == proto.Race_RaceNightElf {
 		starshardsCDTimer := priest.NewTimer()
-		StarshardsRankMap.RegisterAll(func(rank shared.SpellData) {
+		StarshardsRankMap.Each(func(_ int32, rank *spelldata.Spell) {
 			priest.registerStarshardsSpell(rank, starshardsCDTimer)
 		})
 	}
@@ -82,7 +82,7 @@ func (priest *Priest) Initialize() {
 	// Devouring Plague is an Undead racial in Classic. The Forever beta client teaches it to priests
 	// of every race (SkillLineAbility race mask -1), so it is baseline here.
 	devouringPlagueCDTimer := priest.NewTimer()
-	DevouringPlagueRankMap.RegisterAll(func(rank shared.SpellData) {
+	DevouringPlagueRankMap.Each(func(_ int32, rank *spelldata.Spell) {
 		priest.registerDevouringPlagueSpell(rank, devouringPlagueCDTimer)
 	})
 }
@@ -123,8 +123,8 @@ type PriestAgent interface {
 // Word: Pain, Mind Flay, Holy Fire and Starshards carry it, Devouring Plague does not.
 // shared.PeriodicTickOutcome cannot serve: its magic branches roll the hit again on every tick, which
 // would charge the miss twice.
-func priestTickOutcome(row shared.SpellData, dot *core.Dot) core.OutcomeApplier {
-	if !row.PeriodicCanCrit {
+func priestTickOutcome(canCrit bool, dot *core.Dot) core.OutcomeApplier {
+	if !canCrit {
 		return dot.OutcomeTick
 	}
 
@@ -211,20 +211,6 @@ const (
 	PriestSpellLast
 	PriestSpellsAll    = PriestSpellLast<<1 - 1
 	PriestSpellDoT     = PriestSpellDevouringPlague | PriestSpellHolyFire | PriestSpellMindFlay | PriestSpellShadowWordPain | PriestSpellStarshards
-	// Everything the client gives a zero cast time, which is what the talents that name "instant
-	// spells" read: the channels start instantly too, so Mind Flay and Penance belong here.
-	PriestSpellInstant = PriestSpellDevouringPlague |
-		PriestSpellFade |
-		PriestSpellHolyNova |
-		PriestSpellMindFlay |
-		PriestSpellPenance |
-		PriestSpellPowerInfusion |
-		PriestSpellShadowWordDeath |
-		PriestSpellShadowWordPain |
-		PriestSpellVampiricEmbrace |
-		PriestSpellShadowFiend |
-		PriestSpellStarshards |
-		PriestSpellShadowform
 	PriestShadowSpells = PriestSpellDevouringPlague |
 		PriestSpellShadowWordDeath |
 		PriestSpellShadowform |

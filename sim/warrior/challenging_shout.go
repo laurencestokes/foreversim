@@ -5,10 +5,10 @@ import (
 )
 
 func (warrior *Warrior) registerChallengingShout() {
-	challengingShoutRank := spellData.ChallengingShout.HighestRank()
+	challengingShoutRank := spellData.ChallengingShout.Highest()
 
 	warrior.ChallengingShout = warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: challengingShoutRank.SpellID},
+		ActionID:       core.ActionID{SpellID: challengingShoutRank.ID},
 		SpellSchool:    core.SpellSchoolPhysical,
 		DefenseType:    core.DefenseTypeMagic,
 		ProcMask:       core.ProcMaskEmpty,
@@ -16,16 +16,16 @@ func (warrior *Warrior) registerChallengingShout() {
 		ClassSpellMask: SpellMaskChallengingShout,
 
 		RageCost: core.RageCostOptions{
-			Cost: challengingShoutRank.Cost,
+			Cost: int32(challengingShoutRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: challengingShoutRank.GCD,
+				GCD: challengingShoutRank.GCD(),
 			},
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: challengingShoutRank.Cooldown,
+				Duration: cooldownOf(challengingShoutRank),
 			},
 		},
 

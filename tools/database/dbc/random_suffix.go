@@ -1,6 +1,7 @@
 package dbc
 
 import (
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
@@ -48,8 +49,8 @@ func (raw RandomSuffix) ToProto() *proto.ItemRandomSuffix {
 			spellEffects := dbcInstance.SpellEffects[raw.EffectArgs[i]]
 			for _, spellEffect := range spellEffects {
 				if spellEffect.EffectMiscValues[0] == -1 &&
-					spellEffect.EffectType == E_APPLY_AURA &&
-					spellEffect.EffectAura == A_MOD_STAT {
+					spellEffect.EffectType == dbcenums.E_APPLY_AURA &&
+					spellEffect.EffectAura == dbcenums.A_MOD_STAT {
 					// Apply bonus to all stats
 					suffix.Stats[proto.Stat_StatAgility] += amount
 					suffix.Stats[proto.Stat_StatIntellect] += amount
@@ -58,13 +59,13 @@ func (raw RandomSuffix) ToProto() *proto.ItemRandomSuffix {
 					suffix.Stats[proto.Stat_StatStrength] += amount
 					continue
 				}
-				if spellEffect.EffectType == E_APPLY_AURA && spellEffect.EffectAura == A_MOD_STAT {
+				if spellEffect.EffectType == dbcenums.E_APPLY_AURA && spellEffect.EffectAura == dbcenums.A_MOD_STAT {
 					stat, ok := MapMainStatToStat(spellEffect.EffectMiscValues[0])
 					if !ok {
 						continue
 					}
 					suffix.Stats[stat] += amount
-				} else if spellEffect.EffectType == E_APPLY_AURA && spellEffect.EffectAura == A_MOD_RESISTANCE && (SpellSchool(spellEffect.EffectMiscValues[0]) == ALL_SPELL_DAMAGE || SpellSchool(spellEffect.EffectMiscValues[0]) == SPELL_PENETRATION) {
+				} else if spellEffect.EffectType == dbcenums.E_APPLY_AURA && spellEffect.EffectAura == dbcenums.A_MOD_RESISTANCE && (SpellSchool(spellEffect.EffectMiscValues[0]) == ALL_SPELL_DAMAGE || SpellSchool(spellEffect.EffectMiscValues[0]) == SPELL_PENETRATION) {
 					suffix.Stats[proto.Stat_StatArcaneResistance] += amount
 					suffix.Stats[proto.Stat_StatFireResistance] += amount
 					suffix.Stats[proto.Stat_StatFrostResistance] += amount

@@ -23,6 +23,7 @@ type SpellConfig struct {
 	BaseCost       float64
 	MetricSplits   int
 	ClassSpellMask int64
+	ClassFlags     ClassFlags
 	Rank           int32
 
 	ManaCost   ManaCostOptions
@@ -32,6 +33,7 @@ type SpellConfig struct {
 
 	Cast               CastConfig
 	ExtraCastCondition CanCastCondition
+	CastRequirement    CastRequirement
 
 	// Optional range constraints. If supplied, these are used to modify the ExtraCastCondition above to additionally check for DistanceFromTarget.
 	MinRange     float64
@@ -99,6 +101,9 @@ type Spell struct {
 	// should be a unique bit
 	ClassSpellMask int64
 
+	// The client's SpellClassOptions: the family and mask bit its talents name this spell by.
+	ClassFlags ClassFlags
+
 	// Speed in yards/second. Spell missile speeds can be found in the game data.
 	// Example: https://wow.tools/dbc/?dbc=spellmisc&build=3.4.0.44996
 	MissileSpeed float64
@@ -112,6 +117,11 @@ type Spell struct {
 	SharedCD           Cooldown
 	IgnoreHaste        bool
 	ExtraCastCondition CanCastCondition
+
+	CastRequirement    CastRequirement
+	hasCastRequirement bool
+	casterAuras        []*Aura
+	excludeCasterAuras []*Aura
 
 	// Optional range constraints. If supplied, these are used to modify the ExtraCastCondition above to additionally check for DistanceFromTarget.
 	MinRange     float64
@@ -141,6 +151,10 @@ type Spell struct {
 	// The current or most recent cast data.
 	CurCast Cast
 
+	// The client's SPELLMOD_NOT_LOSE_CASTING_TIME: a chance, on top of the caster's own, that a hit
+	// taken does not push this spell's cast back.
+	PushbackResist float64
+
 	BonusHitPercent          float64
 	BonusCritPercent         float64
 	BonusSpellDamage         float64
@@ -149,8 +163,11 @@ type Spell struct {
 	CdMultiplier             float64
 	DamageMultiplier         float64
 	DamageMultiplierAdditive float64
-	CritMultiplierPct        float64 // Multiplies the base crit multiplier, 1 = unmodified. Fed by SpellMod_CritMultiplier_Pct.
-	CritMultiplierAdditive   float64 // Additive critical damage bonus
+	// Added to DamageMultiplierAdditive on direct hits only. Unlike that bucket this one is 0
+	// when nothing feeds it.
+	DirectDamageMultiplierAdditive float64
+	CritMultiplierPct              float64 // Multiplies the base crit multiplier, 1 = unmodified. Fed by SpellMod_CritMultiplier_Pct.
+	CritMultiplierAdditive         float64 // Additive critical damage bonus
 
 	BonusBaseDamage  float64 // Certain items can increase the base damage of a spell e.g. https://www.wowhead.com/forever/item=28248/totem-of-the-void
 	BonusCoefficient float64 // EffectBonusCoefficient in SpellEffect client DB table, "SP mod" on Wowhead (not necessarily shown there even if > 0)
@@ -232,12 +249,15 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 		Flags:          config.Flags,
 		MissileSpeed:   config.MissileSpeed,
 		ClassSpellMask: config.ClassSpellMask,
+		ClassFlags:     config.ClassFlags,
 
 		DefaultCast:        config.Cast.DefaultCast,
 		CD:                 config.Cast.CD,
 		SharedCD:           config.Cast.SharedCD,
 		IgnoreHaste:        config.Cast.IgnoreHaste,
 		ExtraCastCondition: config.ExtraCastCondition,
+		CastRequirement:    config.CastRequirement,
+		hasCastRequirement: config.CastRequirement != CastRequirement{},
 
 		castTimeFn: config.Cast.CastTime,
 
@@ -328,7 +348,7 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 	}
 
 	if spell.DefaultCast == emptyCast {
-		if config.ExtraCastCondition == nil && config.Cast.CD.Timer == nil && config.Cast.SharedCD.Timer == nil {
+		if config.ExtraCastCondition == nil && config.Cast.CD.Timer == nil && config.Cast.SharedCD.Timer == nil && !spell.hasCastRequirement {
 			spell.castFn = spell.makeCastFuncAutosOrProcs()
 		} else {
 			spell.castFn = spell.makeCastFuncSimple()
@@ -499,6 +519,10 @@ func (spell *Spell) finalize() {
 	}
 	spell.SpellMetrics = spell.splitSpellMetrics[0]
 
+	if spell.hasCastRequirement {
+		spell.resolveCasterAuras()
+	}
+
 	// Set the "static" "default" cost here
 	if spell.Cost != nil {
 		spell.DefaultCast.Cost = spell.Cost.GetCurrentCost()
@@ -667,6 +691,15 @@ func (spell *Spell) CanCompleteCast(sim *Simulation, target *Unit, logCastFailur
 		return false
 	}
 
+	if spell.hasCastRequirement {
+		if reason, _ := spell.castRequirementFailure(); reason != "" {
+			if logCastFailure {
+				return spell.castFailureHelper(sim, reason)
+			}
+			return false
+		}
+	}
+
 	if spell.ExtraCastCondition != nil && !spell.ExtraCastCondition(sim, target) {
 		//if sim.Log != nil {
 		//	sim.Log("Cant cast because of extra condition")
@@ -808,6 +841,11 @@ func (spell *Spell) TravelTime() time.Duration {
 // Returns true if the given mask matches the spell mask
 func (spell *Spell) Matches(mask int64) bool {
 	return spell.ClassSpellMask&mask > 0
+}
+
+// Returns true if the given class flags name this spell
+func (spell *Spell) MatchesFlags(f ClassFlags) bool {
+	return f.Matches(spell.ClassFlags)
 }
 
 // Handles computing the cost of spells and checking whether the Unit

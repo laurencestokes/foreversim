@@ -5,6 +5,7 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -90,6 +91,10 @@ const (
 		SpellMaskHamstring | SpellMaskExecute | SpellMaskPummel | SpellMaskRevenge | SpellMaskOverpower |
 		SpellMaskThunderClap | SpellMaskMockingBlow | SpellMaskMortalStrike | SpellMaskConcussionBlow |
 		SpellMaskShieldSlam | SpellMaskRetaliation | SpellMaskIntercept | SpellMaskBloodthirst
+	// Focused Rage's class mask (29787) adds these to the offensive abilities and leaves out Retaliation.
+	SpellMaskFocusedRage = SpellMaskOffensiveAbilities&^SpellMaskRetaliation | SpellMaskDemoralizingShout |
+		SpellMaskDeathWish | SpellMaskSweepingStrikes | SpellMaskSpearingStrike | SpellMaskChallengingShout |
+		SpellMaskIntimidatingShout
 	SpellMaskShouts = SpellMaskBattleShout | SpellMaskDemoralizingShout | SpellMaskIntimidatingShout | SpellMaskChallengingShout
 )
 
@@ -278,4 +283,11 @@ func (warrior *Warrior) CastNormalizedSweepingStrikesAttack(results core.SpellRe
 // Agent is a generic way to access underlying warrior on any of the agents.
 type WarriorAgent interface {
 	GetWarrior() *Warrior
+}
+
+// The recovery the ability waits out. A warrior ability can state it on a shared category -
+// Bloodthirst and Mortal Strike both run off category 971 - and leave its own column at zero, so the
+// cooldown is whichever of the two the client filled in, as the family table read it.
+func cooldownOf(s *spelldata.Spell) time.Duration {
+	return max(s.Cooldown(), s.CategoryCooldown())
 }

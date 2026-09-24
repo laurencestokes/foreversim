@@ -4,7 +4,7 @@ import (
 	"github.com/wowsims/forever/sim/core"
 )
 
-var innervateRank = spellData.Innervate.HighestRank()
+var innervateRank = spellData.Innervate.Highest()
 
 func (druid *Druid) registerInnervateCD() {
 	innervateTarget := druid.GetUnit(druid.SelfBuffs.InnervateTarget)
@@ -13,7 +13,7 @@ func (druid *Druid) registerInnervateCD() {
 	}
 	innervateTargetChar := druid.Env.Raid.GetPlayerFromUnit(innervateTarget).GetCharacter()
 
-	actionID := core.ActionID{SpellID: innervateRank.SpellID, Tag: druid.Index}
+	actionID := core.ActionID{SpellID: innervateRank.ID, Tag: druid.Index}
 
 	amount := 0.05
 	if innervateTarget == &druid.Unit {
@@ -26,19 +26,19 @@ func (druid *Druid) registerInnervateCD() {
 
 	innervateSpell := druid.RegisterSpell(Humanoid|Moonkin|Tree, core.SpellConfig{
 		ActionID:       actionID,
-		SpellSchool:    innervateRank.SpellSchool,
-		DefenseType:    innervateRank.DefenseType,
+		SpellSchool:    innervateRank.SpellSchool(),
+		DefenseType:    innervateRank.DefenseTypeCore(),
 		ClassSpellMask: DruidSpellInnervate,
 		Flags:          core.SpellFlagAPL | core.SpellFlagHelpful,
-		MaxRange:       innervateRank.MaxRange,
+		MaxRange:       float64(innervateRank.MaxRange),
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: innervateRank.GCD,
+				GCD: innervateRank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    druid.NewTimer(),
-				Duration: innervateRank.Cooldown,
+				Duration: max(innervateRank.Cooldown(), innervateRank.CategoryCooldown()),
 			},
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {

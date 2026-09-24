@@ -4,12 +4,12 @@ import (
 	"github.com/wowsims/forever/sim/core"
 )
 
-var vanishRank = spellData.Vanish.BySpellID(1856)
+var vanishRank = spellData.Vanish.ByID(1856)
 
 func (rogue *Rogue) registerVanishSpell() {
 	rogue.Vanish = rogue.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: vanishRank.SpellID},
-		SpellSchool:    vanishRank.SpellSchool,
+		ActionID:       core.ActionID{SpellID: vanishRank.ID},
+		SpellSchool:    vanishRank.SpellSchool(),
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: RogueSpellVanish,
 
@@ -20,7 +20,7 @@ func (rogue *Rogue) registerVanishSpell() {
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    rogue.NewTimer(),
-				Duration: vanishRank.Cooldown,
+				Duration: max(vanishRank.Cooldown(), vanishRank.CategoryCooldown()),
 			},
 		},
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {

@@ -7,13 +7,13 @@ import (
 )
 
 func (warrior *Warrior) registerCharge() {
-	chargeRank := spellData.Charge.BySpellID(11578)
+	chargeRank := spellData.Charge.ByID(11578)
 
-	actionID := core.ActionID{SpellID: chargeRank.SpellID}
+	actionID := core.ActionID{SpellID: chargeRank.ID}
 	metrics := warrior.NewRageMetrics(actionID)
 
-	chargeCD := chargeRank.Cooldown
-	chargeRage := chargeRank.Energize.Tenths() + spellData.ImprovedCharge.TenthsAt(warrior.Talents.ImprovedCharge)
+	chargeCD := cooldownOf(chargeRank)
+	chargeRage := chargeRank.EnergizeEffect().Tenths() + spellData.ImprovedCharge.TenthsAt(warrior.Talents.ImprovedCharge)
 
 	aura := warrior.registerDashAura("Charge", actionID, chargeCD, nil)
 
@@ -22,8 +22,8 @@ func (warrior *Warrior) registerCharge() {
 		SpellSchool:    core.SpellSchoolPhysical,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: SpellMaskCharge,
-		MinRange:       chargeRank.MinRange,
-		MaxRange:       chargeRank.MaxRange,
+		MinRange:       float64(chargeRank.MinRange),
+		MaxRange:       float64(chargeRank.MaxRange),
 
 		Cast: core.CastConfig{
 			CD: core.Cooldown{

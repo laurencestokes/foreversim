@@ -7,28 +7,28 @@ import (
 // The beta client has one rank of Multi-Shot: no flat bonus, and a 6 sec cooldown shared with Aimed
 // Shot where Classic had 10 sec alone. Ranks 2-5 are gone from the spellbook.
 func (hunter *Hunter) registerMultiShotSpell(timer *core.Timer) {
-	rank := spellData.MultiShot.HighestRank()
+	rank := spellData.MultiShot.Highest()
 	numHits := min(3, hunter.Env.ActiveTargetCount())
 
 	hunter.MultiShot = hunter.RegisterRangedSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ClassSpellMask: HunterSpellMultiShot,
 		ProcMask:       core.ProcMaskRangedSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		MissileSpeed:   rank.MissileSpeed,
+		MissileSpeed:   float64(rank.Speed),
 
 		ManaCost: core.ManaCostOptions{
 			BaseCostPercent: 13.9, // client SpellPower 170887: PowerCostPct 13.9, no flat cost
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				CastTime: rank.CastTime,
+				CastTime: rank.CastTime(),
 			},
 			CD: core.Cooldown{
 				Timer:    timer,
-				Duration: rank.Cooldown,
+				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
 			},
 		},
 

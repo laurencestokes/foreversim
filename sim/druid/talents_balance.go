@@ -3,8 +3,8 @@ package druid
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -46,12 +46,10 @@ func (druid *Druid) applyMoonfury() {
 	}
 
 	// Forever states Moonfury as +2% damage a rank to the Arcane|Nature schools (mask 72) rather
-	// than as a spell modifier; the class mask keeps it on the Balance spell list.
-	druid.AddStaticMod(core.SpellModConfig{
-		ClassMask:  DruidDamagingSpells,
-		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.Moonfury.Effect(shared.A_MOD_DAMAGE_PERCENT_DONE, 72).FractionAt(druid.Talents.Moonfury),
-	})
+	// than as a spell modifier: a separate multiplier on all Arcane and Nature damage.
+	multiplier := spellData.Moonfury.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_DONE, 72).MultiplierAt(druid.Talents.Moonfury)
+	druid.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexArcane] *= multiplier
+	druid.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexNature] *= multiplier
 }
 
 func (druid *Druid) applyMoonglow() {
@@ -64,7 +62,7 @@ func (druid *Druid) applyMoonglow() {
 		// Grasp ("your damaging spells"): not Moonkin Form, Innervate or the heals.
 		ClassMask:  DruidSpellMoonfire | DruidSpellStarfire | DruidSpellWrath | DruidSpellInsectSwarm | DruidSpellHurricane,
 		Kind:       core.SpellMod_PowerCost_Pct_Add,
-		FloatValue: spellData.Moonglow.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_COST).FractionAt(druid.Talents.Moonglow),
+		FloatValue: spellData.Moonglow.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(druid.Talents.Moonglow),
 	})
 }
 
@@ -74,13 +72,13 @@ func (druid *Druid) applyNaturesGrace() {
 		return
 	}
 
-	triggered := spellData.NaturesGraceTriggered.HighestRank()
-	hasteMultiplier := 1 + triggered.Effect(shared.A_MOD_CASTING_SPEED_NOT_STACK, 0).Value/100
+	triggered := spellData.NaturesGraceTriggered.Highest()
+	hasteMultiplier := 1 + triggered.Effect(dbcenums.A_MOD_CASTING_SPEED_NOT_STACK, 0).BaseValue()/100
 
 	aura := druid.RegisterAura(core.Aura{
 		Label:    "Nature's Grace",
-		ActionID: core.ActionID{SpellID: triggered.SpellID},
-		Duration: triggered.Duration,
+		ActionID: core.ActionID{SpellID: triggered.ID},
+		Duration: triggered.Duration(),
 		OnGain: func(_ *core.Aura, sim *core.Simulation) {
 			druid.MultiplyCastSpeed(sim, hasteMultiplier)
 		},
@@ -91,7 +89,7 @@ func (druid *Druid) applyNaturesGrace() {
 
 	druid.MakeProcTriggerAura(core.ProcTrigger{
 		Name:               "Nature's Grace Trigger",
-		ActionID:           core.ActionID{SpellID: spellData.NaturesGrace.HighestRank().SpellID},
+		ActionID:           core.ActionID{SpellID: spellData.NaturesGrace.Highest().ID},
 		Callback:           core.CallbackOnSpellHitDealt,
 		ClassSpellMask:     DruidDamagingSpells,
 		Outcome:            core.OutcomeCrit,
@@ -110,7 +108,7 @@ func (druid *Druid) applyVengeance() {
 	druid.AddStaticMod(core.SpellModConfig{
 		ClassMask:  DruidDamagingSpells,
 		Kind:       core.SpellMod_CritMultiplier_Flat,
-		FloatValue: spellData.Vengeance.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_CRIT_DAMAGE_BONUS).FractionAt(druid.Talents.Vengeance),
+		FloatValue: spellData.Vengeance.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_CRIT_DAMAGE_BONUS)).FractionAt(druid.Talents.Vengeance),
 	})
 }
 
@@ -120,9 +118,9 @@ func (druid *Druid) applyNaturesReach() {
 		return
 	}
 
-	hit := spellData.NaturesReach.Effect(shared.A_MOD_HIT_CHANCE, 0).ValueAt(druid.Talents.NaturesReach)
+	hit := spellData.NaturesReach.Effect(dbcenums.A_MOD_HIT_CHANCE, 0).ValueAt(druid.Talents.NaturesReach)
 	druid.AddStat(stats.PhysicalHitPercent, hit)
-	druid.AddStat(stats.SpellHitPercent, spellData.NaturesReach.Effect(shared.A_MOD_SPELL_HIT_CHANCE, 0).ValueAt(druid.Talents.NaturesReach))
+	druid.AddStat(stats.SpellHitPercent, spellData.NaturesReach.Effect(dbcenums.A_MOD_SPELL_HIT_CHANCE, 0).ValueAt(druid.Talents.NaturesReach))
 }
 
 func (druid *Druid) applyInsectSwarm() {
@@ -142,14 +140,14 @@ func (druid *Druid) applyImprovedMoonfire() {
 	druid.AddStaticMod(core.SpellModConfig{
 		ClassMask:  DruidSpellMoonfire,
 		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.ImprovedMoonfire.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DAMAGE).FractionAt(druid.Talents.ImprovedMoonfire),
+		FloatValue: spellData.ImprovedMoonfire.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(druid.Talents.ImprovedMoonfire),
 	})
 
 	// 5% a point chance to crit with Moonfire.
 	druid.AddStaticMod(core.SpellModConfig{
 		ClassMask:  DruidSpellMoonfire,
 		Kind:       core.SpellMod_BonusCrit_Percent,
-		FloatValue: spellData.ImprovedMoonfire.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_CRITICAL_CHANCE).ValueAt(druid.Talents.ImprovedMoonfire),
+		FloatValue: spellData.ImprovedMoonfire.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CRITICAL_CHANCE)).ValueAt(druid.Talents.ImprovedMoonfire),
 	})
 }
 
@@ -162,13 +160,13 @@ func (druid *Druid) applyImprovedWrath() {
 	druid.AddStaticMod(core.SpellModConfig{
 		ClassMask: DruidSpellWrath,
 		Kind:      core.SpellMod_CastTime_Flat,
-		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedWrath.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_CASTING_TIME).ValueAt(druid.Talents.ImprovedWrath)),
+		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedWrath.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CASTING_TIME)).ValueAt(druid.Talents.ImprovedWrath)),
 	})
 
 	druid.AddStaticMod(core.SpellModConfig{
 		ClassMask:  DruidSpellWrath,
 		Kind:       core.SpellMod_PowerCost_Pct_Add,
-		FloatValue: spellData.ImprovedWrath.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_COST).FractionAt(druid.Talents.ImprovedWrath),
+		FloatValue: spellData.ImprovedWrath.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(druid.Talents.ImprovedWrath),
 	})
 }
 
@@ -178,10 +176,11 @@ func (druid *Druid) applyGenesis() {
 		return
 	}
 
+	// Client 1223081's mask includes the bleeds (Rake, Rip, Lacerate) and not Lifebloom.
 	druid.AddStaticMod(core.SpellModConfig{
-		ClassMask:  DruidSpellDoT | DruidSpellHoT,
+		ClassMask:  DruidSpellDoT | DruidSpellRake | DruidSpellRip | DruidSpellLacerate | DruidSpellRejuvenation | DruidSpellRegrowth,
 		Kind:       core.SpellMod_DotDamageDone_Pct,
-		FloatValue: spellData.Genesis.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DOT).FractionAt(druid.Talents.Genesis),
+		FloatValue: spellData.Genesis.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DOT)).FractionAt(druid.Talents.Genesis),
 	})
 }
 
@@ -191,7 +190,7 @@ func (druid *Druid) applyNaturesMajesty() {
 		return
 	}
 
-	crit := spellData.NaturesMajesty.Effect(shared.A_MOD_CRIT_PCT, 0).ValueAt(druid.Talents.NaturesMajesty)
+	crit := spellData.NaturesMajesty.Effect(dbcenums.A_MOD_CRIT_PCT, 0).ValueAt(druid.Talents.NaturesMajesty)
 	druid.AddStat(stats.SpellCritPercent, crit)
 	druid.AddStat(stats.PhysicalCritPercent, crit)
 }
@@ -228,7 +227,7 @@ func (druid *Druid) applyImprovedStarfire() {
 	druid.AddStaticMod(core.SpellModConfig{
 		ClassMask: DruidSpellStarfire,
 		Kind:      core.SpellMod_CastTime_Flat,
-		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedStarfire.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_CASTING_TIME).ValueAt(druid.Talents.ImprovedStarfire)),
+		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedStarfire.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CASTING_TIME)).ValueAt(druid.Talents.ImprovedStarfire)),
 	})
 }
 
@@ -248,15 +247,15 @@ func (druid *Druid) applyEclipse() {
 		return
 	}
 
-	triggered := spellData.EclipseTriggered.HighestRank()
+	triggered := spellData.EclipseTriggered.Highest()
 	// The client's curve is 0.17 / 0.33 / 0.5 sec.
-	castTimeReduction := time.Millisecond * time.Duration(spellData.Eclipse.EffectAt(1).ValueAt(druid.Talents.Eclipse))
+	castTimeReduction := time.Millisecond * time.Duration(spellData.Eclipse.EffectAt(2).ValueAt(druid.Talents.Eclipse))
 	const chargesPerWrath = 2
 
 	druid.EclipseAura = druid.RegisterAura(core.Aura{
 		Label:     "Eclipse",
-		ActionID:  core.ActionID{SpellID: triggered.SpellID},
-		Duration:  triggered.Duration,
+		ActionID:  core.ActionID{SpellID: triggered.ID},
+		Duration:  triggered.Duration(),
 		MaxStacks: 4,
 	}).AttachSpellMod(core.SpellModConfig{
 		ClassMask: DruidSpellStarfire,

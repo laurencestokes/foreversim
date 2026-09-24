@@ -1,8 +1,6 @@
 package dbc
 
 import (
-	"strconv"
-
 	"github.com/wowsims/forever/sim/core/proto"
 )
 
@@ -466,64 +464,4 @@ var Classes = []DbcClass{
 	{proto.Class_ClassMage, 8},
 	{proto.Class_ClassWarlock, 9},
 	{proto.Class_ClassDruid, 11},
-}
-
-// Used to map ITEM_SPELLTRIGGER_CHANCE_ON_HIT items using PPM
-// which is not available in the gamefiles.
-// Adding PPM values here will prevent filtering of the item
-// when parsing in item_effect.go#MergeItemEffectsForAllStates.
-var MapItemIdToPPM = map[int32]float64{
-	12798: 1, // Annihilator
-	19289: 1, // Darkmoon Card: Maelstrom
-	// 19019: 6,    // Thunderfury
-	21670: 10, // Badge of the Swarmguard
-	// 22559: 1,    // Mongoose
-	28579: 1,    // Romulo's Poison Vial
-	28429: 1,    // Lionheart Champion
-	28430: 1,    // Lionheart Executioner
-	28437: 1,    // Drakefist Hammer
-	28438: 1,    // Dragonmaw
-	28439: 1,    // Dragonstrike
-	28573: 0.5,  // Despair
-	28774: 1.33, // Glaive of the Pit
-	28830: 1,    // Dragonspine Trophy 20s ICD
-	// 29301: 1, // Band of the Eternal Champion 60s ICD
-	29348: 1,   // The Bladefist
-	29693: 0.5, // Khorium Champion
-	29962: 1,   // Heartrazor
-	29996: 1,   // Rod of the sun king
-	30090: 1,   // World Breaker
-	30311: 2,   // Warp Slicer
-	30316: 2,   // Devastation
-	31323: 1,   // Don Santos' Famous Hunting Rifle
-	31331: 2,   // The Night blade
-	31859: 1,   // Darkmoon Card: Madness
-	32262: 1,   // Syphon of the Nathrezim
-	32505: 1,   // Madness of the Betrayer
-}
-
-// Items whose proc rate is nowhere in the spell data - ProcChance is 0, or the >100 sentinel that
-// means the rate lives elsewhere - and that have no MapItemIdToPPM entry to supply it either. Such a
-// proc is left with no rate at all, so the effect either fires on every hit or is abandoned. Naming
-// them is the only way anyone finds out a number is owed.
-//
-// Reported once per item: the same item reaches the check from several effects, and on every
-// scaling state.
-var reportedMissingPPM = map[int32]bool{}
-
-func ReportMissingPPM(itemID int32, spellID int) {
-	if itemID == 0 || reportedMissingPPM[itemID] {
-		return
-	}
-
-	reportedMissingPPM[itemID] = true
-	println("Item needs a manual PPM: " + dbcInstance.Items[int(itemID)].Name +
-		" (" + strconv.FormatInt(int64(itemID), 10) + ") from spell " + strconv.Itoa(spellID))
-}
-
-func getPPMForItemID(itemID int32) float64 {
-	if ppm, ok := MapItemIdToPPM[itemID]; ok {
-		return ppm
-	}
-	return 0
 }

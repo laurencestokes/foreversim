@@ -1,8 +1,8 @@
 package mage
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
 // Four stacks per the beta client tooltip; the aura row states no stack count.
@@ -16,12 +16,14 @@ func (mage *Mage) registerArcaneCharges() {
 		return
 	}
 
-	buffRank := spellData.ArcaneBlastTriggered.HighestRank()
-	damagePerStack := buffRank.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DAMAGE).Value / 100
-	costPerStack := buffRank.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_COST).Value / 100
+	buffRank := spellData.ArcaneBlastTriggered.Highest()
+	damagePerStack := buffRank.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).Average(core.CharacterLevel) / 100
+	costPerStack := buffRank.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).Average(core.CharacterLevel) / 100
 
+	// 400573's damage mask names every mage damage spell but Arcane Blast, Arcane Missiles, Blizzard
+	// and Flamestrike, whatever its tooltip says.
 	damageMod := mage.AddDynamicMod(core.SpellModConfig{
-		ClassMask: MageSpellsAll &^ MageSpellArcaneBlast,
+		ClassMask: MageSpellsAllDamaging &^ (MageSpellArcaneBlast | MageSpellArcaneMissiles | MageSpellBlizzard | MageSpellFlamestrike),
 		Kind:      core.SpellMod_DamageDone_Flat,
 	})
 	costMod := mage.AddDynamicMod(core.SpellModConfig{
@@ -31,8 +33,8 @@ func (mage *Mage) registerArcaneCharges() {
 
 	mage.ArcaneBlastAura = mage.RegisterAura(core.Aura{
 		Label:     "Arcane Blast",
-		ActionID:  core.ActionID{SpellID: buffRank.SpellID},
-		Duration:  buffRank.Duration,
+		ActionID:  core.ActionID{SpellID: buffRank.ID},
+		Duration:  buffRank.Duration(),
 		MaxStacks: ArcaneBlastMaxStacks,
 		OnGain: func(_ *core.Aura, _ *core.Simulation) {
 			damageMod.Activate()

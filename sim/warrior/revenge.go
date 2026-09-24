@@ -9,9 +9,9 @@ import (
 func (warrior *Warrior) registerRevenge() {
 	// TODO: Manual review needed -- spell 25288 states "a high amount of threat" with no number;
 	// none is modelled until measured in game.
-	revengeRank := spellData.Revenge.HighestRank()
+	revengeRank := spellData.Revenge.Highest()
 
-	actionID := core.ActionID{SpellID: revengeRank.SpellID}
+	actionID := core.ActionID{SpellID: revengeRank.ID}
 
 	// TODO: In-game test needed
 	aura := warrior.RegisterAura(core.Aura{
@@ -41,17 +41,17 @@ func (warrior *Warrior) registerRevenge() {
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: revengeRank.GCD,
+				GCD: revengeRank.GCD(),
 			},
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: revengeRank.Cooldown,
+				Duration: cooldownOf(revengeRank),
 			},
 		},
 
 		RageCost: core.RageCostOptions{
-			Cost:   revengeRank.Cost,
+			Cost:   int32(revengeRank.Cost()),
 			Refund: revengeRank.MissRefund(),
 		},
 

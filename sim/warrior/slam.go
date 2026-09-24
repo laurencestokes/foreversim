@@ -5,10 +5,10 @@ import (
 )
 
 func (warrior *Warrior) registerSlam() {
-	slamRank := spellData.Slam.HighestRank()
-	slamBaseDamage, _ := slamRank.Direct.Range()
+	slamRank := spellData.Slam.Highest()
+	slamBaseDamage := slamRank.DamageEffect().Average(core.CharacterLevel)
 
-	actionID := core.ActionID{SpellID: slamRank.SpellID}
+	actionID := core.ActionID{SpellID: slamRank.ID}
 
 	warrior.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
@@ -20,17 +20,17 @@ func (warrior *Warrior) registerSlam() {
 		MaxRange:       core.MaxMeleeRange,
 
 		RageCost: core.RageCostOptions{
-			Cost:   slamRank.Cost,
+			Cost:   int32(slamRank.Cost()),
 			Refund: slamRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD:      slamRank.GCD,
-				CastTime: slamRank.CastTime,
+				GCD:      slamRank.GCD(),
+				CastTime: slamRank.CastTime(),
 			},
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: slamRank.Cooldown,
+				Duration: cooldownOf(slamRank),
 			},
 			IgnoreHaste: true,
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {

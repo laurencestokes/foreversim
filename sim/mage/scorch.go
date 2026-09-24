@@ -1,44 +1,44 @@
 package mage
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 // Every rank is registered: the fire rotation drops to rank 1 when mana runs short.
 func (mage *Mage) registerScorchSpell() {
 	mage.registerImprovedScorch()
-	spellData.Scorch.RegisterAll(mage.registerScorchRank)
+	spellData.Scorch.Each(func(_ int32, rank *spelldata.Spell) { mage.registerScorchRank(rank) })
 }
 
-func (mage *Mage) registerScorchRank(scorchRank shared.SpellData) {
+func (mage *Mage) registerScorchRank(scorchRank *spelldata.Spell) {
 	procChance := spellData.ImprovedScorch.FractionAt(mage.Talents.ImprovedScorch)
 
 	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: scorchRank.SpellID},
-		SpellSchool:    scorchRank.SpellSchool,
-		DefenseType:    scorchRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: scorchRank.ID},
+		SpellSchool:    scorchRank.SpellSchool(),
+		DefenseType:    scorchRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: MageSpellScorch,
-		Rank:           scorchRank.Rank,
+		Rank:           scorchRank.RankNumber(),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: scorchRank.Cost,
+			FlatCost: int32(scorchRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD:      scorchRank.GCD,
-				CastTime: scorchRank.CastTime,
+				GCD:      scorchRank.GCD(),
+				CastTime: scorchRank.CastTime(),
 			},
 		},
 
 		DamageMultiplier: 1,
-		BonusCoefficient: scorchRank.Direct.BonusCoefficient(),
+		BonusCoefficient: scorchRank.DamageEffect().Coeff(),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcAndDealDamage(sim, target, scorchRank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			result := spell.CalcAndDealDamage(sim, target, scorchRank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 			if result.Landed() && mage.ImprovedScorchAura != nil && sim.Proc(procChance, "Improved Scorch") {
 				mage.ImprovedScorchAura.Activate(sim)
 				mage.ImprovedScorchAura.AddStack(sim)
@@ -54,8 +54,8 @@ func (mage *Mage) registerImprovedScorch() {
 		return
 	}
 
-	vulnerabilityRank := spellData.ImprovedScorchTriggered.HighestRank()
-	damagePerStack := vulnerabilityRank.Effects[0].Value / 100
+	vulnerabilityRank := spellData.ImprovedScorchTriggered.Highest()
+	damagePerStack := vulnerabilityRank.EffectN(1).Average(core.CharacterLevel) / 100
 
 	damageMod := mage.AddDynamicMod(core.SpellModConfig{
 		ClassMask: MageSpellsAll,
@@ -65,8 +65,8 @@ func (mage *Mage) registerImprovedScorch() {
 
 	mage.ImprovedScorchAura = mage.RegisterAura(core.Aura{
 		Label:     "Fire Vulnerability",
-		ActionID:  core.ActionID{SpellID: vulnerabilityRank.SpellID},
-		Duration:  vulnerabilityRank.Duration,
+		ActionID:  core.ActionID{SpellID: vulnerabilityRank.ID},
+		Duration:  vulnerabilityRank.Duration(),
 		MaxStacks: 5,
 		OnGain: func(_ *core.Aura, _ *core.Simulation) {
 			damageMod.Activate()

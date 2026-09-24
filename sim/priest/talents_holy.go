@@ -3,8 +3,9 @@ package priest
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -91,7 +92,7 @@ func (priest *Priest) applyDivineFury() {
 
 	priest.AddStaticMod(core.SpellModConfig{
 		ClassMask: PriestSpellSmite | PriestSpellHolyFire,
-		TimeValue: time.Millisecond * time.Duration(spellData.DivineFury.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_CASTING_TIME).ValueAt(priest.Talents.DivineFury)),
+		TimeValue: time.Millisecond * time.Duration(spellData.DivineFury.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CASTING_TIME)).ValueAt(priest.Talents.DivineFury)),
 		Kind:      core.SpellMod_CastTime_Flat,
 	})
 }
@@ -101,58 +102,58 @@ func (priest *Priest) applyHolyNova() {
 		return
 	}
 
-	HolyNovaRankMap.RegisterAll(priest.registerHolyNovaSpell)
+	HolyNovaRankMap.Each(func(_ int32, rank *spelldata.Spell) { priest.registerHolyNovaSpell(rank) })
 }
 
 var HolyNovaRankMap = spellData.HolyNova
 
 // Damage to everything in range and a heal on the priest's own party, both at the same coefficient.
-func (priest *Priest) registerHolyNovaSpell(rank shared.SpellData) {
-	heal := spellData.HolyNovaTriggered.ByRank(rank.Rank)
+func (priest *Priest) registerHolyNovaSpell(rank *spelldata.Spell) {
+	heal := spellData.HolyNovaTriggered.Rank(rank.RankNumber())
 	partyPlayers := priest.Party.Players
 
 	healSpell := priest.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: heal.SpellID},
+		ActionID:    core.ActionID{SpellID: heal.ID},
 		SpellSchool: core.SpellSchoolHoly,
 		ProcMask:    core.ProcMaskSpellHealing,
 		Flags:       core.SpellFlagHelpful | core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell,
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 0,
-		BonusCoefficient: rank.Direct.BonusCoefficient(),
+		BonusCoefficient: rank.DamageEffect().Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
 			for _, player := range partyPlayers {
-				spell.CalcAndDealHealing(sim, &player.GetCharacter().Unit, heal.Direct.Damage(sim), spell.OutcomeHealingCrit)
+				spell.CalcAndDealHealing(sim, &player.GetCharacter().Unit, heal.HealEffect().Average(core.CharacterLevel), spell.OutcomeHealingCrit)
 			}
 		},
 	})
 
 	priest.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: PriestSpellHolyNova,
-		Rank:           rank.Rank,
-		MaxRange:       rank.MaxRange,
+		Rank:           rank.RankNumber(),
+		MaxRange:       float64(rank.MaxRange),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: rank.GCD,
+				GCD: rank.GCD(),
 			},
 		},
 
 		DamageMultiplier: 1,
-		BonusCoefficient: rank.Direct.BonusCoefficient(),
+		BonusCoefficient: rank.DamageEffect().Coeff(),
 		ThreatMultiplier: 0,
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealAoeDamage(sim, rank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			spell.CalcAndDealAoeDamage(sim, rank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 			healSpell.Cast(sim, &priest.Unit)
 		},
 	})
@@ -207,21 +208,21 @@ func (priest *Priest) applySearingLight() {
 	priest.AddStaticMod(core.SpellModConfig{
 		ClassMask:  PriestSpellsAll,
 		School:     core.SpellSchoolHoly,
-		FloatValue: spellData.SearingLight.EffectAt(0).FractionAt(priest.Talents.SearingLight),
+		FloatValue: spellData.SearingLight.EffectAt(1).FractionAt(priest.Talents.SearingLight),
 		Kind:       core.SpellMod_DamageDone_Pct,
 	})
 
-	freeNova := spellData.SearingLightTriggered.HighestRank()
+	freeNova := spellData.SearingLightTriggered.Highest()
 	costMod := priest.AddDynamicMod(core.SpellModConfig{
 		ClassMask:  PriestSpellHolyNova,
-		FloatValue: freeNova.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_COST).Value / 100,
+		FloatValue: freeNova.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).Average(core.CharacterLevel) / 100,
 		Kind:       core.SpellMod_PowerCost_Pct_Add,
 	})
 
 	priest.SearingLightAura = priest.RegisterAura(core.Aura{
 		Label:    "Searing Light",
-		ActionID: core.ActionID{SpellID: freeNova.SpellID},
-		Duration: freeNova.Duration,
+		ActionID: core.ActionID{SpellID: freeNova.ID},
+		Duration: freeNova.Duration(),
 		OnGain: func(_ *core.Aura, _ *core.Simulation) {
 			costMod.Activate()
 		},
@@ -239,7 +240,7 @@ func (priest *Priest) applySearingLight() {
 		Name:               "Searing Light Trigger",
 		Callback:           core.CallbackOnPeriodicDamageDealt,
 		ClassSpellMask:     PriestSpellHolyFire,
-		ProcChance:         spellData.SearingLight.EffectAt(1).FractionAt(priest.Talents.SearingLight),
+		ProcChance:         spellData.SearingLight.EffectAt(2).FractionAt(priest.Talents.SearingLight),
 		TriggerImmediately: true,
 		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
 			priest.SearingLightAura.Activate(sim)
@@ -265,13 +266,12 @@ func (priest *Priest) applyLitanyOfLight() {
 	}
 }
 
-// Spirit of Redemption's passive half: +5% total Spirit. The on-death form is not modelled.
+// Spirit of Redemption is only the on-death form (27827), which is not modelled. Classic's +5%
+// Spirit is gone: Forever's 20711 carries one dummy effect and no stat modifier.
 func (priest *Priest) applySpiritOfRedemption() {
 	if !priest.Talents.SpiritOfRedemption {
 		return
 	}
-
-	priest.MultiplyStat(stats.Spirit, 1.05)
 }
 
 // The beta client's curves: damage 1/3/5/6/8% of Spirit, healing 5% per point.
@@ -282,9 +282,9 @@ func (priest *Priest) applySpiritualGuidance() {
 
 	points := priest.Talents.SpiritualGuidance
 	priest.AddStatDependency(stats.Spirit, stats.SpellDamage,
-		spellData.SpiritualGuidance.Effect(shared.A_MOD_SPELL_DAMAGE_OF_STAT_PERCENT, 126).FractionAt(points))
+		spellData.SpiritualGuidance.Effect(dbcenums.A_MOD_SPELL_DAMAGE_OF_STAT_PERCENT, 126).FractionAt(points))
 	priest.AddStatDependency(stats.Spirit, stats.HealingPower,
-		spellData.SpiritualGuidance.Effect(shared.A_MOD_SPELL_HEALING_OF_STAT_PERCENT, 4).FractionAt(points))
+		spellData.SpiritualGuidance.Effect(dbcenums.A_MOD_SPELL_HEALING_OF_STAT_PERCENT, 4).FractionAt(points))
 }
 
 // applySpiritualHealing implements Spiritual Healing.

@@ -38,6 +38,7 @@
 		"ui/sim/proto/legacy_classic/**",
 		"tools/data_watch/**",
 		"tools/forever_talents/**",
-		"tools/parity/**"
+		"tools/parity/**",
+		".vscode/extensions/*/out/**"
 	]
 }

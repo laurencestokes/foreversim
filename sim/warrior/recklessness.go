@@ -1,20 +1,20 @@
 package warrior
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
 func (warrior *Warrior) registerRecklessness() {
-	recklessnessRank := spellData.Recklessness.HighestRank()
+	recklessnessRank := spellData.Recklessness.Highest()
 
-	actionID := core.ActionID{SpellID: recklessnessRank.SpellID}
-	recklessnessCritValue := recklessnessRank.Effect(shared.A_MOD_CRIT_PCT, 0).Value
+	actionID := core.ActionID{SpellID: recklessnessRank.ID}
+	recklessnessCritValue := recklessnessRank.Effect(dbcenums.A_MOD_CRIT_PCT, 0).Average(core.CharacterLevel)
 	aura := warrior.RegisterAura(core.Aura{
 		Label:    "Recklessness",
 		ActionID: actionID,
-		Duration: recklessnessRank.Duration,
+		Duration: recklessnessRank.Duration(),
 	}).AttachStatsBuff(
 		stats.Stats{
 			stats.PhysicalCritPercent: recklessnessCritValue,
@@ -22,7 +22,7 @@ func (warrior *Warrior) registerRecklessness() {
 		},
 	).AttachMultiplicativePseudoStatBuff(
 		&warrior.PseudoStats.DamageTakenMultiplier,
-		recklessnessRank.Effect(shared.A_MOD_DAMAGE_PERCENT_TAKEN, 127).Multiplier(),
+		1+recklessnessRank.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_TAKEN, 127).Percent(),
 	).
 		AttachFearImmunity()
 
@@ -34,11 +34,11 @@ func (warrior *Warrior) registerRecklessness() {
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: recklessnessRank.GCD,
+				GCD: recklessnessRank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: recklessnessRank.Cooldown,
+				Duration: cooldownOf(recklessnessRank),
 			},
 		},
 

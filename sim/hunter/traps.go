@@ -3,8 +3,8 @@ package hunter
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
 // Forever doubles the shared trap cooldown to 30 sec. Seen on every trap tooltip from the demo
@@ -17,15 +17,16 @@ const trapSharedCooldown = time.Second * 30
 var explosiveTrapRange = [4][2]float64{{}, {104, 135}, {145, 193}, {208, 265}}
 
 func (hunter *Hunter) registerExplosiveTrapSpell(timer *core.Timer) {
-	rank := spellData.ExplosiveTrap.HighestRank()
-	effect := spellData.ExplosiveTrapEffect.ByRank(rank.Rank)
-	tick := effect.Periodic
+	rank := spellData.ExplosiveTrap.Highest()
+	effect := spellData.ExplosiveTrapEffect.Rank(rank.RankNumber())
+	// The dot sits on a persistent area aura, which PeriodicEffect does not answer for.
+	tick := effect.Effect(dbcenums.A_PERIODIC_DAMAGE, 0)
 
-	damageRange := explosiveTrapRange[rank.Rank]
+	damageRange := explosiveTrapRange[rank.RankNumber()]
 	numHits := hunter.Env.ActiveTargetCount()
 
 	hunter.ExplosiveTrap = hunter.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
+		ActionID:       core.ActionID{SpellID: rank.ID},
 		SpellSchool:    core.SpellSchoolFire,
 		DefenseType:    core.DefenseTypeMagic,
 		ClassSpellMask: HunterSpellExplosiveTrap,
@@ -34,7 +35,7 @@ func (hunter *Hunter) registerExplosiveTrapSpell(timer *core.Timer) {
 		MaxRange:       core.MaxMeleeRange,
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
@@ -60,7 +61,7 @@ func (hunter *Hunter) registerExplosiveTrapSpell(timer *core.Timer) {
 			TickLength:    time.Second * 2,
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, shared.SpellDataMin(tick))
+				dot.Snapshot(target, tick.Average(core.CharacterLevel))
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 				for _, aoeTarget := range sim.Encounter.ActiveTargetUnits {
@@ -85,12 +86,12 @@ func (hunter *Hunter) registerExplosiveTrapSpell(timer *core.Timer) {
 }
 
 func (hunter *Hunter) registerImmolationTrapSpell(timer *core.Timer) {
-	rank := spellData.ImmolationTrap.HighestRank()
-	effect := spellData.ImmolationTrapEffect.ByRank(rank.Rank)
-	tick := effect.Periodic.(shared.SpellDataPeriodic)
+	rank := spellData.ImmolationTrap.Highest()
+	effect := spellData.ImmolationTrapEffect.Rank(rank.RankNumber())
+	tick := effect.PeriodicEffect()
 
 	hunter.ImmolationTrap = hunter.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
+		ActionID:       core.ActionID{SpellID: rank.ID},
 		SpellSchool:    core.SpellSchoolFire,
 		DefenseType:    core.DefenseTypeMagic,
 		ClassSpellMask: HunterSpellImmolationTrap,
@@ -99,7 +100,7 @@ func (hunter *Hunter) registerImmolationTrapSpell(timer *core.Timer) {
 		MaxRange:       core.MaxMeleeRange,
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
@@ -122,11 +123,11 @@ func (hunter *Hunter) registerImmolationTrapSpell(timer *core.Timer) {
 			},
 			// 5 ticks 3 sec apart in both clients (13797, 14298-14301); the sim had Season of
 			// Discovery's 1.5 sec.
-			NumberOfTicks: tick.NumberOfTicks,
-			TickLength:    tick.TickLength,
+			NumberOfTicks: int32(effect.Duration() / tick.Period()),
+			TickLength:    tick.Period(),
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, tick.Damage(sim))
+				dot.Snapshot(target, tick.Average(core.CharacterLevel))
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
@@ -145,10 +146,10 @@ func (hunter *Hunter) registerImmolationTrapSpell(timer *core.Timer) {
 // Freezing Trap deals no damage; it is registered so the trap talents and the shared cooldown have
 // something to act on, and so an APL can press it.
 func (hunter *Hunter) registerFreezingTrapSpell(timer *core.Timer) {
-	rank := spellData.FreezingTrap.ByRank(1)
+	rank := spellData.FreezingTrap.Rank(1)
 
 	hunter.FreezingTrap = hunter.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
+		ActionID:       core.ActionID{SpellID: rank.ID},
 		SpellSchool:    core.SpellSchoolFrost,
 		DefenseType:    core.DefenseTypeMagic,
 		ClassSpellMask: HunterSpellFreezingTrap,
@@ -157,7 +158,7 @@ func (hunter *Hunter) registerFreezingTrapSpell(timer *core.Timer) {
 		MaxRange:       core.MaxMeleeRange,
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{

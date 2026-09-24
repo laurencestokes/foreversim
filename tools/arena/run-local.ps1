@@ -7,8 +7,11 @@
 #
 #   .\tools\arena\run-local.ps1                    # the plain arena, every spec
 #   .\tools\arena\run-local.ps1 -Optimise          # search the talent trees as well (hours)
-#   .\tools\arena\run-local.ps1 -Optimise -Specs balance,shadow_priest
+#   .\tools\arena\run-local.ps1 -Optimise -Specs druid/balance,priest
 #   .\tools\arena\run-local.ps1 -Optimise -Push    # and commit the leaderboard
+#
+# -Specs matches package paths (sim/druid/balance; sim/priest holds both priests), not the
+# page's spec keys.
 param(
     [switch]$Optimise,
     [switch]$Push,
@@ -24,28 +27,22 @@ Push-Location $repo
 try {
     # sim/web is a server with no arena entry and needs a generated dist stub; its presence in
     # ./sim/... is what made the first CI run fail.
-    # master's arena runner (sim/arenalib) is not ported to forever-next yet; until it is, the
-    # parity check's equal-stat run of the fifteen specs is the input, one build per spec.
-    $arena = Test-Path (Join-Path $repo 'sim/arenalib')
-    $pkgs = go list ./sim/... | Where-Object { $_ -notmatch '/sim/web' }
-    if ($Specs -and $arena) {
+    $pkgs = go list ./sim/... 2>$null | Where-Object { $_ -notmatch '/sim/web' }
+    if ($Specs) {
         $pkgs = $pkgs | Where-Object { $p = $_; $Specs | Where-Object { $p -match [regex]::Escape($_) } }
         if (-not $pkgs) { throw "no packages matched: $($Specs -join ', ')" }
     }
 
-    $env:ARENA_OUT = Join-Path $repo $(if ($arena) { 'arena-out' } else { 'arena-out-parity' })
-    if (-not $env:PARITY_ITERATIONS) { $env:PARITY_ITERATIONS = '5000' }
-    $env:ARENA_ITERATIONS = $env:PARITY_ITERATIONS
+    $env:ARENA_OUT = Join-Path $repo 'arena-out'
+    # What the merge says each build was run for: sim/arenalib's iterations.
+    $env:ARENA_ITERATIONS = '5000'
     $env:ARENA_OPTIMISE = if ($Optimise) { '1' } else { '' }
     New-Item -ItemType Directory -Force -Path $env:ARENA_OUT | Out-Null
 
     $started = Get-Date
-    # -timeout 0 is the point of running here at all.
-    if ($arena) {
-        go test --tags=with_db -timeout 0 -p $Parallel -v -run TestArena @pkgs
-    } else {
-        go test --tags=with_db -timeout 0 -count=1 -v -run '^TestParity$' ./tools/parity
-    }
+    # -timeout 0 is the point of running here at all. -count=1 because a cached pass writes
+    # nothing, and the test cache cannot know the files are the point.
+    go test --tags=with_db -timeout 0 -count=1 -p $Parallel -v -run TestArena @pkgs
     if ($LASTEXITCODE -ne 0) { throw "the arena run failed" }
     Write-Host ("arena finished in {0:g}" -f ((Get-Date) - $started))
 

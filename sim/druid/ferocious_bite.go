@@ -4,33 +4,33 @@ import (
 	"github.com/wowsims/forever/sim/core"
 )
 
-var ferociousBiteRank = spellData.FerociousBite.HighestRank()
+var ferociousBiteRank = spellData.FerociousBite.Highest()
 
 // The client states the damage a point of excess Energy adds on the rank's second effect (270 at
 // rank 5, in its own units). The per-combo-point damage and the attack power share are not in the
 // generated table, so they stay the sim's client-read values.
-var ferociousBiteDamagePerEnergy = spellData.FerociousBite.EffectAt(1).FractionAt(ferociousBiteRank.Rank)
+var ferociousBiteDamagePerEnergy = spellData.FerociousBite.EffectAt(2).FractionAt(ferociousBiteRank.RankNumber())
 
 const ferociousBiteDamagePerComboPoint = 147.0
 const ferociousBiteAPPerComboPoint = 0.03
 
 func (druid *Druid) registerFerociousBiteSpell() {
 	druid.FerociousBite = druid.RegisterSpell(Cat, core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: ferociousBiteRank.SpellID},
-		SpellSchool:    ferociousBiteRank.SpellSchool,
-		DefenseType:    ferociousBiteRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: ferociousBiteRank.ID},
+		SpellSchool:    ferociousBiteRank.SpellSchool(),
+		DefenseType:    ferociousBiteRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		ClassSpellMask: DruidSpellFerociousBite,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		Rank:           ferociousBiteRank.Rank,
+		Rank:           ferociousBiteRank.RankNumber(),
 
 		EnergyCost: core.EnergyCostOptions{
-			Cost:   ferociousBiteRank.Cost,
+			Cost:   int32(ferociousBiteRank.Cost()),
 			Refund: ferociousBiteRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: ferociousBiteRank.GCD,
+				GCD: ferociousBiteRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},
@@ -65,7 +65,7 @@ func (druid *Druid) registerFerociousBiteSpell() {
 }
 
 func ferociousBiteDamage(sim *core.Simulation, comboPoints float64, attackPower float64) float64 {
-	return ferociousBiteRank.Direct.Damage(sim) +
+	return ferociousBiteRank.DamageEffect().Average(core.CharacterLevel) +
 		ferociousBiteDamagePerComboPoint*comboPoints +
 		ferociousBiteAPPerComboPoint*comboPoints*attackPower
 }

@@ -5,25 +5,25 @@ import (
 )
 
 func (hunter *Hunter) registerWingClipSpell() {
-	rank := spellData.WingClip.HighestRank()
-	// Effect 0 is the snare; the damage is effect 1.
-	baseDamage := spellData.WingClip.EffectAt(1).ValueAt(rank.Rank)
+	rank := spellData.WingClip.Highest()
+	// Effect 1 is the snare; the damage is effect 2.
+	baseDamage := rank.EffectN(2).Average(core.CharacterLevel)
 
 	hunter.WingClip = hunter.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ClassSpellMask: HunterSpellWingClip,
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL | core.SpellFlagBinary,
-		MaxRange:       rank.MaxRange,
+		MaxRange:       float64(rank.MaxRange),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: rank.GCD,
+				GCD: rank.GCD(),
 			},
 			IgnoreHaste: true,
 		},

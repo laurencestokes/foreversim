@@ -1,31 +1,32 @@
 package rogue
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 )
 
-var garroteRank = spellData.Garrote.HighestRank()
+var garroteRank = spellData.Garrote.Highest()
 
 func (rogue *Rogue) registerGarrote() {
-	tick := garroteRank.Periodic.(shared.SpellDataPeriodic)
+	tick := garroteRank.PeriodicEffect()
+	tickLength := tick.Period()
+	tickDamage := tick.Average(core.CharacterLevel)
 
 	rogue.Garrote = rogue.GetOrRegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: garroteRank.SpellID},
-		SpellSchool:    garroteRank.SpellSchool,
-		DefenseType:    garroteRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: garroteRank.ID},
+		SpellSchool:    garroteRank.SpellSchool(),
+		DefenseType:    garroteRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | SpellFlagBuilder | core.SpellFlagAPL,
 		ClassSpellMask: RogueSpellGarrote,
 		MaxRange:       core.MaxMeleeRange,
 
 		EnergyCost: core.EnergyCostOptions{
-			Cost:   garroteRank.Cost,
+			Cost:   int32(garroteRank.Cost()),
 			Refund: garroteRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: garroteRank.GCD,
+				GCD: garroteRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},
@@ -46,13 +47,13 @@ func (rogue *Rogue) registerGarrote() {
 				Label: "Garrote",
 				Tag:   RogueBleedTag,
 			},
-			NumberOfTicks: tick.NumberOfTicks,
-			TickLength:    tick.TickLength,
+			NumberOfTicks: int32(garroteRank.Duration() / tickLength),
+			TickLength:    tickLength,
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.SnapshotPhysical(target, tick.Tick+dot.Spell.MeleeAttackPower(target)*0.03)
+				dot.SnapshotPhysical(target, tickDamage+dot.Spell.MeleeAttackPower(target)*0.03)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, shared.PeriodicTickOutcome(garroteRank, dot))
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, garroteRank.TickOutcome(dot))
 			},
 		},
 

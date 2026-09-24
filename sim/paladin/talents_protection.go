@@ -5,6 +5,7 @@ import (
 
 	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
@@ -146,7 +147,7 @@ func (paladin *Paladin) applyImprovedRighteousFury() {
 	// The client states this as a negative percentage per rank: -2 / -4 / -6, so MultiplierAt
 	// gives 0.98 / 0.96 / 0.94 and the minus is never written here.
 	multiplier := spellData.ImprovedRighteousFury.
-		Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_EFFECT2).
+		Effect(shared.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_EFFECT2)).
 		MultiplierAt(paladin.Talents.ImprovedRighteousFury)
 
 	paladin.OnSpellRegistered(func(spell *core.Spell) {
@@ -278,7 +279,7 @@ func (paladin *Paladin) applyIronCreed() {
 	paladin.AddStaticMod(core.SpellModConfig{
 		ClassMask:  SpellMaskHolyStrike,
 		Kind:       core.SpellMod_ThreatMultiplier_Pct,
-		FloatValue: spellData.IronCreed.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_THREAT).FractionAt(paladin.Talents.IronCreed),
+		FloatValue: spellData.IronCreed.Effect(shared.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_THREAT)).FractionAt(paladin.Talents.IronCreed),
 	})
 
 	row := spellData.IronCreedTriggered.HighestRank()

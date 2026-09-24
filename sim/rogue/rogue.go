@@ -146,7 +146,7 @@ func (rogue *Rogue) Initialize() {
 
 	rogue.ruthlessnessMetrics = rogue.NewComboPointMetrics(core.ActionID{SpellID: 14161})
 	// Forever states a flat SpellAuraOptions.ProcChance of 100 on the talent spell and puts the
-	// real per-rank chance on the effect, so ProcChanceAt would read 100% at every rank.
+	// real per-rank chance on the effect, so the row's ProcChance would read 100% at every rank.
 	rogue.ruthlessnessChance = spellData.Ruthlessness.FractionAt(rogue.Talents.Ruthlessness)
 	rogue.relentlessStrikesMetrics = rogue.NewEnergyMetrics(core.ActionID{SpellID: 14179})
 }
@@ -325,6 +325,8 @@ const (
 	RogueSpellLethality      = RogueSpellSinisterStrike | RogueSpellGouge | RogueSpellBackstab | RogueSpellGhostlyStrike | RogueSpellMutilate | RogueSpellMutilateHit | RogueSpellHemorrhage
 	RogueSpellDirectFinisher = RogueSpellEviscerate
 	RogueSpellFinisher       = RogueSpellDirectFinisher | RogueSpellSliceAndDice | RogueSpellRupture | RogueSpellExposeArmor | RogueSpellVenom
-	// Quietus reads as an execute bonus on the rogue's strikes, not on the finishers.
-	RogueSpellStrikes = RogueSpellSinisterStrike | RogueSpellBackstab | RogueSpellHemorrhage | RogueSpellGhostlyStrike | RogueSpellAmbush | RogueSpellMutilate | RogueSpellMutilateHit
+	// Quietus names only these three in its tooltip (1310728); its effects are dummies with no mask.
+	RogueSpellQuietus = RogueSpellSinisterStrike | RogueSpellGhostlyStrike | RogueSpellHemorrhage
+	// Cold Blood's class mask (14177): Mutilate's two hits, not the parent cast.
+	RogueSpellColdBlooded = RogueSpellSinisterStrike | RogueSpellBackstab | RogueSpellAmbush | RogueSpellEviscerate | RogueSpellMutilateHit
 )

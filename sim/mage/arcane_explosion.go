@@ -5,31 +5,31 @@ import (
 )
 
 func (mage *Mage) registerArcaneExplosionSpell() {
-	arcaneExplosionRank := spellData.ArcaneExplosion.HighestRank()
+	arcaneExplosionRank := spellData.ArcaneExplosion.Highest()
 
 	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: arcaneExplosionRank.SpellID},
-		SpellSchool:    arcaneExplosionRank.SpellSchool,
-		DefenseType:    arcaneExplosionRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: arcaneExplosionRank.ID},
+		SpellSchool:    arcaneExplosionRank.SpellSchool(),
+		DefenseType:    arcaneExplosionRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: MageSpellArcaneExplosion,
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: arcaneExplosionRank.Cost,
+			FlatCost: int32(arcaneExplosionRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: arcaneExplosionRank.GCD,
+				GCD: arcaneExplosionRank.GCD(),
 			},
 		},
 
 		DamageMultiplier: 1,
-		BonusCoefficient: arcaneExplosionRank.Direct.BonusCoefficient(),
+		BonusCoefficient: arcaneExplosionRank.DamageEffect().Coeff(),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealAoeDamage(sim, arcaneExplosionRank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			spell.CalcAndDealAoeDamage(sim, arcaneExplosionRank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 		},
 	})
 }

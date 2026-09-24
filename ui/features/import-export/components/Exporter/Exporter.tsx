@@ -24,7 +24,7 @@ export const Exporter = ({
 	onOpenChange,
 	title,
 	allowDownload = false,
-	downloadFileName = 'wowsims.json',
+	downloadFileName = 'forever-sim.json',
 	downloadMimeType,
 	selectCategories = false,
 	getData,

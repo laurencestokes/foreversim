@@ -4,7 +4,7 @@ import (
 	"github.com/wowsims/forever/sim/core"
 )
 
-var exposeArmorRank = spellData.ExposeArmor.HighestRank()
+var exposeArmorRank = spellData.ExposeArmor.Highest()
 
 // Forever repurposes Improved Expose Armor: the client states an energy cost reduction
 // (SPELLMOD_COST -5/-10) and a dummy of 1/2, which our Forever sim reads as combo points handed
@@ -15,12 +15,12 @@ func (rogue *Rogue) registerExposeArmorSpell() {
 	})
 
 	cpMetrics := rogue.NewComboPointMetrics(core.ActionID{SpellID: 14169})
-	pointsBack := spellData.ImprovedExposeArmor.EffectAt(1).ValueAt(rogue.Talents.ImprovedExposeArmor)
+	pointsBack := spellData.ImprovedExposeArmor.EffectAt(2).ValueAt(rogue.Talents.ImprovedExposeArmor)
 
 	rogue.ExposeArmor = rogue.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: exposeArmorRank.SpellID},
-		SpellSchool:    exposeArmorRank.SpellSchool,
-		DefenseType:    exposeArmorRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: exposeArmorRank.ID},
+		SpellSchool:    exposeArmorRank.SpellSchool(),
+		DefenseType:    exposeArmorRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | SpellFlagFinisher | core.SpellFlagAPL,
 		MetricSplits:   6,
@@ -28,13 +28,13 @@ func (rogue *Rogue) registerExposeArmorSpell() {
 		MaxRange:       core.MaxMeleeRange,
 
 		EnergyCost: core.EnergyCostOptions{
-			Cost:          exposeArmorRank.Cost,
+			Cost:          int32(exposeArmorRank.Cost()),
 			Refund:        exposeArmorRank.MissRefund(),
 			RefundMetrics: rogue.EnergyRefundMetrics,
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: exposeArmorRank.GCD,
+				GCD: exposeArmorRank.GCD(),
 			},
 			IgnoreHaste: true,
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {

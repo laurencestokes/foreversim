@@ -1,22 +1,26 @@
 package mage
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
 // Forever's Blizzard is an area trigger that casts a damage spell (1279949 at rank 6) every second.
 func (mage *Mage) registerBlizzardSpell() {
-	blizzardRank := spellData.Blizzard.HighestRank()
-	blizzardTick := blizzardRank.Periodic.(shared.SpellDataPeriodic)
-	blizzardActionId := core.ActionID{SpellID: blizzardRank.SpellID}
+	blizzardRank := spellData.Blizzard.Highest()
+	// The damage is the spell BlizzardTriggered casts each tick, at the same rank; the tick length is
+	// Blizzard's own periodic dummy.
+	blizzardTickSpell := spellData.BlizzardTriggered.Rank(blizzardRank.RankNumber())
+	blizzardTick := blizzardTickSpell.DamageEffect()
+	tickLength := blizzardRank.Effect(dbcenums.A_PERIODIC_DUMMY, 0).Period()
+	blizzardActionId := core.ActionID{SpellID: blizzardRank.ID}
 
 	// Improved Blizzard's chill, a separate spell so Fingers of Frost can roll on it.
 	var improvedBlizzard *core.Spell
 	if mage.Talents.ImprovedBlizzard > 0 {
-		improvedBlizzardRank := spellData.ImprovedBlizzardTriggered.HighestRank()
+		improvedBlizzardRank := spellData.ImprovedBlizzardTriggered.Highest()
 		improvedBlizzard = mage.RegisterSpell(core.SpellConfig{
-			ActionID:       core.ActionID{SpellID: improvedBlizzardRank.SpellID},
+			ActionID:       core.ActionID{SpellID: improvedBlizzardRank.ID},
 			SpellSchool:    core.SpellSchoolFrost,
 			DefenseType:    core.DefenseTypeMagic,
 			ProcMask:       core.ProcMaskSpellDamageProc,
@@ -28,20 +32,20 @@ func (mage *Mage) registerBlizzardSpell() {
 		})
 	}
 
-	blizzardTickSpell := mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: blizzardTick.SpellID},
-		SpellSchool:    blizzardRank.SpellSchool,
-		DefenseType:    blizzardRank.DefenseType,
+	blizzardTickCast := mage.RegisterSpell(core.SpellConfig{
+		ActionID:       core.ActionID{SpellID: blizzardTickSpell.ID},
+		SpellSchool:    blizzardRank.SpellSchool(),
+		DefenseType:    blizzardRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagNoOnCastComplete,
 		ClassSpellMask: MageSpellBlizzard,
 
 		DamageMultiplier: 1,
-		BonusCoefficient: blizzardTick.Coef,
+		BonusCoefficient: blizzardTick.Coeff(),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			results := spell.CalcAndDealAoeDamage(sim, blizzardTick.Tick, spell.OutcomeMagicHit)
+			results := spell.CalcAndDealAoeDamage(sim, blizzardTick.Average(core.CharacterLevel), spell.OutcomeMagicHit)
 			if improvedBlizzard == nil {
 				return
 			}
@@ -55,17 +59,17 @@ func (mage *Mage) registerBlizzardSpell() {
 
 	mage.RegisterSpell(core.SpellConfig{
 		ActionID:       blizzardActionId,
-		SpellSchool:    blizzardRank.SpellSchool,
-		DefenseType:    blizzardRank.DefenseType,
+		SpellSchool:    blizzardRank.SpellSchool(),
+		DefenseType:    blizzardRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagChanneled | core.SpellFlagAPL,
 		ClassSpellMask: MageSpellBlizzard,
 		ManaCost: core.ManaCostOptions{
-			FlatCost: blizzardRank.Cost,
+			FlatCost: int32(blizzardRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: blizzardRank.GCD,
+				GCD: blizzardRank.GCD(),
 			},
 		},
 		Dot: core.DotConfig{
@@ -74,10 +78,10 @@ func (mage *Mage) registerBlizzardSpell() {
 				Label:    "Blizzard",
 				ActionID: blizzardActionId,
 			},
-			NumberOfTicks: blizzardTick.NumberOfTicks,
-			TickLength:    blizzardTick.TickLength,
+			NumberOfTicks: int32(blizzardRank.Duration() / tickLength),
+			TickLength:    tickLength,
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				blizzardTickSpell.Cast(sim, target)
+				blizzardTickCast.Cast(sim, target)
 			},
 		},
 

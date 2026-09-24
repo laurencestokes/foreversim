@@ -22,6 +22,7 @@ export default defineSpec<Spec.SpecRetributionPaladin>({
 	// All stats for which EP should be calculated.
 	epStats: [
 		Stat.StatStrength,
+		Stat.StatIntellect,
 		Stat.StatSpellDamage,
 		Stat.StatAgility,
 		Stat.StatAttackPower,

@@ -34,6 +34,8 @@ message UIZone {
 	int32 id = 1;
 	string name = 2;
 	Expansion expansion = 3;
+	// Every kind of area the zone counts as.
+	repeated AreaType area_types = 4;
 }
 message UINPC {
 	int32 id = 1;

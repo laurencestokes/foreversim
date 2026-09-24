@@ -13,13 +13,13 @@ import (
 // Raptor Strike replaces the next main-hand swing rather than costing a global, so the cast the
 // rotation presses only queues it; the hit lands on the swing.
 func (hunter *Hunter) registerRaptorStrikeSpell() {
-	rank := spellData.RaptorStrike.HighestRank()
-	baseDamage := rank.Direct.Damage
+	rank := spellData.RaptorStrike.Highest()
+	baseDamage := rank.DamageEffect().Average(core.CharacterLevel)
 
 	hunter.RaptorStrikeHit = hunter.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID}.WithTag(1),
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID}.WithTag(1),
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ClassSpellMask: HunterSpellRaptorStrike,
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagNoOnCastComplete,
@@ -30,22 +30,22 @@ func (hunter *Hunter) registerRaptorStrikeSpell() {
 		BonusCoefficient: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			damage := baseDamage(sim) + hunter.MHWeaponDamage(sim, spell.MeleeAttackPower(target))
+			damage := baseDamage + hunter.MHWeaponDamage(sim, spell.MeleeAttackPower(target))
 			spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
 		},
 	})
 
 	hunter.RaptorStrike = hunter.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ClassSpellMask: HunterSpellRaptorStrike,
 		ProcMask:       core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeMHAuto,
 		Flags:          core.SpellFlagMeleeMetrics,
 		MaxRange:       core.MaxMeleeRange,
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
@@ -53,7 +53,7 @@ func (hunter *Hunter) registerRaptorStrikeSpell() {
 			},
 			CD: core.Cooldown{
 				Timer:    hunter.NewTimer(),
-				Duration: rank.Cooldown,
+				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
 			},
 		},
 

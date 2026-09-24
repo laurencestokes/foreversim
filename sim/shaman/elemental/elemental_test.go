@@ -3,6 +3,7 @@ package elemental
 import (
 	"testing"
 
+	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
@@ -58,4 +59,20 @@ var DefaultWeaponTypes = []proto.WeaponType{
 
 var DefaultRangedWeaponTypes = []proto.RangedWeaponType{
 	proto.RangedWeaponType_RangedWeaponTypeTotem,
+}
+
+// The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
+func TestArena(t *testing.T) {
+	arenalib.Run(t, arenalib.Spec{
+		Dir:   "elemental_shaman",
+		UI:    "shaman/elemental",
+		Class: proto.Class_ClassShaman,
+		Race:  proto.Race_RaceOrc,
+		SpecOptions: &proto.Player_ElementalShaman{ElementalShaman: &proto.ElementalShaman{
+			Options: &proto.ElementalShaman_Options{ClassOptions: &proto.ShamanOptions{}},
+		}},
+		Role: arenalib.Caster,
+		// Flame Shock is 20 yd in the client (SpellRange 3).
+		DistanceFromTarget: 20,
+	})
 }

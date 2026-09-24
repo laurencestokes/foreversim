@@ -37,6 +37,14 @@ message ScalingItemProperties {
     double weapon_damage_max = 3;
     map<int32, double> stats = 4; // for compactness
 	int32 ilvl = 6;
+
+	// Stats that only apply while the encounter is in that kind of area.
+	repeated AreaStats area_stats = 7;
+}
+
+message AreaStats {
+	AreaType area_type = 1;
+	map<int32, double> stats = 2; // keys are the numeric values of Stat
 }
 
 enum Spec {
@@ -634,6 +642,21 @@ enum MobType {
 	MobTypeUndead = 8;
 }
 
+// The client's terrain area groups (SpellCastingRequirements.RequiredAreasID).
+enum AreaType {
+	AreaTypeUnknown = 0;
+	AreaTypeForestGrassland = 1;
+	AreaTypeMountainous = 2;
+	AreaTypeSnowy = 3;
+	AreaTypeDesert = 4;
+	AreaTypeSwamp = 5;
+	AreaTypeWasteland = 6;
+	AreaTypeHaunted = 7;
+	AreaTypeCavernous = 8;
+	AreaTypeVolcanic = 9;
+	AreaTypeStrongholdsCities = 10;
+}
+
 enum InputType {
 	Bool = 0;
 	Number = 1;
@@ -723,6 +746,11 @@ message Encounter {
 	// If type != Simple or Custom, then this may be empty.
 	repeated Target targets = 6;
 
+	// Every kind of area the fight is in; a zone can count as several. Empty is none.
+	repeated AreaType area_types = 11;
+
+	// The zone the area set came from, for the UI only; 0 once edited by hand.
+	int32 zone_id = 12;
 }
 
 message PresetTarget {

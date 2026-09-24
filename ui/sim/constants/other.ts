@@ -31,17 +31,9 @@ export const REPO_RELEASES_URL = `${REPO_URL}/releases`;
 export const REPO_NEW_ISSUE_URL = `${REPO_URL}/issues/new`;
 export const REPO_CHOOSE_NEW_ISSUE_URL = `${REPO_NEW_ISSUE_URL}/choose`;
 
-// Only this repository: the Discord and Patreon links were wowsims', and this site is not theirs.
-export interface Social {
-	key: string;
-	href: string;
-	className: string;
-	icon: 'github';
-	tooltip: string;
-	label?: string;
-}
+export const SOCIALS = [{ key: 'github', href: REPO_URL, className: 'ui-social-link', icon: 'github', tooltip: 'info.github' }] as const;
 
-export const SOCIALS: readonly Social[] = [{ key: 'github', href: REPO_URL, className: 'ui-social-link', icon: 'github', tooltip: 'info.github' }];
+export type Social = (typeof SOCIALS)[number];
 
 // Root-relative path of the individual sim page for the given spec. Resolve it
 // against the page origin at the point of use (see SimTitleDropdown) — this

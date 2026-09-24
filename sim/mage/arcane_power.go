@@ -1,8 +1,8 @@
 package mage
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
 func (mage *Mage) registerArcanePowerSpell() {
@@ -10,20 +10,20 @@ func (mage *Mage) registerArcanePowerSpell() {
 		return
 	}
 
-	arcanePowerRank := spellData.ArcanePower.HighestRank()
-	actionID := core.ActionID{SpellID: arcanePowerRank.SpellID}
+	arcanePowerRank := spellData.ArcanePower.Highest()
+	actionID := core.ActionID{SpellID: arcanePowerRank.ID}
 
 	mage.ArcanePowerAura = mage.RegisterAura(core.Aura{
 		Label:    "Arcane Power",
 		ActionID: actionID,
-		Duration: arcanePowerRank.Duration,
+		Duration: arcanePowerRank.Duration(),
 	}).AttachSpellMod(core.SpellModConfig{
 		ClassMask:  MageSpellsAll,
-		FloatValue: arcanePowerRank.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DAMAGE).Value / 100,
+		FloatValue: arcanePowerRank.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).Average(core.CharacterLevel) / 100,
 		Kind:       core.SpellMod_DamageDone_Flat,
 	}).AttachSpellMod(core.SpellModConfig{
 		ClassMask:  MageSpellsAll,
-		FloatValue: arcanePowerRank.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_COST).Value / 100,
+		FloatValue: arcanePowerRank.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).Average(core.CharacterLevel) / 100,
 		Kind:       core.SpellMod_PowerCost_Pct_Add,
 	})
 
@@ -34,7 +34,7 @@ func (mage *Mage) registerArcanePowerSpell() {
 		Cast: core.CastConfig{
 			CD: core.Cooldown{
 				Timer:    mage.NewTimer(),
-				Duration: arcanePowerRank.Cooldown,
+				Duration: max(arcanePowerRank.Cooldown(), arcanePowerRank.CategoryCooldown()),
 			},
 		},
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {

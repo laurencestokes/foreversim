@@ -5,32 +5,32 @@ import (
 )
 
 func (warlock *Warlock) registerShadowBolt() {
-	rank := spellData.ShadowBolt.HighestRank()
+	rank := spellData.ShadowBolt.Highest()
 
 	warlock.ShadowBolt = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellShadowBolt,
-		MissileSpeed:   rank.MissileSpeed,
+		MissileSpeed:   float64(rank.Speed),
 
-		ManaCost: core.ManaCostOptions{FlatCost: rank.Cost},
+		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD:      rank.GCD,
-				CastTime: rank.CastTime,
+				GCD:      rank.GCD(),
+				CastTime: rank.CastTime(),
 			},
 		},
 
 		DamageMultiplierAdditive: 1,
 		DamageMultiplier:         1,
 		ThreatMultiplier:         1,
-		BonusCoefficient:         rank.Direct.BonusCoefficient(),
+		BonusCoefficient:         rank.DamageEffect().Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, rank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			result := spell.CalcDamage(sim, target, rank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
 				spell.DealDamage(sim, result)
 			})

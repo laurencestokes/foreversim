@@ -14,32 +14,29 @@ import (
 const PenanceTicks = 3
 
 func (priest *Priest) registerPenanceSpell() {
-	rank := spellData.Penance.HighestRank()
-	bolt := spellData.PenanceTriggered.BySpellID(1316993)
-	// Each bolt is its own direct Holy hit (1316993, School Damage), so every one can crit.
-	boltCrits := bolt
-	boltCrits.PeriodicCanCrit = true
+	rank := spellData.Penance.Highest()
+	bolt := spellData.PenanceTriggered.ByID(1316993)
 
 	priest.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
+		ActionID:       core.ActionID{SpellID: rank.ID},
 		SpellSchool:    core.SpellSchoolHoly,
 		DefenseType:    core.DefenseTypeMagic,
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL | core.SpellFlagChanneled,
 		ClassSpellMask: PriestSpellPenance,
-		Rank:           rank.Rank,
-		MaxRange:       rank.MaxRange,
+		Rank:           rank.RankNumber(),
+		MaxRange:       float64(rank.MaxRange),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: rank.GCD,
+				GCD: rank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    priest.NewTimer(),
-				Duration: rank.Cooldown,
+				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
 			},
 		},
 
@@ -53,13 +50,14 @@ func (priest *Priest) registerPenanceSpell() {
 			NumberOfTicks:       PenanceTicks,
 			TickLength:          time.Second * 2 / PenanceTicks,
 			AffectedByCastSpeed: false,
-			BonusCoefficient:    bolt.Direct.BonusCoefficient(),
+			BonusCoefficient:    bolt.DamageEffect().Coeff(),
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, bolt.Direct.Damage(sim))
+				dot.Snapshot(target, bolt.DamageEffect().Average(core.CharacterLevel))
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, priestTickOutcome(boltCrits, dot))
+				// Each bolt is its own direct Holy hit (1316993, School Damage), so every one can crit.
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, priestTickOutcome(true, dot))
 			},
 		},
 
@@ -75,7 +73,7 @@ func (priest *Priest) registerPenanceSpell() {
 			if useSnapshot {
 				return spell.Dot(target).CalcSnapshotDamage(sim, target, spell.OutcomeExpectedMagicHit)
 			}
-			return spell.CalcPeriodicDamage(sim, target, bolt.Direct.Damage(sim), spell.OutcomeExpectedMagicHit)
+			return spell.CalcPeriodicDamage(sim, target, bolt.DamageEffect().Average(core.CharacterLevel), spell.OutcomeExpectedMagicHit)
 		},
 	})
 }

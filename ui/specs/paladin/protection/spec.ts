@@ -24,6 +24,7 @@ export default defineSpec<Spec.SpecProtectionPaladin>({
 	epStats: [
 		Stat.StatStamina,
 		Stat.StatStrength,
+		Stat.StatIntellect,
 		Stat.StatSpellDamage,
 		Stat.StatAgility,
 		Stat.StatAttackPower,

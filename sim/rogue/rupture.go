@@ -1,27 +1,29 @@
 package rogue
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 )
 
 // Was the TBC rank-6 id 26867, which the level squish removed. Derived from the table so
 // it follows the data instead of naming a rank that may not exist.
-var RuptureSpellID = spellData.Rupture.HighestRank().SpellID
+var RuptureSpellID = spellData.Rupture.Highest().ID
 
-var ruptureRank = spellData.Rupture.BySpellID(RuptureSpellID)
+var ruptureRank = spellData.Rupture.ByID(RuptureSpellID)
 
 func (rogue *Rogue) registerRupture() {
-	tick := ruptureRank.Periodic.(shared.SpellDataPeriodic)
+	tick := ruptureRank.PeriodicEffect()
+	tickLength := tick.Period()
+	tickDamage := tick.Average(core.CharacterLevel)
+	baseTickCount := int32(ruptureRank.Duration() / tickLength)
 
 	// The beta client cut the per combo point step with the tick (rank 6: 60 + 8 -> 35 + 4.73).
 	// The table carries the 35; the step sits on a dummy effect the generator reads as 0.
 	const damagePerComboPoint = 4.73
 
 	rogue.Rupture = rogue.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: ruptureRank.SpellID},
-		SpellSchool:    ruptureRank.SpellSchool,
-		DefenseType:    ruptureRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: ruptureRank.ID},
+		SpellSchool:    ruptureRank.SpellSchool(),
+		DefenseType:    ruptureRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | SpellFlagFinisher | core.SpellFlagAPL,
 		MetricSplits:   6,
@@ -29,13 +31,13 @@ func (rogue *Rogue) registerRupture() {
 		MaxRange:       core.MaxMeleeRange,
 
 		EnergyCost: core.EnergyCostOptions{
-			Cost:          ruptureRank.Cost,
+			Cost:          int32(ruptureRank.Cost()),
 			Refund:        ruptureRank.MissRefund(),
 			RefundMetrics: rogue.EnergyRefundMetrics,
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: ruptureRank.GCD,
+				GCD: ruptureRank.GCD(),
 			},
 			IgnoreHaste: true,
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
@@ -56,17 +58,17 @@ func (rogue *Rogue) registerRupture() {
 				Tag:   RogueBleedTag,
 			},
 			NumberOfTicks: 0, // Set dynamically
-			TickLength:    tick.TickLength,
+			TickLength:    tickLength,
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				damage := rogue.ruptureDamage(target, rogue.ComboPoints(), tick.Tick, damagePerComboPoint)
+				damage := rogue.ruptureDamage(target, rogue.ComboPoints(), tickDamage, damagePerComboPoint)
 				if rogue.isHemorrhaging(target) {
 					damage *= HemorrhageRuptureMultiplier
 				}
 				dot.SnapshotPhysical(target, damage)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, shared.PeriodicTickOutcome(ruptureRank, dot))
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, ruptureRank.TickOutcome(dot))
 			},
 		},
 
@@ -75,7 +77,7 @@ func (rogue *Rogue) registerRupture() {
 			result := spell.CalcOutcome(sim, target, spell.OutcomeMeleeSpecialHit)
 			if result.Landed() {
 				dot := spell.Dot(target)
-				dot.BaseTickCount = tick.NumberOfTicks + rogue.ComboPoints()
+				dot.BaseTickCount = baseTickCount + rogue.ComboPoints()
 				dot.Apply(sim)
 				rogue.ApplyFinisher(sim, spell)
 			} else {

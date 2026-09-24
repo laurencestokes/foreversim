@@ -1,15 +1,53 @@
 package forever
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/common/shared"
-	"github.com/wowsims/forever/sim/core"
 )
 
 func RegisterAllProcs() {
 
 	// Procs
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Increases Strength by 200 for 10s.
+	// https://www.wowhead.com/forever/spell=17152
+	// unsupported: states no rate
+	// trigger 17152 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 17152, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 647, ItemName: "Destiny"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Wounds the target causing them to bleed for 120 damage over 30s.
+	// https://www.wowhead.com/forever/spell=17504
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 809, ItemName: "Bloodrazor"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts a target for 108 Nature damage.
+	// https://www.wowhead.com/forever/spell=18104
+	// unsupported: states no rate
+	// trigger 18104 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18104, BuffSpellID: 18104, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 811, ItemName: "Axe of the Deep Woods"},
+	// })
 
 	// TODO: Manual implementation required
 	//       This can be ignored if the effect has already been implemented.
@@ -30,15 +68,138 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
-	// When struck in combat has a 2% chance of dealing 115 Fire damage to all targets around you.
-	// https://www.wowhead.com/forever/spell=18818
+	// When struck in combat has a 1% chance of inflicting 50 Frost damage to the attacker and freezing them
+	// for 5s.
+	// https://www.wowhead.com/forever/spell=18798
+	// unsupported: no row in the store; the damage spell has no row in the store
+	// trigger 18799 is not in the store
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18799, BuffSpellID: 18798},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 942, ItemName: "Freezing Band"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// When struck in melee combat, has a 3% chance of stealing 270 life from target enemy.
+	// https://www.wowhead.com/forever/spell=18817
+	// unsupported: the damage spell's row states no damage
+	// trigger 18815 (3%, core.CallbackOnSpellHitTaken, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial) -> buff 18817
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18815, BuffSpellID: 18817},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 1168, ItemName: "Skullflame Shield -  - "},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Wounds the target's head, dealing 250 Physical damage, and increasing the casting time of all spells by
+	// 60% for 30s.
+	// https://www.wowhead.com/forever/spell=17148
+	// unsupported: states no rate
+	// trigger 17148 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 17148, BuffSpellID: 17148, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 1263, ItemName: "Brain Hacker"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Reduces the range enemies detect you by 10 yards for 15s.
+	// https://www.wowhead.com/forever/spell=1300364
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
 	//	Callback:           core.CallbackEmpty,
 	//	ProcMask:           core.ProcMaskUnknown,
 	//	Outcome:            core.OutcomeEmpty,
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
-	//	{ItemID: 1168, ItemName: "Skullflame Shield -  - "},
+	//	{ItemID: 1490, ItemName: "Guardian Talisman"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts a target for 140 Fire damage.
+	// https://www.wowhead.com/forever/spell=1300753
+	// unsupported: states no rate
+	// trigger 1300753 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1300753, BuffSpellID: 1300753, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 1728, ItemName: "Teebu's Blazing Longsword"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Fires a Flaming Cannonball at your target for 49 Fire damage.
+	// https://www.wowhead.com/forever/spell=29639
+	// unsupported: states no rate
+	// trigger 29639 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 29639, BuffSpellID: 29639, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 2099, ItemName: "Dwarven Hand Cannon"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Sends a shadowy bolt at the enemy causing 125 Shadow damage.
+	// https://www.wowhead.com/forever/spell=18138
+	// unsupported: states no rate
+	// trigger 18138 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18138, BuffSpellID: 18138, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 2163, ItemName: "Shadowblade"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Next spell cast within 4s will cast instantly.
+	// https://www.wowhead.com/forever/spell=18803
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 2243, ItemName: "Hand of Edward the Odd"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Increases run speed by 40% for 10s.
+	// https://www.wowhead.com/forever/spell=14530
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 2820, ItemName: "Nifty Stopwatch"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Hurls a fiery ball that causes 200 Fire damage and an additional 36 damage over 8s.
+	// https://www.wowhead.com/forever/spell=16415
+	// unsupported: states no rate
+	// trigger 16415 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 16415, BuffSpellID: 16415, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 2915, ItemName: "Taran Icebreaker"},
 	// })
 
 	// TODO: Manual implementation required
@@ -60,6 +221,49 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Finds the nearest treasure chest, if one is nearby. Only outdoors.
+	// https://www.wowhead.com/forever/spell=1317740
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 4130, ItemName: "Smotts' Compass"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// A burst of energy fills the caster, increasing his damage by 10 and armor by 150 for 15s.
+	// https://www.wowhead.com/forever/spell=8191
+	// unsupported: states no rate
+	// trigger 8191 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 8191, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 6622, ItemName: "Sword of Zeal"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Heals wielder of 78 damage over 12s.
+	// https://www.wowhead.com/forever/spell=8348
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 6660, ItemName: "Julie's Dagger"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Blasts enemies in front of you with the power of wind, fire, all that kind of thing!
 	// https://www.wowhead.com/forever/spell=14537
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -75,6 +279,62 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Diseases a target for 100 Nature damage and an additional 360 damage over 1min.
+	// https://www.wowhead.com/forever/spell=9796
+	// unsupported: states no rate
+	// trigger 9796 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 9796, BuffSpellID: 9796, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 7959, ItemName: "Blight"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Protects the caster with a holy shield.
+	// https://www.wowhead.com/forever/spell=9800
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 7960, ItemName: "Truesilver Champion"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Wounds the target for 75 damage.
+	// https://www.wowhead.com/forever/spell=16405
+	// unsupported: states no rate
+	// trigger 16405 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 16405, BuffSpellID: 16405, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 8190, ItemName: "Hanzo Sword"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Hurls a fiery ball that causes 331 Fire damage and an additional 132 damage over 8s.
+	// https://www.wowhead.com/forever/spell=10578
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 8348, ItemName: "Helm of Fire"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Absorbs 600 magical damage. Lasts 2min.
 	// https://www.wowhead.com/forever/spell=10618
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -84,6 +344,172 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 8367, ItemName: "Dragonscale Breastplate"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Deal 112 Fire damage. Deals 3 times as much damage to Earth Elementals, Fire Elementals, and Mountain
+	// Giants.
+	// https://www.wowhead.com/forever/spell=1317432
+	// unsupported: states no rate
+	// trigger 1317432 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1317432, BuffSpellID: 1317432, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 8708, ItemName: "Hammer of Expertise"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Lash the enemy with the rage of Sul'thraze, reducing their attack power by 180 for 15s and dealing 159
+	// Shadow damage. After 5s, the target suffers an additional 159 Shadow damage. This additional Shadow damage
+	// deals 2 times as much damage to Trolls.
+	// https://www.wowhead.com/forever/spell=1294430
+	// unsupported: states no rate
+	// trigger 1294430 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 1294430, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 9372, ItemName: "Sul'thraze the Lasher"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Shields the wielder from physical damage, absorbing 84 damage. Lasts 20s.
+	// https://www.wowhead.com/forever/spell=11657
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 9380, ItemName: "Jang'thraze the Protector"},
+	//	{ItemID: 11086, ItemName: "Jang'thraze the Protector"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Deal 294 Physical damage and stun for 1s. Trolls take 2 times damage and stun duration.
+	// https://www.wowhead.com/forever/spell=1294339
+	// unsupported: states no rate
+	// trigger 1294339 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1294339, BuffSpellID: 1294339, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 9477, ItemName: "The Chief's Enforcer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Wounds the target for 70 Physical damage.
+	// https://www.wowhead.com/forever/spell=1292573
+	// unsupported: states no rate
+	// trigger 1292573 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1292573, BuffSpellID: 1292573, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 9478, ItemName: "Ripsaw"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts a target for 91 Nature damage.
+	// https://www.wowhead.com/forever/spell=18081
+	// unsupported: states no rate
+	// trigger 18081 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18081, BuffSpellID: 18081, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 9651, ItemName: "Gryphon Rider's Stormhammer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Increases Attack Power by 102 and melee attack speed by 6% for 15s.
+	// https://www.wowhead.com/forever/spell=12686
+	// unsupported: states no rate
+	// trigger 12686 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 12686, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 10626, ItemName: "Ragehammer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Heals wielder of 42 damage.
+	// https://www.wowhead.com/forever/spell=1300356
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 10750, ItemName: "Lifeforce Dirk"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Hurls a fiery ball that causes 77 Fire damage and an additional 14 damage over 7s.
+	// https://www.wowhead.com/forever/spell=16413
+	// unsupported: states no rate
+	// trigger 16413 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 16413, BuffSpellID: 16413, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 10797, ItemName: "Firebreather"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Corrupts the target, causing 90 damage over 3s.
+	// https://www.wowhead.com/forever/spell=18088
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 10803, ItemName: "Blade of the Wretched"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Steals 56 life from target enemy.
+	// https://www.wowhead.com/forever/spell=18084
+	// unsupported: states no rate; the damage spell's row states no damage
+	// trigger 18084 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18084, BuffSpellID: 18084, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 10804, ItemName: "Fist of the Damned"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Steals 21 life from target enemy. Deals 3 times as much damage to Undead.
+	// https://www.wowhead.com/forever/spell=1299869
+	// unsupported: states no rate; the damage spell's row states no damage
+	// trigger 1299869 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1299869, BuffSpellID: 1299869, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 10805, ItemName: "Eater of the Dead"},
 	// })
 
 	// TODO: Manual implementation required
@@ -121,6 +547,47 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Wounds the target for 75 damage.
+	// https://www.wowhead.com/forever/spell=16405
+	// unsupported: states no rate
+	// trigger 16405 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 16405, BuffSpellID: 16405, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 11603, ItemName: "Vilerend Slicer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Reduces targets armor by 300 for 20s.
+	// https://www.wowhead.com/forever/spell=15280
+	// unsupported: states no rate
+	// trigger 15280 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 15280, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 11607, ItemName: "Dark Iron Sunderer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Stuns target for 8s.
+	// https://www.wowhead.com/forever/spell=15283
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 11608, ItemName: "Dark Iron Pulverizer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Charm target Dark Iron Dwarf for 20s.
 	// https://www.wowhead.com/forever/spell=1300754
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -130,6 +597,19 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 11625, ItemName: "Enthralled Sphere"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Corrosive acid that deals 13 Nature damage every 2.0 sec and lowers target's armor by 50 for 14s.
+	// https://www.wowhead.com/forever/spell=13526
+	// unsupported: states no rate
+	// trigger 13526 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 13526, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 11635, ItemName: "Hookfang Shanker"},
 	// })
 
 	// TODO: Manual implementation required
@@ -151,15 +631,39 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Wounds the target for 35 damage.
+	// https://www.wowhead.com/forever/spell=16433
+	// unsupported: states no rate
+	// trigger 16433 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 16433, BuffSpellID: 16433, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 11744, ItemName: "Bloodfist"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Harmful spell casts have a chance to deal 70 Fire damage. Deals 3 times as much damage to Plants.
 	// https://www.wowhead.com/forever/spell=1300782
-	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
-	//	Callback:           core.CallbackEmpty,
-	//	ProcMask:           core.ProcMaskUnknown,
-	//	Outcome:            core.OutcomeEmpty,
-	//	RequireDamageDealt: false
-	// }, []shared.ItemVariant{
+	// unsupported: states no rate
+	// trigger 1300781 (no stated rate, core.CallbackOnCastComplete, core.ProcMaskSpellDamage) -> buff 1300782
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1300781, BuffSpellID: 1300782},
+	//	[]shared.ItemVariant{
 	//	{ItemID: 11750, ItemName: "Kindling Stave"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts a target for 182 Fire damage.
+	// https://www.wowhead.com/forever/spell=18086
+	// unsupported: states no rate
+	// trigger 18086 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18086, BuffSpellID: 18086, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 11803, ItemName: "Force of Magma"},
 	// })
 
 	// TODO: Manual implementation required
@@ -181,6 +685,20 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Shoots a ring of fire dealing 154 Fire damage to all nearby enemies, and envelops the caster with a Fire
+	// Shield for 15s.
+	// https://www.wowhead.com/forever/spell=16559
+	// unsupported: states no rate
+	// trigger 16559 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 16559, BuffSpellID: 16559, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 11809, ItemName: "Flame Wrath"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// When struck in combat has a chance to reduce all damage taken by 51 for 10s.
 	// https://www.wowhead.com/forever/spell=15595
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -190,6 +708,45 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 11810, ItemName: "Force of Will"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Deal 109 Physical damage. Trolls and Orcs take 2 times damage and are horrified for 4s.
+	// https://www.wowhead.com/forever/spell=1300783
+	// unsupported: states no rate
+	// trigger 1300783 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1300783, BuffSpellID: 1300783, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 11816, ItemName: "Angerforge's Battle Axe"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Increases attack power by 84 for 10s.
+	// https://www.wowhead.com/forever/spell=15602
+	// unsupported: states no rate
+	// trigger 15602 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 15602, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 11817, ItemName: "Lord General's Sword"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts a target for 60 Nature damage.
+	// https://www.wowhead.com/forever/spell=18089
+	// unsupported: states no rate
+	// trigger 18089 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18089, BuffSpellID: 18089, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 11902, ItemName: "Linken's Sword of Mastery"},
 	// })
 
 	// TODO: Manual implementation required
@@ -212,6 +769,19 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Steals 49 life from target enemy. Deals 2 times as much damage to Undead.
+	// https://www.wowhead.com/forever/spell=16414
+	// unsupported: states no rate; the damage spell's row states no damage
+	// trigger 16414 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 16414, BuffSpellID: 16414, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 11920, ItemName: "Wraith Scythe"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Dying heals all party members within 40 yards for 1176.
 	// https://www.wowhead.com/forever/spell=1300891
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -221,6 +791,19 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 11923, ItemName: "The Hammer of Grace"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Hurls a fiery ball that causes 171 Fire damage and an additional 18 damage over 6s.
+	// https://www.wowhead.com/forever/spell=15662
+	// unsupported: states no rate
+	// trigger 15662 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 15662, BuffSpellID: 15662, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 12243, ItemName: "Smoldering Claw"},
 	// })
 
 	// TODO: Manual implementation required
@@ -241,6 +824,78 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Wounds the target causing them to bleed for 161 damage over 7s. Deals 2 times as much damage to Dragonkin.
+	// https://www.wowhead.com/forever/spell=14118
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 12463, ItemName: "Drakefang Butcher"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Stuns target for 3s.
+	// https://www.wowhead.com/forever/spell=56
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 12528, ItemName: "The Judge's Gavel"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts a target for 56 Fire damage and increases Fire damage done to target by 10 for 30s.
+	// https://www.wowhead.com/forever/spell=16454
+	// unsupported: states no rate
+	// trigger 16454 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 16454, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 12531, ItemName: "Searing Needle"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Inflicts numbing pain that deals 10 Nature damage every 1.0 sec and increases time between target's attacks
+	// by 11% for 10s.
+	// https://www.wowhead.com/forever/spell=16528
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 12582, ItemName: "Keris of Zul'Serak"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Delivers a fatal wound for 448 Physical damage. Deals 50% increased damage to targets below 25% health.
+	// https://www.wowhead.com/forever/spell=16549
+	// unsupported: states no rate
+	// trigger 16549 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 16549, BuffSpellID: 16549, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 12583, ItemName: "Blackhand Doomsaw"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Deals 75 damage when you are the victim of a critical melee strike.
 	// https://www.wowhead.com/forever/spell=16550
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -250,6 +905,36 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 12588, ItemName: "Bonespike Shoulder"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// All attacks are guaranteed to land and will be critical strikes for the next 3s.
+	// https://www.wowhead.com/forever/spell=16551
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 12590, ItemName: "Felstriker"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Transfers 10 health every 1.0 seconds from the target to the caster for 5s.
+	// https://www.wowhead.com/forever/spell=16603
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 12621, ItemName: "Demonfork"},
 	// })
 
 	// TODO: Manual implementation required
@@ -288,6 +973,135 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Enemy is inflicted with the Bleakwood Curse that reduces their magic resistances by 25. Can be applied
+	// up to 3 times.
+	// https://www.wowhead.com/forever/spell=16871
+	// unsupported: states no rate
+	// trigger 16871 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 16871, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 12769, ItemName: "Bleakwood Hew"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Burns the enemy for 200 damage over 30s.
+	// https://www.wowhead.com/forever/spell=16898
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 12777, ItemName: "Blazing Rapier"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Dispels a magic effect on the current foe.
+	// https://www.wowhead.com/forever/spell=16908
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 12781, ItemName: "Serenity"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Heal self for 360 and Increases Strength by 120 for 30s.
+	// https://www.wowhead.com/forever/spell=16916
+	// unsupported: states no rate
+	// trigger 16916 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 16916, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 12790, ItemName: "Arcanite Champion"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Wounds the target causing them to bleed for 98 damage over 7s. Deals 2 times as much damage if applied
+	// while behind the target.
+	// https://www.wowhead.com/forever/spell=1300787
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 12791, ItemName: "Barman Shanker"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Hurls a fiery ball that causes 228 Fire damage and an additional 36 damage over 6s.
+	// https://www.wowhead.com/forever/spell=18082
+	// unsupported: states no rate
+	// trigger 18082 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18082, BuffSpellID: 18082, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 12792, ItemName: "Volcanic Hammer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts up to 3 targets for 125 Nature damage.
+	// https://www.wowhead.com/forever/spell=16921
+	// unsupported: states no rate
+	// trigger 16921 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 16921, BuffSpellID: 16921, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 12794, ItemName: "Masterwork Stormhammer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Wounds the target causing them to bleed for 100 damage over 30s.
+	// https://www.wowhead.com/forever/spell=13318
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 12795, ItemName: "Blood Talon"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Stuns target for 3s.
+	// https://www.wowhead.com/forever/spell=56
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 12796, ItemName: "Hammer of the Titans"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Chance on hit to grant nearby party members 4% increased critical strike chance.
 	// https://www.wowhead.com/forever/spell=16939
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -318,15 +1132,54 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
-	// Chance to strike your ranged target with a Shadowbolt for 16 Shadow damage.
-	// https://www.wowhead.com/forever/spell=29640
+	// Deals 51 Nature damage every 2.0 sec to all enemies within an 8 yard radius of the caster for 10s.
+	// https://www.wowhead.com/forever/spell=17196
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
 	//	Callback:           core.CallbackEmpty,
 	//	ProcMask:           core.ProcMaskUnknown,
 	//	Outcome:            core.OutcomeEmpty,
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
+	//	{ItemID: 12969, ItemName: "Seeping Willow"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Chance to strike your ranged target with a Shadowbolt for 16 Shadow damage.
+	// https://www.wowhead.com/forever/spell=29640
+	// unsupported: states no rate
+	// trigger 29626 (no stated rate, core.CallbackOnSpellHitDealt, core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial) -> buff 29640
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 29626, BuffSpellID: 29640},
+	//	[]shared.ItemVariant{
 	//	{ItemID: 13040, ItemName: "Heartseeking Crossbow"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Sends a shadowy bolt at the enemy causing 200 Shadow damage.
+	// https://www.wowhead.com/forever/spell=18211
+	// unsupported: states no rate
+	// trigger 18211 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18211, BuffSpellID: 18211, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 13053, ItemName: "Doombringer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Wounds the target for 75 damage.
+	// https://www.wowhead.com/forever/spell=16405
+	// unsupported: states no rate
+	// trigger 16405 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 16405, BuffSpellID: 16405, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 13060, ItemName: "The Needler"},
 	// })
 
 	// TODO: Manual implementation required
@@ -349,6 +1202,32 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Strike the target with a Flaming Shell for 38 Fire damage.
+	// https://www.wowhead.com/forever/spell=29647
+	// unsupported: states no rate
+	// trigger 29647 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 29647, BuffSpellID: 29647, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 13146, ItemName: "Shell Launcher Shotgun"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts a target for 205 Frost damage.
+	// https://www.wowhead.com/forever/spell=19260
+	// unsupported: states no rate
+	// trigger 19260 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 19260, BuffSpellID: 19260, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 13148, ItemName: "Chillpike"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Flick the lighter, dealing 210 Fire damage to all enemies in a cone in front of you. Deals 2 times as
 	// much damage to Plants.
 	// https://www.wowhead.com/forever/spell=17283
@@ -365,6 +1244,36 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Poisons target for 7 Nature damage every 1.0 sec for 15s.
+	// https://www.wowhead.com/forever/spell=18203
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 13183, ItemName: "Venomspitter"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Knocks target silly for 1s. Orcs and Ogres are stunned for 2 times as long.
+	// https://www.wowhead.com/forever/spell=17308
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 13198, ItemName: "Hurd Smasher"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Remove 1 Disarm effect from target ally.
 	// https://www.wowhead.com/forever/spell=1308917
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -374,6 +1283,21 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 13213, ItemName: "Smolderweb's Eye"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Slows target enemy's casting speed and increases the time between melee and ranged attacks by 9% for 10s.
+	// https://www.wowhead.com/forever/spell=17331
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 13218, ItemName: "Fang of the Crystal Spider"},
 	// })
 
 	// TODO: Manual implementation required
@@ -396,6 +1320,58 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Increases Attack Power by 100, and Attack Power against Undead by an additional 100 for 10s.
+	// https://www.wowhead.com/forever/spell=17352
+	// unsupported: states no rate
+	// trigger 17352 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 17352, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 13246, ItemName: "Argent Avenger"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts a target for 700 Fire damage.
+	// https://www.wowhead.com/forever/spell=18112
+	// unsupported: states no rate
+	// trigger 18112 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18112, BuffSpellID: 18112, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 13262, ItemName: "Ashbringer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Wounds the target for 100 damage and deals an additional 13 damage every 1.0 sec for 10s.
+	// https://www.wowhead.com/forever/spell=17407
+	// unsupported: states no rate
+	// trigger 17407 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 17407, BuffSpellID: 17407, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 13285, ItemName: "The Blackrock Slicer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Sends a shadowy bolt at the enemy causing 150 Shadow damage and dealing 34 damage every 2.0 sec for 6s.
+	// https://www.wowhead.com/forever/spell=17483
+	// unsupported: states no rate
+	// trigger 17483 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 17483, BuffSpellID: 17483, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 13348, ItemName: "Demonshear"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// https://www.wowhead.com/forever/spell=1298517
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
 	//	Callback:           core.CallbackEmpty,
@@ -410,14 +1386,27 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
-	// Deals 22 Physical damage every time you block.
-	// https://www.wowhead.com/forever/spell=17496
+	// Drains target for 21 Shadow damage every 1.0 sec and transfers it to the caster. Lasts for 10s.
+	// https://www.wowhead.com/forever/spell=17484
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
 	//	Callback:           core.CallbackEmpty,
 	//	ProcMask:           core.ProcMaskUnknown,
 	//	Outcome:            core.OutcomeEmpty,
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
+	//	{ItemID: 13361, ItemName: "Skullforge Reaver"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Deals 22 Physical damage every time you block.
+	// https://www.wowhead.com/forever/spell=17496
+	// unsupported: an outcome the proc mask has no bit for
+	// trigger 17495 (every time, core.CallbackOnSpellHitTaken, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial) -> buff 17496
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 17495, BuffSpellID: 17496},
+	//	[]shared.ItemVariant{
 	//	{ItemID: 13375, ItemName: "Crest of Retribution"},
 	// })
 
@@ -454,6 +1443,79 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Knocks target silly for 2s and increases Strength by 53 for 20s.
+	// https://www.wowhead.com/forever/spell=17500
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 13393, ItemName: "Malown's Slam"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Wounds the target causing them to bleed for 98 damage over 14s.
+	// https://www.wowhead.com/forever/spell=18202
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 13399, ItemName: "Gargoyle Shredder Talons"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Steals 210 life from target enemy.
+	// https://www.wowhead.com/forever/spell=17505
+	// unsupported: states no rate; the damage spell's row states no damage
+	// trigger 17505 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 17505, BuffSpellID: 17505, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 13401, ItemName: "The Cruel Hand of Timmy"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Target enemy loses 10 health and mana every 1.0 sec for 10s.
+	// https://www.wowhead.com/forever/spell=17506
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 13408, ItemName: "Soul Breaker"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Increases the effects that healing and mana potions have on the wearer by 20%.
+	// https://www.wowhead.com/forever/spell=17619
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 13503, ItemName: "Alchemists' Stone"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Harness the power of lightning to strike the target, stunning them for 2s. Stuns players in water for
 	// 2 times as long.
 	// https://www.wowhead.com/forever/spell=1299443
@@ -479,6 +1541,34 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 13544, ItemName: "Spectral Essence"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Melee attacks with this weapon deal 41 Frost damage.
+	// https://www.wowhead.com/forever/spell=1298414
+	// unsupported: ProcTypeMask bit 37
+	// trigger 1298413 (every time, core.CallbackOnSpellHitDealt, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial) -> buff 1298414
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1298413, BuffSpellID: 1298414},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 13952, ItemName: "Iceblade Hacker"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Silences an enemy preventing it from casting spells for 6s.
+	// https://www.wowhead.com/forever/spell=1293654
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 13953, ItemName: "Silent Fang"},
 	// })
 
 	// TODO: Manual implementation required
@@ -533,6 +1623,47 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Melee attacks with this weapon deal 28 Frost damage.
+	// https://www.wowhead.com/forever/spell=1298499
+	// unsupported: ProcTypeMask bit 37
+	// trigger 1298500 (every time, core.CallbackOnSpellHitDealt, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial) -> buff 1298499
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1298500, BuffSpellID: 1298499},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 13982, ItemName: "Warblade of Caer Darrow"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Diseases target enemy for 42 Nature damage every 3.0 sec for 12s.
+	// https://www.wowhead.com/forever/spell=18289
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 13983, ItemName: "Gravestone War Axe"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts a target for 105 Frost damage.
+	// https://www.wowhead.com/forever/spell=18276
+	// unsupported: states no rate
+	// trigger 18276 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18276, BuffSpellID: 18276, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 13984, ItemName: "Darrowspike"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// https://www.wowhead.com/forever/spell=1298508
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
 	//	Callback:           core.CallbackEmpty,
@@ -542,6 +1673,21 @@ func RegisterAllProcs() {
 	// }, []shared.ItemVariant{
 	//	{ItemID: 14022, ItemName: "Barov Peasant Caller"},
 	//	{ItemID: 14023, ItemName: "Barov Peasant Caller"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Increase the duration of Fear effects applied to the target by 25% for 1min.
+	// https://www.wowhead.com/forever/spell=19755
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 14024, ItemName: "Frightalon"},
 	// })
 
 	// TODO: Manual implementation required
@@ -608,6 +1754,74 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Blasts a target for 105 Frost damage.
+	// https://www.wowhead.com/forever/spell=18276
+	// unsupported: states no rate
+	// trigger 18276 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18276, BuffSpellID: 18276, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 14487, ItemName: "Bonechill Hammer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Deals 15 Shadow damage every 2.0 sec for 14s and lowers their attack power by 92 for 14s.
+	// https://www.wowhead.com/forever/spell=18633
+	// unsupported: states no rate
+	// trigger 18633 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 18633, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 14531, ItemName: "Frightskull Shaft"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Deals 49 Shadow damage every 1.0 sec for 5s. All damage done is then transferred to the caster.
+	// https://www.wowhead.com/forever/spell=18652
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 14541, ItemName: "Barovian Family Sword"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts a target for 90 Fire damage.
+	// https://www.wowhead.com/forever/spell=18833
+	// unsupported: states no rate
+	// trigger 18833 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18833, BuffSpellID: 18833, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 14555, ItemName: "Alcor's Sunrazor"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// When struck in combat has a 5% chance of increasing all party member's armor by 725 for 30s. This chance
+	// is doubled in Strongholds and Cities.
+	// https://www.wowhead.com/forever/spell=18946
+	// unsupported: no row in the store; the buff has no row in the store
+	// trigger 20847 is not in the store
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 20847, BuffSpellID: 18946},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 14557, ItemName: "The Lion Horn of Stormwind"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Protects the wearer from being fully engulfed by Shadow Flame.
 	// https://www.wowhead.com/forever/spell=22683
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -617,6 +1831,62 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 15138, ItemName: "Onyxia Scale Cloak"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts a target for 252 Nature damage.
+	// https://www.wowhead.com/forever/spell=19874
+	// unsupported: states no rate
+	// trigger 19874 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 19874, BuffSpellID: 19874, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 15418, ItemName: "Shimmering Platinum Warhammer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Wounds the target causing them to bleed for 80 damage over 30s.
+	// https://www.wowhead.com/forever/spell=16406
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 15814, ItemName: "Hameya's Slayer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Inflicts 21 Nature damage every 2.0 sec for 10s.
+	// https://www.wowhead.com/forever/spell=20586
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 15853, ItemName: "Windreaper"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Fires a Shadow Shot at the target for 26 Shadow damage.
+	// https://www.wowhead.com/forever/spell=29641
+	// unsupported: states no rate
+	// trigger 29641 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 29641, BuffSpellID: 29641, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 16004, ItemName: "Dark Iron Rifle"},
 	// })
 
 	// TODO: Manual implementation required
@@ -853,6 +2123,34 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Poisons target for 8 Nature damage every 2.0 sec for 20s.
+	// https://www.wowhead.com/forever/spell=17511
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 17002, ItemName: "Ichor Spitter"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts a target for 84 Arcane damage.
+	// https://www.wowhead.com/forever/spell=20883
+	// unsupported: states no rate
+	// trigger 20883 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 20883, BuffSpellID: 20883, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 17054, ItemName: "Joonho's Mercy"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Restores 235 Mana when you kill a Dragonkin that gives experience. This effect cannot occur more than
 	// once every 10 sec.
 	// https://www.wowhead.com/forever/spell=1305426
@@ -883,6 +2181,73 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Sends a shadowy bolt at the enemy causing 140 Shadow damage.
+	// https://www.wowhead.com/forever/spell=1305398
+	// unsupported: states no rate
+	// trigger 1305398 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1305398, BuffSpellID: 1305398, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 17068, ItemName: "Deathbringer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Sends a shadowy bolt at the enemy causing 75 Shadow damage and lowering all stats by 25 for 30s.
+	// https://www.wowhead.com/forever/spell=21151
+	// unsupported: states no rate
+	// trigger 21151 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 21151, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 17071, ItemName: "Gutgore Ripper"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Knocks down all nearby enemies for 3s.
+	// https://www.wowhead.com/forever/spell=21152
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 17073, ItemName: "Earthshaker"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Steals 140 life from target enemy.
+	// https://www.wowhead.com/forever/spell=21170
+	// unsupported: states no rate; the damage spell's row states no damage
+	// trigger 21170 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 21170, BuffSpellID: 21170, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 17074, ItemName: "Shadowstrike"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Delivers a fatal wound for 236 Physical damage. Deals 75% increased damage to targets below 25% health.
+	// https://www.wowhead.com/forever/spell=1305394
+	// unsupported: states no rate
+	// trigger 1305394 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1305394, BuffSpellID: 1305394, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 17075, ItemName: "Vis'kag the Bloodletter"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Restores 150 mana or 20 rage when you kill a target that gives experience; this effect cannot occur more
 	// than once every 10 seconds.
 	// https://www.wowhead.com/forever/spell=21186
@@ -893,6 +2258,47 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 17104, ItemName: "Spinal Reaper"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Increases your attack speed by 20% for 10s.
+	// https://www.wowhead.com/forever/spell=21165
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 17112, ItemName: "Empyrean Demolisher"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Hurls a fiery ball that causes 92 Fire damage and an additional 16 damage over 8s.
+	// https://www.wowhead.com/forever/spell=21159
+	// unsupported: states no rate
+	// trigger 21159 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 21159, BuffSpellID: 21159, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 17193, ItemName: "Sulfuron Hammer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts up to 3 targets for 200 Nature damage. Each target after the first takes less damage.
+	// https://www.wowhead.com/forever/spell=21179
+	// unsupported: states no rate
+	// trigger 21179 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 21179, BuffSpellID: 21179, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 17223, ItemName: "Thunderstrike"},
 	// })
 
 	// TODO: Manual implementation required
@@ -1021,6 +2427,68 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Grants an extra attack on your next swing.
+	// https://www.wowhead.com/forever/spell=21919
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 17705, ItemName: "Thrash Blade"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Wounds the target causing them to bleed for 210 damage over 7s.
+	// https://www.wowhead.com/forever/spell=21949
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 17730, ItemName: "Gatorbite Axe"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Restores 32 mana. Restore 1 times as much if attacking an Earth Elementals, Golems, or Titan-forged enermy.
+	//
+	// https://www.wowhead.com/forever/spell=21951
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 17733, ItemName: "Fist of Stone"},
+	//	{ItemID: 17943, ItemName: "Fist of Stone"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Poisons target for 13 Nature damage every 1.0 sec for 7s.
+	// https://www.wowhead.com/forever/spell=21952
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 17738, ItemName: "Claw of Celebras"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Removes 1 poison effect.
 	// https://www.wowhead.com/forever/spell=21954
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -1031,6 +2499,32 @@ func RegisterAllProcs() {
 	// }, []shared.ItemVariant{
 	//	{ItemID: 17744, ItemName: "Heart of Noxxion"},
 	//	{ItemID: 17744, ItemName: "Heart of Noxxion"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Sends a shadowy bolt at the enemy causing 70 Shadow damage.
+	// https://www.wowhead.com/forever/spell=1292155
+	// unsupported: states no rate
+	// trigger 1292155 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1292155, BuffSpellID: 1292155, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 17752, ItemName: "Satyr's Lash"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Strike your target with Keeper's Sting for 28 Nature damage.
+	// https://www.wowhead.com/forever/spell=29655
+	// unsupported: states no rate
+	// trigger 29655 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 29655, BuffSpellID: 29655, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 17753, ItemName: "Verdant Keeper's Aim"},
 	// })
 
 	// TODO: Manual implementation required
@@ -1052,17 +2546,13 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
-	// Chance on hit to restore 32 mana. Restore 3 times as much if attacking an Earth Elemental, Golem, or Titan-forged
-	// enemy.
-	//
-	// https://www.wowhead.com/forever/spell=1294794
-	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
-	//	Callback:           core.CallbackEmpty,
-	//	ProcMask:           core.ProcMaskUnknown,
-	//	Outcome:            core.OutcomeEmpty,
-	//	RequireDamageDealt: false
-	// }, []shared.ItemVariant{
-	//	{ItemID: 17943, ItemName: "Fist of Stone"},
+	// Wounds the target for 168 damage and lowers their armor by 100.
+	// https://www.wowhead.com/forever/spell=21961
+	// unsupported: states no rate
+	// trigger 21961 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 21961, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 17766, ItemName: "Princess Theradras' Scepter"},
 	// })
 
 	// TODO: Manual implementation required
@@ -1078,6 +2568,21 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 18047, ItemName: "Flame Walkers"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Increases your Attack Speed by 10% for 6s.
+	// https://www.wowhead.com/forever/spell=22640
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 18203, ItemName: "Eskhandar's Right Claw"},
 	// })
 
 	// TODO: Manual implementation required
@@ -1114,6 +2619,19 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Slice the target, dealing 70 Nature damage. Deals 3 times as much damage to Aquatic enemies.
+	// https://www.wowhead.com/forever/spell=1302166
+	// unsupported: states no rate
+	// trigger 1302166 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1302166, BuffSpellID: 1302166, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 18324, ItemName: "Waveslicer"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Absorbs 1176 Shadow damage. Lasts 30s.
 	// https://www.wowhead.com/forever/spell=1302362
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -1123,6 +2641,20 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 18340, ItemName: "Eidolon Talisman"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Grants the wielder 13 Defense, 300 Armor, 30 Attack Power, and 36 additional Attack Power against Dragonkin
+	// for 10s.
+	// https://www.wowhead.com/forever/spell=22850
+	// unsupported: states no rate
+	// trigger 22850 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 22850, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 18348, ItemName: "Quel'Serrar"},
 	// })
 
 	// TODO: Manual implementation required
@@ -1204,6 +2736,20 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Shatter the target, dealing 49 Physical damage. Deals 3 times as much damage to Earth Elementals, Golems,
+	// and Titan-forged.
+	// https://www.wowhead.com/forever/spell=1302279
+	// unsupported: states no rate
+	// trigger 1302279 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1302279, BuffSpellID: 1302279, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 18388, ItemName: "Stoneshatter"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Chance on landing a damaging spell to assault the target's mind, increasing the casting time of all spells
 	// by 10% for 30s. Stacks up to 5 times.
 	// https://www.wowhead.com/forever/spell=1302342
@@ -1229,6 +2775,21 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 18406, ItemName: "Onyxia Blood Talisman"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Increases run speed by 35% for 10s.
+	// https://www.wowhead.com/forever/spell=22863
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 18410, ItemName: "Sprinter's Sword"},
 	// })
 
 	// TODO: Manual implementation required
@@ -1296,6 +2857,20 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Slice the target with magically enhanced precision, dealing 42 Arcane damage. Deals 3 times as much damage
+	// to Plants.
+	// https://www.wowhead.com/forever/spell=1302344
+	// unsupported: states no rate
+	// trigger 1302344 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1302344, BuffSpellID: 1302344, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 18498, ItemName: "Hedgecutter"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Energize the lodestone for 10s, heightening its magnetic pull. Drawing in the weapon of the next melee
 	// attacker that strikes you, Disarming them for 8s.
 	// https://www.wowhead.com/forever/spell=1302356
@@ -1306,6 +2881,19 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 18537, ItemName: "Counterattack Lodestone"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Deal 175 Fire damage. Deals 3 times as much damage to Plants.
+	// https://www.wowhead.com/forever/spell=1302354
+	// unsupported: states no rate
+	// trigger 1302354 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1302354, BuffSpellID: 1302354, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 18538, ItemName: "Treant's Bane"},
 	// })
 
 	// TODO: Manual implementation required
@@ -1387,6 +2975,62 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Blasts a target for 35 Fire damage.
+	// https://www.wowhead.com/forever/spell=13442
+	// unsupported: states no rate
+	// trigger 13442 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 13442, BuffSpellID: 13442, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 18671, ItemName: "Baron Charr's Sceptre"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Deal 42 Fire damage over 3s.
+	// https://www.wowhead.com/forever/spell=1302343
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 18755, ItemName: "Xorothian Firestick"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts a target for 48 Fire damage.
+	// https://www.wowhead.com/forever/spell=23267
+	// unsupported: states no rate
+	// trigger 23267 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 23267, BuffSpellID: 23267, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 18816, ItemName: "Perdition's Blade"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// While equipped, the wearer suffers less damage from falls.
+	// https://www.wowhead.com/forever/spell=23409
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 18951, ItemName: "Evonice's Landin' Pilla"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Safely transport yourself to Gadgetzan in Tanaris! Emphasis on Safe! Yup, nothing bad could ever happen
 	// while using this device!
 	// https://www.wowhead.com/forever/spell=23453
@@ -1419,6 +3063,90 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Blasts a target for 45 Frost damage.
+	// https://www.wowhead.com/forever/spell=18398
+	// unsupported: states no rate
+	// trigger 18398 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18398, BuffSpellID: 18398, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 19099, ItemName: "Glacial Blade"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Blasts a target for 45 Nature damage.
+	// https://www.wowhead.com/forever/spell=23592
+	// unsupported: states no rate
+	// trigger 23592 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 23592, BuffSpellID: 23592, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 19100, ItemName: "Electrified Dagger"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Removes 1 Bleed effect. While in or on Water, removes all Bleed, Disease, and Poison effects.
+	// https://www.wowhead.com/forever/spell=23595
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 19141, ItemName: "Luffa"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Reduce your threat to the current target making them less likely to attack you.
+	// https://www.wowhead.com/forever/spell=23604
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 19166, ItemName: "Black Amnesty"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Spell damage taken by target increased by 15% for 5s.
+	// https://www.wowhead.com/forever/spell=23605
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 19169, ItemName: "Nightfall"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Sends a shadowy bolt at the enemy causing 200 Shadow damage.
+	// https://www.wowhead.com/forever/spell=18211
+	// unsupported: states no rate
+	// trigger 18211 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18211, BuffSpellID: 18211, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 19170, ItemName: "Ebon Hand"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Gives the wearer a 10% chance of being able to resurrect with 20% health and mana.
 	// https://www.wowhead.com/forever/spell=23701
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -1428,6 +3156,21 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 19290, ItemName: "Darkmoon Card: Twisting Nether"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Stuns target for 1s.
+	// https://www.wowhead.com/forever/spell=23454
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 19323, ItemName: "The Unstoppable Force"},
 	// })
 
 	// TODO: Manual implementation required
@@ -2179,6 +3922,21 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Disorients the target, causing it to wander aimlessly for up to 3s.
+	// https://www.wowhead.com/forever/spell=26108
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 21134, ItemName: "Dark Edge of Insanity"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Reduces your threat to enemy targets within 30 yards, making them less likely to attack you.
 	// https://www.wowhead.com/forever/spell=25892
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -2855,6 +4613,36 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Blasts enemies in front of you with the power of wind, fire, all that kind of thing!
+	// https://www.wowhead.com/forever/spell=14537
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 211941, ItemName: "Windwalker's Yari"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Deals 504 Fire damage over 12s. Demons and Beasts are Rooted in place for 6s.
+	// https://www.wowhead.com/forever/spell=443265
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 219345, ItemName: "Infernal Lasso"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Increases the duration of Rip by 2 sec.
 	// https://www.wowhead.com/forever/spell=446212
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -2909,6 +4697,20 @@ func RegisterAllProcs() {
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
 	//	{ItemID: 220846, ItemName: "First Sergeant's Pulsing Greaves"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// https://www.wowhead.com/forever/spell=408953
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 220915, ItemName: "Idol of the Raging Shambler"},
 	// })
 
 	// TODO: Manual implementation required
@@ -4617,6 +6419,33 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Your casts of Greater Heal in combat grant up to 40 increased healing and up to 13 increased damage for
+	// 15s.
+	// https://www.wowhead.com/forever/spell=1249119
+	// unsupported: named ability
+	// trigger 1249118 (every time, core.CallbackOnHealDealt, core.ProcMaskSpellHealing) -> buff 1249119
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 1249118, BuffSpellID: 1249119},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 249473, ItemName: "Dormant Heart of the Mountain"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Sends a shadowy bolt at the enemy causing 140 Shadow damage.
+	// https://www.wowhead.com/forever/spell=16784
+	// unsupported: states no rate
+	// trigger 16784 (every time, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 16784, BuffSpellID: 16784, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 260186, ItemName: "Darkblade"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Safely transport yourself to Gadgetzan in Tanaris! Emphasis on Safe! Yup, nothing bad could ever happen
 	// while using this device!
 	// https://www.wowhead.com/forever/spell=23453
@@ -4703,8 +6532,20 @@ func RegisterAllProcs() {
 	//	Outcome:            core.OutcomeEmpty,
 	//	RequireDamageDealt: false
 	// }, []shared.ItemVariant{
-	//	{ItemID: 269741, ItemName: "Scented Runewood Brooch"},
-	//	{ItemID: 269741, ItemName: "Scented Runewood Brooch"},
+	//	{ItemID: 269741, ItemName: "Scented Runewood Brooch -  - "},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Harmful spell casts and attacks against Furbolg have a chance to deal 105 Nature damage.
+	// https://www.wowhead.com/forever/spell=1318324
+	// unsupported: states no rate
+	// trigger 1318323 (no stated rate, core.CallbackOnSpellHitDealt, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial | core.ProcMaskSpellDamage) -> buff 1318324
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1318323, BuffSpellID: 1318324},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 269741, ItemName: "Scented Runewood Brooch -  - "},
 	// })
 
 	// TODO: Manual implementation required
@@ -5665,6 +7506,47 @@ func RegisterAllProcs() {
 	//       This can be ignored if the effect has already been implemented.
 	//       With next db run the item will be removed if implemented.
 	//
+	// Blunderflame the target for 56 Fire damage.
+	// https://www.wowhead.com/forever/spell=1296730
+	// unsupported: states no rate
+	// trigger 1296730 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1296730, BuffSpellID: 1296730, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 275439, ItemName: "Blunderflame Bone Bow"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Cremate the target for 56 Fire damage.
+	// https://www.wowhead.com/forever/spell=1297921
+	// unsupported: states no rate
+	// trigger 1297921 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1297921, BuffSpellID: 1297921, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 275441, ItemName: "Cremation Longbow"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Heals wielder of 182 damage over 14s.
+	// https://www.wowhead.com/forever/spell=1297357
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 275645, ItemName: "Reforged Spear"},
+	// })
+
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
 	// Your healing spells have a 5% chance to remove 1 Poison effect from the target.
 	// https://www.wowhead.com/forever/spell=1297369
 	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
@@ -5797,492 +7679,252 @@ func RegisterAllProcs() {
 	//	{ItemID: 282080, ItemName: "Flame Seared Signet"},
 	// })
 
-	// When struck in combat has a 1% chance of inflicting 50 Frost damage to the attacker and freezing them
-	// for 5s.
-	// https://www.wowhead.com/forever/spell=18798
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      942,
-		SpellID:     18798,
-		School:      core.SpellSchoolFrost,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      50,
-		MaxDmg:      50,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "Freezing Band",
-			ActionID:           core.ActionID{ItemID: 942},
-			Callback:           core.CallbackOnSpellHitTaken,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         0.01,
-		},
-	})
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Reduces target enemy's attack power by 60 for 30s.
+	// https://www.wowhead.com/forever/spell=1315767
+	// unsupported: states no rate
+	// trigger 1315767 (0%, core.CallbackEmpty, core.ProcMaskUnknown)
+	// shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 1315767, IsWeaponProc: true},
+	//	[]shared.ItemVariant{
+	//	{ItemID: 284262, ItemName: "Howling Hide"},
+	// })
 
-	// When struck in melee combat, has a 3% chance of stealing 270 life from target enemy.
-	// https://www.wowhead.com/forever/spell=18817
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      1168,
-		SpellID:     18817,
-		School:      core.SpellSchoolShadow,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      270,
-		MaxDmg:      270,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "Skullflame Shield -  - ",
-			ActionID:           core.ActionID{ItemID: 1168},
-			Callback:           core.CallbackOnSpellHitTaken,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         0.03,
-		},
-	})
+	// TODO: Manual implementation required
+	//       This can be ignored if the effect has already been implemented.
+	//       With next db run the item will be removed if implemented.
+	//
+	// Thrown hammers have a low chance to stun the target for 1s.
+	// https://www.wowhead.com/forever/spell=1318178
+	// shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
+	//	Callback:           core.CallbackEmpty,
+	//	ProcMask:           core.ProcMaskUnknown,
+	//	Outcome:            core.OutcomeEmpty,
+	//	RequireDamageDealt: false
+	// }, []shared.ItemVariant{
+	//	{ItemID: 285281, ItemName: "Arcanite Blacksmith Hammer"},
+	// })
+
+	// When struck in combat has a 2% chance of dealing 115 Fire damage to all targets around you.
+	// https://www.wowhead.com/forever/spell=18818
+	// trigger 18816 (effect 1's chance, core.CallbackOnSpellHitTaken, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial) -> buff 18818
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 18816, BuffSpellID: 18818},
+		[]shared.ItemVariant{
+			{ItemID: 1168, ItemName: "Skullflame Shield -  - "},
+		})
+
+	// When struck in combat has a 3% chance to encase the caster in bone, increasing armor by 150 for 20s.
+	// https://www.wowhead.com/forever/spell=18828
+	// trigger 19409 (3%, core.CallbackOnSpellHitTaken, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial) -> buff 18828
+	shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 19409, BuffSpellID: 18828},
+		[]shared.ItemVariant{
+			{ItemID: 1979, ItemName: "Wall of the Dead"},
+		})
 
 	// All ranged auto-attacks conjure an icy bolt to blast your current target, inflicting 8 Frost damage.
 	// https://www.wowhead.com/forever/spell=29502
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      2824,
-		SpellID:     29502,
-		School:      core.SpellSchoolFrost,
-		DefenseType: core.DefenseTypeRanged,
-		MinDmg:      8,
-		MaxDmg:      8,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "Hurricane",
-			ActionID:           core.ActionID{ItemID: 2824},
-			Callback:           core.CallbackOnSpellHitDealt,
-			ProcMask:           core.ProcMaskRangedAuto,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         1,
-		},
-	})
+	// trigger 1316319 (every time, core.CallbackOnSpellHitDealt, core.ProcMaskRangedAuto) -> buff 29502
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1316319, BuffSpellID: 29502},
+		[]shared.ItemVariant{
+			{ItemID: 2824, ItemName: "Hurricane"},
+		})
 
 	// Adds 4 Fire damage to your weapon attack.
 	// https://www.wowhead.com/forever/spell=7714
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      12631,
-		SpellID:     7714,
-		School:      core.SpellSchoolFire,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      4,
-		MaxDmg:      4,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "Fiery Plate Gauntlets",
-			ActionID:           core.ActionID{ItemID: 12631},
-			Callback:           core.CallbackOnSpellHitDealt,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         1,
-		},
-	})
+	// trigger 7721 (every time, core.CallbackOnSpellHitDealt, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial) -> buff 7714
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 7721, BuffSpellID: 7714},
+		[]shared.ItemVariant{
+			{ItemID: 12631, ItemName: "Fiery Plate Gauntlets"},
+		})
 
 	// Adds 3 Lightning damage to your melee attacks.
 	// https://www.wowhead.com/forever/spell=16614
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      12632,
-		SpellID:     16614,
-		School:      core.SpellSchoolNature,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      3,
-		MaxDmg:      3,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "Storm Gauntlets",
-			ActionID:           core.ActionID{ItemID: 12632},
-			Callback:           core.CallbackOnSpellHitDealt,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         1,
-		},
-	})
+	// trigger 16615 (every time, core.CallbackOnSpellHitDealt, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial) -> buff 16614
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 16615, BuffSpellID: 16614},
+		[]shared.ItemVariant{
+			{ItemID: 12632, ItemName: "Storm Gauntlets"},
+		})
 
 	// Reduces an enemy's armor by 165. Stacks up to 3 times.
 	// https://www.wowhead.com/forever/spell=16928
-	shared.NewStackingStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
-		Callback:           core.CallbackOnSpellHitDealt,
-		ProcMask:           core.ProcMaskUnknown,
-		Outcome:            core.OutcomeLanded,
-		RequireDamageDealt: true,
-		IsWeaponProc:       true,
-	}, []shared.ItemVariant{
-		{ItemID: 12798, ItemName: "Annihilator"},
-	})
-
-	// Melee attacks with this weapon deal 41 Frost damage.
-	// https://www.wowhead.com/forever/spell=1298414
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      13952,
-		SpellID:     1298414,
-		School:      core.SpellSchoolFrost,
-		DefenseType: core.DefenseTypeMelee,
-		MinDmg:      40.70000076293945,
-		MaxDmg:      40.70000076293945,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc | core.SpellFlagSuppressWeaponProcs,
-		Trigger: core.ProcTrigger{
-			Name:               "Iceblade Hacker",
-			ActionID:           core.ActionID{ItemID: 13952},
-			Callback:           core.CallbackOnSpellHitDealt,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         1,
-		},
-	})
-
-	// Melee attacks with this weapon deal 28 Frost damage.
-	// https://www.wowhead.com/forever/spell=1298499
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      13982,
-		SpellID:     1298499,
-		School:      core.SpellSchoolFrost,
-		DefenseType: core.DefenseTypeMelee,
-		MinDmg:      27.719999313354492,
-		MaxDmg:      27.719999313354492,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc | core.SpellFlagSuppressWeaponProcs,
-		Trigger: core.ProcTrigger{
-			Name:               "Warblade of Caer Darrow",
-			ActionID:           core.ActionID{ItemID: 13982},
-			Callback:           core.CallbackOnSpellHitDealt,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         1,
-		},
-	})
-
-	// When struck in combat has a 5% chance of increasing all party member's armor by 725 for 30s. This chance
-	// is doubled in Strongholds and Cities.
-	// https://www.wowhead.com/forever/spell=18946
-	shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
-		Callback:           core.CallbackOnSpellHitTaken,
-		ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial,
-		Outcome:            core.OutcomeLanded,
-		RequireDamageDealt: true,
-	}, []shared.ItemVariant{
-		{ItemID: 14557, ItemName: "The Lion Horn of Stormwind"},
-	})
+	// trigger 16928 (1 ppm, core.CallbackEmpty, core.ProcMaskUnknown)
+	shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 16928, IsWeaponProc: true},
+		[]shared.ItemVariant{
+			{ItemID: 12798, ItemName: "Annihilator"},
+		})
 
 	// Adds 2 fire damage to your melee attacks.
 	// https://www.wowhead.com/forever/spell=7712
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      17111,
-		SpellID:     7712,
-		School:      core.SpellSchoolFire,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      2,
-		MaxDmg:      2,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "Blazefury Medallion",
-			ActionID:           core.ActionID{ItemID: 17111},
-			Callback:           core.CallbackOnSpellHitDealt,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         1,
-		},
-	})
+	// trigger 7711 (every time, core.CallbackOnSpellHitDealt, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial) -> buff 7712
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 7711, BuffSpellID: 7712},
+		[]shared.ItemVariant{
+			{ItemID: 17111, ItemName: "Blazefury Medallion"},
+		})
 
 	// Chance on landing a damaging spell to deal 112 Shadow damage and restore 104 mana to you.
 	// https://www.wowhead.com/forever/spell=27860
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      17780,
-		SpellID:     27860,
-		School:      core.SpellSchoolShadow,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      112,
-		MaxDmg:      112,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "Blade of Eternal Darkness",
-			ActionID:           core.ActionID{ItemID: 17780},
-			Callback:           core.CallbackOnCastComplete,
-			ProcMask:           core.ProcMaskSpellDamage,
-			Outcome:            core.OutcomeEmpty,
-			RequireDamageDealt: false,
-			ProcChance:         1,
-			ICD:                time.Millisecond * 100,
-		},
-	})
+	// trigger 21978 (every time, core.CallbackOnCastComplete, core.ProcMaskSpellDamage) -> buff 27860
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 21978, BuffSpellID: 27860},
+		[]shared.ItemVariant{
+			{ItemID: 17780, ItemName: "Blade of Eternal Darkness"},
+		})
 
 	// Adds 2 Arcane damage to your melee attacks.
 	// https://www.wowhead.com/forever/spell=1302247
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      18383,
-		SpellID:     1302247,
-		School:      core.SpellSchoolArcane,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      2,
-		MaxDmg:      2,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "Force Imbued Gauntlets",
-			ActionID:           core.ActionID{ItemID: 18383},
-			Callback:           core.CallbackOnSpellHitDealt,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         1,
-		},
-	})
+	// trigger 1302248 (every time, core.CallbackOnSpellHitDealt, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial) -> buff 1302247
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1302248, BuffSpellID: 1302247},
+		[]shared.ItemVariant{
+			{ItemID: 18383, ItemName: "Force Imbued Gauntlets"},
+		})
 
 	// When struck in combat has a 5% chance of inflicting 50 Nature damage to the attacker.
 	// https://www.wowhead.com/forever/spell=16782
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      18825,
-		SpellID:     16782,
-		School:      core.SpellSchoolNature,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      50,
-		MaxDmg:      50,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "Grand Marshal's Aegis - ",
-			ActionID:           core.ActionID{ItemID: 18825},
-			Callback:           core.CallbackOnSpellHitTaken,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         0.05,
-		},
-	})
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      234588,
-		SpellID:     16782,
-		School:      core.SpellSchoolNature,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      50,
-		MaxDmg:      50,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "Grand Marshal's Aegis -  - ",
-			ActionID:           core.ActionID{ItemID: 234588},
-			Callback:           core.CallbackOnSpellHitTaken,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         0.05,
-		},
-	})
+	// trigger 13959 (5%, core.CallbackOnSpellHitTaken, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial) -> buff 16782
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 13959, BuffSpellID: 16782},
+		[]shared.ItemVariant{
+			{ItemID: 18825, ItemName: "Grand Marshal's Aegis - "},
+		})
 
 	// When struck in combat has a 5% chance of inflicting 50 Nature damage to the attacker.
 	// https://www.wowhead.com/forever/spell=16782
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      18826,
-		SpellID:     16782,
-		School:      core.SpellSchoolNature,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      50,
-		MaxDmg:      50,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "High Warlord's Shield Wall - ",
-			ActionID:           core.ActionID{ItemID: 18826},
-			Callback:           core.CallbackOnSpellHitTaken,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         0.05,
-		},
-	})
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      234562,
-		SpellID:     16782,
-		School:      core.SpellSchoolNature,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      50,
-		MaxDmg:      50,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "High Warlord's Shield Wall -  - ",
-			ActionID:           core.ActionID{ItemID: 234562},
-			Callback:           core.CallbackOnSpellHitTaken,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         0.05,
-		},
-	})
+	// trigger 13959 (5%, core.CallbackOnSpellHitTaken, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial) -> buff 16782
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 13959, BuffSpellID: 16782},
+		[]shared.ItemVariant{
+			{ItemID: 18826, ItemName: "High Warlord's Shield Wall - "},
+		})
 
 	// 2% chance on successful spellcast to increase your Spirit by 150 for 15s.
 	// https://www.wowhead.com/forever/spell=23684
-	shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
-		Callback:           core.CallbackOnCastComplete,
-		ProcMask:           core.ProcMaskSpellDamage,
-		Outcome:            core.OutcomeEmpty,
-		RequireDamageDealt: false,
-	}, []shared.ItemVariant{
-		{ItemID: 19288, ItemName: "Darkmoon Card: Blue Dragon"},
-	})
+	// trigger 23688 (2%, core.CallbackOnCastComplete, core.ProcMaskSpellDamage | core.ProcMaskSpellHealing) -> buff 23684
+	shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 23688, BuffSpellID: 23684},
+		[]shared.ItemVariant{
+			{ItemID: 19288, ItemName: "Darkmoon Card: Blue Dragon"},
+		})
 
 	// Gives a chance when your harmful spells land to increase the damage of your spells and effects by 132
 	// for 10s.
 	// https://www.wowhead.com/forever/spell=25907
-	shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
-		Callback:           core.CallbackOnCastComplete,
-		ProcMask:           core.ProcMaskSpellDamage,
-		Outcome:            core.OutcomeEmpty,
-		RequireDamageDealt: false,
-		CanProcFromProcs:   true,
-	}, []shared.ItemVariant{
-		{ItemID: 21190, ItemName: "Wrath of Cenarius"},
-	})
+	// trigger 25906 (5%, core.CallbackOnCastComplete, core.ProcMaskSpellDamage) -> buff 25907
+	shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 25906, BuffSpellID: 25907},
+		[]shared.ItemVariant{
+			{ItemID: 21190, ItemName: "Wrath of Cenarius"},
+		})
 
 	// Chance on harmful spellcast to increase your spell damage and healing by up to 35 for 10s. This spell
 	// damage increase is doubled against Dragonkin.
 	// https://www.wowhead.com/forever/spell=1318930
-	shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
-		Callback:           core.CallbackOnCastComplete,
-		ProcMask:           core.ProcMaskSpellDamage,
-		Outcome:            core.OutcomeEmpty,
-		RequireDamageDealt: false,
-	}, []shared.ItemVariant{
-		{ItemID: 22268, ItemName: "Draconic Infused Emblem"},
-	})
+	// trigger 1318931 (every time, core.CallbackOnCastComplete, core.ProcMaskSpellDamage) -> buff 1318930
+	shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 1318931, BuffSpellID: 1318930},
+		[]shared.ItemVariant{
+			{ItemID: 22268, ItemName: "Draconic Infused Emblem"},
+		})
 
-	// Your casts of Greater Heal in combat grant up to 40 increased healing and up to 13 increased damage for
-	// 15s.
-	// https://www.wowhead.com/forever/spell=1249119
-	shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
-		Callback:           core.CallbackOnHealDealt,
-		ProcMask:           core.ProcMaskSpellHealing,
-		Outcome:            core.OutcomeLanded,
-		RequireDamageDealt: false,
-		CanProcFromProcs:   true,
-	}, []shared.ItemVariant{
-		{ItemID: 249473, ItemName: "Dormant Heart of the Mountain"},
-	})
+	// When struck in combat has a 20% chance of inflicting 50 Nature damage to the attacker.
+	// https://www.wowhead.com/forever/spell=16782
+	// trigger 1216968 (20%, core.CallbackOnSpellHitTaken, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial) -> buff 16782
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1216968, BuffSpellID: 16782},
+		[]shared.ItemVariant{
+			{ItemID: 234562, ItemName: "High Warlord's Shield Wall -  - "},
+		})
+
+	// When struck in combat has a 20% chance of inflicting 50 Nature damage to the attacker.
+	// https://www.wowhead.com/forever/spell=16782
+	// trigger 1216968 (20%, core.CallbackOnSpellHitTaken, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial) -> buff 16782
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1216968, BuffSpellID: 16782},
+		[]shared.ItemVariant{
+			{ItemID: 234588, ItemName: "Grand Marshal's Aegis -  - "},
+		})
 
 	// Chance on hit to deal 75 Arcane damage. Deals 2 times as much damage to Naga and Satyrs.
 	// https://www.wowhead.com/forever/spell=1265634
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      260205,
-		SpellID:     1265634,
-		School:      core.SpellSchoolArcane,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      75,
-		MaxDmg:      75,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "Highborne Research Tablet",
-			ActionID:           core.ActionID{ItemID: 260205},
-			Callback:           core.CallbackOnSpellHitDealt,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial | core.ProcMaskSpellDamage,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: false,
-			ProcChance:         1,
-		},
-	})
+	// trigger 1318159 (every time, core.CallbackOnSpellHitDealt, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial | core.ProcMaskSpellDamage) -> buff 1265634
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1318159, BuffSpellID: 1265634},
+		[]shared.ItemVariant{
+			{ItemID: 260205, ItemName: "Highborne Research Tablet"},
+		})
 
 	// When struck in combat has a 5% chance of inflicting 50 Nature damage to the attacker.
 	// https://www.wowhead.com/forever/spell=16782
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      272591,
-		SpellID:     16782,
-		School:      core.SpellSchoolNature,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      50,
-		MaxDmg:      50,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "Premier High Warlord's Shield Wall",
-			ActionID:           core.ActionID{ItemID: 272591},
-			Callback:           core.CallbackOnSpellHitTaken,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         0.05,
-		},
-	})
+	// trigger 13959 (5%, core.CallbackOnSpellHitTaken, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial) -> buff 16782
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 13959, BuffSpellID: 16782},
+		[]shared.ItemVariant{
+			{ItemID: 272591, ItemName: "Premier High Warlord's Shield Wall"},
+		})
 
 	// When struck in combat has a 5% chance of inflicting 50 Nature damage to the attacker.
 	// https://www.wowhead.com/forever/spell=16782
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      272838,
-		SpellID:     16782,
-		School:      core.SpellSchoolNature,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      50,
-		MaxDmg:      50,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "Premier Grand Marshal's Aegis",
-			ActionID:           core.ActionID{ItemID: 272838},
-			Callback:           core.CallbackOnSpellHitTaken,
-			ProcMask:           core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         0.05,
-		},
-	})
+	// trigger 13959 (5%, core.CallbackOnSpellHitTaken, core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto | core.ProcMaskMeleeMHSpecial | core.ProcMaskMeleeOHSpecial | core.ProcMaskRangedAuto | core.ProcMaskRangedSpecial) -> buff 16782
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 13959, BuffSpellID: 16782},
+		[]shared.ItemVariant{
+			{ItemID: 272838, ItemName: "Premier Grand Marshal's Aegis"},
+		})
 
 	// Chance on harmful spell cast to reduce target enemy's attack power by 60 for 30s.
 	//
 	// https://www.wowhead.com/forever/spell=1297082
-	shared.NewProcStatBonusEffectWithVariants(shared.ProcStatBonusEffect{
-		Callback:           core.CallbackOnCastComplete,
-		ProcMask:           core.ProcMaskSpellDamage,
-		Outcome:            core.OutcomeEmpty,
-		RequireDamageDealt: false,
-	}, []shared.ItemVariant{
-		{ItemID: 275630, ItemName: "Depleted Eye of Influence"},
-	})
+	// trigger 1297085 (every time, core.CallbackOnCastComplete, core.ProcMaskSpellDamage) -> buff 1297082
+	shared.NewSpellDataProc(shared.SpellDataProc{TriggerSpellID: 1297085, BuffSpellID: 1297082},
+		[]shared.ItemVariant{
+			{ItemID: 275630, ItemName: "Depleted Eye of Influence"},
+		})
 
 	// Thrown attacks explode on impact, causing 21 Fire damage to nearby enemies.
 	// https://www.wowhead.com/forever/spell=1318121
-	shared.NewProcDamageEffect(shared.ProcDamageEffect{
-		ItemID:      285278,
-		SpellID:     1318121,
-		School:      core.SpellSchoolFire,
-		DefenseType: core.DefenseTypeMagic,
-		MinDmg:      20.600000381469727,
-		MaxDmg:      20.600000381469727,
-		Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagNoOnDamageDealt | core.SpellFlagProc,
-		Trigger: core.ProcTrigger{
-			Name:               "Satchel of Dark Iron Bombs",
-			ActionID:           core.ActionID{ItemID: 285278},
-			Callback:           core.CallbackOnSpellHitDealt,
-			ProcMask:           core.ProcMaskRangedAuto,
-			Outcome:            core.OutcomeLanded,
-			RequireDamageDealt: true,
-			ProcChance:         1,
-		},
-	})
+	// trigger 1318123 (every time, core.CallbackOnSpellHitDealt, core.ProcMaskRangedAuto) -> buff 1318121
+	shared.NewSpellDataDamageProc(shared.SpellDataProc{TriggerSpellID: 1318123, BuffSpellID: 1318121},
+		[]shared.ItemVariant{
+			{ItemID: 285278, ItemName: "Satchel of Dark Iron Bombs"},
+		})
 
 	// Skipped
+	// Not simulated: Hammer of the Northern Wind: "Frostbolt" (13439) - ignored aura type 33
+	// https://www.wowhead.com/forever/spell=13439
 	// Not simulated: Rod of the Sleepwalker: "Resist Sleep 05" (1292652) - ignored aura type 117
 	// https://www.wowhead.com/forever/spell=1292652
+	// Not simulated: Frost Tiger Blade: "Frostbolt" (13439) - ignored aura type 33
+	// https://www.wowhead.com/forever/spell=13439
+	// Not simulated: Mug O' Hurt: "Dazed" (13496) - ignored aura type 33
+	// https://www.wowhead.com/forever/spell=13496
 	// Not simulated: Girdle of the Blindwatcher: "Stealth Detection 05" (1292149) - ignored aura type 17
 	// https://www.wowhead.com/forever/spell=1292149
+	// Not simulated: Ravager: "Bladestorm" (9632) - ignored aura type 33
+	// https://www.wowhead.com/forever/spell=9632
 	// Not simulated: Mask of Thero-shan: "Stealth 06" (17746) - ignored aura type 154
 	// https://www.wowhead.com/forever/spell=17746
 	// Not simulated: Nightscape Boots: "Stealth 06" (17746) - ignored aura type 154
 	// https://www.wowhead.com/forever/spell=17746
 	// Not simulated: Catseye Ultra Goggles: "Stealth Detection 15" (12418) - ignored aura type 17
 	// https://www.wowhead.com/forever/spell=12418
+	// Not simulated: Winter's Bite: "Frostbolt" (13439) - ignored aura type 33
+	// https://www.wowhead.com/forever/spell=13439
 	// Not simulated: Stealthblade: "Stealth 08" (27037) - ignored aura type 154
 	// https://www.wowhead.com/forever/spell=27037
+	// Not simulated: Coldrage Dagger: "Frostbolt" (1293790) - ignored aura type 33
+	// https://www.wowhead.com/forever/spell=1293790
 	// Not simulated: Tooth of Eranikus: "Resist Sleep 03" (1300001) - ignored aura type 117
 	// https://www.wowhead.com/forever/spell=1300001
+	// Not simulated: Dragon's Call: "Dragon's Call" (13049) - ignored effect type 28
+	// https://www.wowhead.com/forever/spell=13049
 	// Not simulated: Carrot on a Stick: "Mount Speed" (13587) - ignored aura type 130
 	// https://www.wowhead.com/forever/spell=13587
 	// Not simulated: Savage Gladiator Chain: "Resist Fear 04" (1292574) - ignored aura type 117
 	// https://www.wowhead.com/forever/spell=1292574
 	// Not simulated: High Priestess Boots: "Resist Charm 10" (1300925) - ignored aura type 117
 	// https://www.wowhead.com/forever/spell=1300925
+	// Not simulated: Blackblade of Shahram: "Shahram" (16602) - ignored effect type 28
+	// https://www.wowhead.com/forever/spell=16602
 	// Not simulated: Stronghold Gauntlets: "Immune to Disarm" (7219) - ignored aura type 77
 	// https://www.wowhead.com/forever/spell=7219
+	// Not simulated: Frostguard: "Chilled" (16927) - ignored aura type 33
+	// https://www.wowhead.com/forever/spell=16927
 	// Not simulated: Tome of Knowledge: "Stealth 05" (1293068) - ignored aura type 154
 	// https://www.wowhead.com/forever/spell=1293068
 	// Not simulated: Spectral Essence: "Visions of the Past" (17623) - ignored aura type 19
 	// https://www.wowhead.com/forever/spell=17623
+	// Not simulated: Iceblade Hacker: "Frostbolt" (1298416) - ignored aura type 33
+	// https://www.wowhead.com/forever/spell=1298416
 	// Not simulated: Voice Amplification Modulator: "Resist Silence 07" (19786) - ignored aura type 117
 	// https://www.wowhead.com/forever/spell=19786
 	// Not simulated: Knight-Lieutenant's Dragonhide Gloves: "Stealth Detection 10" (23217) - ignored aura type 17
@@ -6301,6 +7943,8 @@ func RegisterAllProcs() {
 	// https://www.wowhead.com/forever/spell=21958
 	// Not simulated: Zum'rah's Vexing Cane: "Ward of Zum'rah" (1294258) - ignored effect type 28
 	// https://www.wowhead.com/forever/spell=1294258
+	// Not simulated: Eskhandar's Left Claw: "Eskhandar's Rake" (22639) - ignored aura type 33
+	// https://www.wowhead.com/forever/spell=22639
 	// Not simulated: Helm of Awareness: "Stealth Detection 05" (1292149) - ignored aura type 17
 	// https://www.wowhead.com/forever/spell=1292149
 	// Not simulated: Murmuring Ring: "Resist Silence 07" (19786) - ignored aura type 117

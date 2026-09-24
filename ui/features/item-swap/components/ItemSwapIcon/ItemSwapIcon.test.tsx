@@ -62,7 +62,7 @@ const setup = (swap: Map<ItemSlot, EquippedItem> = new Map(), slots: ItemSlot[] 
 	} as never);
 	const player = {
 		storeKey,
-		sim: { store },
+		sim: { store, encounter: { getAreaTypes: () => [] } },
 		itemSwapSettings: { getItem: (slot: ItemSlot) => swap.get(slot) ?? null, equipItem },
 	} as unknown as Player<any>;
 	const host = fakeHost({ player });

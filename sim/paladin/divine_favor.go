@@ -3,6 +3,7 @@ package paladin
 import (
 	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
 var DivineFavorRankMap = spellData.DivineFavor
@@ -24,7 +25,7 @@ func (paladin *Paladin) registerDivineFavor() {
 	}).AttachSpellMod(core.SpellModConfig{
 		Kind:       core.SpellMod_BonusCrit_Percent,
 		ClassMask:  SpellMaskHealingSpells | SpellMaskHolyShock,
-		FloatValue: row.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_CRITICAL_CHANCE).Value,
+		FloatValue: row.Effect(shared.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CRITICAL_CHANCE)).Value,
 	}).AttachProcTrigger(core.ProcTrigger{
 		CanProcFromProcs:   true, // 20216 carries the bit.
 		Callback:           core.CallbackOnCastComplete,

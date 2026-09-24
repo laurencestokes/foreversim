@@ -375,9 +375,9 @@ const (
 		HunterSpellExplosiveTrap | HunterSpellFreezingTrap |
 		HunterSpellImmolationTrap
 
-	// Efficiency reads "Shots, Stings and melee abilities" off the client tooltip.
+	// The shots and stings in Efficiency's (19416) class mask; Sniper Shot is not in it.
 	HunterSpellsShotsAndStings = HunterSpellAimedShot | HunterSpellArcaneShot |
-		HunterSpellMultiShot | HunterSpellSerpentSting | HunterSpellSniperShot |
+		HunterSpellMultiShot | HunterSpellSerpentSting |
 		HunterSpellVolley | HunterSpellSummonHawk
 
 	HunterSpellsMelee = HunterSpellRaptorStrike | HunterSpellMongooseBite |

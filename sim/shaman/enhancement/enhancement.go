@@ -57,8 +57,6 @@ func NewEnhancementShaman(character *core.Character, options *proto.Player) *Enh
 		enh.SelfBuffs.ImbueOH = proto.ShamanImbue_NoImbue
 	}
 
-	enh.PseudoStats.CanParry = true
-
 	return enh
 }
 

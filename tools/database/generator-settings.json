@@ -59,6 +59,8 @@
 		"SpellProcsPerMinuteMod",
 		"SpellCategories",
 		"SpellShapeshift",
+		"SpellShapeshiftForm",
+		"SpellAuraRestrictions",
 		"SpellEffect",
 		"SpellDuration",
 		"SpellAuraOptions",

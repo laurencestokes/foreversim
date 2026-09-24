@@ -1,40 +1,40 @@
 package priest
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 var SmiteRankMap = spellData.Smite
 
 // Every rank is registered: the Smite rotation drops to rank 7 when mana runs short.
-func (priest *Priest) registerSmiteSpell(rank shared.SpellData) {
+func (priest *Priest) registerSmiteSpell(rank *spelldata.Spell) {
 	priest.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: PriestSpellSmite,
-		Rank:           rank.Rank,
-		MaxRange:       rank.MaxRange,
+		Rank:           rank.RankNumber(),
+		MaxRange:       float64(rank.MaxRange),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD:      rank.GCD,
-				CastTime: rank.CastTime,
+				GCD:      rank.GCD(),
+				CastTime: rank.CastTime(),
 			},
 		},
 
 		DamageMultiplier: 1,
-		BonusCoefficient: rank.Direct.BonusCoefficient(),
+		BonusCoefficient: rank.DamageEffect().Coeff(),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, rank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			spell.CalcAndDealDamage(sim, target, rank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 		},
 	})
 }

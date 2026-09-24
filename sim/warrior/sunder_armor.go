@@ -2,6 +2,7 @@ package warrior
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
 func (warrior *Warrior) registerSunderArmor() {
@@ -9,9 +10,9 @@ func (warrior *Warrior) registerSunderArmor() {
 	//
 	// TODO: rank 1 reads a flat threat of 1, which looks like placeholder data next to the
 	// rest of the ladder. Harmless while this pins the highest rank, but worth confirming.
-	sunderArmorRank := spellData.SunderArmor.HighestRank()
+	sunderArmorRank := spellData.SunderArmor.Highest()
 
-	actionId := core.ActionID{SpellID: sunderArmorRank.SpellID}
+	actionId := core.ActionID{SpellID: sunderArmorRank.ID}
 
 	// core.SunderArmorAura carries the client's rank 5 (450 armor a stack). The id is set to the
 	// rank's so an APL can watch the stacks by the spell it casts.
@@ -31,12 +32,12 @@ func (warrior *Warrior) registerSunderArmor() {
 		MaxRange:       core.MaxMeleeRange,
 
 		RageCost: core.RageCostOptions{
-			Cost:   sunderArmorRank.Cost,
+			Cost:   int32(sunderArmorRank.Cost()),
 			Refund: sunderArmorRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: sunderArmorRank.GCD,
+				GCD: sunderArmorRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},
@@ -46,7 +47,7 @@ func (warrior *Warrior) registerSunderArmor() {
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		FlatThreatBonus:  sunderArmorRank.FlatThreatBonus,
+		FlatThreatBonus:  sunderArmorRank.FindEffect(dbcenums.E_THREAT, 0, 0).Average(core.CharacterLevel),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			result := spell.CalcOutcome(sim, target, spell.OutcomeMeleeSpecialHit)

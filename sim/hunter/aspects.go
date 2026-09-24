@@ -1,8 +1,8 @@
 package hunter
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -16,20 +16,20 @@ func (hunter *Hunter) registerAspects() {
 }
 
 func (hunter *Hunter) registerAspectOfTheHawkSpell() {
-	hawkRank := spellData.AspectOfTheHawk.HighestRank()
-	actionID := core.ActionID{SpellID: hawkRank.SpellID}
+	hawkRank := spellData.AspectOfTheHawk.Highest()
+	actionID := core.ActionID{SpellID: hawkRank.ID}
 
 	// Every rank of Deadly Aspects triggers the same Quick Shots (6150): 30% ranged haste for 12
 	// sec. The points buy only the proc chance, 2% a rank.
 	var quickShots *core.Aura
 	if hunter.Talents.DeadlyAspects > 0 {
-		quickShotsRank := spellData.AspectOfTheHawkTriggered.HighestRank()
-		hasteMultiplier := 1 + quickShotsRank.Effect(shared.A_MOD_RANGED_HASTE, 0).Value/100
+		quickShotsRank := spellData.AspectOfTheHawkTriggered.Highest()
+		hasteMultiplier := 1 + quickShotsRank.Effect(dbcenums.A_MOD_RANGED_HASTE, 0).Average(core.CharacterLevel)/100
 
 		quickShots = hunter.GetOrRegisterAura(core.Aura{
 			Label:    "Quick Shots",
-			ActionID: core.ActionID{SpellID: quickShotsRank.SpellID},
-			Duration: quickShotsRank.Duration,
+			ActionID: core.ActionID{SpellID: quickShotsRank.ID},
+			Duration: quickShotsRank.Duration(),
 			OnGain: func(aura *core.Aura, sim *core.Simulation) {
 				aura.Unit.MultiplyRangedSpeed(sim, hasteMultiplier)
 			},
@@ -39,9 +39,9 @@ func (hunter *Hunter) registerAspectOfTheHawkSpell() {
 		})
 	}
 
-	rap := shared.SpellDataMin(hawkRank.Direct)
+	rap := hawkRank.Effect(dbcenums.A_MOD_RANGED_ATTACK_POWER, 0).Average(core.CharacterLevel)
 	// The row states the same 2% a rank twice, once per aspect the talent covers.
-	procChance := spellData.DeadlyAspects.EffectAt(0).FractionAt(hunter.Talents.DeadlyAspects)
+	procChance := spellData.DeadlyAspects.EffectAt(1).FractionAt(hunter.Talents.DeadlyAspects)
 
 	hunter.AspectOfTheHawkAura = hunter.GetOrRegisterAura(core.Aura{
 		Label:      "Aspect of the Hawk",
@@ -67,18 +67,18 @@ func (hunter *Hunter) registerAspectOfTheHawkSpell() {
 
 	hunter.AspectOfTheHawk = hunter.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
-		SpellSchool:    hawkRank.SpellSchool,
-		DefenseType:    hawkRank.DefenseType,
+		SpellSchool:    hawkRank.SpellSchool(),
+		DefenseType:    hawkRank.DefenseTypeCore(),
 		ClassSpellMask: HunterSpellAspectOfTheHawk,
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL,
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: hawkRank.Cost,
+			FlatCost: int32(hawkRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: hawkRank.GCD,
+				GCD: hawkRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},

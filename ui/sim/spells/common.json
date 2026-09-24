@@ -195,6 +195,12 @@
 		"source": "classic",
 		"note": "Checked against the beta client (spell 16601) and unchanged from Classic Era. Forever renumbered the haste aura from 138 to 319 and changed no value."
 	},
+	"16782": {
+		"ability": "Lightning Bolt (Electrostatic Charge)",
+		"file": "sim/common/forever/stat_bonus_procs_auto_gen.go",
+		"note": "The PvP shields' Electrostatic Charge (13959 at 5%, 1216968 at 20%). Identical in beta client 1.60.1.69893 and Classic Era: 35 to 65 Nature damage to the attacker.",
+		"source": "classic"
+	},
 	"16898": {
 		"ability": "Blaze (Blazing Rapier)",
 		"file": "sim/common/item_effects.go",

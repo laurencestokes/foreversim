@@ -86,9 +86,6 @@ type Character struct {
 	// This character's index within its party [0-4].
 	PartyIndex int
 
-	// This stores a timer on spell category ID so that we can track on use effects.
-	spellCategoryTimers map[int32]*Timer
-
 	Pets []*Pet // cached in AddPet, for advance()
 
 	// Used for manually modifying a rotation before it's constructed
@@ -122,7 +119,7 @@ func NewCharacter(party *Party, partyIndex int, player *proto.Player) Character 
 		Class: player.Class,
 		Spec:  PlayerProtoToSpec(player),
 
-		Equipment: ProtoToEquipment(player.Equipment),
+		Equipment: ProtoToEquipment(player.Equipment).inArea(party.areaTypes()),
 
 		professions: [2]proto.Profession{
 			player.Profession1,
@@ -444,7 +441,7 @@ func (character *Character) Finalize() {
 			},
 
 			Handler: func(sim *Simulation, spell *Spell, result *SpellResult) {
-				if !sim.Proc(character.PseudoStats.PushbackChance, "Pushback") {
+				if !sim.Proc(character.PseudoStats.PushbackChance-character.Hardcast.Spell.PushbackResist, "Pushback") {
 					return
 				}
 

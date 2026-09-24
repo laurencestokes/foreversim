@@ -283,6 +283,9 @@ export class Database {
 	getZone(zoneId: number): Zone | null {
 		return this.zones.get(zoneId) || null;
 	}
+	getAllZones(): Array<Zone> {
+		return Array.from(this.zones.values());
+	}
 
 	getMatchingGems(socketColor: GemColor): Array<Gem> {
 		const ret = [];

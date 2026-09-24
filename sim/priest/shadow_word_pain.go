@@ -3,31 +3,32 @@ package priest
 import (
 	"fmt"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 var ShadowWordPainRankMap = spellData.ShadowWordPain
 
-func (priest *Priest) registerShadowWordPainSpell(rank shared.SpellData) {
-	tick := rank.Periodic.(shared.SpellDataPeriodic)
+func (priest *Priest) registerShadowWordPainSpell(rank *spelldata.Spell) {
+	tick := rank.PeriodicEffect()
+	tickLength := tick.Period()
 
 	priest.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: PriestSpellShadowWordPain,
-		Rank:           rank.Rank,
-		MaxRange:       rank.MaxRange,
+		Rank:           rank.RankNumber(),
+		MaxRange:       float64(rank.MaxRange),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: rank.GCD,
+				GCD: rank.GCD(),
 			},
 		},
 
@@ -36,18 +37,18 @@ func (priest *Priest) registerShadowWordPainSpell(rank shared.SpellData) {
 
 		Dot: core.DotConfig{
 			Aura: core.Aura{
-				Label: fmt.Sprintf("ShadowWordPain-%d", rank.Rank),
+				Label: fmt.Sprintf("ShadowWordPain-%d", rank.RankNumber()),
 			},
-			NumberOfTicks:       tick.NumberOfTicks,
-			TickLength:          tick.TickLength,
+			NumberOfTicks:       int32(rank.Duration() / tickLength),
+			TickLength:          tickLength,
 			AffectedByCastSpeed: false,
-			BonusCoefficient:    tick.Coef,
+			BonusCoefficient:    tick.Coeff(),
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, tick.Tick)
+				dot.Snapshot(target, tick.Average(core.CharacterLevel))
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, priestTickOutcome(rank, dot))
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, priestTickOutcome(rank.PeriodicCanCrit(), dot))
 			},
 		},
 
@@ -63,7 +64,7 @@ func (priest *Priest) registerShadowWordPainSpell(rank shared.SpellData) {
 			if useSnapshot {
 				return spell.Dot(target).CalcSnapshotDamage(sim, target, spell.OutcomeExpectedMagicHit)
 			}
-			return spell.CalcPeriodicDamage(sim, target, tick.Tick, spell.OutcomeExpectedMagicHit)
+			return spell.CalcPeriodicDamage(sim, target, tick.Average(core.CharacterLevel), spell.OutcomeExpectedMagicHit)
 		},
 	})
 }

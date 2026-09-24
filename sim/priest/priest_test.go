@@ -3,6 +3,7 @@ package priest
 import (
 	"testing"
 
+	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
@@ -76,3 +77,40 @@ func priestSuite(apl string, talents string, preShadowform bool) core.CharacterS
 		},
 	}
 }
+
+// Both priests share ui/specs/priest/dps, so each takes its own talents, gear and rotation out
+// of it. The site's options, which leave Inner Fire and Shadowfiend off.
+func TestArenaShadow(t *testing.T) {
+	arenalib.Run(t, arenalib.Spec{
+		Dir:         "shadow_priest",
+		UI:          "priest/dps",
+		Class:       proto.Class_ClassPriest,
+		Race:        proto.Race_RaceUndead,
+		SpecOptions: arenaPriestOptions,
+		Role:        arenalib.Caster,
+		// Mind Flay is 20 yd in the client (SpellRange 3).
+		DistanceFromTarget: 20,
+		Talents:            "Shadow",
+		GearSets:           []string{"launch", "p0.bis", "p1.bis"},
+		Rotations:          []string{"shadow"},
+	})
+}
+
+func TestArenaSmite(t *testing.T) {
+	arenalib.Run(t, arenalib.Spec{
+		Dir:                "smite_priest",
+		UI:                 "priest/dps",
+		Class:              proto.Class_ClassPriest,
+		Race:               proto.Race_RaceUndead,
+		SpecOptions:        arenaPriestOptions,
+		Role:               arenalib.Caster,
+		DistanceFromTarget: 30,
+		Talents:            "Smite",
+		GearSets:           []string{"smite_launch"},
+		Rotations:          []string{"smite"},
+	})
+}
+
+var arenaPriestOptions = &proto.Player_DpsPriest{DpsPriest: &proto.DpsPriest{Options: &proto.DpsPriest_Options{
+	ClassOptions: &proto.PriestOptions{},
+}}}

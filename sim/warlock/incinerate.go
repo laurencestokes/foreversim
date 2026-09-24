@@ -11,33 +11,33 @@ func (warlock *Warlock) registerIncinerate() {
 		return
 	}
 
-	rank := spellData.Incinerate.HighestRank()
-	immolateBonus := 1 + spellData.Incinerate.EffectAt(1).FractionAt(rank.Rank)
+	rank := spellData.Incinerate.Highest()
+	immolateBonus := 1 + rank.EffectN(2).Percent()
 
 	warlock.Incinerate = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellIncinerate,
-		MissileSpeed:   rank.MissileSpeed,
+		MissileSpeed:   float64(rank.Speed),
 
-		ManaCost: core.ManaCostOptions{FlatCost: rank.Cost},
+		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD:      rank.GCD,
-				CastTime: rank.CastTime,
+				GCD:      rank.GCD(),
+				CastTime: rank.CastTime(),
 			},
 		},
 
 		DamageMultiplierAdditive: 1,
 		DamageMultiplier:         1,
 		ThreatMultiplier:         1,
-		BonusCoefficient:         rank.Direct.BonusCoefficient(),
+		BonusCoefficient:         rank.DamageEffect().Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			baseDamage := rank.Direct.Damage(sim)
+			baseDamage := rank.DamageEffect().Average(core.CharacterLevel)
 			if warlock.Immolate.Dot(target).IsActive() {
 				baseDamage *= immolateBonus
 			}

@@ -3,6 +3,7 @@ package warlock
 import (
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -239,7 +240,7 @@ const (
 
 	WarlockShadowDamage = WarlockSpellCorruption | WarlockSpellDrainLife | WarlockSpellCurseOfAgony |
 		WarlockSpellCurseOfDoom | WarlockSpellShadowBolt | WarlockSpellShadowBurn | WarlockSpellSiphonLife |
-		WarlockSpellDeathCoil | WarlockSpellDrainSoul | WarlockSpellWrack | WarlockSpellLifeTap
+		WarlockSpellDeathCoil | WarlockSpellDrainSoul | WarlockSpellWrack
 
 	WarlockPeriodicShadowDamage = WarlockSpellCorruption | WarlockSpellDrainLife | WarlockSpellCurseOfAgony |
 		WarlockSpellCurseOfDoom | WarlockSpellSiphonLife | WarlockSpellDrainSoul | WarlockSpellWrack
@@ -279,3 +280,17 @@ const (
 
 // Called to handle custom resources
 type WarlockSpellCastedCallback func(resultList core.SpellResultSlice, spell *core.Spell, sim *core.Simulation)
+
+// The tick outcome the family table picked: a crit roll where the client marks Periodic Can Crit, a
+// plain tick otherwise, and never a per-tick hit roll. The store's TickOutcome adds that hit roll on
+// magic ticks, which would move every dot.
+func periodicTickOutcome(s *spelldata.Spell, dot *core.Dot) core.OutcomeApplier {
+	switch {
+	case s.PeriodicCanCrit() && s.DefenseTypeCore() == core.DefenseTypeMagic:
+		return dot.Spell.OutcomeTickMagicCrit
+	case s.PeriodicCanCrit():
+		return dot.Spell.OutcomeTickPhysicalCrit
+	default:
+		return dot.OutcomeTick
+	}
+}

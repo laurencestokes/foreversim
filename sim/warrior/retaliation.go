@@ -5,17 +5,17 @@ import (
 )
 
 func (warrior *Warrior) registerRetaliation() {
-	retaliationRank := spellData.Retaliation.HighestRank()
-	retaliationHit := spellData.RetaliationTriggered.HighestRank()
-	retaliationHitBaseDamage, _ := retaliationHit.Direct.Range()
+	retaliationRank := spellData.Retaliation.Highest()
+	retaliationHit := spellData.RetaliationTriggered.Highest()
+	retaliationHitBaseDamage := retaliationHit.DamageEffect().Average(core.CharacterLevel)
 
-	actionID := core.ActionID{SpellID: retaliationRank.SpellID}
+	actionID := core.ActionID{SpellID: retaliationRank.ID}
 
 	attackSpell := warrior.RegisterSpell(core.SpellConfig{
 		ClassSpellMask: SpellMaskRetaliationHit,
-		ActionID:       core.ActionID{SpellID: retaliationHit.SpellID},
-		SpellSchool:    retaliationHit.SpellSchool,
-		DefenseType:    retaliationHit.DefenseType,
+		ActionID:       core.ActionID{SpellID: retaliationHit.ID},
+		SpellSchool:    retaliationHit.SpellSchool(),
+		DefenseType:    retaliationHit.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMH,
 		Flags:          core.SpellFlagMeleeMetrics,
 
@@ -31,8 +31,8 @@ func (warrior *Warrior) registerRetaliation() {
 	aura := warrior.RegisterAura(core.Aura{
 		ActionID:  actionID,
 		Label:     "Retaliation",
-		Duration:  retaliationRank.Duration,
-		MaxStacks: retaliationRank.ProcCharges,
+		Duration:  retaliationRank.Duration(),
+		MaxStacks: int32(retaliationRank.ProcCharges),
 		OnSpellHitTaken: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 			if spell.ProcMask.Matches(core.ProcMaskMelee) && result.Landed() && result.Damage > 0 {
 				attackSpell.Cast(sim, spell.Unit)
@@ -47,11 +47,11 @@ func (warrior *Warrior) registerRetaliation() {
 		ClassSpellMask: SpellMaskRetaliation,
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: retaliationRank.GCD,
+				GCD: retaliationRank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: retaliationRank.Cooldown,
+				Duration: cooldownOf(retaliationRank),
 			},
 		},
 
@@ -61,7 +61,7 @@ func (warrior *Warrior) registerRetaliation() {
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
 			aura.Activate(sim)
-			aura.SetStacks(sim, retaliationRank.ProcCharges)
+			aura.SetStacks(sim, int32(retaliationRank.ProcCharges))
 		},
 
 		RelatedSelfBuff: aura,

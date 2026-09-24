@@ -5,13 +5,13 @@ import (
 )
 
 func (warrior *Warrior) registerIntercept() {
-	interceptRank := spellData.Intercept.HighestRank()
-	// The damage sits on the stun the charge triggers, which the generator follows onto the row.
-	interceptStunDamage, _ := interceptRank.Direct.Range()
+	interceptRank := spellData.Intercept.Highest()
+	// The damage sits on the stun the charge triggers (20615), not on Intercept itself.
+	interceptStunDamage := interceptRank.EffectN(2).Trigger().DamageEffect().Average(core.CharacterLevel)
 
-	actionID := core.ActionID{SpellID: interceptRank.SpellID}
-	chargeMinRange := interceptRank.MinRange
-	interceptCD := interceptRank.Cooldown
+	actionID := core.ActionID{SpellID: interceptRank.ID}
+	chargeMinRange := float64(interceptRank.MinRange)
+	interceptCD := cooldownOf(interceptRank)
 
 	var spell *core.Spell
 	var interceptTarget *core.Unit
@@ -26,10 +26,10 @@ func (warrior *Warrior) registerIntercept() {
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: SpellMaskIntercept,
 		MinRange:       chargeMinRange,
-		MaxRange:       interceptRank.MaxRange,
+		MaxRange:       float64(interceptRank.MaxRange),
 
 		RageCost: core.RageCostOptions{
-			Cost: interceptRank.Cost,
+			Cost: int32(interceptRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			CD: core.Cooldown{

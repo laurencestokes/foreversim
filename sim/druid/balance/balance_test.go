@@ -3,6 +3,7 @@ package balance
 import (
 	"testing"
 
+	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
 	_ "github.com/wowsims/forever/sim/common" // imported to get caster sets included.
 	"github.com/wowsims/forever/sim/core"
@@ -55,4 +56,18 @@ var DefaultWeaponTypes = []proto.WeaponType{
 
 var DefaultRangedWeaponTypes = []proto.RangedWeaponType{
 	proto.RangedWeaponType_RangedWeaponTypeIdol,
+}
+
+// The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
+func TestArena(t *testing.T) {
+	arenalib.Run(t, arenalib.Spec{
+		Dir:   "balance_druid",
+		UI:    "druid/balance",
+		Class: proto.Class_ClassDruid,
+		Race:  proto.Race_RaceNightElf,
+		SpecOptions: &proto.Player_BalanceDruid{BalanceDruid: &proto.BalanceDruid{
+			Options: &proto.BalanceDruid_Options{ClassOptions: &proto.DruidOptions{}},
+		}},
+		Role: arenalib.Caster,
+	})
 }

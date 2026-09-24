@@ -4,7 +4,7 @@ import (
 	"github.com/wowsims/forever/sim/core"
 )
 
-var faerieFireRank = spellData.FaerieFire.HighestRank()
+var faerieFireRank = spellData.FaerieFire.Highest()
 
 // Forever has no Faerie Fire (Feral): the client keeps only the Balance line (770, 778, 9749,
 // 9907), so one registration serves every form.
@@ -17,26 +17,26 @@ func (druid *Druid) registerFaerieFireSpell() {
 
 	druid.FaerieFire = druid.RegisterSpell(Any, core.SpellConfig{
 		ClassSpellMask: DruidSpellFaerieFire,
-		ActionID:       core.ActionID{SpellID: faerieFireRank.SpellID},
-		SpellSchool:    faerieFireRank.SpellSchool,
-		DefenseType:    faerieFireRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: faerieFireRank.ID},
+		SpellSchool:    faerieFireRank.SpellSchool(),
+		DefenseType:    faerieFireRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
-		Rank:           faerieFireRank.Rank,
+		Rank:           faerieFireRank.RankNumber(),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: faerieFireRank.Cost,
+			FlatCost: int32(faerieFireRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: faerieFireRank.GCD,
+				GCD: faerieFireRank.GCD(),
 			},
 		},
 
 		ThreatMultiplier: 1,
 		// Two threat a level, the sim's long-standing value; the client states none.
 		FlatThreatBonus: 2 * float64(core.CharacterLevel),
-		MaxRange:        faerieFireRank.MaxRange,
+		MaxRange:        float64(faerieFireRank.MaxRange),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			result := spell.CalcAndDealOutcome(sim, target, spell.OutcomeMagicHit)

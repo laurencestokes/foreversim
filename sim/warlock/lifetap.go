@@ -2,17 +2,19 @@ package warlock
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/stats"
 )
 
-// Life Tap turns health into mana one for one, so the restore is the damage the spell rolls against
-// the warlock. The row carries the 424 on its energize effect and no coefficient of its own; the
-// 0.8 is ours. Improved Life Tap rides on the talent as a SpellMod, Demonic Energies hands the pet
-// a share of the restore (the talent's second effect, 50% per point).
+// Life Tap is a plain mana gain, not damage: 11689 converts $s1 (424) health into
+// ($m1 + Spirit) * (1 + Improved Life Tap 18182) mana, so no damage done / taken modifier touches
+// either side. Demonic Energies hands the pet a share of the restore (the talent's second effect,
+// 50% per point).
 func (warlock *Warlock) registerLifeTap() {
-	rank := spellData.LifeTap.HighestRank()
-	actionID := core.ActionID{SpellID: rank.SpellID}
-	baseDamage := spellData.LifeTap.EffectAt(0).ValueAt(rank.Rank)
-	petManaShare := spellData.DemonicEnergies.EffectAt(1).FractionAt(warlock.Talents.DemonicEnergies)
+	rank := spellData.LifeTap.Highest()
+	actionID := core.ActionID{SpellID: rank.ID}
+	healthCost := rank.EffectN(1).Average(core.CharacterLevel)
+	manaMultiplier := 1 + spellData.ImprovedLifeTap.FractionAt(warlock.Talents.ImprovedLifeTap)
+	petManaShare := spellData.DemonicEnergies.EffectAt(2).FractionAt(warlock.Talents.DemonicEnergies)
 
 	manaMetrics := warlock.NewManaMetrics(actionID)
 	petManaMetrics := make(map[*WarlockPet]*core.ResourceMetrics, len(warlock.BasePets))
@@ -22,10 +24,10 @@ func (warlock *Warlock) registerLifeTap() {
 
 	warlock.LifeTap = warlock.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
-		SpellSchool:    rank.SpellSchool,
+		SpellSchool:    rank.SpellSchool(),
 		DefenseType:    core.DefenseTypeMagic,
 		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL | core.SpellFlagBinary,
+		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellLifeTap,
 
 		Cast: core.CastConfig{
@@ -34,19 +36,15 @@ func (warlock *Warlock) registerLifeTap() {
 			},
 		},
 
-		DamageMultiplierAdditive: 1,
-		DamageMultiplier:         1,
-		ThreatMultiplier:         1,
-		BonusCoefficient:         0.8,
+		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, &warlock.Unit, baseDamage, spell.OutcomeAlwaysHit)
-			warlock.RemoveHealth(sim, result.Damage)
-
-			warlock.AddMana(sim, result.Damage, manaMetrics)
+			restore := (healthCost + warlock.GetStat(stats.Spirit)) * manaMultiplier
+			warlock.RemoveHealth(sim, healthCost)
+			warlock.AddMana(sim, restore, manaMetrics)
 
 			if petManaShare > 0 && warlock.ActivePet != nil {
-				warlock.ActivePet.AddMana(sim, result.Damage*petManaShare, petManaMetrics[warlock.ActivePet])
+				warlock.ActivePet.AddMana(sim, restore*petManaShare, petManaMetrics[warlock.ActivePet])
 			}
 		},
 	})

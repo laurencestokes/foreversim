@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 	"github.com/wowsims/forever/tools/database/dbc"
@@ -14,33 +15,33 @@ import (
 // Empty array means ignore all effects of that type, otherwise it will be ignored
 // based on EffectMiscValue_0
 var IgnoreSpellEffectByAuraType = map[dbc.EffectAuraType][]int{
-	dbc.A_MOD_MECHANIC_RESISTANCE: {},
-	dbc.A_MOD_STEALTH:             {},
-	dbc.A_MOD_STEALTH_DETECT:      {},
-	dbc.A_MOD_STEALTH_LEVEL:       {},
-	dbc.A_MOD_DECREASE_SPEED:      {},
-	dbc.A_MOD_INVISIBILITY:        {},
-	dbc.A_MOD_INVISIBILITY_DETECT: {},
-	dbc.A_MOD_SKILL: {
+	dbcenums.A_MOD_MECHANIC_RESISTANCE: {},
+	dbcenums.A_MOD_STEALTH:             {},
+	dbcenums.A_MOD_STEALTH_DETECT:      {},
+	dbcenums.A_MOD_STEALTH_LEVEL:       {},
+	dbcenums.A_MOD_DECREASE_SPEED:      {},
+	dbcenums.A_MOD_INVISIBILITY:        {},
+	dbcenums.A_MOD_INVISIBILITY_DETECT: {},
+	dbcenums.A_MOD_SKILL: {
 		356, // Fishing Skill
 		393, // Skinning Skill
 	},
-	dbc.A_MOD_INCREASE_MOUNTED_SPEED:        {},
-	dbc.A_MOD_MOUNTED_SPEED_ALWAYS:          {},
-	dbc.A_MOD_MOUNTED_SPEED_NOT_STACK:       {},
-	dbc.A_MOD_INCREASE_MOUNTED_FLIGHT_SPEED: {},
-	dbc.A_MOD_MOUNTED_FLIGHT_SPEED_ALWAYS:   {},
-	dbc.A_TRANSFORM:                         {},
-	dbc.A_MECHANIC_IMMUNITY:                 {},
-	dbc.A_TRACK_CREATURES:                   {},
-	dbc.A_TRACK_RESOURCES:                   {},
-	dbc.A_FAR_SIGHT:                         {},
+	dbcenums.A_MOD_INCREASE_MOUNTED_SPEED:        {},
+	dbcenums.A_MOD_MOUNTED_SPEED_ALWAYS:          {},
+	dbcenums.A_MOD_MOUNTED_SPEED_NOT_STACK:       {},
+	dbcenums.A_MOD_INCREASE_MOUNTED_FLIGHT_SPEED: {},
+	dbcenums.A_MOD_MOUNTED_FLIGHT_SPEED_ALWAYS:   {},
+	dbcenums.A_TRANSFORM:                         {},
+	dbcenums.A_MECHANIC_IMMUNITY:                 {},
+	dbcenums.A_TRACK_CREATURES:                   {},
+	dbcenums.A_TRACK_RESOURCES:                   {},
+	dbcenums.A_FAR_SIGHT:                         {},
 }
 
 var IgnoreSpellEffectBySpellEffectType = map[dbc.SpellEffectType][]int{
-	dbc.E_CREATE_ITEM:    {},
-	dbc.E_SUMMON:         {},
-	dbc.E_TELEPORT_UNITS: {},
+	dbcenums.E_CREATE_ITEM:    {},
+	dbcenums.E_SUMMON:         {},
+	dbcenums.E_TELEPORT_UNITS: {},
 }
 
 // Spells that are flavour rather than mechanics, keyed by spell ID so that reporting them as

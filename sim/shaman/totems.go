@@ -3,21 +3,21 @@ package shaman
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
 // A totem's buff is a spell of its own; the value it gives lives on that spell, not on the totem.
-var windfuryTotemRank = spellData.WindfuryTotem.HighestRank()
-var windfuryTotemBuff = spellData.WindfuryTotemTriggered.HighestRank()
-var strengthOfEarthTotemRank = spellData.StrengthOfEarthTotem.HighestRank()
-var strengthOfEarthTotemBuff = spellData.StrengthOfEarthTotemTriggered.HighestRank()
-var graceOfAirTotemRank = spellData.GraceOfAirTotem.HighestRank()
-var graceOfAirTotemBuff = spellData.GraceOfAirTotemTriggered.HighestRank()
-var manaSpringTotemRank = spellData.ManaSpringTotem.HighestRank()
-var manaSpringTotemBuff = spellData.ManaSpringTotemTriggered.HighestRank()
+var windfuryTotemRank = spellData.WindfuryTotem.Highest()
+var windfuryTotemBuff = spellData.WindfuryTotemTriggered.Highest()
+var strengthOfEarthTotemRank = spellData.StrengthOfEarthTotem.Highest()
+var strengthOfEarthTotemBuff = spellData.StrengthOfEarthTotemTriggered.Highest()
+var graceOfAirTotemRank = spellData.GraceOfAirTotem.Highest()
+var graceOfAirTotemBuff = spellData.GraceOfAirTotemTriggered.Highest()
+var manaSpringTotemRank = spellData.ManaSpringTotem.Highest()
+var manaSpringTotemBuff = spellData.ManaSpringTotemTriggered.Highest()
 
 func (shaman *Shaman) newTotemSpellConfig(flatCost int32, spellID int32, spellMask int64, gcd time.Duration) core.SpellConfig {
 	return core.SpellConfig{
@@ -38,12 +38,12 @@ func (shaman *Shaman) newTotemSpellConfig(flatCost int32, spellID int32, spellMa
 }
 
 func (shaman *Shaman) registerWindfuryTotemSpell() {
-	duration := windfuryTotemRank.Duration
+	duration := windfuryTotemRank.Duration()
 	// Forever drops Improved Weapon Totems, so the buff's own attack power is the whole value.
-	value := windfuryTotemBuff.Direct.Damage(nil)
+	value := windfuryTotemBuff.EffectN(1).Average(core.CharacterLevel)
 
-	wfProcAura := shaman.NewTemporaryStatsAura("Windfury Totem Proc (Self)", core.ActionID{SpellID: windfuryTotemBuff.SpellID}, stats.Stats{stats.AttackPower: value}, windfuryTotemBuff.Duration)
-	wfProcAura.MaxStacks = windfuryTotemBuff.ProcCharges
+	wfProcAura := shaman.NewTemporaryStatsAura("Windfury Totem Proc (Self)", core.ActionID{SpellID: windfuryTotemBuff.ID}, stats.Stats{stats.AttackPower: value}, windfuryTotemBuff.Duration())
+	wfProcAura.MaxStacks = int32(windfuryTotemBuff.ProcCharges)
 	wfProcAura.AttachProcTrigger(core.ProcTrigger{
 		Name:     "Windfury Attack (Self)",
 		Callback: core.CallbackOnSpellHitDealt,
@@ -59,12 +59,12 @@ func (shaman *Shaman) registerWindfuryTotemSpell() {
 		},
 	})
 
-	config := shaman.newTotemSpellConfig(windfuryTotemRank.Cost, windfuryTotemRank.SpellID, SpellMaskBasicTotem, windfuryTotemRank.GCD)
+	config := shaman.newTotemSpellConfig(int32(windfuryTotemRank.Cost()), windfuryTotemRank.ID, SpellMaskBasicTotem, windfuryTotemRank.GCD())
 
 	var windfurySpell *core.Spell
 	wfProcTrigger := shaman.MakeProcTriggerAura(core.ProcTrigger{
 		Name:               "Windfury Totem Trigger (Self)",
-		MetricsActionID:    core.ActionID{SpellID: windfuryTotemRank.SpellID},
+		MetricsActionID:    core.ActionID{SpellID: windfuryTotemRank.ID},
 		IsWeaponProc:       true,
 		ProcChance:         0.2,
 		Duration:           core.NeverExpires,
@@ -92,7 +92,7 @@ func (shaman *Shaman) registerWindfuryTotemSpell() {
 	wfPartyWeaponBuffTrackingAura := shaman.RegisterAura(core.Aura{
 		Label:    "Windfury Party Weapon Buff Tracking Aura",
 		Duration: time.Second * 10,
-		ActionID: core.ActionID{SpellID: windfuryTotemRank.SpellID, Tag: 1},
+		ActionID: core.ActionID{SpellID: windfuryTotemRank.ID, Tag: 1},
 	})
 
 	wfAura := shaman.RegisterAura(core.Aura{
@@ -101,7 +101,7 @@ func (shaman *Shaman) registerWindfuryTotemSpell() {
 		Duration: duration,
 	}).ApplyOnInit(func(aura *core.Aura, sim *core.Simulation) {
 		mhConfig := *shaman.AutoAttacks.MHConfig()
-		mhConfig.ActionID = mhConfig.ActionID.WithTag(windfuryTotemBuff.SpellID)
+		mhConfig.ActionID = mhConfig.ActionID.WithTag(windfuryTotemBuff.ID)
 		windfurySpell = shaman.GetOrRegisterSpell(mhConfig)
 	}).AttachPeriodicAction(core.PeriodicActionOptions{
 		Period:          time.Second * 5,
@@ -141,10 +141,10 @@ func (shaman *Shaman) registerWindfuryTotemSpell() {
 }
 
 func (shaman *Shaman) registerStrengthOfEarthTotemSpell() {
-	duration := strengthOfEarthTotemRank.Duration
+	duration := strengthOfEarthTotemRank.Duration()
 	// Forever drops Enhancing Totems, so the buff's own value is the whole value.
-	value := strengthOfEarthTotemBuff.Direct.Damage(nil)
-	config := shaman.newTotemSpellConfig(strengthOfEarthTotemRank.Cost, strengthOfEarthTotemRank.SpellID, SpellMaskBasicTotem, strengthOfEarthTotemRank.GCD)
+	value := strengthOfEarthTotemBuff.EffectN(1).Average(core.CharacterLevel)
+	config := shaman.newTotemSpellConfig(int32(strengthOfEarthTotemRank.Cost()), strengthOfEarthTotemRank.ID, SpellMaskBasicTotem, strengthOfEarthTotemRank.GCD())
 	buffAura := shaman.RegisterAura(core.Aura{
 		Label:    "Strength Of Earth Totem (Self)",
 		ActionID: config.ActionID,
@@ -171,9 +171,9 @@ func (shaman *Shaman) registerStrengthOfEarthTotemSpell() {
 }
 
 func (shaman *Shaman) registerGraceOfAirTotemSpell() {
-	duration := graceOfAirTotemRank.Duration
-	value := graceOfAirTotemBuff.Direct.Damage(nil)
-	config := shaman.newTotemSpellConfig(graceOfAirTotemRank.Cost, graceOfAirTotemRank.SpellID, SpellMaskBasicTotem, graceOfAirTotemRank.GCD)
+	duration := graceOfAirTotemRank.Duration()
+	value := graceOfAirTotemBuff.EffectN(1).Average(core.CharacterLevel)
+	config := shaman.newTotemSpellConfig(int32(graceOfAirTotemRank.Cost()), graceOfAirTotemRank.ID, SpellMaskBasicTotem, graceOfAirTotemRank.GCD())
 	buffAura := shaman.RegisterAura(core.Aura{
 		Label:    "Grace Of Air Totem (Self)",
 		ActionID: config.ActionID,
@@ -200,13 +200,13 @@ func (shaman *Shaman) registerGraceOfAirTotemSpell() {
 }
 
 func (shaman *Shaman) registerManaSpringTotemSpell() {
-	duration := manaSpringTotemRank.Duration
+	duration := manaSpringTotemRank.Duration()
 	// The buff ticks its value every 2 sec, and MP5 is the form the sim takes; Restorative Totems
 	// raises it by the ladder the client states.
-	tick := manaSpringTotemBuff.Energize.(shared.SpellDataPeriodic)
-	value := tick.Tick * (5 / tick.TickLength.Seconds()) *
-		spellData.RestorativeTotems.EffectAt(0).MultiplierAt(shaman.Talents.RestorativeTotems)
-	config := shaman.newTotemSpellConfig(manaSpringTotemRank.Cost, manaSpringTotemRank.SpellID, SpellMaskBasicTotem, manaSpringTotemRank.GCD)
+	tick := manaSpringTotemBuff.Effect(dbcenums.A_PERIODIC_ENERGIZE, 0)
+	value := tick.Average(core.CharacterLevel) * (5 / tick.Period().Seconds()) *
+		spellData.RestorativeTotems.EffectAt(1).MultiplierAt(shaman.Talents.RestorativeTotems)
+	config := shaman.newTotemSpellConfig(int32(manaSpringTotemRank.Cost()), manaSpringTotemRank.ID, SpellMaskBasicTotem, manaSpringTotemRank.GCD())
 	buffAura := shaman.RegisterAura(core.Aura{
 		Label:    "Mana Spring Totem (Self)",
 		ActionID: config.ActionID,

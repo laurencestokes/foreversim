@@ -5,16 +5,16 @@ import (
 )
 
 func (warrior *Warrior) registerDisarm() {
-	disarmRank := spellData.Disarm.HighestRank()
+	disarmRank := spellData.Disarm.Highest()
 
-	actionID := core.ActionID{SpellID: disarmRank.SpellID}
+	actionID := core.ActionID{SpellID: disarmRank.ID}
 
 	// TODO: core has no disarm effect, so the aura only tracks the debuff's uptime.
 	auras := warrior.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		return target.GetOrRegisterAura(core.Aura{
 			Label:    "Disarm-" + warrior.Label,
 			ActionID: actionID,
-			Duration: disarmRank.Duration,
+			Duration: disarmRank.Duration(),
 		})
 	})
 
@@ -25,20 +25,20 @@ func (warrior *Warrior) registerDisarm() {
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: SpellMaskDisarm,
-		MaxRange:       disarmRank.MaxRange,
+		MaxRange:       float64(disarmRank.MaxRange),
 
 		RageCost: core.RageCostOptions{
-			Cost:   disarmRank.Cost,
+			Cost:   int32(disarmRank.Cost()),
 			Refund: disarmRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: disarmRank.GCD,
+				GCD: disarmRank.GCD(),
 			},
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: disarmRank.Cooldown,
+				Duration: cooldownOf(disarmRank),
 			},
 		},
 

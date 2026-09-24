@@ -2,38 +2,6 @@ package shared
 
 import "fmt"
 
-// What a modifier aura applies to, in index order. The client ships no name list, so these were read
-// off the talents that use them and then checked against TrinityCore's SpellModOp (3.3.5) and
-// cmangos-tbc's (2.4.3): all 23 agree on value, and on name too except 24 and 27, where cmangos says
-// SPELL_BONUS_DAMAGE and MULTIPLE_VALUE. Every modifier effect in the generated tables uses one of
-// these - the gaps below are values the cores name and no talent uses.
-const (
-	SPELLMOD_DAMAGE                = 0  // Fire Power, Piercing Ice, Contagion
-	SPELLMOD_DURATION              = 1  // Permafrost, Improved Gouge, Brutal Impact
-	SPELLMOD_THREAT                = 2  // Subtlety, Improved Drain Soul
-	SPELLMOD_EFFECT1               = 3  // Arcane Potency, Improved Concentration Aura
-	SPELLMOD_CHARGES               = 4  // Improved Shield Block, Improved Holy Shield
-	SPELLMOD_RANGE                 = 5  // Arctic Reach, Flame Throwing, Grim Reach
-	SPELLMOD_RADIUS                = 6  // Arctic Reach, Holy Reach, Booming Voice
-	SPELLMOD_CRITICAL_CHANCE       = 7  // Arcane Impact, Improved Flamestrike, Incineration
-	SPELLMOD_ALL_EFFECTS           = 8  // Frost Warding, Magic Attunement, Demonic Aegis
-	SPELLMOD_NOT_LOSE_CASTING_TIME = 9  // Burning Soul, Fel Concentration, Intensity
-	SPELLMOD_CASTING_TIME          = 10 // Improved Fireball, Improved Frostbolt
-	SPELLMOD_COOLDOWN              = 11 // Improved Fire Blast, Improved Frost Nova, Ice Floes
-	SPELLMOD_EFFECT2               = 12 // Malediction, Mana Feed
-	SPELLMOD_COST                  = 14 // Frost Channeling, Cataclysm
-	SPELLMOD_CRIT_DAMAGE_BONUS     = 15 // Ice Shards, Ruin, Vengeance
-	SPELLMOD_RESIST_MISS_CHANCE    = 16 // Arcane Focus, Elemental Precision, Suppression
-	SPELLMOD_CHANCE_OF_SUCCESS     = 18 // Improved Poisons, Improved Nature's Grasp
-	SPELLMOD_ACTIVATION_TIME       = 19 // Improved Fire Totems
-	SPELLMOD_GLOBAL_COOLDOWN       = 21 // Improved Slam
-	SPELLMOD_DOT                   = 22 // Emberstorm, Contagion, Fire Power
-	SPELLMOD_EFFECT3               = 23 // Improved Faerie Fire, Savage Fury
-	SPELLMOD_BONUS_MULTIPLIER      = 24 // Empowered Arcane Missiles / Fireball / Frostbolt / Corruption
-	SPELLMOD_VALUE_MULTIPLIER      = 27 // Improved Mana Shield
-	SPELLMOD_RESIST_DISPEL_CHANCE  = 28 // Vile Poisons, Sanctified Seals
-)
-
 // Reads the ladder by points spent. Rank 0 is untaken and answers 0, where ByRank would panic.
 //
 //	spellData.NaturesReach.ValueAt(2)   // 20, the client's number as it stands

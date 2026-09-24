@@ -292,6 +292,12 @@
 		"source": "forever",
 		"tooltip": "Instant\n1 min cooldown\nGenerates 10 Rage at the cost of health, and then generates an additional 10 Rage over 10 sec.\nImproved Bloodrage increases all of that Rage by 25% per point."
 	},
+	"412609": {
+		"ability": "Deep Wounds",
+		"file": "sim/warrior/talents_arms.go",
+		"note": "The bleed itself (Deep Wound), which the sim now carries as the action id. Beta client 1.60.1.69893 and Classic Era agree: 4 ticks over 12 sec. The share of average weapon damage, 20/40/60%, is the talent's (12834).",
+		"source": "classic"
+	},
 	"56638": {
 		"ability": "Bloodthrill",
 		"file": "sim/warrior/talents.go",

@@ -1,49 +1,48 @@
 package warlock
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 )
 
 func (warlock *Warlock) registerCorruption() {
-	rank := spellData.Corruption.HighestRank()
-	tick := rank.Periodic.(shared.SpellDataPeriodic)
-	warlock.CorruptionTickBaseDamage = tick.Tick
+	rank := spellData.Corruption.Highest()
+	tick := rank.PeriodicEffect()
+	warlock.CorruptionTickBaseDamage = tick.Average(core.CharacterLevel)
 
 	warlock.Corruption = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellCorruption,
 
-		ManaCost: core.ManaCostOptions{FlatCost: rank.Cost},
+		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD:      rank.GCD,
-				CastTime: rank.CastTime,
+				GCD:      rank.GCD(),
+				CastTime: rank.CastTime(),
 			},
 		},
 
 		DamageMultiplierAdditive: 1,
 		DamageMultiplier:         1,
 		ThreatMultiplier:         1,
-		BonusCoefficient:         tick.Coef,
+		BonusCoefficient:         tick.Coeff(),
 
 		Dot: core.DotConfig{
 			Aura: core.Aura{
 				Label: "Corruption",
 				Tag:   "Affliction",
 			},
-			NumberOfTicks:    tick.NumberOfTicks,
-			TickLength:       tick.TickLength,
-			BonusCoefficient: tick.Coef,
+			NumberOfTicks:    int32(rank.Duration() / tick.Period()),
+			TickLength:       tick.Period(),
+			BonusCoefficient: tick.Coeff(),
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 				dot.Snapshot(target, warlock.CorruptionTickBaseDamage)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, shared.PeriodicTickOutcome(rank, dot))
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, periodicTickOutcome(rank, dot))
 			},
 		},
 
@@ -60,7 +59,7 @@ func (warlock *Warlock) registerCorruption() {
 			if useSnapshot {
 				return dot.CalcSnapshotDamage(sim, target, spell.OutcomeExpectedMagicAlwaysHit)
 			}
-			return spell.CalcPeriodicDamage(sim, target, tick.Tick, spell.OutcomeExpectedMagicAlwaysHit)
+			return spell.CalcPeriodicDamage(sim, target, tick.Average(core.CharacterLevel), spell.OutcomeExpectedMagicAlwaysHit)
 		},
 	})
 }

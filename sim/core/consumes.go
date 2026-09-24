@@ -651,7 +651,10 @@ func registerExplosivesCD(agent Agent, consumes *proto.ConsumesSpec, sharedTimer
 
 // Creates a spell object for the common explosive case.
 func (character *Character) newBasicExplosiveSpellConfig(sharedTimer *Timer, actionID ActionID, school SpellSchool, minDamage float64, maxDamage float64, speed float64, castTime time.Duration, cooldown Cooldown) SpellConfig {
-	dealSelfDamage := actionID.SameAction(SuperSapperActionID) || actionID.SameAction(GoblinSapperActionID)
+	var selfDamage *Spell
+	if actionID.SameAction(SuperSapperActionID) || actionID.SameAction(GoblinSapperActionID) {
+		selfDamage = character.newSapperSelfDamageSpell(actionID, school)
+	}
 
 	return SpellConfig{
 		ActionID:     actionID,
@@ -688,12 +691,30 @@ func (character *Character) newBasicExplosiveSpellConfig(sharedTimer *Timer, act
 				spell.DealBatchedAoeDamage(sim)
 			}
 
-			if dealSelfDamage {
+			if selfDamage != nil {
 				baseDamage := sim.Roll(minDamage, maxDamage)
-				spell.CalcAndDealDamage(sim, &character.Unit, baseDamage, spell.OutcomeMagicHitAndCrit)
+				selfDamage.CalcAndDealDamage(sim, &character.Unit, baseDamage, selfDamage.OutcomeMagicHitAndCrit)
 			}
 		},
 	}
+}
+
+// The half of a sapper charge that goes off in the thrower's face. Its own spell so that the hit
+// carries the kind it is - a harmful spell landing on the character - which is what a listener on
+// spell damage taken hears. The tag keeps it apart from the charge's outgoing damage, whose own
+// hits state no kind.
+func (character *Character) newSapperSelfDamageSpell(actionID ActionID, school SpellSchool) *Spell {
+	return character.GetOrRegisterSpell(SpellConfig{
+		ActionID:    actionID.WithTag(1),
+		SpellSchool: school,
+		DefenseType: DefenseTypeMagic,
+		ProcMask:    ProcMaskSpellDamage,
+		Flags:       SpellFlagExplosive,
+
+		BonusHitPercent:  100,
+		DamageMultiplier: 1,
+		ThreatMultiplier: 1,
+	})
 }
 func (character *Character) newSuperSapperSpell(sharedTimer *Timer) *Spell {
 	return character.GetOrRegisterSpell(character.newBasicExplosiveSpellConfig(sharedTimer, SuperSapperActionID, SpellSchoolFire, 900, 1500, 0, 0, Cooldown{Timer: character.NewTimer(), Duration: time.Minute * 5}))

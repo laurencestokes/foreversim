@@ -50,9 +50,10 @@ func (paladin *Paladin) registerSealOfRighteousness(row shared.SpellData) {
 		SpellSchool: core.SpellSchoolHoly,
 		DefenseType: core.DefenseTypeMelee,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		// The damage spells carry Suppress Weapon Procs and are procs: weapon procs and auras
-		// without Can Proc From Procs never hear them.
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagPassiveSpell | core.SpellFlagProc | core.SpellFlagSuppressWeaponProcs,
+		// The damage spells are procs, so auras without Can Proc From Procs never hear them. They
+		// carry no Suppress Weapon Procs, unlike their TBC rows: a "Chance on hit" weapon effect
+		// rolls on the seal's hit as well as on the swing, and the game shows both procs landing.
+		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagPassiveSpell | core.SpellFlagProc,
 		ClassSpellMask: SpellMaskSealOfRighteousnessProc,
 
 		DamageMultiplier: 1,

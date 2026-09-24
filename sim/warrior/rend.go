@@ -1,31 +1,30 @@
 package warrior
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 )
 
 // TODO: Ingame testing needed if Rend has a coef
 func (warrior *Warrior) registerRend() {
-	rendRank := spellData.Rend.HighestRank()
+	rendRank := spellData.Rend.Highest()
 
-	tick := rendRank.Periodic.AsPeriodic()
+	tick := rendRank.PeriodicEffect()
 
 	warrior.Rend = warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rendRank.SpellID},
-		SpellSchool:    rendRank.SpellSchool,
-		DefenseType:    rendRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rendRank.ID},
+		SpellSchool:    rendRank.SpellSchool(),
+		DefenseType:    rendRank.DefenseTypeCore(),
 		ClassSpellMask: SpellMaskRend,
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagNoOnCastComplete | core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
-			Cost:   rendRank.Cost,
+			Cost:   int32(rendRank.Cost()),
 			Refund: rendRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: rendRank.GCD,
+				GCD: rendRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},
@@ -41,10 +40,10 @@ func (warrior *Warrior) registerRend() {
 			Aura: core.Aura{
 				Label: "Rend",
 			},
-			NumberOfTicks: tick.NumberOfTicks,
-			TickLength:    tick.TickLength,
+			NumberOfTicks: int32(rendRank.Duration() / tick.Period()),
+			TickLength:    tick.Period(),
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Spell.CalcAndDealPeriodicDamage(sim, target, tick.Tick, shared.PeriodicTickOutcome(rendRank, dot))
+				dot.Spell.CalcAndDealPeriodicDamage(sim, target, tick.Average(core.CharacterLevel), rendRank.TickOutcome(dot))
 			},
 		},
 

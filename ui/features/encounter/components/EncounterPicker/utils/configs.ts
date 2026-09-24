@@ -128,3 +128,22 @@ export const presetEncounterConfig = (encounter: Encounter): EnumPickerConfig<En
 		},
 	};
 };
+
+export const zoneConfig = (encounter: Encounter): EnumPickerConfig<Encounter> => {
+	const zones = encounter.sim.db
+		.getAllZones()
+		.filter(zone => zone.areaTypes.length > 0)
+		.sort((a, b) => a.name.localeCompare(b.name));
+	return {
+		id: 'encounter-zone',
+		label: i18n.t('settings_tab.encounter.zone.label'),
+		labelTooltip: i18n.t('settings_tab.encounter.zone.tooltip'),
+		values: [{ name: i18n.t('common.custom'), value: 0 }, ...zones.map(zone => ({ name: zone.name, value: zone.id }))],
+		storeField: 'encounter:*',
+		getValue: (subject: Encounter) => subject.getZoneId(),
+		setValue: (subject: Encounter, newValue: number) => {
+			trackEvent({ action: 'settings', category: 'area', label: 'zone', value: newValue });
+			subject.setZone(newValue);
+		},
+	};
+};

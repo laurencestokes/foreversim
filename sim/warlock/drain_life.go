@@ -1,7 +1,6 @@
 package warlock
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 )
 
@@ -12,40 +11,40 @@ import (
 // Improved Drains rides on the talent as a dot SpellMod. Soul Siphon has to be counted per tick,
 // so it stays here.
 func (warlock *Warlock) registerDrainLife() {
-	rank := spellData.DrainLife.HighestRank()
-	tick := rank.Periodic.(shared.SpellDataPeriodic)
-	healthMetric := warlock.NewHealthMetrics(core.ActionID{SpellID: rank.SpellID})
+	rank := spellData.DrainLife.Highest()
+	tick := rank.PeriodicEffect()
+	healthMetric := warlock.NewHealthMetrics(core.ActionID{SpellID: rank.ID})
 
 	warlock.DrainLife = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagChanneled | core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellDrainLife,
 
-		ManaCost: core.ManaCostOptions{FlatCost: rank.Cost},
-		Cast:     core.CastConfig{DefaultCast: core.Cast{GCD: rank.GCD}},
+		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
+		Cast:     core.CastConfig{DefaultCast: core.Cast{GCD: rank.GCD()}},
 
 		DamageMultiplierAdditive: 1,
 		DamageMultiplier:         1,
 		ThreatMultiplier:         1,
-		BonusCoefficient:         tick.Coef,
+		BonusCoefficient:         tick.Coeff(),
 
 		Dot: core.DotConfig{
 			Aura:                 core.Aura{Label: "Drain Life"},
-			NumberOfTicks:        tick.NumberOfTicks,
-			TickLength:           tick.TickLength,
+			NumberOfTicks:        int32(rank.Duration() / tick.Period()),
+			TickLength:           tick.Period(),
 			AffectedByCastSpeed:  true,
 			HasteReducesDuration: true,
-			BonusCoefficient:     tick.Coef,
+			BonusCoefficient:     tick.Coeff(),
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, tick.Tick)
+				dot.Snapshot(target, tick.Average(core.CharacterLevel))
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 				// Scaled here rather than through dot.PeriodicDamageMultiplier, which Improved
 				// Drains' SpellMod already owns.
-				result := dot.CalcSnapshotDamage(sim, target, shared.PeriodicTickOutcome(rank, dot))
+				result := dot.CalcSnapshotDamage(sim, target, periodicTickOutcome(rank, dot))
 				result.Damage *= warlock.soulSiphonMultiplier(target)
 				dot.Spell.DealPeriodicDamage(sim, result)
 				warlock.GainHealth(sim, result.Damage*warlock.PseudoStats.SelfHealingMultiplier, healthMetric)

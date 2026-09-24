@@ -2,13 +2,29 @@ package dbc
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"slices"
 	"strings"
 
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
+
+// Kept apart from the item's stats so the sim can apply them per encounter.
+func addAreaStats(opts *proto.ScalingItemProperties, areaType proto.AreaType, statMap map[int32]float64) {
+	for _, existing := range opts.AreaStats {
+		if existing.AreaType == areaType {
+			for stat, value := range statMap {
+				existing.Stats[stat] += value
+			}
+			return
+		}
+	}
+	opts.AreaStats = append(opts.AreaStats, &proto.AreaStats{AreaType: areaType, Stats: maps.Clone(statMap)})
+}
 
 // ItemEffect represents an item effect in the game.
 type ItemEffect struct {
@@ -97,18 +113,10 @@ func assignTrigger(e *ItemEffect, statsSpellID int, pe *proto.ItemEffect) {
 		proc := &proto.ProcEffect{
 			IcdMs: procIcdMs(spTop, statsSP),
 		}
-		// If proc chance is above 100 it is most likely a PPM proc
-		// Or if we manually assigned PPM
-		ppm := getPPMForItemID(int32(e.ParentItemID))
-		if spTop.ProcChance == 0 || spTop.ProcChance > 100 || ppm > 0 {
-			if ppm > 0 {
-				proc.ProcRate = &proto.ProcEffect_Ppm{
-					Ppm: ppm,
-				}
-			} else {
-				ReportMissingPPM(int32(e.ParentItemID), e.SpellID)
-			}
-		} else {
+		// The column is the roll only where it is one: 0 means the client states no rate at all and
+		// anything above 100 is its "the rate lives elsewhere" sentinel. A proc whose rate is not in
+		// the spell data reaches the sim through the spell store, where an override answers it.
+		if spTop.ProcChance > 0 && spTop.ProcChance <= 100 {
 			proc.ProcRate = &proto.ProcEffect_ProcChance{
 				ProcChance: float64(spTop.ProcChance) / 100,
 			}
@@ -170,7 +178,7 @@ func (e *ItemEffect) ToProto(itemLevel int) (*proto.ItemEffect, bool) {
 
 	// The stats may live on the accumulating aura rather than on the one the trigger applies, in
 	// which case the effect is real even though the scaling options above resolved to nothing.
-	if stacking := buildStackingAura(e.SpellID, statsSpellID, itemLevel, e.ParentItemID); stacking != nil {
+	if stacking := buildStackingAura(e.SpellID, statsSpellID, itemLevel); stacking != nil {
 		stacking.Aura.ScalingOptions[int32(0)] = buildItemEffectScalingProps(int(stacking.Aura.BuffId), itemLevel)
 		applyStackingAura(pe, stacking)
 	}
@@ -215,8 +223,8 @@ func resolveTriggerType(topType, spellID int) int {
 	// grant pet stats that way, with no proc mask, no chance and no duration, and promoting them
 	// emitted a proc with no rate at all. Something has to say when it would fire.
 	//
-	// The weapons whose rate lives only in MapItemIdToPPM are unaffected: the database types those
-	// CHANCE_ON_HIT itself, so they return above without being promoted here.
+	// The chance-on-hit weapons are unaffected: the database types those CHANCE_ON_HIT itself, so
+	// they return above without being promoted here.
 	sp := dbcInstance.Spells[spellID]
 	statesAProc := slices.ContainsFunc(sp.ProcTypeMask, func(bits int) bool { return bits != 0 }) || sp.ProcChance != 0
 	if !statesAProc {
@@ -260,7 +268,7 @@ func buildBaseStatScalingProps(spellID int, itemSpellID int) *proto.ScalingItemE
 					value = math.Abs(value)
 				}
 
-				if se.EffectAura == A_MOD_RESISTANCE && stat == -2 {
+				if se.EffectAura == dbcenums.A_MOD_RESISTANCE && stat == -2 {
 					// All Resists
 					total[stats.ArcaneResistance] += value
 					total[stats.FireResistance] += value
@@ -274,7 +282,7 @@ func buildBaseStatScalingProps(spellID int, itemSpellID int) *proto.ScalingItemE
 				continue
 			}
 
-			if se.EffectAura == A_PROC_TRIGGER_SPELL_WITH_VALUE && spellID == se.EffectTriggerSpell {
+			if se.EffectAura == dbcenums.A_PROC_TRIGGER_SPELL_WITH_VALUE && spellID == se.EffectTriggerSpell {
 				for idx := range total {
 					if total[idx] == 0 {
 						continue
@@ -300,7 +308,7 @@ func (w *chainWalker) collectStats(spellID, itemLevel int, total *stats.Stats) {
 	for _, se := range w.effects(spellID) {
 		if s, resolved := se.ParseStatEffect(sp.ScalesWithItemLevel(), itemLevel); resolved {
 			total.AddInplace(&s)
-		} else if se.EffectAura == A_PROC_TRIGGER_SPELL {
+		} else if se.EffectAura == dbcenums.A_PROC_TRIGGER_SPELL {
 			// Deliberately narrower than IsProcTrigger: descending through an
 			// A_PROC_TRIGGER_SPELL_WITH_VALUE would collect the triggered spell's own amounts,
 			// past the point where the caller can still override them with the value the
@@ -440,11 +448,15 @@ func MergeItemEffectsForAllStates(parsed *proto.UIItem) []*proto.ItemEffect {
 			if _, fromClient := dbcInstance.Items[int(parsed.Id)]; !fromClient {
 				continue
 			}
+			if areaType := spelldata.AreaTypeOfGroup(dbcInstance.Spells[e.SpellID].RequiredAreasID); areaType != proto.AreaType_AreaTypeUnknown {
+				addAreaStats(parsed.ScalingOptions[0], areaType, props.Stats)
+				continue
+			}
 			for stat, value := range props.Stats {
 				parsed.ScalingOptions[0].Stats[int32(stat)] += value
 			}
 			continue
-		} else if (e.TriggerType == ITEM_SPELLTRIGGER_ON_EQUIP) || (e.TriggerType == ITEM_SPELLTRIGGER_CHANCE_ON_HIT && getPPMForItemID(parsed.Id) > 0) || e.CoolDownMSec > 0 {
+		} else if (e.TriggerType == ITEM_SPELLTRIGGER_ON_EQUIP) || (e.TriggerType == ITEM_SPELLTRIGGER_CHANCE_ON_HIT) || e.CoolDownMSec > 0 {
 			baseEff = e
 		} else {
 			continue
@@ -462,7 +474,7 @@ func MergeItemEffectsForAllStates(parsed *proto.UIItem) []*proto.ItemEffect {
 
 		// A container aura that accumulates a separate stat aura resolves its amounts at every
 		// state too, and per stack rather than in total.
-		if stacking := buildStackingAura(baseEff.SpellID, statsSpellID, int(parsed.ScalingOptions[0].Ilvl), baseEff.ParentItemID); stacking != nil {
+		if stacking := buildStackingAura(baseEff.SpellID, statsSpellID, int(parsed.ScalingOptions[0].Ilvl)); stacking != nil {
 			for state, opt := range parsed.ScalingOptions {
 				stacking.Aura.ScalingOptions[state] = buildItemEffectScalingProps(int(stacking.Aura.BuffId), int(opt.Ilvl))
 			}

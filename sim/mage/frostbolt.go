@@ -5,33 +5,33 @@ import (
 )
 
 func (mage *Mage) registerFrostboltSpell() {
-	frostboltRank := spellData.Frostbolt.HighestRank()
+	frostboltRank := spellData.Frostbolt.Highest()
 
 	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: frostboltRank.SpellID},
-		SpellSchool:    frostboltRank.SpellSchool,
-		DefenseType:    frostboltRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: frostboltRank.ID},
+		SpellSchool:    frostboltRank.SpellSchool(),
+		DefenseType:    frostboltRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL | core.SpellFlagBinary,
 		ClassSpellMask: MageSpellFrostbolt,
-		MissileSpeed:   frostboltRank.MissileSpeed,
+		MissileSpeed:   float64(frostboltRank.Speed),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: frostboltRank.Cost,
+			FlatCost: int32(frostboltRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD:      frostboltRank.GCD,
-				CastTime: frostboltRank.CastTime,
+				GCD:      frostboltRank.GCD(),
+				CastTime: frostboltRank.CastTime(),
 			},
 		},
 
 		DamageMultiplier: 1,
-		BonusCoefficient: frostboltRank.Direct.BonusCoefficient(),
+		BonusCoefficient: frostboltRank.DamageEffect().Coeff(),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, frostboltRank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			result := spell.CalcDamage(sim, target, frostboltRank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
 				spell.DealDamage(sim, result)
 			})

@@ -4,16 +4,16 @@ import (
 	"time"
 
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
-var sliceAndDiceRank = spellData.SliceAndDice.BySpellID(6774)
+var sliceAndDiceRank = spellData.SliceAndDice.ByID(6774)
 
 func (rogue *Rogue) registerSliceAndDice() {
-	actionID := core.ActionID{SpellID: sliceAndDiceRank.SpellID}
+	actionID := core.ActionID{SpellID: sliceAndDiceRank.ID}
 
 	// The client states the attack speed bonus as a percentage on the rank's own effect (30).
-	baseDamage, _ := sliceAndDiceRank.Direct.Range()
-	rogue.SliceAndDiceBonusFlat = baseDamage / 100
+	rogue.SliceAndDiceBonusFlat = sliceAndDiceRank.Effect(dbcenums.A_MOD_MELEE_HASTE_3, 0).Average(core.CharacterLevel) / 100
 
 	var sliceAndDiceMod float64
 	rogue.SliceAndDiceAura = rogue.RegisterAura(core.Aura{
@@ -37,11 +37,11 @@ func (rogue *Rogue) registerSliceAndDice() {
 		ClassSpellMask: RogueSpellSliceAndDice,
 
 		EnergyCost: core.EnergyCostOptions{
-			Cost: sliceAndDiceRank.Cost,
+			Cost: int32(sliceAndDiceRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: sliceAndDiceRank.GCD,
+				GCD: sliceAndDiceRank.GCD(),
 			},
 			IgnoreHaste: true,
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {

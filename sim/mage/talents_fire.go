@@ -3,8 +3,8 @@ package mage
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
 func (mage *Mage) registerFireTalents() {
@@ -50,7 +50,7 @@ func (mage *Mage) registerWakeOfFire() {
 
 	mage.AddStaticMod(core.SpellModConfig{
 		ClassMask: MageSpellFireBlast,
-		TimeValue: time.Millisecond * time.Duration(spellData.WakeOfFire.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_COOLDOWN).ValueAt(mage.Talents.WakeOfFire)),
+		TimeValue: time.Millisecond * time.Duration(spellData.WakeOfFire.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COOLDOWN)).ValueAt(mage.Talents.WakeOfFire)),
 		Kind:      core.SpellMod_Cooldown_Flat,
 	})
 }
@@ -75,7 +75,7 @@ func (mage *Mage) registerImprovedFireball() {
 
 	mage.AddStaticMod(core.SpellModConfig{
 		ClassMask: MageSpellFireball,
-		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedFireball.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_CASTING_TIME).ValueAt(mage.Talents.ImprovedFireball)),
+		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedFireball.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CASTING_TIME)).ValueAt(mage.Talents.ImprovedFireball)),
 		Kind:      core.SpellMod_CastTime_Flat,
 	})
 }
@@ -89,13 +89,13 @@ func (mage *Mage) registerIgnite() {
 		return
 	}
 
-	igniteRank := spellData.IgniteTriggered.HighestRank()
+	igniteRank := spellData.IgniteTriggered.Highest()
 	share := spellData.Ignite.FractionAt(mage.Talents.Ignite)
 	tickLength := time.Second * 2
-	numTicks := int32(igniteRank.Duration / tickLength)
+	numTicks := int32(igniteRank.Duration() / tickLength)
 
 	mage.Ignite = mage.RegisterSpell(core.SpellConfig{
-		ActionID:         core.ActionID{SpellID: igniteRank.SpellID},
+		ActionID:         core.ActionID{SpellID: igniteRank.ID},
 		SpellSchool:      core.SpellSchoolFire,
 		DefenseType:      core.DefenseTypeMagic,
 		ProcMask:         core.ProcMaskSpellDamage,
@@ -172,7 +172,7 @@ func (mage *Mage) registerBurningSoul() {
 	mage.AddStaticMod(core.SpellModConfig{
 		ClassMask:  MageSpellsAll,
 		School:     core.SpellSchoolFire,
-		FloatValue: spellData.BurningSoul.Effect(shared.A_MOD_THREAT, 4).FractionAt(mage.Talents.BurningSoul),
+		FloatValue: spellData.BurningSoul.Effect(dbcenums.A_MOD_THREAT, 4).FractionAt(mage.Talents.BurningSoul),
 		Kind:       core.SpellMod_ThreatMultiplier_Pct,
 	})
 }
@@ -227,6 +227,12 @@ func (mage *Mage) registerHotStreak() {
 		OnStacksChange: func(_ *core.Aura, _ *core.Simulation, _ int32, newStacks int32) {
 			castTimeMod.UpdateFloatValue(-.25 * float64(newStacks))
 		},
+		OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
+			// 400625 carries one charge: the next Pyroblast spends every stack.
+			if spell.Matches(MageSpellPyroblast) {
+				aura.Deactivate(sim)
+			}
+		},
 	})
 
 	mage.MakeProcTriggerAura(core.ProcTrigger{
@@ -248,7 +254,7 @@ func (mage *Mage) registerMasterOfElements() {
 	}
 
 	refundCoeff := spellData.MasterOfElements.FractionAt(mage.Talents.MasterOfElements)
-	manaMetrics := mage.NewManaMetrics(core.ActionID{SpellID: spellData.MasterOfElements.HighestRank().SpellID})
+	manaMetrics := mage.NewManaMetrics(core.ActionID{SpellID: spellData.MasterOfElements.Highest().ID})
 
 	mage.MakeProcTriggerAura(core.ProcTrigger{
 		Name:               "Master of Elements",
@@ -287,7 +293,7 @@ func (mage *Mage) registerFirePower() {
 	mage.AddStaticMod(core.SpellModConfig{
 		ClassMask:  MageSpellsAll,
 		School:     core.SpellSchoolFire,
-		FloatValue: spellData.FirePower.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DAMAGE).FractionAt(mage.Talents.FirePower),
+		FloatValue: spellData.FirePower.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(mage.Talents.FirePower),
 		Kind:       core.SpellMod_DamageDone_Flat,
 	})
 }

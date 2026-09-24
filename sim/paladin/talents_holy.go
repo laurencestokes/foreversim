@@ -5,6 +5,7 @@ import (
 
 	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -94,17 +95,31 @@ func (paladin *Paladin) applySpiritualFocus() {
 		return
 	}
 
-	paladin.PseudoStats.PushbackChance -= spellData.SpiritualFocus.FractionAt(paladin.Talents.SpiritualFocus)
+	// 20205 names these by class mask; Holy Wrath, Exorcism and the rest are pushed back as usual.
+	resist := spellData.SpiritualFocus.FractionAt(paladin.Talents.SpiritualFocus)
+	paladin.AddStaticMod(core.SpellModConfig{
+		ClassMask: SpellMaskFlashOfLight | SpellMaskHolyLight | SpellMaskLightsVigil,
+		Kind:      core.SpellMod_Custom,
+		ApplyCustom: func(_ *core.SpellMod, spell *core.Spell) {
+			spell.PushbackResist += resist
+		},
+		RemoveCustom: func(_ *core.SpellMod, spell *core.Spell) {
+			spell.PushbackResist -= resist
+		},
+	})
 }
 
-// Improved Seals - Increases the damage done by your Seals and Judgements by 5/10/15%.
+// Improved Seals - Increases the damage done by your Seals and Judgements by 5/10/15%. 20224's mask
+// names the Righteousness, Command and Fury procs and judgements only; the Seal of Light heal is
+// not in it.
 func (paladin *Paladin) applyImprovedSeals() {
 	if paladin.Talents.ImprovedSeals == 0 {
 		return
 	}
 
 	paladin.AddStaticMod(core.SpellModConfig{
-		ClassMask:  SpellMaskSealProcs | SpellMaskAllJudgements,
+		ClassMask: SpellMaskSealOfRighteousnessProc | SpellMaskSealOfCommandProc | SpellMaskSealOfFuryProc |
+			SpellMaskJudgementOfRighteousness | SpellMaskJudgementOfCommand | SpellMaskJudgementOfFury,
 		Kind:       core.SpellMod_DamageDone_Flat,
 		FloatValue: spellData.ImprovedSeals.FractionAt(paladin.Talents.ImprovedSeals),
 	})
@@ -201,7 +216,13 @@ func (paladin *Paladin) applyDivinePrecision() {
 		return
 	}
 
-	paladin.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexHoly] += spellData.DivinePrecision.ValueAt(paladin.Talents.DivinePrecision)
+	// 1310904 is a miss chance mod on a class mask, not school hit: the Holy Shield proc is left out and
+	// Holy Strike, a melee attack, is in.
+	paladin.AddStaticMod(core.SpellModConfig{
+		ClassMask:  SpellMaskDivinePrecision,
+		Kind:       core.SpellMod_BonusHit_Percent,
+		FloatValue: spellData.DivinePrecision.ValueAt(paladin.Talents.DivinePrecision),
+	})
 }
 
 // Consecrated Ground - Gives your Holy spells 5/10% increased damage against the first 4 enemies
@@ -240,6 +261,6 @@ func (paladin *Paladin) applyHolyPower() {
 	paladin.AddStaticMod(core.SpellModConfig{
 		ClassMask:  SpellMaskHolyShock | SpellMaskHolyShockHeal,
 		Kind:       core.SpellMod_BonusCrit_Percent,
-		FloatValue: spellData.HolyPower.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_CRITICAL_CHANCE).ValueAt(paladin.Talents.HolyPower),
+		FloatValue: spellData.HolyPower.Effect(shared.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_CRITICAL_CHANCE)).ValueAt(paladin.Talents.HolyPower),
 	})
 }

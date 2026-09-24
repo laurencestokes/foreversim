@@ -241,10 +241,16 @@ CLIENTDATA_OUTPUT   := $(abspath ./tools/database/wowsims.db)
 # reads the build off Blizzard's CDN instead of BaseDir (no install needed).
 DB2TOOL_FLAGS ?=
 
+# The spell store is regenerated before the item database, and the order is load-bearing: gen_db
+# classifies every item and enchant proc from the store compiled into it, so running it against a
+# refreshed client and a stale store writes item files from last week's rows. gen_spelldata reads the
+# store too, and writes nothing the sim does not compile against, so it is what may rewrite it.
 .PHONY: db
 db:
 	@echo "Extracting client data"
 	go run ./tools/db2tool -s $(CLIENTDATA_SETTINGS) --output $(CLIENTDATA_OUTPUT) $(DB2TOOL_FLAGS)
+	@echo "Regenerating the spell store"
+	go run ./tools/database/gen_spelldata
 	@echo "Running DBC generation tool"
 	go run tools/database/gen_db/*.go -outDir=./assets -gen=db
 
@@ -255,13 +261,18 @@ db:
 basestats:
 	python3 tools/base_stats_parser.py
 
+# Same order as `db` above, and for the same reason.
 .PHONY: ptrdb
 ptrdb:
 	@echo "Extracting client data"
 	go run ./tools/db2tool -s $(CLIENTDATAPTR_SETTINGS) --output $(CLIENTDATA_OUTPUT) $(DB2TOOL_FLAGS)
+	@echo "Regenerating the spell store"
+	go run ./tools/database/gen_spelldata
 	@echo "Running DBC generation tool"
 	go run tools/database/gen_db/*.go -outDir=./assets -gen=db
 
+# The same order as `db`, and for the same reason: this rule depends on tools/database/*.go, so a
+# change to the store generator triggers it, and gen_db has to read a store written by that change.
 sim/core/items/all_items.go: $(call rwildcard,tools/database,*.go) $(call rwildcard,sim/core/proto,*.go)
 	@test -f tools/database/wowsims.db || { \
 		echo "ERROR: tools/database/wowsims.db is missing (gitignored, produced by 'make db')."; \
@@ -270,6 +281,8 @@ sim/core/items/all_items.go: $(call rwildcard,tools/database,*.go) $(call rwildc
 	@test -f tools/db2tool/listfile.csv || { \
 		echo "tools/db2tool/listfile.csv is missing, downloading it..."; \
 		curl -fL -o tools/db2tool/listfile.csv https://github.com/wowdev/wow-listfile/releases/latest/download/community-listfile.csv; }
+	@echo "Regenerating the spell store"
+	go run ./tools/database/gen_spelldata
 	go run tools/database/gen_db/*.go -outDir=./assets -gen=db
 
 # Syncs the HiGHS solver artifacts from the pinned npm `highs` package: copies its wasm to
@@ -288,6 +301,13 @@ test: $(OUT_DIR)/lib.wasm.gz binary_dist/dist.go
 update-tests:
 	find . -name "*.results" -type f -delete
 	find . -name "*.results.tmp" -exec bash -c 'cp "$$1" "$${1%.results.tmp}".results' _ {} \;
+
+# Names the generated spell data files that are not what tools/database/gen_spelldata writes
+# today, and writes nothing. Exits 1 with the paths when the committed files have drifted, which a
+# client update or a hand edit both do. Needs tools/database/wowsims.db.
+.PHONY: spelldata-check
+spelldata-check:
+	go run ./tools/database/gen_spelldata -check
 
 .PHONY: fmt
 fmt: tsfmt
@@ -325,3 +345,7 @@ endif
 
 webworkers:
 	npx tsx vite.build-workers.mts --watch=$(if $(WATCH),true,false)
+
+.PHONY: vscode-spelldata
+vscode-spelldata:
+	cd tools/vscode-spelldata && npm ci --no-audit --no-fund && npm run build

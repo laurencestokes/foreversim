@@ -5,9 +5,9 @@ import (
 )
 
 func (warrior *Warrior) registerShieldBash() {
-	shieldBashRank := spellData.ShieldBash.HighestRank()
+	shieldBashRank := spellData.ShieldBash.Highest()
 
-	actionID := core.ActionID{SpellID: shieldBashRank.SpellID}
+	actionID := core.ActionID{SpellID: shieldBashRank.ID}
 
 	warrior.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
@@ -19,17 +19,17 @@ func (warrior *Warrior) registerShieldBash() {
 		MaxRange:       core.MaxMeleeRange,
 
 		RageCost: core.RageCostOptions{
-			Cost:   shieldBashRank.Cost,
+			Cost:   int32(shieldBashRank.Cost()),
 			Refund: shieldBashRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: shieldBashRank.GCD,
+				GCD: shieldBashRank.GCD(),
 			},
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: shieldBashRank.Cooldown,
+				Duration: cooldownOf(shieldBashRank),
 			},
 		},
 
@@ -44,7 +44,7 @@ func (warrior *Warrior) registerShieldBash() {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			baseDamage := shieldBashRank.Direct.Damage(sim)
+			baseDamage := shieldBashRank.DamageEffect().Average(core.CharacterLevel)
 			result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
 
 			if !result.Landed() {

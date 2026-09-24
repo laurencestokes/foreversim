@@ -344,12 +344,9 @@ export const ArenaPage = () => (
 			</PageSection>
 			<PageSection title="Where AI comes into it, and where it does not">
 				<p className="m-0">
-					<strong>Not into any number on this page.</strong> The damage figures come from a simulator - the{' '}
-					<a href="https://github.com/wowsims/forever" target="_blank" rel="noreferrer">
-						wowsims
-					</a>{' '}
-					engine, forked and adjusted for Forever. It is ordinary code doing arithmetic on the client&apos;s own data tables. No language model
-					produces, adjusts or estimates a DPS figure, and the talent search is a hill climb that measures builds rather than reasons about them.
+					<strong>Not into any number on this page.</strong> The damage figures come from a simulator - an open-source engine, forked and adjusted for
+					Forever. It is ordinary code doing arithmetic on the client&apos;s own data tables. No language model produces, adjusts or estimates a DPS
+					figure, and the talent search is a hill climb that measures builds rather than reasons about them.
 				</p>
 				<p className="m-0">
 					<strong>Into the code, heavily.</strong> This sim&apos;s Forever changes, the talent search, this page and most of what surrounds them were

@@ -240,9 +240,9 @@ func (spell *Spell) SpellDamage(target *Unit) float64 {
 
 func (spell *Spell) SpellHitChance(target *Unit) float64 {
 	hitPercent := spell.Unit.stats[stats.SpellHitPercent] + spell.BonusHitPercent
-	// In TBC all talents that modify spell school specific hit have a container spell class spell mask
-	// so we only apply this hit to spells that have a class spell mask set
-	if spell.ClassSpellMask != 0 {
+	// All talents that modify spell school specific hit name their spells by class mask, so this
+	// hit only reaches spells that carry one, either the sim's tag or the client's class flags.
+	if spell.ClassSpellMask != 0 || !spell.ClassFlags.IsZero() {
 		hitPercent += spell.Unit.PseudoStats.SchoolBonusHitChance[spell.SpellSchool.SchoolIndex()]
 	}
 	return hitPercent / 100
@@ -769,7 +769,7 @@ func (spell *Spell) AttackerDamageMultiplier(attackTable *AttackTable, isDot boo
 	damageMultiplierAdditive := TernaryFloat64(
 		isDot,
 		spell.DamageMultiplierAdditive+spell.Unit.PseudoStats.DotDamageMultiplierAdditive-1,
-		spell.DamageMultiplierAdditive,
+		spell.DamageMultiplierAdditive+spell.DirectDamageMultiplierAdditive,
 	)
 
 	return spell.attackerDamageMultiplierInternal(attackTable) *

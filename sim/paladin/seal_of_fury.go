@@ -67,9 +67,9 @@ func (paladin *Paladin) registerSealOfFury(row shared.SpellData) {
 		SpellSchool: core.SpellSchoolHoly,
 		DefenseType: core.DefenseTypeMelee,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
-		// The damage spells carry the same flags as Seal of Righteousness's: Suppress Weapon
-		// Procs, and procs themselves.
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagPassiveSpell | core.SpellFlagProc | core.SpellFlagSuppressWeaponProcs,
+		// The damage spells carry the same flags as Seal of Righteousness's: procs themselves,
+		// and no Suppress Weapon Procs, so a weapon's "Chance on hit" rolls on the seal's hit too.
+		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagPassiveSpell | core.SpellFlagProc,
 		ClassSpellMask: SpellMaskSealOfFuryProc,
 
 		DamageMultiplier: 1,

@@ -1,7 +1,7 @@
 package database
 
 // Re-derives the families below from the client database and asserts the committed table agrees, so
-// a hand-edited or stale generated file fails. Covers 23 of 809 families; regenerating and checking
+// a hand-edited or stale generated file fails. Covers 8 of 809 families; regenerating and checking
 // the diff is empty is the only check that reaches every row.
 //
 // Skips when tools/database/wowsims.db is absent, which is why CI is unaffected.
@@ -14,20 +14,12 @@ import (
 	"testing"
 
 	"github.com/wowsims/forever/sim/common/shared"
-	"github.com/wowsims/forever/sim/druid"
-	"github.com/wowsims/forever/sim/mage"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/paladin"
-	"github.com/wowsims/forever/sim/priest"
-	"github.com/wowsims/forever/sim/shaman"
-	"github.com/wowsims/forever/tools/database/dbc"
 )
 
 const (
 	classPaladin = 2
-	classPriest  = 16
-	classShaman  = 64
-	classMage    = 128
-	classDruid   = 1024
 )
 
 type rankFamily struct {
@@ -36,8 +28,6 @@ type rankFamily struct {
 	Table    shared.SpellDataTable
 }
 
-// The two shaman tables were inline anonymous literals until they were hoisted to package vars so this
-// gate could read them.
 // TODO: Holy Shock, Avenger's Shield and Vampiric Touch left this gate when their abilities were
 // stubbed. Holy Shock's damage and heal chains share one name, which the generator refuses, so its
 // table is by hand in sim/paladin/holy_shock.go; the other two still have no ladder the generator
@@ -64,21 +54,6 @@ var rankFamilies = []rankFamily{
 	{"Fire Resistance Aura", classPaladin, paladin.FireResistanceAuraRankMap},
 	{"Frost Resistance Aura", classPaladin, paladin.FrostResistanceAuraRankMap},
 	{"Shadow Resistance Aura", classPaladin, paladin.ShadowResistanceAuraRankMap},
-
-	{"Mind Blast", classPriest, priest.MindBlastRankMap},
-	{"Mind Flay", classPriest, priest.MindFlayRankMap},
-	{"Shadow Word: Pain", classPriest, priest.ShadowWordPainRankMap},
-	{"Shadow Word: Death", classPriest, priest.ShadowWordDeathRankMap},
-	{"Smite", classPriest, priest.SmiteRankMap},
-	{"Devouring Plague", classPriest, priest.DevouringPlagueRankMap},
-	{"Holy Nova", classPriest, priest.HolyNovaRankMap},
-	{"Starshards", classPriest, priest.StarshardsRankMap},
-
-	{"Lightning Bolt", classShaman, shaman.LightningBoltRankMap},
-	{"Chain Lightning", classShaman, shaman.ChainLightningRankMap},
-
-	{"Flamestrike", classMage, mage.FlameStrikeRankMap},
-	{"Starfire", classDruid, druid.StarfireRankMap},
 }
 
 // One value in the committed table against the same value re-derived from the database.
@@ -201,7 +176,7 @@ func compareRow(t *testing.T, db *sql.DB, fam rankFamily, row shared.SpellData) 
 func directCandidates(effects []RankEffect) []RankEffect {
 	var out []RankEffect
 	for _, e := range effects {
-		if e.Effect == dbc.E_SCHOOL_DAMAGE || e.Effect == dbc.E_HEAL || e.Effect == dbc.E_ENERGIZE || e.Aura != 0 || IsWeaponDamageEffect(e.Effect) {
+		if e.Effect == dbcenums.E_SCHOOL_DAMAGE || e.Effect == dbcenums.E_HEAL || e.Effect == dbcenums.E_ENERGIZE || e.Aura != 0 || IsWeaponDamageEffect(e.Effect) {
 			out = append(out, e)
 		}
 	}

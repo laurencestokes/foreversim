@@ -6,25 +6,25 @@ import (
 
 func (warrior *Warrior) registerHamstring() {
 	// TODO: Ingame research needed if this adds flat threat
-	hamstringRank := spellData.Hamstring.HighestRank()
-	hamstringBaseDamage, _ := hamstringRank.Direct.Range()
+	hamstringRank := spellData.Hamstring.Highest()
+	hamstringBaseDamage := hamstringRank.DamageEffect().Average(core.CharacterLevel)
 
 	warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: hamstringRank.SpellID},
-		SpellSchool:    hamstringRank.SpellSchool,
-		DefenseType:    hamstringRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: hamstringRank.ID},
+		SpellSchool:    hamstringRank.SpellSchool(),
+		DefenseType:    hamstringRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 		ClassSpellMask: SpellMaskHamstring,
 		MaxRange:       core.MaxMeleeRange,
 
 		RageCost: core.RageCostOptions{
-			Cost:   hamstringRank.Cost,
+			Cost:   int32(hamstringRank.Cost()),
 			Refund: hamstringRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: hamstringRank.GCD,
+				GCD: hamstringRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},

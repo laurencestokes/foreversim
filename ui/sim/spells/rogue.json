@@ -290,6 +290,12 @@
 		"note": "The on-use of Renataki's Charm of Trickery (item 19954), 60 Energy on a 3 min cooldown, unchanged from Classic.",
 		"source": "classic"
 	},
+	"25300": {
+		"ability": "Backstab",
+		"file": "sim/rogue/backstab.go",
+		"note": "Rank 9, the rank the sim casts since it reads the client spell store (#427). Beta client 1.60.1.69893 matches Classic Era: 150% weapon damage plus 150, 60 Energy, dagger only; only the combo point effect's type moved.",
+		"source": "classic"
+	},
 	"25302": {
 		"ability": "Feint",
 		"file": "sim/rogue/feint.go",
@@ -316,6 +322,12 @@
 		"note": "Beta client 1.60.1.69893: about a third less a tick at every rank (rank 5 34 -> 23 every 3 sec) and about 1.5x the charges, which the sim does not model. The 30% proc chance and 5 stacks are Classic's.",
 		"source": "forever",
 		"tooltip": "3 sec cast\nCoats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy for 36 Nature damage over 12 sec. Stacks up to 5 times on a single target. 115 charges."
+	},
+	"31016": {
+		"ability": "Eviscerate",
+		"file": "sim/rogue/eviscerate.go",
+		"note": "Rank 9, the rank the sim casts since it reads the client spell store (#427). Beta client 1.60.1.69893 matches Classic Era: damage per combo point, range and 35 Energy are unchanged; the client adds the combo point cost as a second power row.",
+		"source": "classic"
 	},
 	"399956": {
 		"ability": "Mutilate",

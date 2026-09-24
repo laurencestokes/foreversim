@@ -1,6 +1,8 @@
 import i18n from '@i18n/config';
 import type { UnitMetrics } from '@sim/proto/sim_result';
 import { BooleanPicker } from '@ui-kit/BooleanPicker';
+import { noticeIconClass } from '@ui-kit/NoticeLevel';
+import clsx from 'clsx';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useSimResult } from '../../hooks/useSimResult';
@@ -16,6 +18,8 @@ export interface TimelineProps {
 	/** The timeline tab is open. While it is not, a finished run is held rather than drawn. */
 	active: boolean;
 }
+
+const WARNING_ICON = noticeIconClass('warning');
 
 export const Timeline = ({ active }: TimelineProps) => {
 	const live = useSimResult();
@@ -64,7 +68,7 @@ export const Timeline = ({ active }: TimelineProps) => {
 			<div className="flex flex-wrap items-start gap-2">
 				<div className="flex flex-col max-lg:shrink max-lg:grow max-lg:basis-full">
 					<p>
-						<i className="fa fa-exclamation-triangle fa-xl mr-2 text-damage-partial text-shadow-glow-danger" />
+						<i className={clsx(WARNING_ICON, 'fa-xl mr-2')} />
 						{i18n.t('results_tab.details.timeline.disclaimer')}
 					</p>
 					<p>{i18n.t('results_tab.details.timeline.note')}</p>

@@ -70,8 +70,8 @@ const talentDataset: Source = {
 	url: 'https://github.com/Deradon/wow-forever-talent-calc',
 };
 const upstream: Source = {
-	label: 'wowsims/classic, the Classic Era simulator this fork started from',
-	url: 'https://github.com/wowsims/classic',
+	label: 'classic-legacy, the Classic-based engine this sim ran on until the September 2026 switch',
+	url: 'https://github.com/ElliotWood/Forever/tree/classic-legacy',
 };
 const betaClient: Source = {
 	label: 'wago.tools: the Forever beta client data tables, build 1.60.1.69913',

@@ -3,6 +3,7 @@ package paladin
 import (
 	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
 var SwiftJudgementRankMap = spellData.SwiftJudgement
@@ -24,7 +25,7 @@ func (paladin *Paladin) registerSwiftJudgement() {
 	}).AttachSpellMod(core.SpellModConfig{
 		Kind:       core.SpellMod_PowerCost_Pct_Add,
 		ClassMask:  SpellMaskJudgement,
-		FloatValue: row.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_COST).Value / 100,
+		FloatValue: row.Effect(shared.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).Value / 100,
 	}).AttachProcTrigger(core.ProcTrigger{
 		Callback:           core.CallbackOnCastComplete,
 		ClassSpellMask:     SpellMaskJudgement,

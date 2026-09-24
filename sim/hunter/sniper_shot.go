@@ -11,28 +11,28 @@ func (hunter *Hunter) registerSniperShotSpell() {
 		return
 	}
 
-	rank := spellData.SniperShot.HighestRank()
-	flatBonus := rank.Direct.Damage
+	rank := spellData.SniperShot.Highest()
+	flatBonus := rank.DamageEffect().Average(core.CharacterLevel)
 
 	hunter.SniperShot = hunter.RegisterRangedSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ClassSpellMask: HunterSpellSniperShot,
 		ProcMask:       core.ProcMaskRangedSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		MissileSpeed:   rank.MissileSpeed,
+		MissileSpeed:   float64(rank.Speed),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				CastTime: rank.CastTime,
+				CastTime: rank.CastTime(),
 			},
 			CD: core.Cooldown{
 				Timer:    hunter.NewTimer(),
-				Duration: rank.Cooldown,
+				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
 			},
 		},
 
@@ -40,7 +40,7 @@ func (hunter *Hunter) registerSniperShotSpell() {
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			baseDamage := hunter.AutoAttacks.Ranged().CalculateNormalizedWeaponDamage(sim, spell.RangedAttackPower(target)) +
-				flatBonus(sim)
+				flatBonus
 
 			result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeRangedHitAndCrit)
 

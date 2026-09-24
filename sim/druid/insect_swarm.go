@@ -1,35 +1,34 @@
 package druid
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 )
 
-var insectSwarmRank = spellData.InsectSwarm.HighestRank()
-var insectSwarmTick = insectSwarmRank.Periodic.(shared.SpellDataPeriodic)
+var insectSwarmRank = spellData.InsectSwarm.Highest()
+var insectSwarmTick = insectSwarmRank.PeriodicEffect()
 
 func (druid *Druid) registerInsectSwarmSpell() {
 	auras := druid.NewEnemyAuraArray(core.InsectSwarmAura)
 
 	druid.InsectSwarm = druid.RegisterSpell(Humanoid|Moonkin, core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: insectSwarmRank.SpellID},
-		SpellSchool:    insectSwarmRank.SpellSchool,
-		DefenseType:    insectSwarmRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: insectSwarmRank.ID},
+		SpellSchool:    insectSwarmRank.SpellSchool(),
+		DefenseType:    insectSwarmRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		ClassSpellMask: DruidSpellInsectSwarm,
 		Flags:          core.SpellFlagAPL | core.SpellFlagBinary,
-		Rank:           insectSwarmRank.Rank,
+		Rank:           insectSwarmRank.RankNumber(),
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		MaxRange:         insectSwarmRank.MaxRange,
+		MaxRange:         float64(insectSwarmRank.MaxRange),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: insectSwarmRank.Cost,
+			FlatCost: int32(insectSwarmRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: insectSwarmRank.GCD,
+				GCD: insectSwarmRank.GCD(),
 			},
 		},
 
@@ -44,16 +43,16 @@ func (druid *Druid) registerInsectSwarmSpell() {
 				},
 			},
 
-			NumberOfTicks:       insectSwarmTick.NumberOfTicks,
-			TickLength:          insectSwarmTick.TickLength,
+			NumberOfTicks:       int32(insectSwarmRank.Duration() / insectSwarmTick.Period()),
+			TickLength:          insectSwarmTick.Period(),
 			AffectedByCastSpeed: false,
-			BonusCoefficient:    insectSwarmTick.Coef,
+			BonusCoefficient:    insectSwarmTick.Coeff(),
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, insectSwarmTick.Tick)
+				dot.Snapshot(target, insectSwarmTick.Average(core.CharacterLevel))
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, shared.PeriodicTickOutcome(insectSwarmRank, dot))
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, periodicTickOutcome(insectSwarmRank, dot))
 			},
 		},
 

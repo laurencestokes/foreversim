@@ -4,7 +4,7 @@ import (
 	"github.com/wowsims/forever/sim/core"
 )
 
-var lavaBurstRank = spellData.LavaBurst.HighestRank()
+var lavaBurstRank = spellData.LavaBurst.Highest()
 
 // Lava Burst is new in Forever. Its second effect is the bonus it gains against a target already
 // burning with Flame Shock.
@@ -13,34 +13,34 @@ func (shaman *Shaman) registerLavaBurstSpell() {
 		return
 	}
 
-	flameShockBonus := spellData.LavaBurst.EffectAt(1).MultiplierAt(lavaBurstRank.Rank)
+	flameShockBonus := 1 + lavaBurstRank.EffectN(2).Percent()
 
 	shaman.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: lavaBurstRank.SpellID},
-		SpellSchool:    lavaBurstRank.SpellSchool,
-		DefenseType:    lavaBurstRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: lavaBurstRank.ID},
+		SpellSchool:    lavaBurstRank.SpellSchool(),
+		DefenseType:    lavaBurstRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL | SpellFlagShamanSpell | SpellFlagFocusable,
 		ClassSpellMask: SpellMaskLavaBurst,
-		MissileSpeed:   lavaBurstRank.MissileSpeed,
+		MissileSpeed:   float64(lavaBurstRank.Speed),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: lavaBurstRank.Cost,
+			FlatCost: int32(lavaBurstRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD:      lavaBurstRank.GCD,
-				CastTime: lavaBurstRank.CastTime,
+				GCD:      lavaBurstRank.GCD(),
+				CastTime: lavaBurstRank.CastTime(),
 			},
 			CD: core.Cooldown{
 				Timer:    shaman.NewTimer(),
-				Duration: lavaBurstRank.Cooldown,
+				Duration: max(lavaBurstRank.Cooldown(), lavaBurstRank.CategoryCooldown()),
 			},
 		},
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		BonusCoefficient: lavaBurstRank.Direct.BonusCoefficient(),
+		BonusCoefficient: lavaBurstRank.DamageEffect().Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			if shaman.FlameShock.RelatedDotSpell.Dot(target).IsActive() {
@@ -48,7 +48,7 @@ func (shaman *Shaman) registerLavaBurstSpell() {
 				defer func() { spell.DamageMultiplier /= flameShockBonus }()
 			}
 
-			result := spell.CalcDamage(sim, target, lavaBurstRank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			result := spell.CalcDamage(sim, target, lavaBurstRank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
 				spell.DealDamage(sim, result)
 			})

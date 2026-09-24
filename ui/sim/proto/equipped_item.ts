@@ -1,4 +1,4 @@
-import { GemColor, ItemRandomSuffix, ItemSlot, ItemSpec, Profession, PseudoStat, ScalingItemProperties } from '@generated/proto/common';
+import { type AreaType, GemColor, ItemRandomSuffix, ItemSlot, ItemSpec, Profession, PseudoStat, ScalingItemProperties } from '@generated/proto/common';
 import { UIEnchant as Enchant, UIGem as Gem, UIItem as Item } from '@generated/proto/ui';
 
 import { distinct } from '../utils/collections';
@@ -235,7 +235,8 @@ export class EquippedItem {
 		});
 	}
 
-	withDynamicStats() {
+	// Folds in the stats of the given areas, as the sim does.
+	withDynamicStats(areaTypes: readonly AreaType[] = []) {
 		const item = this.item;
 		const scalingOptions = item.scalingOptions[0];
 
@@ -247,6 +248,10 @@ export class EquippedItem {
 		// Forever's random suffixes are flat enchantments, as in Classic (sim/core/database.go).
 		if (this._randomSuffix) {
 			item.stats = item.stats.map((stat, index) => stat + (this._randomSuffix!.stats[index] || 0));
+		}
+
+		for (const areaStats of scalingOptions.areaStats.filter(bonus => areaTypes.includes(bonus.areaType))) {
+			item.stats = item.stats.map((stat, index) => stat + (areaStats.stats[index] || 0));
 		}
 
 		return new EquippedItem({

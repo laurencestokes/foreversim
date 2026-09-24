@@ -5,16 +5,16 @@ import (
 )
 
 func (warrior *Warrior) registerTaunt() {
-	tauntRank := spellData.Taunt.HighestRank()
+	tauntRank := spellData.Taunt.Highest()
 
 	warrior.Taunt = warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: tauntRank.SpellID},
+		ActionID:       core.ActionID{SpellID: tauntRank.ID},
 		SpellSchool:    core.SpellSchoolPhysical,
 		DefenseType:    core.DefenseTypeMagic,
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: SpellMaskTaunt,
-		MaxRange:       tauntRank.MaxRange,
+		MaxRange:       float64(tauntRank.MaxRange),
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
@@ -23,7 +23,7 @@ func (warrior *Warrior) registerTaunt() {
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: tauntRank.Cooldown,
+				Duration: cooldownOf(tauntRank),
 			},
 		},
 

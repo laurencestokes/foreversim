@@ -9,8 +9,8 @@
 //
 // Usage: go run ./tools/arena <arena-out-dir> [ui/app/arena/results.json]
 //
-// Input is one JSON array of rawResult per spec: master's sim/arenalib writes them, and so
-// does tools/parity on forever-next with ARENA_OUT set. ARENA_ITERATIONS (default 5000) is
+// Input is one JSON array of rawResult per spec: sim/arenalib's TestArena hooks write them,
+// and so does tools/parity (one equal-stat build per spec) with ARENA_OUT set. ARENA_ITERATIONS (default 5000) is
 // what the page says each build was run for, and ARENA_SIM names the engine that ran them.
 package main
 

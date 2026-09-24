@@ -1,0 +1,251 @@
+package spelldata
+
+import (
+	"slices"
+	"strconv"
+	"strings"
+
+	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
+)
+
+// An addition to the resolved config for what the client does not state: the proc mask, the metrics
+// the sim keeps and the flags a row cannot justify.
+type SpellOpt func(*core.SpellConfig, *Spell)
+
+// SpellCategories.StartRecoveryCategory of the global cooldown. It is the only category the store
+// carries - 1763 rows state 133 and the rest state nothing - so a row outside it spends no GCD.
+const globalCooldownCategory int16 = 133
+
+// ImplicitTarget_0 values that name a friendly unit.
+var helpfulTargets = []dbcenums.ImplicitTarget{
+	dbcenums.TARGET_UNIT_CASTER, dbcenums.TARGET_UNIT_PET, dbcenums.TARGET_UNIT_CASTER_AREA_PARTY,
+	dbcenums.TARGET_UNIT_TARGET_ALLY, dbcenums.TARGET_UNIT_SRC_AREA_ALLY, dbcenums.TARGET_UNIT_DEST_AREA_ALLY,
+	dbcenums.TARGET_UNIT_SRC_AREA_PARTY, dbcenums.TARGET_UNIT_DEST_AREA_PARTY, dbcenums.TARGET_UNIT_TARGET_PARTY,
+	dbcenums.TARGET_UNIT_TARGET_CHAINHEAL_ALLY, dbcenums.TARGET_UNIT_CASTER_AREA_RAID, dbcenums.TARGET_UNIT_TARGET_RAID,
+}
+
+// What the client states about a spell, as the fields core registers it through. The caller adds the
+// proc mask, ApplyEffects and anything the client does not carry to the returned value before handing
+// it to RegisterSpell: the resolver fills the row's own fields and nothing else.
+//
+// The unit is needed for the cooldown timers, so a config is built where the sim has a character,
+// not at package init. MaxTargets has no SpellConfig field; a caller that needs the row's cap reads
+// s.MaxTargets itself.
+func SpellConfig(unit *core.Unit, s *Spell, opts ...SpellOpt) core.SpellConfig {
+	config := core.SpellConfig{
+		ActionID:     core.ActionID{SpellID: s.ID},
+		Rank:         rankOf(s),
+		SpellSchool:  s.SpellSchool(),
+		DefenseType:  s.DefenseTypeCore(),
+		ClassFlags:   s.ClassFlags,
+		Flags:        rowFlags(s),
+		MissileSpeed: float64(s.Speed),
+		MinRange:     float64(s.MinRange),
+		MaxRange:     float64(s.MaxRange),
+		Cast:         castConfig(unit, s),
+
+		CastRequirement: s.CastRequirement(),
+	}
+	applyCost(&config, s)
+	if s.IsBleed() {
+		config.DamageMultiplier = 1
+		config.ThreatMultiplier = 1
+	}
+
+	// The row first, the caller's options on top, so an option sees what the row filled.
+	for _, opt := range opts {
+		opt(&config, s)
+	}
+	return config
+}
+
+// The proc mask, the melee metrics bucket and the multipliers an ability needs, for a physical spell.
+func Melee(mask core.ProcMask) SpellOpt {
+	return func(config *core.SpellConfig, _ *Spell) {
+		config.ProcMask = mask
+		config.Flags |= core.SpellFlagMeleeMetrics | core.SpellFlagAPL
+		config.DamageMultiplier = 1
+		config.ThreatMultiplier = 1
+		config.Cast.IgnoreHaste = true
+	}
+}
+
+// The same for a spell that scales with spell power, whose share of it the row states on the effect
+// that deals the damage, or heals where the spell has no damaging effect.
+func Magic(mask core.ProcMask) SpellOpt {
+	return func(config *core.SpellConfig, s *Spell) {
+		config.ProcMask = mask
+		config.Flags |= core.SpellFlagAPL
+		config.DamageMultiplier = 1
+		config.ThreatMultiplier = 1
+		config.BonusCoefficient = spellPowerCoeff(s)
+	}
+}
+
+// A spell another spell or an aura casts: it is out of the rotation Melee and Magic put it in, it
+// does not feed on-cast effects, and it has no cast, cost, cooldown or form requirement of its own even when it shares
+// the row of the ability that casts it, the way the warrior's Blood Craze heal and Whirlwind's
+// off-hand strike are registered. Its damage and healing are still measured, its casts are not: the
+// metrics aggregator counts no cast for a passive spell, so a sub-spell whose casts the sim reports -
+// the warrior's Deep Wounds and Retaliation's counterattack - sets the flags itself instead.
+func Proc() SpellOpt {
+	return func(config *core.SpellConfig, _ *Spell) {
+		config.Flags |= core.SpellFlagPassiveSpell | core.SpellFlagNoOnCastComplete
+		config.Flags &^= core.SpellFlagAPL
+		config.Cast = core.CastConfig{}
+		config.CastRequirement = core.CastRequirement{}
+		config.ManaCost = core.ManaCostOptions{}
+		config.RageCost = core.RageCostOptions{}
+		config.EnergyCost = core.EnergyCostOptions{}
+		config.FocusCost = core.FocusCostOptions{}
+	}
+}
+
+// Flags the client does not state, such as the sim's own metrics and rotation flags.
+func Flags(flags core.SpellFlag) SpellOpt {
+	return func(config *core.SpellConfig, _ *Spell) {
+		config.Flags |= flags
+	}
+}
+
+// Splits one spell id into several actions, for a spell the sim registers more than once.
+func Tag(tag int32) SpellOpt {
+	return func(config *core.SpellConfig, _ *Spell) {
+		config.ActionID.Tag = tag
+	}
+}
+
+func (s *Spell) CastRequirement() core.CastRequirement {
+	return core.CastRequirement{
+		Forms:             s.StanceMask,
+		ExcludedForms:     s.StanceExclude,
+		CasterForm:        s.CastableInCasterForm(),
+		NotShapeshifted:   s.NotShapeshifted(),
+		CasterAura:        s.CasterAura,
+		ExcludeCasterAura: s.ExcludeCasterAura,
+	}
+}
+
+func spellPowerCoeff(s *Spell) float64 {
+	if e := s.DamageEffect(); e != NilEffect {
+		return e.Coeff()
+	}
+	return s.HealEffect().Coeff()
+}
+
+// Spell.NameSubtext_lang, which is "Rank 4" on a ranked spell and a word like "Passive" or
+// "Shapeshift" on a handful of others. A spell the client shows no rank on answers 0, which is what
+// the APL UI reads as "this spell has no ranks".
+func rankOf(s *Spell) int32 {
+	digits, ranked := strings.CutPrefix(s.Rank, "Rank ")
+	if !ranked {
+		return 0
+	}
+	rank, err := strconv.Atoi(digits)
+	if err != nil {
+		return 0
+	}
+	return int32(rank)
+}
+
+// The flags the row's attributes and targets state. Everything else is the caller's: a flag the
+// client does not carry is not invented here.
+func rowFlags(s *Spell) core.SpellFlag {
+	var flags core.SpellFlag
+	if s.IsPassive() {
+		flags |= core.SpellFlagPassiveSpell
+	}
+	if s.IsChanneled() {
+		flags |= core.SpellFlagChanneled
+	}
+	if s.SuppressesWeaponProcs() {
+		flags |= core.SpellFlagSuppressWeaponProcs
+	}
+	// Helpful decides who the APL casts the spell on, so it follows the first effect's target. An
+	// attack whose first effect is a self side-effect reads as helpful here and the caller clears it.
+	if slices.Contains(helpfulTargets, s.EffectN(1).Target[0]) {
+		flags |= core.SpellFlagHelpful
+	}
+	return flags
+}
+
+func castConfig(unit *core.Unit, s *Spell) core.CastConfig {
+	// Haste shortens a cast and the GCD it spends, which is the school's business rather than the hit
+	// table's: the shouts, Taunt, Piercing Howl and Thunder Clap are physical spells the client files
+	// under the magic defense type, and they ignore haste like every other ability.
+	cast := core.CastConfig{
+		DefaultCast: core.Cast{CastTime: s.CastTime()},
+		IgnoreHaste: s.SpellSchool() == core.SpellSchoolPhysical,
+	}
+
+	if s.StartRecoveryCategory == globalCooldownCategory {
+		cast.DefaultCast.GCD = s.GCD()
+	}
+
+	switch {
+	case s.CooldownMs > 0:
+		cast.CD = core.Cooldown{Timer: unit.NewTimer(), Duration: s.Cooldown()}
+		if s.CategoryCooldownMs > 0 {
+			cast.SharedCD = core.Cooldown{Timer: categoryTimer(unit, s), Duration: s.CategoryCooldown()}
+		}
+	case s.CategoryCooldownMs > 0:
+		cast.CD = core.Cooldown{Timer: categoryTimer(unit, s), Duration: s.CategoryCooldown()}
+	}
+
+	return cast
+}
+
+// The timer a category cooldown runs off. A category is a set of spells that share one cooldown, so
+// the timer is the unit's for that category; 16 rows state a category cooldown without a category to
+// share it with, and that is the spell's own recovery time.
+func categoryTimer(unit *core.Unit, s *Spell) *core.Timer {
+	if s.Category == 0 {
+		return unit.NewTimer()
+	}
+	return unit.CategoryTimer(int32(s.Category))
+}
+
+// The cost out of the first bar the row states, and NonEmpty where the cast would otherwise read as
+// an empty one, which is what a hand-written config sets on an off-GCD ability that spends a
+// resource. It is not what keeps core's "Empty DefaultCast with a cost" panic away: core fills
+// DefaultCast.Cost from the resolved cost before it tests for an empty cast. A row that spends
+// nothing is left empty on purpose, so a passive or a proc spell keeps the cast path core gives those.
+//
+// Only the first bar: 45 rows state a second one - 44 of them combo points beside energy - and the
+// sim has one cost per spell, so the caller spends the rest itself. A bar the sim does not model,
+// which is the client's -2 health on Bloodrage, resolves to no cost at all and leaves the cast as it
+// found it rather than declaring a cost the spell does not take.
+func applyCost(config *core.SpellConfig, s *Spell) {
+	if len(s.Powers) == 0 {
+		return
+	}
+
+	powerType := s.Powers[0].Type
+
+	// Truncated rather than rounded, which is what the generated rank tables answer for the same
+	// row: Retaliation states one rage-tenth and so costs nothing.
+	cost := int32(s.PowerCost(powerType))
+	costPct := float64(s.Powers[0].CostPct)
+
+	switch powerType {
+	case dbcenums.POWER_MANA:
+		config.ManaCost = core.ManaCostOptions{FlatCost: cost}
+		if costPct > 0 {
+			config.ManaCost.BaseCostPercent = costPct
+		}
+	case dbcenums.POWER_RAGE:
+		config.RageCost = core.RageCostOptions{Cost: cost, Refund: s.MissRefund()}
+	case dbcenums.POWER_ENERGY:
+		config.EnergyCost = core.EnergyCostOptions{Cost: cost, Refund: s.MissRefund()}
+	case dbcenums.POWER_FOCUS:
+		config.FocusCost = core.FocusCostOptions{Cost: cost, Refund: s.MissRefund()}
+	default:
+		return
+	}
+
+	spends := cost > 0 || costPct > 0
+	if spends && config.Cast.DefaultCast.GCD == 0 && config.Cast.DefaultCast.CastTime == 0 {
+		config.Cast.DefaultCast.NonEmpty = true
+	}
+}

@@ -97,20 +97,26 @@ const (
 		SpellMaskFlashOfLight |
 		SpellMaskHolyShockHeal
 
-	// Everything cast without a cast time, for Benediction.
-	SpellMaskInstantSpells = SpellMaskAllSeals |
-		SpellMaskAllAuras |
+	// Benediction's class mask (20101) over the spells the sim registers: not Hammer of the Righteous,
+	// Lay on Hands, Divine Favor, Swift Judgement or any aura but Retribution Aura.
+	SpellMaskBenediction = SpellMaskAllSeals |
+		SpellMaskRetributionAura |
 		SpellMaskJudgement |
 		SpellMaskHolyStrike |
-		SpellMaskHammerOfTheRighteous |
 		SpellMaskConsecration |
 		SpellMaskExorcism |
-		SpellMaskLayOnHands |
 		SpellMaskRighteousFury |
-		SpellMaskDivineFavor |
 		SpellMaskHolyShock |
 		SpellMaskHolyShockHeal |
 		SpellMaskHolyShield |
-		SpellMaskSwiftJudgement |
 		SpellMaskTemplarsBulwark
+
+	// Divine Precision's class mask (1310904), as far as the sim casts it.
+	SpellMaskDivinePrecision = SpellMaskConsecration |
+		SpellMaskExorcism |
+		SpellMaskHolyShock |
+		SpellMaskHolyStrike |
+		SpellMaskHolyWrath |
+		SpellMaskLightsVigil |
+		SpellMaskLightsVigilStrike
 )

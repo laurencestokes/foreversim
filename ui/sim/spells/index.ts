@@ -1,8 +1,8 @@
 // The spell manifest, loaded for the browser.
 //
 // These files were written so Wowhead's Classic database would stop describing abilities
-// Forever changed, and sim/spell_sources_test.go keeps them honest against what the sim
-// registers. Nothing read them at runtime, so an ability Wowhead has never heard of - Lava
+// Forever changed, and each spec's TestArena (sim/arenalib) keeps them honest against what
+// the sim casts. Nothing read them at runtime, so an ability Wowhead has never heard of - Lava
 // Burst's Forever ranks, Spearing Strike, the set procs in the 450000 range - arrived in the
 // damage table with no name at all, as a blank row.
 

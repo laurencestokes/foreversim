@@ -5,16 +5,16 @@ import (
 )
 
 func (hunter *Hunter) registerMongooseBiteSpell() {
-	rank := spellData.MongooseBite.HighestRank()
-	baseDamage := rank.Direct.Damage
+	rank := spellData.MongooseBite.Highest()
+	baseDamage := rank.DamageEffect().Average(core.CharacterLevel)
 
 	// The aura is only a pre-requisite for Mongoose Bite: a dodge opens the window, and Expose Prey
 	// opens it off any landed hit on a marked target.
-	defensiveWindow := spellData.ExposePreyTriggered.ByRank(1)
+	defensiveWindow := spellData.ExposePreyTriggered.Rank(1)
 	hunter.DefensiveState = hunter.RegisterAura(core.Aura{
 		Label:    "Defensive State",
-		ActionID: core.ActionID{SpellID: defensiveWindow.SpellID},
-		Duration: defensiveWindow.Duration,
+		ActionID: core.ActionID{SpellID: defensiveWindow.ID},
+		Duration: defensiveWindow.Duration(),
 
 		OnSpellHitTaken: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 			if result.DidDodge() {
@@ -24,25 +24,25 @@ func (hunter *Hunter) registerMongooseBiteSpell() {
 	})
 
 	hunter.MongooseBite = hunter.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ClassSpellMask: HunterSpellMongooseBite,
 		ProcMask:       core.ProcMaskMeleeSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		MaxRange:       rank.MaxRange,
+		MaxRange:       float64(rank.MaxRange),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: rank.GCD,
+				GCD: rank.GCD(),
 			},
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    hunter.NewTimer(),
-				Duration: rank.Cooldown,
+				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
 			},
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
@@ -57,7 +57,7 @@ func (hunter *Hunter) registerMongooseBiteSpell() {
 			hunter.DefensiveState.Deactivate(sim)
 			// Forever: normalized melee weapon damage plus a smaller flat amount, where Classic
 			// dealt the flat amount alone.
-			damage := baseDamage(sim) + hunter.AutoAttacks.MH().CalculateNormalizedWeaponDamage(sim, spell.MeleeAttackPower(target))
+			damage := baseDamage + hunter.AutoAttacks.MH().CalculateNormalizedWeaponDamage(sim, spell.MeleeAttackPower(target))
 			result := spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
 
 			if hunter.LaceratingStrikes != nil && result.Landed() {

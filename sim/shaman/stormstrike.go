@@ -1,22 +1,21 @@
 package shaman
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/stats"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
-var stormstrikeRank = spellData.Stormstrike.HighestRank()
-var StormstrikeActionID = core.ActionID{SpellID: stormstrikeRank.SpellID}
+var stormstrikeRank = spellData.Stormstrike.Highest()
+var StormstrikeActionID = core.ActionID{SpellID: stormstrikeRank.ID}
 
 func (shaman *Shaman) StormstrikeDebuffAura(target *core.Unit) *core.Aura {
 	aura := target.GetOrRegisterAura(core.Aura{
 		Label:     "Stormstrike-" + shaman.Label,
 		ActionID:  StormstrikeActionID,
-		Duration:  stormstrikeRank.Duration,
-		MaxStacks: stormstrikeRank.ProcCharges,
+		Duration:  stormstrikeRank.Duration(),
+		MaxStacks: int32(stormstrikeRank.ProcCharges),
 		OnSpellHitTaken: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if !spell.SpellSchool.Matches(core.SpellSchoolNature) {
+			if spell.Unit != &shaman.Unit || !spell.Matches(stormstrikeSpells) {
 				return
 			}
 			if !result.Landed() || result.Damage == 0 {
@@ -25,11 +24,14 @@ func (shaman *Shaman) StormstrikeDebuffAura(target *core.Unit) *core.Aura {
 			aura.RemoveStack(sim)
 		},
 	})
-	return aura.AttachMultiplicativePseudoStatBuff(
-		&target.PseudoStats.SchoolDamageTakenMultiplier[stats.SchoolIndexNature],
-		1+stormstrikeRank.Effect(shared.A_MOD_SPELL_DAMAGE_FROM_CASTER, 0).Value/100,
-	)
+	// Client 17364 (aura 271): only this shaman's Lightning Bolt, Chain Lightning and Earth Shock take the bonus.
+	multiplier := 1 + stormstrikeRank.Effect(dbcenums.A_MOD_SPELL_DAMAGE_FROM_CASTER, 0).Percent()
+	return aura.AttachDDBC(0, 1, &shaman.AttackTables, func(_ *core.Simulation, spell *core.Spell, _ *core.AttackTable) float64 {
+		return core.Ternary(spell.Matches(stormstrikeSpells), multiplier, 1)
+	})
 }
+
+const stormstrikeSpells = SpellMaskLightningBolt | SpellMaskChainLightning | SpellMaskEarthShock | SpellMaskOverload
 
 func (shaman *Shaman) newStormstrikeHitSpellConfig(spellID int32, isMH bool) core.SpellConfig {
 	var procMask core.ProcMask
@@ -56,7 +58,7 @@ func (shaman *Shaman) newStormstrikeHitSpellConfig(spellID int32, isMH bool) cor
 }
 
 func (shaman *Shaman) newStormstrikeHitSpell(isMH bool) *core.Spell {
-	return shaman.RegisterSpell(shaman.newStormstrikeHitSpellConfig(stormstrikeRank.SpellID, isMH))
+	return shaman.RegisterSpell(shaman.newStormstrikeHitSpellConfig(stormstrikeRank.ID, isMH))
 }
 
 func (shaman *Shaman) newStormstrikeSpellConfig(spellID int32, ssDebuffAuras *core.AuraArray, mhHit *core.Spell, ohHit *core.Spell) core.SpellConfig {
@@ -68,7 +70,7 @@ func (shaman *Shaman) newStormstrikeSpellConfig(spellID int32, ssDebuffAuras *co
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 		ClassSpellMask: SpellMaskStormstrikeCast,
 		ManaCost: core.ManaCostOptions{
-			FlatCost: stormstrikeRank.Cost,
+			FlatCost: int32(stormstrikeRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
@@ -77,7 +79,7 @@ func (shaman *Shaman) newStormstrikeSpellConfig(spellID int32, ssDebuffAuras *co
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    shaman.NewTimer(),
-				Duration: stormstrikeRank.Cooldown,
+				Duration: max(stormstrikeRank.Cooldown(), stormstrikeRank.CategoryCooldown()),
 			},
 		},
 
@@ -108,5 +110,5 @@ func (shaman *Shaman) registerStormstrikeSpell() {
 
 	shaman.StormStrikeDebuffAuras = shaman.NewEnemyAuraArray(shaman.StormstrikeDebuffAura)
 
-	shaman.Stormstrike = shaman.RegisterSpell(shaman.newStormstrikeSpellConfig(stormstrikeRank.SpellID, &shaman.StormStrikeDebuffAuras, mhHit, ohHit))
+	shaman.Stormstrike = shaman.RegisterSpell(shaman.newStormstrikeSpellConfig(stormstrikeRank.ID, &shaman.StormStrikeDebuffAuras, mhHit, ohHit))
 }

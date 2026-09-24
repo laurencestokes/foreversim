@@ -5,24 +5,24 @@ import (
 )
 
 func (warlock *Warlock) registerCurseOfRecklessness() {
-	rank := spellData.CurseOfRecklessness.HighestRank()
+	rank := spellData.CurseOfRecklessness.Highest()
 
 	warlock.CurseOfRecklessnessAuras = warlock.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		return core.CurseOfRecklessnessAura(target, warlock.Index)
 	})
 
 	warlock.CurseOfRecklessness = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellCurseOfRecklessness,
 
-		ManaCost: core.ManaCostOptions{FlatCost: rank.Cost},
+		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: rank.GCD,
+				GCD: rank.GCD(),
 			},
 		},
 

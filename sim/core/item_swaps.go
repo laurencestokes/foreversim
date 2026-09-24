@@ -47,7 +47,7 @@ func (character *Character) enableItemSwap(itemSwap *proto.ItemSwap) {
 	for idx, itemSpec := range itemSwap.Items {
 		itemSlot := proto.ItemSlot(idx)
 		hasItemSwap[itemSlot] = itemSpec != nil && itemSpec.Id != 0
-		swapItems[itemSlot] = toItem(itemSpec)
+		swapItems[itemSlot] = toItem(itemSpec).inArea(character.Party.areaTypes())
 	}
 
 	has2HSwap := swapItems[proto.ItemSlot_ItemSlotMainHand].HandType == proto.HandType_HandTypeTwoHand

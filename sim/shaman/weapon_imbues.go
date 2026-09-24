@@ -70,7 +70,7 @@ func (shaman *Shaman) newWindfuryImbueSpell(isMH bool) *core.Spell {
 		ThreatMultiplier: 1,
 		BonusCoefficient: 1,
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			apBonus := shaman.WindfuryAPBonus * (1 + spellData.ElementalWeapons.EffectAt(2).FractionAt(shaman.Talents.ElementalWeapons))
+			apBonus := shaman.WindfuryAPBonus * (1 + spellData.ElementalWeapons.EffectAt(3).FractionAt(shaman.Talents.ElementalWeapons))
 			mAP := spell.MeleeAttackPower(target) + apBonus
 
 			baseDamage1 := weaponDamageFunc(sim, mAP)
@@ -153,12 +153,12 @@ func (shaman *Shaman) RegisterWindfuryImbue(procMask core.ProcMask) {
 	shaman.RegisterOnItemSwapWithImbue(windfuryEnchantID, &mask, aura)
 }
 
-var flametongueImbue = spellData.FlametongueWeaponTriggered.HighestRank()
-var frostbrandImbue = spellData.FrostbrandWeaponTriggered.HighestRank()
+var flametongueImbue = spellData.FlametongueWeaponTriggered.Highest()
+var frostbrandImbue = spellData.FrostbrandWeaponTriggered.Highest()
 
 func (shaman *Shaman) newFlametongueImbueSpell(weapon *core.Item) *core.Spell {
 	return shaman.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: flametongueImbue.SpellID},
+		ActionID:    core.ActionID{SpellID: flametongueImbue.ID},
 		SpellSchool: core.SpellSchoolFire,
 		// The damage logs as Flametongue Attack (10444), Magic in SpellCategories; it crits for 1.5x
 		// (2.0x with Elemental Fury, see talents_elemental.go).
@@ -270,8 +270,8 @@ func (shaman *Shaman) RegisterFlametongueImbue(procMask core.ProcMask) {
 
 func (shaman *Shaman) newFrostbrandImbueSpell() *core.Spell {
 	return shaman.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: frostbrandImbue.SpellID},
-		SpellSchool:    frostbrandImbue.SpellSchool,
+		ActionID:       core.ActionID{SpellID: frostbrandImbue.ID},
+		SpellSchool:    frostbrandImbue.SpellSchool(),
 		DefenseType:    core.DefenseTypeMagic, // Frostbrand Attack (25501 / 38617) is Magic in SpellCategories
 		ClassSpellMask: SpellMaskFrostbrandWeapon,
 		ProcMask:       core.ProcMaskEmpty,
@@ -279,9 +279,9 @@ func (shaman *Shaman) newFrostbrandImbueSpell() *core.Spell {
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		BonusCoefficient: frostbrandImbue.Direct.BonusCoefficient(),
+		BonusCoefficient: frostbrandImbue.DamageEffect().Coeff(),
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, frostbrandImbue.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			spell.CalcAndDealDamage(sim, target, frostbrandImbue.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 		},
 	})
 }

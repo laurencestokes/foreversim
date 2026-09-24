@@ -64,20 +64,10 @@ jobs:
 
             # Named packages rather than ./sim/... : sim/web is a server, has no arena entry, and
             # its presence in the pattern is what made the first run fail.
-            #
-            # master's arena runner (sim/arenalib) is not ported to forever-next yet; until it is, the
-            # parity check's equal-stat run of the fifteen specs is the input, one build per spec -
-            # the same fallback tools/arena/run-local.ps1 and background.py take.
             - name: Run the arena
-              run: |
-                  if [ -d sim/arenalib ]; then
-                    go test --tags=with_db -timeout 340m -run TestArena $(go list ./sim/... | grep -v '/sim/web')
-                  else
-                    go test --tags=with_db -timeout 340m -count=1 -v -run '^TestParity$' ./tools/parity
-                  fi
+              run: go test --tags=with_db -timeout 340m -count=1 -v -run TestArena $(go list ./sim/... | grep -v '/sim/web')
               env:
                   ARENA_OUT: ${{ github.workspace }}/arena-out
-                  PARITY_ITERATIONS: 5000
                   # ARENA_OPTIMISE is never set here. Searching is the part that does not fit in a six
                   # hour job, and a search that runs out of time commits nothing, so this workflow
                   # deliberately only re-simulates builds that already exist.

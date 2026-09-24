@@ -9,12 +9,12 @@ func (mage *Mage) registerArcaneBlastSpell() {
 		return
 	}
 
-	arcaneBlastRank := spellData.ArcaneBlast.HighestRank()
+	arcaneBlastRank := spellData.ArcaneBlast.Highest()
 
 	mage.ArcaneBlast = mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: arcaneBlastRank.SpellID},
-		SpellSchool:    arcaneBlastRank.SpellSchool,
-		DefenseType:    arcaneBlastRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: arcaneBlastRank.ID},
+		SpellSchool:    arcaneBlastRank.SpellSchool(),
+		DefenseType:    arcaneBlastRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: MageSpellArcaneBlast,
@@ -26,17 +26,17 @@ func (mage *Mage) registerArcaneBlastSpell() {
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD:      arcaneBlastRank.GCD,
-				CastTime: arcaneBlastRank.CastTime,
+				GCD:      arcaneBlastRank.GCD(),
+				CastTime: arcaneBlastRank.CastTime(),
 			},
 		},
 
 		DamageMultiplier: 1,
-		BonusCoefficient: arcaneBlastRank.Direct.BonusCoefficient(),
+		BonusCoefficient: arcaneBlastRank.DamageEffect().Coeff(),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, arcaneBlastRank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			spell.CalcAndDealDamage(sim, target, arcaneBlastRank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 			mage.ArcaneBlastAura.Activate(sim)
 			mage.ArcaneBlastAura.AddStack(sim)
 		},

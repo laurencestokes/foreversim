@@ -1,7 +1,6 @@
 package warlock
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 )
 
@@ -10,43 +9,43 @@ import (
 // back every four ticks, leaving the last four at 150%. Amplify Curse adds half again and is spent
 // on the snapshot.
 func (warlock *Warlock) registerCurseOfAgony() {
-	rank := spellData.BaneOfAgony.HighestRank()
-	tick := rank.Periodic.(shared.SpellDataPeriodic)
-	amplify := 1 + spellData.AmplifyCurse.EffectAt(0).FractionAt(1)
+	rank := spellData.BaneOfAgony.Highest()
+	tick := rank.PeriodicEffect()
+	amplify := 1 + spellData.AmplifyCurse.EffectAt(1).FractionAt(1)
 
 	rampStep := 0.0
 
 	warlock.CurseOfAgony = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellCurseOfAgony,
 
-		ManaCost: core.ManaCostOptions{FlatCost: rank.Cost},
+		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: rank.GCD,
+				GCD: rank.GCD(),
 			},
 		},
 
 		DamageMultiplierAdditive: 1,
 		DamageMultiplier:         1,
 		ThreatMultiplier:         1,
-		BonusCoefficient:         tick.Coef,
+		BonusCoefficient:         tick.Coeff(),
 
 		Dot: core.DotConfig{
 			Aura: core.Aura{
 				Label: "Bane of Agony",
 				Tag:   "Affliction",
 			},
-			NumberOfTicks:    tick.NumberOfTicks,
-			TickLength:       tick.TickLength,
-			BonusCoefficient: tick.Coef,
+			NumberOfTicks:    int32(rank.Duration() / tick.Period()),
+			TickLength:       tick.Period(),
+			BonusCoefficient: tick.Coeff(),
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				base := tick.Tick
+				base := tick.Average(core.CharacterLevel)
 				if warlock.AmplifyCurseAura.IsActive() {
 					base *= amplify
 					warlock.AmplifyCurseAura.Deactivate(sim)
@@ -56,7 +55,7 @@ func (warlock *Warlock) registerCurseOfAgony() {
 				dot.Snapshot(target, rampStep)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, shared.PeriodicTickOutcome(rank, dot))
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, periodicTickOutcome(rank, dot))
 				if dot.TickCount()%4 == 0 {
 					dot.SnapshotBaseDamage += rampStep
 				}
@@ -79,7 +78,7 @@ func (warlock *Warlock) registerCurseOfAgony() {
 			if useSnapshot {
 				return dot.CalcSnapshotDamage(sim, target, spell.OutcomeExpectedMagicAlwaysHit)
 			}
-			return spell.CalcPeriodicDamage(sim, target, tick.Tick, spell.OutcomeExpectedMagicAlwaysHit)
+			return spell.CalcPeriodicDamage(sim, target, tick.Average(core.CharacterLevel), spell.OutcomeExpectedMagicAlwaysHit)
 		},
 	})
 }

@@ -5,7 +5,9 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/tools/database/overrides"
 )
 
 // Walks the chain of spells reachable through SpellEffect.EffectTriggerSpell, visiting each
@@ -56,7 +58,7 @@ type stackingAura struct {
 // attack power with no duration of its own, because the client drops it when the window ends.
 // resolveStatsSpell walks straight past the container to reach the stats, so the container has
 // to be recovered by walking the chain a second time.
-func buildStackingAura(rootSpellID, statsSpellID, itemLevel, parentItemID int) *stackingAura {
+func buildStackingAura(rootSpellID, statsSpellID, itemLevel int) *stackingAura {
 	containerID := newChainWalker().findStackingContainer(rootSpellID, statsSpellID)
 	if containerID == 0 {
 		return nil
@@ -91,18 +93,16 @@ func buildStackingAura(rootSpellID, statsSpellID, itemLevel, parentItemID int) *
 	}
 
 	// A container with ProcChance above 100 is the "rate lives somewhere else" sentinel - Badge of
-	// the Swarmguard reads 101 and really procs at 10 PPM. That number is not in the spell data,
-	// so it comes from MapItemIdToPPM, the same table assignTrigger uses for chance-on-hit items.
-	// With no entry there the rate is unknown, and emitting the shape anyway would leave the stack
-	// trigger with no rate at all - worse than not generating it, so abandon and let the effect
-	// reach the missing-effects report.
+	// the Swarmguard reads 101 and really procs at 10 PPM. That number is not in the spell data, so
+	// it comes from the hand-supplied rates the spell store reads, keyed by the container's own
+	// spell. With no rate there the stack trigger would have none at all - worse than not generating
+	// it, so abandon and let the effect reach the missing-effects report.
 	container := dbcInstance.Spells[containerID]
 	proc := &proto.ProcEffect{IcdMs: procIcdMs(container, dbcInstance.Spells[statAuraID])}
 	switch {
 	case container.ProcChance > 100:
-		ppm := getPPMForItemID(int32(parentItemID))
+		ppm := overrides.PPMFor(int32(containerID))
 		if ppm == 0 {
-			ReportMissingPPM(int32(parentItemID), containerID)
 			return nil
 		}
 		proc.ProcRate = &proto.ProcEffect_Ppm{Ppm: ppm}
@@ -200,7 +200,7 @@ func (w *chainWalker) findStackingContainer(spellID, statAuraID int) int {
 }
 
 func isProcTriggerAura(aura EffectAuraType) bool {
-	return aura == A_PROC_TRIGGER_SPELL || aura == A_PROC_TRIGGER_SPELL_WITH_VALUE
+	return aura == dbcenums.A_PROC_TRIGGER_SPELL || aura == dbcenums.A_PROC_TRIGGER_SPELL_WITH_VALUE
 }
 
 // Attaches an accumulating aura to the effect that bounds it.

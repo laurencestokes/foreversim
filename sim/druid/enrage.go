@@ -3,31 +3,31 @@ package druid
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-var enrageRank = spellData.Enrage.HighestRank()
+var enrageRank = spellData.Enrage.Highest()
 
 // Enrage: 2 Rage a second for 10 sec, and Forever adds an instant 10 Rage up front (the client's
 // E_ENERGIZE effect, stated as 100 in its own units). Base armor is cut by 27% while it lasts,
 // which the client does not carry.
 func (druid *Druid) registerEnrageSpell() {
-	actionID := core.ActionID{SpellID: enrageRank.SpellID}
+	actionID := core.ActionID{SpellID: enrageRank.ID}
 	rageMetrics := druid.NewRageMetrics(actionID)
 
 	const armorMultiplier = 1 - 0.27
 
 	// Energize is the periodic half; the instant 10 is effect 1 (E_ENERGIZE 100).
-	instantRage := enrageRank.Effect(shared.A_NONE, 1).Tenths()
-	ragePerTick := enrageRank.Effect(shared.A_PERIODIC_ENERGIZE, 1).Value / 10
-	numTicks := int(enrageRank.Duration / time.Second)
+	instantRage := enrageRank.Effect(dbcenums.A_NONE, 1).Tenths()
+	ragePerTick := enrageRank.Effect(dbcenums.A_PERIODIC_ENERGIZE, 1).BaseValue() / 10
+	numTicks := int(enrageRank.Duration() / time.Second)
 
 	druid.EnrageAura = druid.RegisterAura(core.Aura{
 		Label:    "Enrage",
 		ActionID: actionID,
-		Duration: enrageRank.Duration,
+		Duration: enrageRank.Duration(),
 		OnGain: func(_ *core.Aura, sim *core.Simulation) {
 			druid.ApplyDynamicEquipScaling(sim, stats.Armor, armorMultiplier)
 		},
@@ -44,7 +44,7 @@ func (druid *Druid) registerEnrageSpell() {
 		Cast: core.CastConfig{
 			CD: core.Cooldown{
 				Timer:    druid.NewTimer(),
-				Duration: enrageRank.Cooldown,
+				Duration: max(enrageRank.Cooldown(), enrageRank.CategoryCooldown()),
 			},
 			IgnoreHaste: true,
 		},

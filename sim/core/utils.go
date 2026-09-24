@@ -25,6 +25,11 @@ func DurationFromSeconds(numSeconds float64) time.Duration {
 	return time.Duration(float64(time.Second) * numSeconds)
 }
 
+// A float is truncated to whole milliseconds, which is how the client's millisecond columns read.
+func DurationFromMillis[T int32 | float64](ms T) time.Duration {
+	return time.Duration(ms) * time.Millisecond
+}
+
 func StringFromStatTypes(statTypes []stats.Stat) string {
 	statNames := MapSlice(statTypes, func(statType stats.Stat) string {
 		return statType.StatName()

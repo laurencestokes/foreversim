@@ -2,10 +2,14 @@ package feralcat
 
 import (
 	"testing"
+	"time"
 
+	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/simsignals"
+	"github.com/wowsims/forever/sim/druid"
 )
 
 func init() {
@@ -96,4 +100,52 @@ var DefaultConsumables = &proto.ConsumesSpec{
 	GoblinSapper:     true,
 	ScrollAgi:        true,
 	ScrollStr:        true,
+}
+
+// Clearcasting (16870, one charge) makes the next ability in its mask free and is spent by it; one
+// outside the mask leaves it up.
+func TestClearcastingSpentByNextCostedAbility(t *testing.T) {
+	sim := core.NewSim(&proto.RaidSimRequest{
+		SimOptions: &proto.SimOptions{RandomSeed: 1},
+		Raid: &proto.Raid{Parties: []*proto.Party{{Buffs: &proto.PartyBuffs{}, Players: []*proto.Player{{
+			Name: "Cat", Class: proto.Class_ClassDruid, Race: proto.Race_RaceNightElf, TalentsString: DefaultTalents,
+			Equipment: &proto.EquipmentSpec{}, Buffs: &proto.IndividualBuffs{}, Spec: DefaultSpecOptions,
+			Rotation: &proto.APLRotation{Type: proto.APLRotation_TypeAPL},
+		}}}}},
+		Encounter: core.MakeSingleTargetEncounter(0),
+	}, simsignals.CreateSignals())
+	sim.Reset()
+
+	cat := sim.Raid.Parties[0].Players[0].(druid.DruidAgent).GetDruid()
+	cat.ClearcastingAura.Activate(sim)
+
+	if !cat.TigersFury.Cast(sim, cat.CurrentTarget) || !cat.ClearcastingAura.IsActive() {
+		t.Fatal("Tiger's Fury, outside the mask, did not cast or spent Clearcasting")
+	}
+
+	for !cat.GCD.IsReady(sim) && sim.CurrentTime < 5*time.Second {
+		sim.Step()
+	}
+	energy := cat.CurrentEnergy()
+	if !cat.Shred.Cast(sim, cat.CurrentTarget) {
+		t.Fatal("Shred did not cast")
+	}
+	if cat.CurrentEnergy() != energy {
+		t.Errorf("Shred cost %v Energy under Clearcasting, want 0", energy-cat.CurrentEnergy())
+	}
+	if cat.ClearcastingAura.IsActive() {
+		t.Error("Shred did not spend Clearcasting")
+	}
+}
+
+// The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
+func TestArena(t *testing.T) {
+	arenalib.Run(t, arenalib.Spec{
+		Dir:         "feral_druid",
+		UI:          "druid/feralcat",
+		Class:       proto.Class_ClassDruid,
+		Race:        proto.Race_RaceTauren,
+		SpecOptions: DefaultSpecOptions,
+		Role:        arenalib.Melee,
+	})
 }

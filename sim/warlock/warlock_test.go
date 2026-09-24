@@ -3,6 +3,7 @@ package warlock
 import (
 	"testing"
 
+	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
@@ -72,4 +73,23 @@ func warlockSuite(apl string, talents string, options *proto.WarlockOptions) cor
 			IDBlacklist:      []int32{28556},
 		},
 	}
+}
+
+// One demon for every rotation: the Succubus, kept out, as the Affliction builds run it.
+func TestArena(t *testing.T) {
+	arenalib.Run(t, arenalib.Spec{
+		Dir:   "warlock",
+		UI:    "warlock/dps",
+		Class: proto.Class_ClassWarlock,
+		Race:  proto.Race_RaceOrc,
+		SpecOptions: &proto.Player_Warlock{Warlock: &proto.Warlock{Options: &proto.Warlock_Options{
+			ClassOptions: &proto.WarlockOptions{
+				Summon:       proto.WarlockOptions_Succubus,
+				Armor:        proto.WarlockOptions_DemonArmor,
+				CurseOptions: proto.WarlockOptions_Elements,
+			},
+		}}},
+		Role:               arenalib.Caster,
+		DistanceFromTarget: 30,
+	})
 }

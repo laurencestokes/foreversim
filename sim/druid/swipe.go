@@ -4,24 +4,24 @@ import (
 	"github.com/wowsims/forever/sim/core"
 )
 
-var swipeRank = spellData.Swipe.HighestRank()
+var swipeRank = spellData.Swipe.Highest()
 
 func (druid *Druid) registerSwipeBearSpell() {
 	druid.Swipe = druid.RegisterSpell(Bear, core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: swipeRank.SpellID},
-		SpellSchool:    swipeRank.SpellSchool,
-		DefenseType:    swipeRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: swipeRank.ID},
+		SpellSchool:    swipeRank.SpellSchool(),
+		DefenseType:    swipeRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		ClassSpellMask: DruidSpellSwipe,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
-			Cost:   swipeRank.Cost,
+			Cost:   int32(swipeRank.Cost()),
 			Refund: swipeRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: swipeRank.GCD,
+				GCD: swipeRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},
@@ -35,7 +35,7 @@ func (druid *Druid) registerSwipeBearSpell() {
 			numHits := min(3, len(druid.Env.Encounter.AllTargetUnits))
 			for i := 0; i < numHits; i++ {
 				aoeTarget := druid.Env.Encounter.AllTargetUnits[i]
-				spell.CalcAndDealDamage(sim, aoeTarget, swipeRank.Direct.Damage(sim), spell.OutcomeMeleeWeaponSpecialHitAndCrit)
+				spell.CalcAndDealDamage(sim, aoeTarget, swipeRank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMeleeWeaponSpecialHitAndCrit)
 			}
 		},
 	})

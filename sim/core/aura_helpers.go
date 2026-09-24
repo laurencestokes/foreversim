@@ -50,8 +50,11 @@ type ProcTrigger struct {
 	Handler            ProcHandler
 	TriggerImmediately bool // If false (default), the handler will be called one spell batch window later for improved realism.
 	ClassSpellMask     int64
-	ClassSpellsOnly    bool // Corresponds to the Only Proc From Class Abilities flag, e.g. https://www.wowhead.com/forever/spell=32106/lesser-spell-blasting
-	ExtraCondition     ProcExtraCondition
+	// The client's EffectSpellClassMask: the spells this listener fires on. A trigger that sets
+	// both this and ClassSpellMask fires only on the spells both name.
+	ClassFlags      ClassFlags
+	ClassSpellsOnly bool // Corresponds to the Only Proc From Class Abilities flag, e.g. https://www.wowhead.com/forever/spell=32106/lesser-spell-blasting
+	ExtraCondition  ProcExtraCondition
 
 	// The Can Proc From Procs attribute (Attributes[3] 0x4000000): the listener also fires on hits
 	// from spells flagged SpellFlagProc. Without it a proc's hits are invisible to this listener,
@@ -92,7 +95,10 @@ func (config *ProcTrigger) matchesSpell(spell *Spell) bool {
 	if config.ClassSpellMask > 0 && config.ClassSpellMask&spell.ClassSpellMask == 0 {
 		return false
 	}
-	if config.ClassSpellsOnly && spell.ClassSpellMask == 0 {
+	if !config.ClassFlags.IsZero() && !spell.MatchesFlags(config.ClassFlags) {
+		return false
+	}
+	if config.ClassSpellsOnly && spell.ClassSpellMask == 0 && spell.ClassFlags.IsZero() {
 		return false
 	}
 	if config.ProcMaskExclude != ProcMaskUnknown && spell.ProcMask.Matches(config.ProcMaskExclude) {

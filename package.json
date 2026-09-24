@@ -12,6 +12,7 @@
 	"scripts": {
 		"start": "cross-env WATCH=1 make devmode",
 		"build": "make host",
+		"build:lsp": "go build -o /dev/null ./tools/spelldata && make vscode-spelldata",
 		"format": "npm run lint:fix && npm run fmt:fix",
 		"lint": "npm run lint:js && npm run lint:css",
 		"lint:fix": "npm run lint:js:fix && npm run lint:css:fix",

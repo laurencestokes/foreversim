@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -50,7 +51,7 @@ func (priest *Priest) applyShadowFocus() {
 	}
 
 	priest.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexShadow] +=
-		spellData.ShadowFocus.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_RESIST_MISS_CHANCE).ValueAt(priest.Talents.ShadowFocus)
+		spellData.ShadowFocus.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_RESIST_MISS_CHANCE)).ValueAt(priest.Talents.ShadowFocus)
 }
 
 // applyBlackout implements Blackout.
@@ -92,7 +93,7 @@ func (priest *Priest) applyImprovedShadowWordPain() {
 	}
 
 	added := time.Millisecond * time.Duration(spellData.ImprovedShadowWordPain.ValueAt(priest.Talents.ImprovedShadowWordPain))
-	tickLength := spellData.ShadowWordPain.HighestRank().Periodic.(shared.SpellDataPeriodic).TickLength
+	tickLength := spellData.ShadowWordPain.Highest().PeriodicEffect().Period()
 
 	priest.AddStaticMod(core.SpellModConfig{
 		ClassMask: PriestSpellShadowWordPain,
@@ -136,32 +137,33 @@ func (priest *Priest) applyMindFlay() {
 		return
 	}
 
-	MindFlayRankMap.RegisterAll(priest.registerMindFlaySpell)
+	MindFlayRankMap.Each(func(_ int32, rank *spelldata.Spell) { priest.registerMindFlaySpell(rank) })
 }
 
 var MindFlayRankMap = spellData.MindFlay
 
 // A three tick channel. Forever's ticks are not hastened, as in Classic and TBC.
-func (priest *Priest) registerMindFlaySpell(rank shared.SpellData) {
-	tick := rank.Periodic.(shared.SpellDataPeriodic)
+func (priest *Priest) registerMindFlaySpell(rank *spelldata.Spell) {
+	tick := rank.PeriodicEffect()
+	tickLength := tick.Period()
 
 	priest.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
-		ProcMask:       core.ProcMaskSpellDamage,
+		ActionID:    core.ActionID{SpellID: rank.ID},
+		SpellSchool: rank.SpellSchool(),
+		DefenseType: rank.DefenseTypeCore(),
+		ProcMask:    core.ProcMaskSpellDamage,
 		// Binary, as on master: the row slows (effect 1), so it resists whole or not at all.
 		Flags:          core.SpellFlagAPL | core.SpellFlagChanneled | core.SpellFlagBinary,
 		ClassSpellMask: PriestSpellMindFlay,
-		Rank:           rank.Rank,
-		MaxRange:       rank.MaxRange,
+		Rank:           rank.RankNumber(),
+		MaxRange:       float64(rank.MaxRange),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: rank.GCD,
+				GCD: rank.GCD(),
 			},
 		},
 
@@ -170,18 +172,18 @@ func (priest *Priest) registerMindFlaySpell(rank shared.SpellData) {
 
 		Dot: core.DotConfig{
 			Aura: core.Aura{
-				Label: fmt.Sprintf("MindFlay-%d", rank.Rank),
+				Label: fmt.Sprintf("MindFlay-%d", rank.RankNumber()),
 			},
-			NumberOfTicks:       tick.NumberOfTicks,
-			TickLength:          tick.TickLength,
+			NumberOfTicks:       int32(rank.Duration() / tickLength),
+			TickLength:          tickLength,
 			AffectedByCastSpeed: false,
-			BonusCoefficient:    tick.Coef,
+			BonusCoefficient:    tick.Coeff(),
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, tick.Tick)
+				dot.Snapshot(target, tick.Average(core.CharacterLevel))
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, priestTickOutcome(rank, dot))
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, priestTickOutcome(rank.PeriodicCanCrit(), dot))
 			},
 		},
 
@@ -197,7 +199,7 @@ func (priest *Priest) registerMindFlaySpell(rank shared.SpellData) {
 			if useSnapshot {
 				return spell.Dot(target).CalcSnapshotDamage(sim, target, spell.OutcomeExpectedMagicHit)
 			}
-			return spell.CalcPeriodicDamage(sim, target, tick.Tick, spell.OutcomeExpectedMagicHit)
+			return spell.CalcPeriodicDamage(sim, target, tick.Average(core.CharacterLevel), spell.OutcomeExpectedMagicHit)
 		},
 	})
 }
@@ -210,7 +212,7 @@ func (priest *Priest) applyImprovedMindFlay() {
 
 	priest.AddStaticMod(core.SpellModConfig{
 		ClassMask:  PriestSpellMindFlay,
-		FloatValue: spellData.ImprovedMindFlay.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DOT).FractionAt(priest.Talents.ImprovedMindFlay),
+		FloatValue: spellData.ImprovedMindFlay.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DOT)).FractionAt(priest.Talents.ImprovedMindFlay),
 		Kind:       core.SpellMod_DamageDone_Flat,
 	})
 }
@@ -231,16 +233,16 @@ func (priest *Priest) applyVampiricEmbrace() {
 		return
 	}
 
-	rank := spellData.VampiricEmbrace.HighestRank()
-	healPct := shared.SpellDataMin(rank.Direct) / 100
-	healthMetrics := priest.NewHealthMetrics(core.ActionID{SpellID: rank.SpellID})
+	rank := spellData.VampiricEmbrace.Highest()
+	healPct := rank.Effect(dbcenums.A_DUMMY, 0).Average(core.CharacterLevel) / 100
+	healthMetrics := priest.NewHealthMetrics(core.ActionID{SpellID: rank.ID})
 	partyPlayers := priest.Party.Players
 
 	veAuras := priest.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		aura := target.GetOrRegisterAura(core.Aura{
 			Label:    "Vampiric Embrace - " + target.Label,
-			ActionID: core.ActionID{SpellID: rank.SpellID},
-			Duration: rank.Duration,
+			ActionID: core.ActionID{SpellID: rank.ID},
+			Duration: rank.Duration(),
 		})
 		aura.AttachProcTriggerCallback(target, core.ProcTrigger{
 			Name:               "Vampiric Embrace Proc",
@@ -259,7 +261,7 @@ func (priest *Priest) applyVampiricEmbrace() {
 	})
 
 	priest.VampiricEmbrace = priest.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
+		ActionID:       core.ActionID{SpellID: rank.ID},
 		SpellSchool:    core.SpellSchoolShadow,
 		DefenseType:    core.DefenseTypeMagic,
 		ProcMask:       core.ProcMaskEmpty,
@@ -267,7 +269,7 @@ func (priest *Priest) applyVampiricEmbrace() {
 		ClassSpellMask: PriestSpellVampiricEmbrace,
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
@@ -275,7 +277,7 @@ func (priest *Priest) applyVampiricEmbrace() {
 			},
 			CD: core.Cooldown{
 				Timer:    priest.NewTimer(),
-				Duration: rank.Cooldown,
+				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
 			},
 		},
 
@@ -298,8 +300,8 @@ func (priest *Priest) applyShadowWeaving() {
 		return
 	}
 
-	stackAura := spellData.ShadowWeavingTriggered.HighestRank()
-	perStack := stackAura.Effect(shared.A_MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER, 32).Value / 100
+	stackAura := spellData.ShadowWeavingTriggered.Highest()
+	perStack := stackAura.Effect(dbcenums.A_MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER, 32).Average(core.CharacterLevel) / 100
 
 	damageMod := priest.AddDynamicMod(core.SpellModConfig{
 		ClassMask: PriestSpellsAll,
@@ -309,8 +311,8 @@ func (priest *Priest) applyShadowWeaving() {
 
 	priest.ShadowWeavingAura = priest.RegisterAura(core.Aura{
 		Label:     "Shadow Weaving",
-		ActionID:  core.ActionID{SpellID: stackAura.SpellID},
-		Duration:  stackAura.Duration,
+		ActionID:  core.ActionID{SpellID: stackAura.ID},
+		Duration:  stackAura.Duration(),
 		MaxStacks: 5,
 		OnGain: func(_ *core.Aura, _ *core.Simulation) {
 			damageMod.Activate()
@@ -355,7 +357,7 @@ func (priest *Priest) applyDevouringContagion() {
 
 	priest.AddStaticMod(core.SpellModConfig{
 		ClassMask:  PriestSpellDevouringPlague,
-		FloatValue: spellData.DevouringContagion.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_COST).FractionAt(priest.Talents.DevouringContagion),
+		FloatValue: spellData.DevouringContagion.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(priest.Talents.DevouringContagion),
 		Kind:       core.SpellMod_PowerCost_Pct_Add,
 	})
 }
@@ -384,17 +386,18 @@ func (priest *Priest) applyDarkness() {
 
 // The beta client's 15473: +10% Shadow damage, -50% Shadow mana cost, +100% Shadow critical strike
 // damage bonus, -15% Physical damage taken. Only healing is blocked, so Smite and Holy Fire stay
-// castable inside it and do not break it.
+// castable inside it and do not break it. The crit bonus is not school-wide: its mask (41984016)
+// names Mind Blast, Mind Flay, Shadow Word: Pain, Devouring Plague and Mana Burn.
 func (priest *Priest) applyShadowform() {
 	if !priest.Talents.Shadowform {
 		return
 	}
 
-	rank := spellData.Shadowform.HighestRank()
+	rank := spellData.Shadowform.Highest()
 
 	priest.ShadowformAura = priest.RegisterAura(core.Aura{
 		Label:    "Shadowform",
-		ActionID: core.ActionID{SpellID: rank.SpellID},
+		ActionID: core.ActionID{SpellID: rank.ID},
 		Duration: core.NeverExpires,
 		OnReset: func(aura *core.Aura, sim *core.Simulation) {
 			if priest.SelfBuffs.PreShadowform {
@@ -409,25 +412,24 @@ func (priest *Priest) applyShadowform() {
 	}).AttachSpellMod(core.SpellModConfig{
 		ClassMask:  PriestSpellsAll,
 		School:     core.SpellSchoolShadow,
-		FloatValue: rank.Effect(shared.A_MOD_DAMAGE_PERCENT_DONE, 32).Value / 100,
+		FloatValue: rank.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_DONE, 32).Average(core.CharacterLevel) / 100,
 		Kind:       core.SpellMod_DamageDone_Pct,
 	}).AttachSpellMod(core.SpellModConfig{
 		ClassMask:  PriestSpellsAll,
 		School:     core.SpellSchoolShadow,
-		FloatValue: rank.Effect(shared.A_MOD_POWER_COST_SCHOOL_PCT, 32).Value / 100,
+		FloatValue: rank.Effect(dbcenums.A_MOD_POWER_COST_SCHOOL_PCT, 32).Average(core.CharacterLevel) / 100,
 		Kind:       core.SpellMod_PowerCost_Pct,
 	}).AttachSpellMod(core.SpellModConfig{
-		ClassMask:  PriestSpellsAll,
-		School:     core.SpellSchoolShadow,
-		FloatValue: rank.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_CRIT_DAMAGE_BONUS).Value / 100,
+		ClassMask:  PriestSpellMindBlast | PriestSpellMindFlay | PriestSpellShadowWordPain | PriestSpellDevouringPlague,
+		FloatValue: rank.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_CRIT_DAMAGE_BONUS)).Average(core.CharacterLevel) / 100,
 		Kind:       core.SpellMod_CritMultiplier_Flat,
 	}).AttachMultiplicativePseudoStatBuff(
 		&priest.PseudoStats.SchoolDamageTakenMultiplier[stats.SchoolIndexPhysical],
-		1+rank.Effect(shared.A_MOD_DAMAGE_PERCENT_TAKEN, 1).Value/100,
+		1+rank.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_TAKEN, 1).Average(core.CharacterLevel)/100,
 	)
 
 	priest.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
+		ActionID:       core.ActionID{SpellID: rank.ID},
 		SpellSchool:    core.SpellSchoolShadow,
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL,

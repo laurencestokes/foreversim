@@ -3,6 +3,7 @@ package feralbear
 import (
 	"testing"
 
+	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
@@ -24,7 +25,7 @@ func TestFeralBear(t *testing.T) {
 			// with yet, and gives the rest TBC-shaped stats.
 			GearSet: core.GearSetCombo{Label: "Naked", GearSet: &proto.EquipmentSpec{}},
 
-			Talents: DefaultTalents,
+			Talents:     DefaultTalents,
 			SpecOptions: core.SpecOptionsCombo{Label: "Standard", SpecOptions: DefaultSpecOptions},
 
 			Rotation: core.GetAplRotation("../../../ui/specs/druid/feralbear/apls", "default"),
@@ -93,4 +94,17 @@ var DefaultConsumables = &proto.ConsumesSpec{
 	ScrollStr:        true,
 	ScrollArm:        true,
 	NightmareSeed:    true,
+}
+
+// The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
+func TestArena(t *testing.T) {
+	arenalib.Run(t, arenalib.Spec{
+		Dir:         "feral_tank_druid",
+		UI:          "druid/feralbear",
+		Class:       proto.Class_ClassDruid,
+		Race:        proto.Race_RaceTauren,
+		SpecOptions: DefaultSpecOptions,
+		Role:        arenalib.Melee,
+		IsTank:      true,
+	})
 }

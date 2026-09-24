@@ -1,19 +1,19 @@
 package druid
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
-var prowlRank = spellData.Prowl.HighestRank()
+var prowlRank = spellData.Prowl.Highest()
 
 func (druid *Druid) registerProwlSpell() {
-	actionID := core.ActionID{SpellID: prowlRank.SpellID}
-	movementSpeedMultiplier := 1 + prowlRank.Effect(shared.A_MOD_DECREASE_SPEED, 0).Value/100
+	actionID := core.ActionID{SpellID: prowlRank.ID}
+	movementSpeedMultiplier := 1 + prowlRank.Effect(dbcenums.A_MOD_DECREASE_SPEED, 0).BaseValue()/100
 
 	icd := core.Cooldown{
 		Timer:    druid.NewTimer(),
-		Duration: prowlRank.Cooldown,
+		Duration: max(prowlRank.Cooldown(), prowlRank.CategoryCooldown()),
 	}
 
 	druid.ProwlAura = druid.RegisterAura(core.Aura{
@@ -43,7 +43,7 @@ func (druid *Druid) registerProwlSpell() {
 
 	druid.Prowl = druid.RegisterSpell(Any, core.SpellConfig{
 		ActionID:    actionID,
-		SpellSchool: prowlRank.SpellSchool,
+		SpellSchool: prowlRank.SpellSchool(),
 		ProcMask:    core.ProcMaskEmpty,
 		Flags:       core.SpellFlagAPL,
 

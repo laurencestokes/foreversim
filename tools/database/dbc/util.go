@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
@@ -147,8 +148,8 @@ func processEnchantmentEffects(
 				points := spellEffect.EffectBasePoints + spellEffect.EffectDieSides
 
 				if spellEffect.EffectMiscValues[0] == -1 &&
-					spellEffect.EffectType == E_APPLY_AURA &&
-					spellEffect.EffectAura == A_MOD_STAT {
+					spellEffect.EffectType == dbcenums.E_APPLY_AURA &&
+					spellEffect.EffectAura == dbcenums.A_MOD_STAT {
 					// Apply bonus to all stats
 					outStats[proto.Stat_StatAgility] += float64(points)
 					outStats[proto.Stat_StatIntellect] += float64(points)
@@ -157,13 +158,13 @@ func processEnchantmentEffects(
 					outStats[proto.Stat_StatStrength] += float64(points)
 					continue
 				}
-				if spellEffect.EffectType == E_APPLY_AURA && spellEffect.EffectAura == A_MOD_STAT {
+				if spellEffect.EffectType == dbcenums.E_APPLY_AURA && spellEffect.EffectAura == dbcenums.A_MOD_STAT {
 					stat, ok := MapMainStatToStat(spellEffect.EffectMiscValues[0])
 					if !ok {
 						continue
 					}
 					outStats[stat] += float64(points)
-				} else if spellEffect.EffectType == E_APPLY_AURA && spellEffect.EffectAura == A_MOD_RESISTANCE && (SpellSchool(spellEffect.EffectMiscValues[0]) == ALL_SPELL_DAMAGE || SpellSchool(spellEffect.EffectMiscValues[0]) == SPELL_PENETRATION) {
+				} else if spellEffect.EffectType == dbcenums.E_APPLY_AURA && spellEffect.EffectAura == dbcenums.A_MOD_RESISTANCE && (SpellSchool(spellEffect.EffectMiscValues[0]) == ALL_SPELL_DAMAGE || SpellSchool(spellEffect.EffectMiscValues[0]) == SPELL_PENETRATION) {
 					outStats[proto.Stat_StatArcaneResistance] += float64(points)
 					outStats[proto.Stat_StatFireResistance] += float64(points)
 					outStats[proto.Stat_StatFrostResistance] += float64(points)
@@ -203,23 +204,23 @@ func processEnchantmentEffects(
 // client's CombatRatings conversion. perPoint is 0 for any other aura.
 func PercentAuraToRating(effectAura EffectAuraType, effectMisc int) (stat proto.Stat, perPoint float64) {
 	switch effectAura {
-	case A_MOD_HIT_CHANCE:
+	case dbcenums.A_MOD_HIT_CHANCE:
 		return proto.Stat_StatMeleeHitRating, core.PhysicalHitRatingPerHitPercent
-	case A_MOD_SPELL_HIT_CHANCE:
+	case dbcenums.A_MOD_SPELL_HIT_CHANCE:
 		return proto.Stat_StatSpellHitRating, core.SpellHitRatingPerHitPercent
-	case A_MOD_WEAPON_CRIT_PERCENT:
+	case dbcenums.A_MOD_WEAPON_CRIT_PERCENT:
 		return proto.Stat_StatMeleeCritRating, core.PhysicalCritRatingPerCritPercent
-	case A_MOD_SPELL_CRIT_CHANCE:
+	case dbcenums.A_MOD_SPELL_CRIT_CHANCE:
 		return proto.Stat_StatSpellCritRating, core.SpellCritRatingPerCritPercent
-	case A_MOD_DODGE_PERCENT:
+	case dbcenums.A_MOD_DODGE_PERCENT:
 		return proto.Stat_StatDodgeRating, core.DodgeRatingPerDodgePercent
-	case A_MOD_PARRY_PERCENT:
+	case dbcenums.A_MOD_PARRY_PERCENT:
 		return proto.Stat_StatParryRating, core.ParryRatingPerParryPercent
-	case A_MOD_BLOCK_PERCENT:
+	case dbcenums.A_MOD_BLOCK_PERCENT:
 		return proto.Stat_StatBlockRating, core.BlockRatingPerBlockPercent
-	case A_MOD_MELEE_HASTE, A_MOD_MELEE_HASTE_3:
+	case dbcenums.A_MOD_MELEE_HASTE, dbcenums.A_MOD_MELEE_HASTE_3:
 		return proto.Stat_StatMeleeHasteRating, core.PhysicalHasteRatingPerHastePercent
-	case A_MOD_SKILL:
+	case dbcenums.A_MOD_SKILL:
 		if effectMisc == skillLineDefense {
 			return proto.Stat_StatDefenseRating, core.DefenseRatingPerDefenseLevel
 		}
@@ -231,25 +232,25 @@ const skillLineDefense = 95
 
 func ConvertEffectAuraToStatIndex(effectAura EffectAuraType, effectMisc int) proto.Stat {
 	switch effectAura {
-	case A_MOD_ATTACK_POWER:
+	case dbcenums.A_MOD_ATTACK_POWER:
 		return proto.Stat_StatAttackPower
-	case A_MOD_RANGED_ATTACK_POWER:
+	case dbcenums.A_MOD_RANGED_ATTACK_POWER:
 		return proto.Stat_StatRangedAttackPower
-	case A_MOD_DAMAGE_DONE:
+	case dbcenums.A_MOD_DAMAGE_DONE:
 		return ConvertSpellDamageFlagToSchoolDamageStat(effectMisc)
-	case A_MOD_HEALING_DONE:
+	case dbcenums.A_MOD_HEALING_DONE:
 		return proto.Stat_StatHealingPower
-	case A_MOD_INCREASE_HEALTH:
+	case dbcenums.A_MOD_INCREASE_HEALTH:
 		return proto.Stat_StatHealth
-	case A_MOD_TARGET_RESISTANCE:
+	case dbcenums.A_MOD_TARGET_RESISTANCE:
 		return ConvertTargetResistanceFlagToPenetrationStat(effectMisc)
-	case A_MOD_RESISTANCE:
+	case dbcenums.A_MOD_RESISTANCE:
 		return ConvertResistanceFlagToResistanceStat(effectMisc)
-	case A_MOD_RATING: // MOD_RATING (Stat Ratings but as Auras; includes mostly Vanilla items, but also some socket bonuses and random one-offs)
+	case dbcenums.A_MOD_RATING:
 		return ConvertModRatingFlagToRatingStat(effectMisc)
-	case A_MOD_SHIELD_BLOCKVALUE:
+	case dbcenums.A_MOD_SHIELD_BLOCKVALUE:
 		return proto.Stat_StatBlockValue
-	case A_MOD_POWER_REGEN:
+	case dbcenums.A_MOD_POWER_REGEN:
 		return proto.Stat_StatMP5
 	default:
 		return -1

@@ -362,7 +362,7 @@ func applyBuffEffects(agent Agent, raidBuffs *proto.RaidBuffs, partyBuffs *proto
 ///////////////////////////////////////////////////////////////////////////
 
 func ThornsAura(char *Character, points int32) *Aura {
-	actionID := ActionID{SpellID: 26992}
+	actionID := ActionID{SpellID: 9910} // Thorns rank 6, the Forever client's top rank
 
 	procSpell := char.RegisterSpell(SpellConfig{
 		ActionID:    actionID,
@@ -374,7 +374,7 @@ func ThornsAura(char *Character, points int32) *Aura {
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *Simulation, target *Unit, spell *Spell) {
-			baseDamage := 25 * (1 + 0.25*float64(points))
+			baseDamage := 22 * (1 + 0.25*float64(points)) // 9910: 22 per hit; 25 was TBC rank 7 (26992)
 			spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMagicHit)
 		},
 	})
@@ -821,10 +821,15 @@ func FerociousInspiration(char *Character, count int32) *Aura {
 	}).AttachMultiplicativePseudoStatBuff(&char.PseudoStats.DamageDealtMultiplier, 1+dmgBuff)
 }
 
-// Forever client 24932: 3% critical strike (aura 290). TBC's was 5%.
+// Leader of the Pack (24932) and Moonkin Aura (24907) are the same aura 290, all critical strike,
+// and their tooltips make them exclusive with each other.
+const DruidCritAuraCategory = "DruidCritAura"
+
+// Forever client 24932: 3% critical strike (aura 290, melee, ranged and spell). TBC's was 5%.
 func LeaderOfThePackAura(char *Character, improved bool) *Aura {
 	statsConfig := []StatConfig{
 		{stats.PhysicalCritPercent, 3, false},
+		{stats.SpellCritPercent, 3, false},
 	}
 
 	if improved {
@@ -832,15 +837,17 @@ func LeaderOfThePackAura(char *Character, improved bool) *Aura {
 	}
 
 	return makeStatBuff(char, BuffConfig{
-		Label:    "Leader of the Pack",
-		ActionID: ActionID{SpellID: 17007},
-		Stats:    statsConfig,
+		Label:             "Leader of the Pack",
+		ActionID:          ActionID{SpellID: 17007},
+		Stats:             statsConfig,
+		ExclusiveCategory: DruidCritAuraCategory,
 	})
 }
 
-// Forever client 24907: 3% critical strike (aura 290). TBC's was 5%.
+// Forever client 24907: 3% critical strike (aura 290, melee, ranged and spell). TBC's was 5%.
 func MoonkinAuraBuff(char *Character, improved bool) *Aura {
 	statsConfig := []StatConfig{
+		{stats.PhysicalCritPercent, 3, false},
 		{stats.SpellCritPercent, 3, false},
 	}
 	if improved {
@@ -848,9 +855,10 @@ func MoonkinAuraBuff(char *Character, improved bool) *Aura {
 	}
 
 	return makeStatBuff(char, BuffConfig{
-		Label:    "Moonkin Aura",
-		ActionID: ActionID{SpellID: 24907},
-		Stats:    statsConfig,
+		Label:             "Moonkin Aura",
+		ActionID:          ActionID{SpellID: 24907},
+		Stats:             statsConfig,
+		ExclusiveCategory: DruidCritAuraCategory,
 	})
 }
 

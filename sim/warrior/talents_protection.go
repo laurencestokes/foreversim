@@ -3,9 +3,10 @@ package warrior
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -56,22 +57,22 @@ func (warrior *Warrior) registerShieldSpecialization() {
 		return
 	}
 
-	shieldSpecializationEnergize := spellData.ShieldSpecializationTriggered.HighestRank()
+	shieldSpecializationEnergize := spellData.ShieldSpecializationTriggered.Highest()
 
-	warrior.AddStat(stats.BlockPercent, spellData.ShieldSpecialization.Effect(shared.A_MOD_BLOCK_PERCENT, 0).FractionAt(warrior.Talents.ShieldSpecialization))
+	warrior.AddStat(stats.BlockPercent, spellData.ShieldSpecialization.Effect(dbcenums.A_MOD_BLOCK_PERCENT, 0).FractionAt(warrior.Talents.ShieldSpecialization))
 
 	warrior.registerRageOnAvoid(
 		"Shield Specialization",
 		shieldSpecializationEnergize,
-		spellData.ShieldSpecialization.EffectAt(1).FractionAt(warrior.Talents.ShieldSpecialization),
+		spellData.ShieldSpecialization.EffectAt(2).FractionAt(warrior.Talents.ShieldSpecialization),
 		core.OutcomeBlock,
 		nil,
 	)
 }
 
-func (warrior *Warrior) registerRageOnAvoid(name string, energize shared.SpellData, chance float64, outcome core.HitOutcome, extra core.ProcExtraCondition) {
-	rage := energize.Energize.Tenths()
-	rageMetrics := warrior.NewRageMetrics(core.ActionID{SpellID: energize.SpellID})
+func (warrior *Warrior) registerRageOnAvoid(name string, energize *spelldata.Spell, chance float64, outcome core.HitOutcome, extra core.ProcExtraCondition) {
+	rage := energize.EnergizeEffect().Tenths()
+	rageMetrics := warrior.NewRageMetrics(core.ActionID{SpellID: energize.ID})
 	warrior.MakeProcTriggerAura(core.ProcTrigger{
 		Name:               name,
 		ProcChance:         chance,
@@ -92,7 +93,7 @@ func (warrior *Warrior) registerToughness() {
 
 	warrior.ApplyEquipScaling(
 		stats.Armor,
-		spellData.Toughness.Effect(shared.A_MOD_BASE_RESISTANCE_PCT, 1).MultiplierAt(warrior.Talents.Toughness),
+		spellData.Toughness.Effect(dbcenums.A_MOD_BASE_RESISTANCE_PCT, 1).MultiplierAt(warrior.Talents.Toughness),
 	)
 }
 
@@ -101,18 +102,18 @@ func (warrior *Warrior) registerLastStand() {
 		return
 	}
 
-	lastStandRank := spellData.LastStand.HighestRank()
-	lastStandBuff := spellData.LastStandTriggered.HighestRank()
-	actionID := core.ActionID{SpellID: lastStandRank.SpellID}
+	lastStandRank := spellData.LastStand.Highest()
+	lastStandBuff := spellData.LastStandTriggered.Highest()
+	actionID := core.ActionID{SpellID: lastStandRank.ID}
 	healthMetrics := warrior.NewHealthMetrics(actionID)
 
 	var bonusHealth float64
 	aura := warrior.RegisterAura(core.Aura{
 		Label:    "Last Stand",
 		ActionID: actionID,
-		Duration: lastStandBuff.Duration,
+		Duration: lastStandBuff.Duration(),
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
-			bonusHealth = warrior.MaxHealth() * lastStandBuff.Effect(shared.A_MOD_MAX_HEALTH, 0).Fraction()
+			bonusHealth = warrior.MaxHealth() * lastStandBuff.Effect(dbcenums.A_MOD_MAX_HEALTH, 0).Percent()
 			warrior.UpdateMaxHealth(sim, bonusHealth, healthMetrics)
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
@@ -127,7 +128,7 @@ func (warrior *Warrior) registerLastStand() {
 		Cast: core.CastConfig{
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: lastStandRank.Cooldown,
+				Duration: cooldownOf(lastStandRank),
 			},
 		},
 
@@ -178,10 +179,10 @@ func (warrior *Warrior) registerConcussionBlow() {
 		return
 	}
 
-	concussionBlowRank := spellData.ConcussionBlow.HighestRank()
+	concussionBlowRank := spellData.ConcussionBlow.Highest()
 
 	warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: concussionBlowRank.SpellID},
+		ActionID:       core.ActionID{SpellID: concussionBlowRank.ID},
 		ClassSpellMask: SpellMaskConcussionBlow,
 		SpellSchool:    core.SpellSchoolPhysical,
 		DefenseType:    core.DefenseTypeMelee,
@@ -190,7 +191,7 @@ func (warrior *Warrior) registerConcussionBlow() {
 		MaxRange:       core.MaxMeleeRange,
 
 		RageCost: core.RageCostOptions{
-			Cost:   concussionBlowRank.Cost,
+			Cost:   int32(concussionBlowRank.Cost()),
 			Refund: concussionBlowRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
@@ -200,7 +201,7 @@ func (warrior *Warrior) registerConcussionBlow() {
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: concussionBlowRank.Cooldown,
+				Duration: cooldownOf(concussionBlowRank),
 			},
 		},
 
@@ -219,29 +220,29 @@ func (warrior *Warrior) registerShieldSlam() {
 		return
 	}
 
-	shieldSlamRank := spellData.ShieldSlam.HighestRank()
+	shieldSlamRank := spellData.ShieldSlam.Highest()
 
 	warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: shieldSlamRank.SpellID},
+		ActionID:       core.ActionID{SpellID: shieldSlamRank.ID},
 		ClassSpellMask: SpellMaskShieldSlam,
-		SpellSchool:    shieldSlamRank.SpellSchool,
-		DefenseType:    shieldSlamRank.DefenseType,
+		SpellSchool:    shieldSlamRank.SpellSchool(),
+		DefenseType:    shieldSlamRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 		MaxRange:       core.MaxMeleeRange,
 
 		RageCost: core.RageCostOptions{
-			Cost:   shieldSlamRank.Cost,
+			Cost:   int32(shieldSlamRank.Cost()),
 			Refund: shieldSlamRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: shieldSlamRank.GCD,
+				GCD: shieldSlamRank.GCD(),
 			},
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: shieldSlamRank.Cooldown,
+				Duration: cooldownOf(shieldSlamRank),
 			},
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
@@ -272,7 +273,7 @@ func (warrior *Warrior) registerFocusedRage() {
 	}
 
 	warrior.AddStaticMod(core.SpellModConfig{
-		ClassMask: SpellMaskOffensiveAbilities,
+		ClassMask: SpellMaskFocusedRage,
 		Kind:      core.SpellMod_PowerCost_Flat,
 		IntValue:  int32(spellData.FocusedRage.TenthsAt(warrior.Talents.FocusedRage)),
 	})
@@ -283,7 +284,7 @@ func (warrior *Warrior) registerMasterOfDefense() {
 		return
 	}
 
-	masterOfDefenseEnergize := spellData.MasterOfDefenseTriggered.HighestRank()
+	masterOfDefenseEnergize := spellData.MasterOfDefenseTriggered.Highest()
 
 	warrior.registerRageOnAvoid(
 		"Master of Defense",
@@ -325,14 +326,14 @@ func (warrior *Warrior) registerImprovedShieldBash() {
 		return
 	}
 
-	improvedShieldBashSilence := spellData.ImprovedShieldBashTriggered.HighestRank()
+	improvedShieldBashSilence := spellData.ImprovedShieldBashTriggered.Highest()
 
 	// TODO: nothing in the sim reads a silence on an enemy, so the aura only shows up in metrics.
 	silenceAuras := warrior.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		return target.GetOrRegisterAura(core.Aura{
 			Label:    "Shield Bash - Silence",
-			ActionID: core.ActionID{SpellID: improvedShieldBashSilence.SpellID},
-			Duration: improvedShieldBashSilence.Duration,
+			ActionID: core.ActionID{SpellID: improvedShieldBashSilence.ID},
+			Duration: improvedShieldBashSilence.Duration(),
 		})
 	})
 

@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"go/format"
 	"math"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"unicode"
 
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/tools/database/dbc"
 )
 
@@ -148,8 +148,8 @@ func fieldNameOf(spellName string) string {
 }
 
 // Every family a class can learn, from two sources: every spell in one of the class's skill lines
-// whose subtext reads "Rank N" or is empty (a single-rank ability like Whirlwind is its own rank 1),
-// and every talent in the class's tree. Nothing hand-maintained.
+// whose subtext reads "Rank N", "Shapeshift" or is empty (a single-rank ability like Whirlwind or Cat
+// Form is its own rank 1), and every talent in the class's tree. Nothing hand-maintained.
 func discoverLadders(db *sql.DB, class dbc.DbcClass, treeID int) ([]rankLadder, []string, []string, error) {
 	mask := classMaskOf(class)
 
@@ -172,10 +172,10 @@ func discoverLadders(db *sql.DB, class dbc.DbcClass, treeID int) ([]rankLadder, 
 			JOIN SkillLine sl2 ON sl2.ID = sla2.SkillLine AND sl2.CategoryID = 7
 			WHERE (sla2.ClassMask & ?) != 0
 		) OR (sla.SkillLine = ? AND sla.ClassMask = ? AND sla.AcquireMethod = ?))
-		AND (s.NameSubtext_lang LIKE 'Rank %' OR s.NameSubtext_lang = '')
+		AND (s.NameSubtext_lang LIKE 'Rank %' OR s.NameSubtext_lang IN ('', 'Shapeshift'))
 		AND sla.SkillLine NOT IN (2851, 2853)
 		AND NOT EXISTS (SELECT 1 FROM SpellEffect se WHERE se.SpellID = sla.Spell AND se.EffectAura = ?)
-		ORDER BY n.Name_lang, sla.Spell`, dbc.ATTR_PASSIVE, mask, skillLineDefense, mask, acquireOnLevel, dbc.A_MOUNTED)
+		ORDER BY n.Name_lang, sla.Spell`, dbcenums.ATTR_PASSIVE, mask, skillLineDefense, mask, acquireOnLevel, dbcenums.A_MOUNTED)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -320,21 +320,13 @@ func discoverLadders(db *sql.DB, class dbc.DbcClass, treeID int) ([]rankLadder, 
 // A $<spellID><token> in a description: "$12880d" on Enrage, "$12976s1" on Last Stand.
 var descriptionSpellRef = regexp.MustCompile(`\$(?:/\d+;)?(\d{4,7})[a-z]`)
 
-// Spells the client's server-side handlers cast, which no effect edge, $<id> token or skill-line row
-// names. Each entry says what links the two.
-var handTriggers = map[int32][]int32{
-	// Retaliation's dummy aura (aura 4) casts the counterattack 20240: same name, class set and icon,
-	// weapon damage with no base, a cost of 1 in SpellPower that is a tenth of a rage.
-	20230: {20240},
-}
-
 // The spells a rank triggers or reads its tooltip from: an EffectTriggerSpell edge (Intercept's
 // stun 20615, Intimidating Shout's fear 20511), a $<id> token (Enrage's buff 12880, Flurry's
-// 12966, Last Stand's 12976) or a handTriggers entry. In id order, without the rank itself and
+// 12966, Last Stand's 12976) or an overrides.HandTriggers entry. In id order, without the rank itself and
 // without ids the client has no spell for.
 func triggeredSpells(db *sql.DB, spellID int32) ([]int32, error) {
 	seen := map[int32]bool{}
-	for _, id := range handTriggers[spellID] {
+	for _, id := range handTriggered(spellID) {
 		seen[id] = true
 	}
 	rows, err := db.Query(`SELECT EffectTriggerSpell FROM SpellEffect WHERE SpellID = ? AND EffectTriggerSpell > 0`, spellID)
@@ -906,12 +898,12 @@ func dispatcherOf(db *sql.DB, ids map[int32]bool) (int32, error) {
 			return 0, err
 		}
 		switch effect {
-		case dbc.E_DUMMY:
+		case dbcenums.E_DUMMY:
 			if dummy != 0 {
 				return 0, nil
 			}
 			dummy = id
-		case dbc.E_SCHOOL_DAMAGE:
+		case dbcenums.E_SCHOOL_DAMAGE:
 			if damage != 0 {
 				return 0, nil
 			}
@@ -955,7 +947,7 @@ func overrideReplacements(db *sql.DB, ids map[int32]bool) (map[int32]bool, error
 		rows, err := db.Query(`
 			SELECT CAST(EffectBasePointsF AS INTEGER)
 			FROM SpellEffect
-			WHERE EffectAura = ? AND EffectMiscValue_0 = ?`, int(dbc.A_OVERRIDE_ACTIONBAR_SPELLS), id)
+			WHERE EffectAura = ? AND EffectMiscValue_0 = ?`, int(dbcenums.A_OVERRIDE_ACTIONBAR_SPELLS), id)
 		if err != nil {
 			return nil, err
 		}
@@ -1057,7 +1049,7 @@ func buildRow(db *sql.DB, rank int32, spellID int32, mask int, points map[int32]
 		// A damage effect with a period is one the description reached and the rank's periodic
 		// dummy times, so it ticks; the rank's own damage effects never carry one. Consecration
 		// names a second, the extra damage on the first few targets.
-		case e.Effect == dbc.E_SCHOOL_DAMAGE && e.AuraPeriod > 0:
+		case e.Effect == dbcenums.E_SCHOOL_DAMAGE && e.AuraPeriod > 0:
 			switch {
 			case row.Periodic == nil:
 				row.Periodic = amountOf(e)
@@ -1069,13 +1061,13 @@ func buildRow(db *sql.DB, rank int32, spellID int32, mask int, points map[int32]
 			}
 		// A dummy the description names on a spell the rank's own dummy points at is the rank's number
 		// kept there with its coefficient: Seal of Righteousness' per-hit damage, on its judgement.
-		case e.Effect == dbc.E_DUMMY && e.Named && row.Direct == nil:
+		case e.Effect == dbcenums.E_DUMMY && e.Named && row.Direct == nil:
 			row.Direct = amountOf(e)
-		case (e.Effect == dbc.E_SCHOOL_DAMAGE || IsWeaponDamageEffect(e.Effect)) && row.Direct == nil:
+		case (e.Effect == dbcenums.E_SCHOOL_DAMAGE || IsWeaponDamageEffect(e.Effect)) && row.Direct == nil:
 			row.Direct = amountOf(e)
-		case e.Effect == dbc.E_HEAL && row.Heal == nil:
+		case e.Effect == dbcenums.E_HEAL && row.Heal == nil:
 			row.Heal = amountOf(e)
-		case (e.Effect == dbc.E_ENERGIZE || e.Aura == dbc.A_PERIODIC_ENERGIZE) && row.Energize == nil:
+		case (e.Effect == dbcenums.E_ENERGIZE || e.Aura == dbcenums.A_PERIODIC_ENERGIZE) && row.Energize == nil:
 			row.Energize = amountOf(e)
 		case IsThreatEffect(e.Effect) && row.FlatThreatBonus == 0:
 			min, _ := derive(e)
@@ -1135,37 +1127,62 @@ func (row generatedRow) hasValue() bool {
 	return row.Direct != nil || row.Heal != nil || row.Periodic != nil || row.Energize != nil
 }
 
-func GenerateSpellDataFiles(helper *DBHelper) error {
-	if err := RequireSpellCastTimes(helper.db); err != nil {
-		return err
+// Every file the generator writes, by the path it is written to, rendered and none written: what
+// happens to them is writeSpellDataFiles' business, and -check's business is that nothing does.
+func renderSpellDataFiles(helper *DBHelper) (map[string][]byte, *storeInputs, error) {
+	if err := RequireSpellCastTimes(helper); err != nil {
+		return nil, nil, err
 	}
 
 	// Rendered in full before anything is written, so a class that fails validation cannot leave half
 	// the packages regenerated and half stale.
-	namer, err := newRankEnumNamer()
-	if err != nil {
-		return err
-	}
+	namer := newRankEnumNamer()
 
 	// One tree per class, picked the same way the talent protos pick it, so the rank caps here and the
 	// ones the sim's Talents message carries are the same numbers.
 	trees, err := selectTraitTrees(helper)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	rendered := map[string][]byte{}
+
+	// The store carries every spell the class files are built from, so the discovery runs here and
+	// both consumers read the one result rather than each rediscovering the ladders.
+	var ladderIDs []int32
 	for _, class := range dbc.Classes {
 		pkg := strings.ToLower(dbc.ClassNameFromDBC(class))
 		tree, ok := trees[classMaskOf(class)]
 		if !ok {
-			return fmt.Errorf("%s: the client database holds no talent tree for this class", pkg)
+			return nil, nil, fmt.Errorf("%s: the client database holds no talent tree for this class", pkg)
 		}
-		out, err := renderClassFile(helper.db, pkg, class, namer, tree)
+		ladders, skipped, partial, err := discoverLadders(helper.db, class, tree)
 		if err != nil {
-			return fmt.Errorf("%s: %w", pkg, err)
+			return nil, nil, fmt.Errorf("%s: %w", pkg, err)
+		}
+		out, err := renderClassFile(helper.db, pkg, class, namer, ladders, skipped, partial)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%s: %w", pkg, err)
 		}
 		rendered[pkg] = out
+
+		for _, l := range ladders {
+			for _, id := range l.Ranks {
+				ladderIDs = append(ladderIDs, id)
+			}
+		}
+
+		// A node the ladders do not describe still grants a spell the sim registers - Hemorrhage is
+		// one - so every spell the tree defines is a root of the store.
+		treeSpells, err := treeSpellIDs(helper.db, tree)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%s: %w", pkg, err)
+		}
+		for id := range treeSpells {
+			if id != 0 {
+				ladderIDs = append(ladderIDs, id)
+			}
+		}
 	}
 
 	// Rendered before any write too: it holds exactly the names the class files above turned out to
@@ -1173,23 +1190,45 @@ func GenerateSpellDataFiles(helper *DBHelper) error {
 	// with it gen_db, which imports the sim.
 	enums, err := namer.render()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	for pkg, out := range rendered {
-		if err := os.WriteFile(fmt.Sprintf("sim/%s/spell_data_auto_gen.go", pkg), out, 0644); err != nil {
-			return err
-		}
+	// The store's rows name the enum values through dbcenums, so nothing they reach is recorded on
+	// the namer: the shared file above holds the class tables' names and no others.
+	//
+	// The client rows it is built from are captured on the way through and handed back, so the
+	// caller can write them next to the store and the regeneration can be checked without the
+	// database - see spelldata_inputs.go.
+	inputs, err := loadStoreInputs(helper.db, ladderIDs, trees)
+	if err != nil {
+		return nil, nil, err
 	}
-	return os.WriteFile("sim/common/shared/spell_data_enums_auto_gen.go", enums, 0644)
+	store, err := renderStore(inputs, namer)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	forms, err := loadShapeshiftForms(helper.db)
+	if err != nil {
+		return nil, nil, err
+	}
+	formsFile, err := renderFormsFile(forms)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	files := map[string][]byte{
+		"sim/common/shared/spell_data_enums_auto_gen.go": enums,
+		"sim/core/spelldata/spells_auto_gen.go":          store,
+		"sim/core/dbcenums/forms_auto_gen.go":            formsFile,
+	}
+	for pkg, out := range rendered {
+		files[fmt.Sprintf("sim/%s/spell_data_auto_gen.go", pkg)] = out
+	}
+	return files, inputs, nil
 }
 
-func renderClassFile(db *sql.DB, pkg string, class dbc.DbcClass, namer *rankEnumNamer, treeID int) ([]byte, error) {
-	ladders, skipped, partial, err := discoverLadders(db, class, treeID)
-	if err != nil {
-		return nil, err
-	}
-
+func renderClassFile(db *sql.DB, pkg string, class dbc.DbcClass, namer *rankEnumNamer, ladders []rankLadder, skipped, partial []string) ([]byte, error) {
 	// Named rather than dropped silently, so a family the resolver could not make sense of is visible
 	// here instead of merely absent. Kept out of the body below, whose text decides which imports the
 	// file needs - a family name containing "time." would otherwise add an unused one.
@@ -1221,6 +1260,10 @@ func renderClassFile(db *sql.DB, pkg string, class dbc.DbcClass, namer *rankEnum
 		if len(rows) > 0 {
 			triggered[l.Field] = rows
 		}
+	}
+
+	if storeBackedClasses[pkg] {
+		return renderLadderClassFile(pkg, ladders, triggered, notGenerated.String())
 	}
 
 	var b strings.Builder
@@ -1290,6 +1333,94 @@ func renderClassFile(db *sql.DB, pkg string, class dbc.DbcClass, namer *rankEnum
 		return nil, fmt.Errorf("generated %s file does not parse, refusing to write it: %w", pkg, err)
 	}
 	return out, nil
+}
+
+// The classes whose file names the store's ladders instead of restating the client's rows. Their
+// numbers come out of sim/core/spelldata, so the file holds one line per family and no data at all.
+var storeBackedClasses = map[string]bool{
+	"warrior": true,
+	"rogue":   true,
+	"warlock": true,
+	"mage":    true,
+	"druid":   true,
+	"priest":  true,
+	"shaman":  true,
+	"hunter":  true,
+}
+
+// A class file as references into the store: the same struct, the same field names, and a ladder per
+// family in place of the rows.
+//
+// A family the talent tree prices is one spell whose per-rank numbers live in a curve, which is what
+// Talent reads; every other family is one spell per rank, which is Ranked. Both index by position,
+// so a ladder whose ranks are not 1..n would silently misnumber and is refused instead.
+func renderLadderClassFile(pkg string, ladders []rankLadder, triggered map[string][]generatedRow, notGenerated string) ([]byte, error) {
+	var b strings.Builder
+	b.WriteString("type generatedSpellData struct {\n")
+	for _, l := range ladders {
+		fmt.Fprintf(&b, "\t%s spelldata.Ladder\n", l.Field)
+		if triggered[l.Field] != nil {
+			fmt.Fprintf(&b, "\t%sTriggered spelldata.Ladder\n", l.Field)
+		}
+	}
+	b.WriteString("}\n\nvar spellData = generatedSpellData{\n")
+
+	for _, l := range ladders {
+		ranks := make([]int32, 0, len(l.Ranks))
+		for rank := range l.Ranks {
+			ranks = append(ranks, rank)
+		}
+		sort.Slice(ranks, func(i, j int) bool { return ranks[i] < ranks[j] })
+
+		ids := make([]int32, 0, len(ranks))
+		for i, rank := range ranks {
+			if rank != int32(i+1) {
+				return nil, fmt.Errorf("%s: rank %d where rank %d was expected, and a ladder indexes by position",
+					l.Name, rank, i+1)
+			}
+			ids = append(ids, l.Ranks[rank])
+		}
+
+		if l.Points != nil {
+			fmt.Fprintf(&b, "\t%s: spelldata.Talent(%d, %d),\n", l.Field, ids[0], len(ids))
+		} else {
+			fmt.Fprintf(&b, "\t%s: spelldata.Ranked(%s),\n", l.Field, joinIDs(ids))
+		}
+
+		rows := triggered[l.Field]
+		if rows == nil {
+			continue
+		}
+		triggeredIDs := make([]int32, 0, len(rows))
+		for i, row := range rows {
+			if row.Rank != int32(i+1) {
+				return nil, fmt.Errorf("%s triggered: rank %d where rank %d was expected, and a ladder indexes by position",
+					l.Name, row.Rank, i+1)
+			}
+			triggeredIDs = append(triggeredIDs, row.SpellID)
+		}
+		fmt.Fprintf(&b, "\t%sTriggered: spelldata.Ranked(%s),\n", l.Field, joinIDs(triggeredIDs))
+	}
+	b.WriteString("}\n")
+
+	var head strings.Builder
+	fmt.Fprintf(&head, "// Code generated by tools/database/gen_spelldata. DO NOT EDIT.\n\n")
+	fmt.Fprintf(&head, "package %s\n\n", pkg)
+	head.WriteString("import (\n\t\"github.com/wowsims/forever/sim/core/spelldata\"\n)\n\n")
+
+	out, err := format.Source([]byte(head.String() + notGenerated + b.String()))
+	if err != nil {
+		return nil, fmt.Errorf("generated %s file does not parse, refusing to write it: %w", pkg, err)
+	}
+	return out, nil
+}
+
+func joinIDs(ids []int32) string {
+	parts := make([]string, len(ids))
+	for i, id := range ids {
+		parts[i] = strconv.Itoa(int(id))
+	}
+	return strings.Join(parts, ", ")
 }
 
 // core's SpellSchool bits are the client's, so this is a rendering and not a translation: the name

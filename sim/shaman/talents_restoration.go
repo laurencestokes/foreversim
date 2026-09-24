@@ -3,8 +3,8 @@ package shaman
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -89,10 +89,11 @@ func (shaman *Shaman) applyTidalMastery() {
 		return
 	}
 
+	// Client 16194's mask is the heals, Lightning Shield and Rolling Thunder - no Lightning Bolt or Chain Lightning.
 	shaman.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_BonusCrit_Percent,
-		FloatValue: spellData.TidalMastery.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_CRITICAL_CHANCE).ValueAt(shaman.Talents.TidalMastery),
-		ClassMask:  SpellMaskChainLightning | SpellMaskLightningBolt | SpellMaskLightningShield | SpellMaskOverload,
+		FloatValue: spellData.TidalMastery.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CRITICAL_CHANCE)).ValueAt(shaman.Talents.TidalMastery),
+		ClassMask:  SpellMaskLightningShield,
 	})
 }
 
@@ -103,7 +104,7 @@ func (shaman *Shaman) applyTotemicFocus() {
 
 	shaman.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_PowerCost_Pct_Add,
-		FloatValue: spellData.TotemicFocus.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_COST).FractionAt(shaman.Talents.TotemicFocus),
+		FloatValue: spellData.TotemicFocus.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(shaman.Talents.TotemicFocus),
 		ClassMask:  SpellMaskTotem,
 	})
 }
@@ -123,7 +124,7 @@ func (shaman *Shaman) applyMindfulness() {
 	}
 
 	shaman.PseudoStats.SpiritRegenRateCasting +=
-		spellData.Mindfulness.Effect(shared.A_MOD_MANA_REGEN_INTERRUPT, 0).FractionAt(shaman.Talents.Mindfulness)
+		spellData.Mindfulness.Effect(dbcenums.A_MOD_MANA_REGEN_INTERRUPT, 0).FractionAt(shaman.Talents.Mindfulness)
 }
 
 // applyTidalFocus implements Tidal Focus, new in Forever: cheaper heals plus flat melee and spell hit.
@@ -135,9 +136,9 @@ func (shaman *Shaman) applyTidalFocus() {
 
 	points := shaman.Talents.TidalFocus
 	shaman.AddStat(stats.MeleeHitRating, core.PhysicalHitRatingPerHitPercent*
-		spellData.TidalFocus.Effect(shared.A_MOD_HIT_CHANCE, 0).ValueAt(points))
+		spellData.TidalFocus.Effect(dbcenums.A_MOD_HIT_CHANCE, 0).ValueAt(points))
 	shaman.AddStat(stats.SpellHitRating, core.SpellHitRatingPerHitPercent*
-		spellData.TidalFocus.Effect(shared.A_MOD_SPELL_HIT_CHANCE, 0).ValueAt(points))
+		spellData.TidalFocus.Effect(dbcenums.A_MOD_SPELL_HIT_CHANCE, 0).ValueAt(points))
 }
 
 // applyNaturalGrace implements Natural Grace, new in Forever: less threat from the shaman's spells.
@@ -148,7 +149,7 @@ func (shaman *Shaman) applyNaturalGrace() {
 
 	shaman.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_ThreatMultiplier_Pct,
-		FloatValue: spellData.NaturalGrace.Effect(shared.A_MOD_THREAT, 126).FractionAt(shaman.Talents.NaturalGrace),
+		FloatValue: spellData.NaturalGrace.Effect(dbcenums.A_MOD_THREAT, 126).FractionAt(shaman.Talents.NaturalGrace),
 		SpellFlag:  SpellFlagShamanSpell,
 	})
 }
@@ -161,7 +162,7 @@ func (shaman *Shaman) applyImprovedReincarnation() {
 	}
 
 	shaman.MultiplyStat(stats.Health,
-		spellData.ImprovedReincarnation.EffectAt(1).MultiplierAt(shaman.Talents.ImprovedReincarnation))
+		spellData.ImprovedReincarnation.EffectAt(2).MultiplierAt(shaman.Talents.ImprovedReincarnation))
 }
 
 // applyAncestralHealing is Forever's healing talent granting armour on the target of a critical heal. The DPS specs never

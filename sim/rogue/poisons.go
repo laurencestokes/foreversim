@@ -3,8 +3,8 @@ package rogue
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
 // Poisons are consumable imbues, not class spells, so gen_spelldata writes no table for them.
@@ -37,7 +37,7 @@ func (rogue *Rogue) applyPoisons() {
 // The chance a weapon hit applies a poison: the poison's own base, plus Improved Poisons, plus
 // Venom while it is up. Read at proc time so Venom's share can come and go.
 func (rogue *Rogue) poisonProcChance(base float64) float64 {
-	return base + spellData.ImprovedPoisons.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_CHANCE_OF_SUCCESS).FractionAt(rogue.Talents.ImprovedPoisons) +
+	return base + spellData.ImprovedPoisons.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CHANCE_OF_SUCCESS)).FractionAt(rogue.Talents.ImprovedPoisons) +
 		rogue.additivePoisonBonusChance
 }
 

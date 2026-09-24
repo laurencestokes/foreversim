@@ -206,14 +206,15 @@ func (druid *Druid) furorShiftEnergy(sim *core.Simulation) float64 {
 		return 0
 	}
 
-	points := float64(druid.Talents.Furor)
-	carryOver := druid.lastCatFormEnergy * 0.2 * points
+	// Client 17056 eff 1 (20-100): "up to a maximum of m2 Energy" caps the whole refund, so 3/5 tops out at 60.
+	m2 := spellData.Furor.EffectAt(1).ValueAt(druid.Talents.Furor)
+	carryOver := druid.lastCatFormEnergy * m2 / 100
 	outOfForm := 0.0
 	if druid.lastCatFormExitAt > 0 {
-		outOfForm = min(20*points, 2*points*(sim.CurrentTime-druid.lastCatFormExitAt).Seconds())
+		outOfForm = m2 / 10 * (sim.CurrentTime - druid.lastCatFormExitAt).Seconds()
 	}
 
-	return min(100, carryOver+outOfForm)
+	return min(m2, carryOver+outOfForm)
 }
 
 func (druid *Druid) RegisterBearFormAura() {

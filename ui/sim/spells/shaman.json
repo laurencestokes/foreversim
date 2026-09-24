@@ -593,6 +593,12 @@
 		"note": "The Champion's/Warlord's 4-piece bonus; sim/shaman/item_sets_pvp.go is untouched relative to the upstream merge base and still grants exactly the 2% shock crit the Classic tooltip describes.",
 		"source": "classic"
 	},
+	"25505": {
+		"ability": "Windfury Weapon",
+		"file": "sim/shaman/weapon_imbues.go",
+		"note": "Not a Forever spell id: the Burning Crusade Windfury Attack id, kept as the label for the imbue's extra attacks and absent from the beta client. The numbers are Windfury Weapon rank 4's (16361), identical in beta client 1.60.1.69893 and Classic Era: 333 bonus attack power and 2 extra attacks, on the 20% enchant proc.",
+		"source": "classic"
+	},
 	"26121": {
 		"ability": "Stormcaller's Wrath",
 		"file": "sim/shaman/item_sets_pve.go",

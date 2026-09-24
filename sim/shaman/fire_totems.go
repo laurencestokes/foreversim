@@ -6,30 +6,30 @@ import (
 
 // The totem lays down a pulse spell of its own; the damage and coefficient live on that spell, not on
 // the totem, and the pulse's cast time is the interval between pulses.
-var searingTotemRank = spellData.SearingTotem.HighestRank()
-var searingTotemAttack = spellData.SearingTotemTriggered.HighestRank()
-var magmaTotemRank = spellData.MagmaTotem.HighestRank()
-var magmaTotemPulse = spellData.MagmaTotemTriggered.BySpellID(10581)
+var searingTotemRank = spellData.SearingTotem.Highest()
+var searingTotemAttack = spellData.SearingTotemTriggered.Highest()
+var magmaTotemRank = spellData.MagmaTotem.Highest()
+var magmaTotemPulse = spellData.MagmaTotemTriggered.ByID(10581)
 
 // Forever has no Fire Nova Totem: the totem's ids are gone and the Fire Nova the spellbook teaches in
 // its place is the caster-centred nova, on a 10 sec cooldown.
-var fireNovaRank = spellData.FireNova.HighestRank()
-var fireNovaDamage = spellData.FireNovaTriggered.HighestRank()
+var fireNovaRank = spellData.FireNova.Highest()
+var fireNovaDamage = spellData.FireNovaTriggered.Highest()
 
 func (shaman *Shaman) registerSearingTotemSpell() {
 	attack := shaman.RegisterSpell(core.SpellConfig{
-		ActionID:         core.ActionID{SpellID: searingTotemAttack.SpellID},
-		SpellSchool:      searingTotemAttack.SpellSchool,
-		DefenseType:      searingTotemAttack.DefenseType,
+		ActionID:         core.ActionID{SpellID: searingTotemAttack.ID},
+		SpellSchool:      searingTotemAttack.SpellSchool(),
+		DefenseType:      searingTotemAttack.DefenseTypeCore(),
 		ProcMask:         core.ProcMaskEmpty,
 		Flags:            SpellFlagShamanSpell | core.SpellFlagPassiveSpell,
 		ClassSpellMask:   SpellMaskSearingTotem,
-		MissileSpeed:     searingTotemAttack.MissileSpeed,
+		MissileSpeed:     float64(searingTotemAttack.Speed),
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		BonusCoefficient: searingTotemAttack.Direct.BonusCoefficient(),
+		BonusCoefficient: searingTotemAttack.DamageEffect().Coeff(),
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, searingTotemAttack.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			result := spell.CalcDamage(sim, target, searingTotemAttack.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
 				spell.DealDamage(sim, result)
 			})
@@ -37,22 +37,22 @@ func (shaman *Shaman) registerSearingTotemSpell() {
 	})
 
 	// The pulse's own cast time is the interval between pulses.
-	tickLength := searingTotemAttack.CastTime
-	duration := searingTotemRank.Duration
+	tickLength := searingTotemAttack.CastTime()
+	duration := searingTotemRank.Duration()
 
 	shaman.SearingTotem = shaman.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: searingTotemRank.SpellID},
-		SpellSchool:    searingTotemRank.SpellSchool,
+		ActionID:       core.ActionID{SpellID: searingTotemRank.ID},
+		SpellSchool:    searingTotemRank.SpellSchool(),
 		DefenseType:    core.DefenseTypeMagic,
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL | SpellFlagShamanSpell | SpellFlagInstant,
 		ClassSpellMask: SpellMaskSearingTotem,
 		ManaCost: core.ManaCostOptions{
-			FlatCost: searingTotemRank.Cost,
+			FlatCost: int32(searingTotemRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: searingTotemRank.GCD,
+				GCD: searingTotemRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},
@@ -78,22 +78,22 @@ func (shaman *Shaman) registerSearingTotemSpell() {
 }
 
 func (shaman *Shaman) registerMagmaTotemSpell() {
-	duration := magmaTotemRank.Duration
+	duration := magmaTotemRank.Duration()
 	tickLength := core.DurationFromSeconds(2)
 
 	shaman.MagmaTotem = shaman.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: magmaTotemRank.SpellID},
-		SpellSchool:    magmaTotemRank.SpellSchool,
+		ActionID:       core.ActionID{SpellID: magmaTotemRank.ID},
+		SpellSchool:    magmaTotemRank.SpellSchool(),
 		DefenseType:    core.DefenseTypeMagic,
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL | SpellFlagShamanSpell | SpellFlagInstant,
 		ClassSpellMask: SpellMaskMagmaTotem,
 		ManaCost: core.ManaCostOptions{
-			FlatCost: magmaTotemRank.Cost,
+			FlatCost: int32(magmaTotemRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: magmaTotemRank.GCD,
+				GCD: magmaTotemRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},
@@ -108,10 +108,10 @@ func (shaman *Shaman) registerMagmaTotemSpell() {
 			},
 			NumberOfTicks:    int32(duration / tickLength),
 			TickLength:       tickLength,
-			BonusCoefficient: magmaTotemPulse.Direct.BonusCoefficient(),
+			BonusCoefficient: magmaTotemPulse.DamageEffect().Coeff(),
 
 			OnTick: func(sim *core.Simulation, _ *core.Unit, dot *core.Dot) {
-				dot.Spell.CalcPeriodicAoeDamage(sim, magmaTotemPulse.Direct.Damage(sim), dot.Spell.OutcomeTickMagicHitAndCrit)
+				dot.Spell.CalcPeriodicAoeDamage(sim, magmaTotemPulse.DamageEffect().Average(core.CharacterLevel), dot.Spell.OutcomeTickMagicHitAndCrit)
 				dot.Spell.DealBatchedPeriodicDamage(sim)
 			},
 		},
@@ -126,31 +126,31 @@ func (shaman *Shaman) registerMagmaTotemSpell() {
 
 func (shaman *Shaman) registerFireNovaSpell() {
 	shaman.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: fireNovaRank.SpellID},
-		SpellSchool:    fireNovaRank.SpellSchool,
-		DefenseType:    fireNovaRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: fireNovaRank.ID},
+		SpellSchool:    fireNovaRank.SpellSchool(),
+		DefenseType:    fireNovaRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL | SpellFlagShamanSpell | SpellFlagInstant,
 		ClassSpellMask: SpellMaskFireNova,
 		ManaCost: core.ManaCostOptions{
-			FlatCost: fireNovaRank.Cost,
+			FlatCost: int32(fireNovaRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: fireNovaRank.GCD,
+				GCD: fireNovaRank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    shaman.NewTimer(),
-				Duration: fireNovaRank.Cooldown,
+				Duration: max(fireNovaRank.Cooldown(), fireNovaRank.CategoryCooldown()),
 			},
 		},
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		BonusCoefficient: fireNovaDamage.Direct.BonusCoefficient(),
+		BonusCoefficient: fireNovaDamage.DamageEffect().Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			spell.CalcAoeDamage(sim, fireNovaDamage.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			spell.CalcAoeDamage(sim, fireNovaDamage.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 			spell.DealBatchedAoeDamage(sim)
 		},
 	})

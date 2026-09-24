@@ -5,35 +5,35 @@ import (
 )
 
 func (mage *Mage) registerFrostNovaSpell() {
-	frostNovaRank := spellData.FrostNova.HighestRank()
+	frostNovaRank := spellData.FrostNova.Highest()
 
 	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: frostNovaRank.SpellID},
-		SpellSchool:    frostNovaRank.SpellSchool,
-		DefenseType:    frostNovaRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: frostNovaRank.ID},
+		SpellSchool:    frostNovaRank.SpellSchool(),
+		DefenseType:    frostNovaRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL | core.SpellFlagBinary,
 		ClassSpellMask: MageSpellFrostNova,
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: frostNovaRank.Cost,
+			FlatCost: int32(frostNovaRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: frostNovaRank.GCD,
+				GCD: frostNovaRank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    mage.NewTimer(),
-				Duration: frostNovaRank.Cooldown,
+				Duration: max(frostNovaRank.Cooldown(), frostNovaRank.CategoryCooldown()),
 			},
 		},
 
 		DamageMultiplier: 1,
-		BonusCoefficient: frostNovaRank.Direct.BonusCoefficient(),
+		BonusCoefficient: frostNovaRank.DamageEffect().Coeff(),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealAoeDamage(sim, frostNovaRank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			spell.CalcAndDealAoeDamage(sim, frostNovaRank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 		},
 	})
 }

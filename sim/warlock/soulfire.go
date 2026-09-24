@@ -5,37 +5,37 @@ import (
 )
 
 func (warlock *Warlock) registerSoulfire() {
-	rank := spellData.SoulFire.HighestRank()
+	rank := spellData.SoulFire.Highest()
 
 	// Bane's cast time cut and Decimation's cooldown cut ride on the talents as SpellMods.
 	warlock.Soulfire = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellSoulFire,
-		MissileSpeed:   rank.MissileSpeed,
+		MissileSpeed:   float64(rank.Speed),
 
-		ManaCost: core.ManaCostOptions{FlatCost: rank.Cost},
+		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD:      rank.GCD,
-				CastTime: rank.CastTime,
+				GCD:      rank.GCD(),
+				CastTime: rank.CastTime(),
 			},
 			CD: core.Cooldown{
 				Timer:    warlock.NewTimer(),
-				Duration: rank.Cooldown,
+				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
 			},
 		},
 
 		DamageMultiplierAdditive: 1,
 		DamageMultiplier:         1,
 		ThreatMultiplier:         1,
-		BonusCoefficient:         rank.Direct.BonusCoefficient(),
+		BonusCoefficient:         rank.DamageEffect().Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, rank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			result := spell.CalcDamage(sim, target, rank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
 				spell.DealDamage(sim, result)
 			})

@@ -1,6 +1,10 @@
 package dbc
 
-import "slices"
+import (
+	"slices"
+
+	"github.com/wowsims/forever/sim/core/dbcenums"
+)
 
 // Describes a direct-damage effect reached from an item or enchant effect chain. Damage procs
 // carry no stats, so the stat-based resolution in ParseStatEffect returns nothing for them and
@@ -18,7 +22,7 @@ type DamageEffect struct {
 // The effect types whose value is flat damage. E_WEAPON_PERCENT_DAMAGE is deliberately absent: it
 // is a percentage of weapon damage rather than an amount, so it needs different wiring than a flat
 // min/max roll.
-var directDamageEffectTypes = []SpellEffectType{E_SCHOOL_DAMAGE, E_HEALTH_LEECH}
+var directDamageEffectTypes = []SpellEffectType{dbcenums.E_SCHOOL_DAMAGE, dbcenums.E_HEALTH_LEECH}
 
 // Resolves the effect's damage to a min and max amount.
 func (s *SpellEffect) DamageRange() (float64, float64) {
@@ -47,7 +51,7 @@ func (w *chainWalker) resolveDamageEffect(spellID int) *DamageEffect {
 	for _, se := range effects {
 		// A_PROC_TRIGGER_DAMAGE carries its amount on the aura itself rather than on a separate
 		// triggered spell, which is how the shield spikes are described.
-		if !slices.Contains(directDamageEffectTypes, se.EffectType) && se.EffectAura != A_PROC_TRIGGER_DAMAGE {
+		if !slices.Contains(directDamageEffectTypes, se.EffectType) && se.EffectAura != dbcenums.A_PROC_TRIGGER_DAMAGE {
 			continue
 		}
 
@@ -63,7 +67,7 @@ func (w *chainWalker) resolveDamageEffect(spellID int) *DamageEffect {
 			MinDamage:        minDamage,
 			MaxDamage:        maxDamage,
 			BonusCoefficient: se.EffectBonusCoefficient,
-			IsLeech:          se.EffectType == E_HEALTH_LEECH,
+			IsLeech:          se.EffectType == dbcenums.E_HEALTH_LEECH,
 		}
 	}
 

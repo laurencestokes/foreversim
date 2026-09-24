@@ -5,35 +5,35 @@ import (
 )
 
 func (mage *Mage) registerConeOfColdSpell() {
-	coneOfColdRank := spellData.ConeOfCold.HighestRank()
+	coneOfColdRank := spellData.ConeOfCold.Highest()
 
 	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: coneOfColdRank.SpellID},
-		SpellSchool:    coneOfColdRank.SpellSchool,
-		DefenseType:    coneOfColdRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: coneOfColdRank.ID},
+		SpellSchool:    coneOfColdRank.SpellSchool(),
+		DefenseType:    coneOfColdRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL | core.SpellFlagBinary,
 		ClassSpellMask: MageSpellConeOfCold,
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: coneOfColdRank.Cost,
+			FlatCost: int32(coneOfColdRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: coneOfColdRank.GCD,
+				GCD: coneOfColdRank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    mage.NewTimer(),
-				Duration: coneOfColdRank.Cooldown,
+				Duration: max(coneOfColdRank.Cooldown(), coneOfColdRank.CategoryCooldown()),
 			},
 		},
 
 		DamageMultiplier: 1,
-		BonusCoefficient: coneOfColdRank.Direct.BonusCoefficient(),
+		BonusCoefficient: coneOfColdRank.DamageEffect().Coeff(),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealAoeDamage(sim, coneOfColdRank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			spell.CalcAndDealAoeDamage(sim, coneOfColdRank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 		},
 	})
 }

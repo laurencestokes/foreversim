@@ -4,25 +4,25 @@ import (
 	"github.com/wowsims/forever/sim/core"
 )
 
-var demoralizingRoarRank = spellData.DemoralizingRoar.HighestRank()
+var demoralizingRoarRank = spellData.DemoralizingRoar.Highest()
 
 func (druid *Druid) registerDemoralizingRoarSpell() {
 	druid.registerDemoralizingRoarAura()
 
 	druid.DemoralizingRoar = druid.RegisterSpell(Bear, core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: demoralizingRoarRank.SpellID},
-		SpellSchool:    demoralizingRoarRank.SpellSchool,
-		DefenseType:    demoralizingRoarRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: demoralizingRoarRank.ID},
+		SpellSchool:    demoralizingRoarRank.SpellSchool(),
+		DefenseType:    demoralizingRoarRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskEmpty,
 		ClassSpellMask: DruidSpellDemoralizingRoar,
 		Flags:          core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
-			Cost: demoralizingRoarRank.Cost,
+			Cost: int32(demoralizingRoarRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: demoralizingRoarRank.GCD,
+				GCD: demoralizingRoarRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},

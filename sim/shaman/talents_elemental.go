@@ -3,8 +3,8 @@ package shaman
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -47,7 +47,7 @@ func (shaman *Shaman) applyCallOfFlame() {
 
 	shaman.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.CallOfFlame.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DAMAGE).FractionAt(shaman.Talents.CallOfFlame),
+		FloatValue: spellData.CallOfFlame.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(shaman.Talents.CallOfFlame),
 		ClassMask:  SpellMaskFireTotem | SpellMaskFlameShock | SpellMaskFireNova | SpellMaskLavaBurst,
 	})
 }
@@ -59,7 +59,7 @@ func (shaman *Shaman) applyCallOfThunder() {
 
 	shaman.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_BonusCrit_Percent,
-		FloatValue: spellData.CallOfThunder.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_CRITICAL_CHANCE).ValueAt(1),
+		FloatValue: spellData.CallOfThunder.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CRITICAL_CHANCE)).ValueAt(1),
 		ClassMask:  SpellMaskLightningBolt | SpellMaskChainLightning | SpellMaskOverload,
 	})
 }
@@ -71,7 +71,7 @@ func (shaman *Shaman) applyConcussion() {
 
 	shaman.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.Concussion.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DAMAGE).FractionAt(shaman.Talents.Concussion),
+		FloatValue: spellData.Concussion.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(shaman.Talents.Concussion),
 		// Client 16035's mask is Lightning Bolt, Chain Lightning and Earth Shock: not Flame or Frost Shock.
 		ClassMask: SpellMaskLightningBolt | SpellMaskChainLightning | SpellMaskOverload | SpellMaskEarthShock,
 	})
@@ -84,7 +84,7 @@ func (shaman *Shaman) applyConvection() {
 
 	shaman.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_PowerCost_Pct_Add,
-		FloatValue: spellData.Convection.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_COST).FractionAt(shaman.Talents.Convection),
+		FloatValue: spellData.Convection.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(shaman.Talents.Convection),
 		ClassMask:  SpellMaskLightningBolt | SpellMaskChainLightning | SpellMaskOverload | SpellMaskShock | SpellMaskLavaBurst,
 	})
 }
@@ -100,7 +100,7 @@ func (shaman *Shaman) applyElementalDevastation() {
 		Duration: time.Second * 10,
 	}).AttachSpellMod(core.SpellModConfig{
 		Kind:       core.SpellMod_BonusCrit_Percent,
-		FloatValue: spellData.ElementalDevastation.Effect(shared.A_DUMMY, 0).ValueAt(shaman.Talents.ElementalDevastation),
+		FloatValue: spellData.ElementalDevastation.Effect(dbcenums.A_DUMMY, 0).ValueAt(shaman.Talents.ElementalDevastation),
 		ProcMask:   core.ProcMaskMelee,
 	})
 	shaman.MakeProcTriggerAura(core.ProcTrigger{
@@ -123,15 +123,16 @@ func (shaman *Shaman) applyElementalFocus() {
 	var triggeringSpell *core.Spell
 	var triggerTime time.Duration
 
-	canConsumeSpells := SpellMaskLightningBolt | SpellMaskChainLightning | SpellMaskLavaBurst | (SpellMaskShock & ^SpellMaskFlameShockDot)
+	// 16246's class mask: Lightning Bolt, Chain Lightning, Lava Burst, the shocks and Fire Nova (408345).
+	canConsumeSpells := SpellMaskLightningBolt | SpellMaskChainLightning | SpellMaskLavaBurst | SpellMaskFireNova | (SpellMaskShock & ^SpellMaskFlameShockDot)
 
-	clearcasting := spellData.ElementalFocusTriggered.HighestRank()
-	maxStacks := clearcasting.ProcCharges
+	clearcasting := spellData.ElementalFocusTriggered.Highest()
+	maxStacks := int32(clearcasting.ProcCharges)
 
 	clearcastingAura := shaman.RegisterAura(core.Aura{
 		Label:     "Clearcasting",
 		ActionID:  core.ActionID{SpellID: 16246},
-		Duration:  clearcasting.Duration,
+		Duration:  clearcasting.Duration(),
 		MaxStacks: maxStacks,
 		OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
 			if !spell.Matches(canConsumeSpells) {
@@ -145,7 +146,7 @@ func (shaman *Shaman) applyElementalFocus() {
 	}).AttachSpellMod(core.SpellModConfig{
 		Kind:       core.SpellMod_PowerCost_Pct_Add,
 		ClassMask:  canConsumeSpells,
-		FloatValue: clearcasting.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_COST).Value / 100,
+		FloatValue: clearcasting.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).Percent(),
 	})
 
 	// Client 16164: "a chance to enter a Clearcasting state after casting any Fire, Frost, or Nature
@@ -153,7 +154,7 @@ func (shaman *Shaman) applyElementalFocus() {
 	// is there for the next cast to see instead of arriving mid-cast with the missile.
 	shaman.MakeProcTriggerAura(core.ProcTrigger{
 		Name:               "Elemental Focus",
-		ProcChance:         spellData.ElementalFocus.ProcChanceAt(1),
+		ProcChance:         float64(spellData.ElementalFocus.Rank(1).ProcChance) / 100,
 		Callback:           core.CallbackOnCastComplete,
 		ProcMask:           core.ProcMaskSpellDamage,
 		CanProcFromProcs:   true, // 16164 carries the bit.
@@ -180,11 +181,12 @@ func (shaman *Shaman) applyElementalFury() {
 
 	// The talent's class mask (16089) also covers Flametongue Attack (bit 21) and Frostbrand
 	// Attack (bit 24): shamans' Flametongue Weapon hits crit for 2.0x in logs while the same
-	// attack granted by Flametongue Totem crits for 1.5x on other players.
+	// attack granted by Flametongue Totem crits for 1.5x on other players. Bit 10 is Lightning
+	// Shield, the orbs (26363..26370) included.
 	shaman.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_CritMultiplier_Flat,
-		FloatValue: spellData.ElementalFury.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_CRIT_DAMAGE_BONUS).FractionAt(shaman.Talents.ElementalFury),
-		ClassMask:  SpellMaskFireTotem | SpellMaskFire | SpellMaskNature | SpellMaskFrost | SpellMaskFlametongueWeapon | SpellMaskFrostbrandWeapon,
+		FloatValue: spellData.ElementalFury.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_CRIT_DAMAGE_BONUS)).FractionAt(shaman.Talents.ElementalFury),
+		ClassMask:  SpellMaskFireTotem | SpellMaskFire | SpellMaskNature | SpellMaskFrost | SpellMaskFlametongueWeapon | SpellMaskFrostbrandWeapon | SpellMaskLightningShield,
 	})
 }
 func (shaman *Shaman) applyLightningOverload() {
@@ -201,7 +203,7 @@ func (shaman *Shaman) applyReverberation() {
 
 	shaman.AddStaticMod(core.SpellModConfig{
 		Kind:      core.SpellMod_Cooldown_Flat,
-		TimeValue: time.Millisecond * time.Duration(spellData.Reverberation.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_COOLDOWN).ValueAt(shaman.Talents.Reverberation)),
+		TimeValue: time.Millisecond * time.Duration(spellData.Reverberation.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COOLDOWN)).ValueAt(shaman.Talents.Reverberation)),
 		ClassMask: SpellMaskShock,
 	})
 }
@@ -214,7 +216,7 @@ func (shaman *Shaman) applyElementalAlacrity() {
 
 	shaman.AddStaticMod(core.SpellModConfig{
 		Kind:      core.SpellMod_CastTime_Flat,
-		TimeValue: time.Millisecond * time.Duration(spellData.ElementalAlacrity.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_CASTING_TIME).ValueAt(shaman.Talents.ElementalAlacrity)),
+		TimeValue: time.Millisecond * time.Duration(spellData.ElementalAlacrity.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CASTING_TIME)).ValueAt(shaman.Talents.ElementalAlacrity)),
 		ClassMask: SpellMaskLightningBolt | SpellMaskChainLightning | SpellMaskLavaBurst,
 	})
 }
@@ -234,7 +236,7 @@ func (shaman *Shaman) applyElementalWarding() {
 		return
 	}
 
-	multiplier := spellData.ElementalWarding.Effect(shared.A_MOD_DAMAGE_PERCENT_TAKEN, 28).MultiplierAt(shaman.Talents.ElementalWarding)
+	multiplier := spellData.ElementalWarding.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_TAKEN, 28).MultiplierAt(shaman.Talents.ElementalWarding)
 	for _, school := range []stats.SchoolIndex{stats.SchoolIndexFire, stats.SchoolIndexFrost, stats.SchoolIndexNature} {
 		shaman.PseudoStats.SchoolDamageTakenMultiplier[school] *= multiplier
 	}
@@ -257,12 +259,12 @@ func (shaman *Shaman) applyImprovedFireNova() {
 
 	shaman.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.ImprovedFireNova.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DAMAGE).FractionAt(shaman.Talents.ImprovedFireNova),
+		FloatValue: spellData.ImprovedFireNova.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(shaman.Talents.ImprovedFireNova),
 		ClassMask:  SpellMaskFireNova,
 	})
 	shaman.AddStaticMod(core.SpellModConfig{
 		Kind:      core.SpellMod_Cooldown_Flat,
-		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedFireNova.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_COOLDOWN).ValueAt(shaman.Talents.ImprovedFireNova)),
+		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedFireNova.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COOLDOWN)).ValueAt(shaman.Talents.ImprovedFireNova)),
 		ClassMask: SpellMaskFireNova,
 	})
 }

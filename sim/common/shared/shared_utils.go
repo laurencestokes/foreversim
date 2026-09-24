@@ -6,6 +6,7 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -295,20 +296,24 @@ func buildProcAura(character *core.Character, config ProcStatBonusEffect, effect
 }
 
 func procDPM(character *core.Character, config ProcStatBonusEffect, source effectSource, proc *proto.ProcEffect) *core.DynamicProcManager {
-	if proc.GetPpm() <= 0 {
+	return dpmForMask(character, source, proc.GetPpm(), config.ProcMask)
+}
+
+func dpmForMask(character *core.Character, source effectSource, ppm float64, mask core.ProcMask) *core.DynamicProcManager {
+	if ppm <= 0 {
 		return nil
 	}
 
-	if config.ProcMask != core.ProcMaskUnknown {
-		return character.NewLegacyPPMManager(proc.GetPpm(), config.ProcMask)
+	if mask != core.ProcMaskUnknown {
+		return character.NewLegacyPPMManager(ppm, mask)
 	}
 
 	// With no mask of its own the rate has to be read off whatever the effect sits on.
 	if source.isEnchant {
-		return character.NewDynamicLegacyProcForEnchant(source.id, proc.GetPpm(), 0)
+		return character.NewDynamicLegacyProcForEnchant(source.id, ppm, 0)
 	}
 
-	return character.NewDynamicLegacyProcForWeapon(source.id, proc.GetPpm(), 0)
+	return character.NewDynamicLegacyProcForWeapon(source.id, ppm, 0)
 }
 
 // Event-driven stacks come from their own trigger: the container's proc flags decide what counts,
@@ -371,6 +376,411 @@ func NewProcStatBonusEffect(config ProcStatBonusEffect) {
 	factory_StatBonusEffect(config, nil)
 }
 
+///////////////////////////////////////////////////////////////////////////
+//							Procs read from the spell data
+///////////////////////////////////////////////////////////////////////////
+
+// An item or enchant proc as the client's own rows state it. What the listener hears, how often it
+// fires and what its internal cooldown is come from the spell carrying the proc; how long the buff
+// lasts and how it stacks come from the spell it applies; only the stats come from the item's
+// effect entry, which is where the sim's item level scaling lives.
+type SpellDataProc struct {
+	// Filled per variant by NewSpellDataProc. An enchant, which has no variants, states its own.
+	Name   string
+	ItemID int32
+	// Set for an enchant, which registers through the enchant registry rather than the item one.
+	EnchantID int32
+
+	// The spell the item effect names: the one carrying the proc flags, the chance and the ICD.
+	TriggerSpellID int32
+	// The buff the proc applies, where the client makes it a spell of its own. Zero where the
+	// trigger's own row is the buff.
+	BuffSpellID int32
+
+	// A "Chance on hit" item effect or a combat enchant. The game casts those off the hit itself
+	// without consulting a proc mask, so the row states no listener and the shape is stated here.
+	IsWeaponProc bool
+}
+
+// Registers the same effect once per item that carries it. Only the highest ID is added to the test
+// suite, the way the stat-bonus constructors do it.
+func NewSpellDataProc(cfg SpellDataProc, variants []ItemVariant) {
+	forEachSpellDataVariant(cfg, variants, registerSpellDataProc)
+}
+
+// An item or enchant proc whose "buff" is a damage spell: the client applies no aura at all, it
+// casts a spell that deals damage. BuffSpellID names that spell.
+func NewSpellDataDamageProc(cfg SpellDataProc, variants []ItemVariant) {
+	forEachSpellDataVariant(cfg, variants, registerSpellDataDamageProc)
+}
+
+func forEachSpellDataVariant(cfg SpellDataProc, variants []ItemVariant, register func(SpellDataProc)) {
+	if len(variants) == 0 {
+		register(cfg)
+		return
+	}
+
+	var maxItemID int32
+	for _, variant := range variants {
+		maxItemID = max(maxItemID, variant.ItemID)
+	}
+
+	for _, variant := range variants {
+		cfg.Name = variant.ItemName
+		cfg.ItemID = variant.ItemID
+		core.AddEffectsToTest = cfg.ItemID == maxItemID
+		register(cfg)
+	}
+
+	core.AddEffectsToTest = true
+}
+
+func registerSpellDataProc(cfg SpellDataProc) {
+	source := cfg.effectSource()
+
+	// Soft fail to allow for overrides for bad effects
+	if source.isAlreadyImplemented() {
+		return
+	}
+
+	trigger := spelldata.MustFind(cfg.TriggerSpellID)
+	buff := trigger
+	if cfg.BuffSpellID != 0 {
+		buff = spelldata.MustFind(cfg.BuffSpellID)
+	}
+
+	// A listener with no callback never fires. The row says so before any character exists, so the
+	// effect is left unregistered rather than added as an aura that does nothing.
+	if !cfg.IsWeaponProc && decodedCallback(trigger) == core.CallbackEmpty {
+		return
+	}
+
+	source.registerEffect(func(agent core.Agent) {
+		applySpellDataProc(agent, cfg, source, trigger, buff)
+	})
+}
+
+// The effect on one character: the buff it applies, the listener that applies it, and the
+// registrations that let an item swap and an APL find both.
+func applySpellDataProc(agent core.Agent, cfg SpellDataProc, source effectSource, trigger *spelldata.Spell, buff *spelldata.Spell) {
+	character := agent.GetCharacter()
+	eligibleSlots := source.eligibleSlots(character)
+
+	effect := source.procEffects()[buff.ID]
+	if effect == nil {
+		panic(fmt.Sprintf("Error getting proc effects for item/enchant %v", source.id))
+	}
+
+	procAura := spellDataProcAura(character, cfg, trigger, buff, effect)
+	triggerAura := character.MakeProcTriggerAura(spellDataTrigger(character, cfg, source, trigger, buff, effect, procAura))
+
+	attachChargeSpender(character, cfg, trigger, buff, procAura)
+
+	// See factory_StatBonusEffect: this is what keeps the ICD-aware APL values from dropping the
+	// effect, not a gate on the proc. It is assigned after the charge spender and whether or not
+	// there is one, since the lockout an APL asks after is the proc's rather than the one between
+	// two charges, which attaching the spender would otherwise leave here.
+	procAura.Icd = triggerAura.Icd
+
+	source.registerProc(character, triggerAura, eligibleSlots)
+	source.registerWeaponEnchantBuff(character, procAura)
+	character.AddStatProcBuff(source.id, procAura, source.isEnchant, eligibleSlots)
+}
+
+// The listener the trigger's row describes, plus the three things the row cannot state: the item's
+// own name and action, which are what the sim keys the rolls and the metrics by, and the internal
+// cooldown a handful of procs state through the buff's spell category instead.
+func spellDataTrigger(character *core.Character, cfg SpellDataProc, source effectSource, trigger *spelldata.Spell, buff *spelldata.Spell, effect *proto.ItemEffect, procAura *core.StatBuffAura) core.ProcTrigger {
+	config := spelldata.ProcTrigger(character, trigger, spellDataProcHandler(buff, procAura),
+		weaponProcShape(cfg), spellDataProcRate(source, trigger, effect.GetProc()))
+
+	config.Name = cfg.Name
+	config.ActionID = source.actionID()
+
+	// The same fallback the database layer applies: Bulwark of Azzinoth's armor buff sits in a
+	// spell category with a 60s recovery while its trigger states nothing. Only a buff that is a
+	// spell of its own counts - where the two are one spell the recovery is that spell's own cast
+	// throttle rather than a gate on re-applying the buff.
+	if config.ICD == 0 && buff.ID != trigger.ID {
+		config.ICD = buff.CategoryCooldown()
+	}
+
+	return config
+}
+
+// A weapon proc's listener, which no row states; anything else keeps the one its row decodes to.
+func weaponProcShape(cfg SpellDataProc) spelldata.ProcOpt {
+	if !cfg.IsWeaponProc {
+		return func(*core.Character, *core.ProcTrigger) {}
+	}
+	return spelldata.WeaponProc()
+}
+
+// The rate for a proc the client states none for. Procs per minute are not in the client's spell
+// data - no row carries a SpellProcsPerMinuteID - so an item's reaches the sim through its effect
+// entry, and the store carries one only where an override put it there. Either way the manager is
+// built here rather than by the resolver, since only the effect knows which weapon or enchant slot
+// a rate with no proc mask has to be measured against.
+func spellDataProcRate(source effectSource, row *spelldata.Spell, proc *proto.ProcEffect) spelldata.ProcOpt {
+	return func(character *core.Character, trigger *core.ProcTrigger) {
+		ppm := proc.GetPpm()
+		if ppm == 0 {
+			ppm = float64(row.RPPM)
+		}
+
+		dpm := dpmForMask(character, source, ppm, trigger.ProcMask)
+		if dpm == nil {
+			return
+		}
+
+		// The callback rolls the chance first and the manager only after it, so a chance left in
+		// place next to a manager would gate the rate twice.
+		trigger.ProcChance = 0
+		trigger.DPM = dpm
+	}
+}
+
+// What the proc does when it fires: it applies the buff, adds a stack where the buff accumulates
+// them, and hands a buff the game spends by charges its full count to spend.
+func spellDataProcHandler(buff *spelldata.Spell, procAura *core.StatBuffAura) core.ProcHandler {
+	return func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+		procAura.Activate(sim)
+
+		switch {
+		case buff.MaxStack > 0:
+			procAura.AddStack(sim)
+		case buff.ProcCharges > 0:
+			procAura.SetStacks(sim, int32(buff.ProcCharges))
+		}
+	}
+}
+
+// The buff the proc applies. Which shape it takes is the client's to say, and the two counts it
+// keeps in one field are not the same thing: a CumulativeAura count is stacks that each add their
+// own stats, a ProcCharges count is one buff at full stats that the game spends by uses.
+func spellDataProcAura(character *core.Character, cfg SpellDataProc, trigger *spelldata.Spell, buff *spelldata.Spell, effect *proto.ItemEffect) *core.StatBuffAura {
+	// A trinket whose trigger opens a window and whose stats accumulate on a second aura inside it
+	// resolves no stats on the aura the trigger applies, so building one here would grant nothing at
+	// all. That shape needs the window machinery in factory_StatBonusEffect.
+	if effect.StackingAura != nil {
+		panic(fmt.Sprintf("%s (%d): a proc whose stats live on an accumulating aura needs the stacking constructor", cfg.Name, cfg.ItemID))
+	}
+
+	aura := spelldata.AuraConfig(buff, spelldata.Label(cfg.Name+" Proc"))
+	aura.Duration = procBuffDuration(cfg, trigger, buff)
+	buffStats := stats.FromProtoMap(effect.GetScalingOptions()[int32(0)].GetStats())
+
+	// The client states the count on whichever of the two rows carries the aura, and the item effect
+	// entry takes the higher of them, so this does too: Idol of the Huntress keeps its 200 on the
+	// trigger while the buff it applies states none.
+	if stacks := max(buff.MaxStack, trigger.MaxStack); stacks > 0 {
+		aura.MaxStacks = int32(stacks)
+		return core.MakeStackingAura(character, core.StackingStatAura{Aura: aura, BonusPerStack: buffStats})
+	}
+
+	// Charges are the buff's own: they count how many times *it* acts before it drops. The trigger's,
+	// where it has any, count how many times the trigger fires, which is a different thing and not
+	// this aura's business.
+	aura.MaxStacks = int32(buff.ProcCharges)
+
+	return character.NewTemporaryStatsAuraWrapped(aura.Label, aura.ActionID, buffStats, aura.Duration, func(config *core.Aura) {
+		config.MaxStacks = aura.MaxStacks
+	})
+}
+
+// How long the buff lasts. The client leaves it off the buff's own row on a fair few procs and states
+// it on the trigger instead, which is the fallback the item effect entry applies as well. An aura of
+// no duration is one core refuses to activate mid-fight, so a pair of rows that states none anywhere
+// is refused here, where the message can name what to look at.
+func procBuffDuration(cfg SpellDataProc, trigger *spelldata.Spell, buff *spelldata.Spell) time.Duration {
+	if buff.DurationMs != 0 {
+		return buff.Duration()
+	}
+
+	if trigger.DurationMs != 0 {
+		return trigger.Duration()
+	}
+
+	panic(fmt.Sprintf("%s (%d): neither the proc's spell %d nor its buff %d states a duration for the aura it applies",
+		cfg.Name, cfg.effectSource().id, trigger.ID, buff.ID))
+}
+
+// What spends a charge. The buff's own row states which hits do - Lightning Shield's three charges
+// go to the melee hits it answers - so it is read as a listener of its own and attached to the buff,
+// where it is live only while the buff is up. A buff whose row states no listener or no rate keeps
+// its charges unspent and runs out its duration instead.
+//
+// Only a buff that is a spell of its own can say what spends a charge. Where the buff is the trigger,
+// the flags on the row are the ones that granted the buff, so a spender built from them would take a
+// charge back on the very hit that handed them over and the count would never run down.
+func attachChargeSpender(character *core.Character, cfg SpellDataProc, trigger *spelldata.Spell, buff *spelldata.Spell, procAura *core.StatBuffAura) {
+	if buff.ID == trigger.ID || buff.ProcCharges <= 0 || buff.MaxStack > 0 || !statesATrigger(buff) {
+		return
+	}
+
+	spender := spelldata.ProcTrigger(character, buff, func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+		procAura.RemoveStack(sim)
+	})
+	spender.Name = cfg.Name + " Charge"
+
+	procAura.AttachProcTriggerCallback(&character.Unit, spender)
+}
+
+// Whether a trigger can be built from this row at all: it has to name hits the sim hears and a rate
+// that resolves to something. The conditions are the ones spelldata.ProcTrigger panics on, since the
+// point of asking is to not reach that panic for a row nobody stated a rate for.
+func statesATrigger(s *spelldata.Spell) bool {
+	decoded := core.DecodeProcTypeMask(s.ProcFlags, s.ProcHint)
+	if decoded.Callback == core.CallbackEmpty {
+		return false
+	}
+
+	// A procs-per-minute rate is measured against the mask, which an empty one cannot do.
+	if s.RPPM > 0 {
+		return decoded.ProcMask != core.ProcMaskUnknown
+	}
+	return s.StatedChance() != 0
+}
+
+func registerSpellDataDamageProc(cfg SpellDataProc) {
+	source := cfg.effectSource()
+
+	// Soft fail to allow for overrides for bad effects
+	if source.isAlreadyImplemented() {
+		return
+	}
+
+	trigger := spelldata.MustFind(cfg.TriggerSpellID)
+	damage := spelldata.MustFind(cfg.BuffSpellID)
+
+	// A listener with no callback never fires, and the row says so before any character exists.
+	if !cfg.IsWeaponProc && decodedCallback(trigger) == core.CallbackEmpty {
+		return
+	}
+
+	source.registerEffect(func(agent core.Agent) {
+		applySpellDataDamageProc(agent, cfg, source, trigger, damage)
+	})
+}
+
+// The effect on one character: the spell the proc casts, and the listener that casts it.
+func applySpellDataDamageProc(agent core.Agent, cfg SpellDataProc, source effectSource, trigger *spelldata.Spell, damage *spelldata.Spell) {
+	character := agent.GetCharacter()
+	damageSpell := character.RegisterSpell(spellDataProcDamageSpell(character, damage))
+
+	// The handler is attached after the options, since which unit the damage lands on depends on the
+	// callback the trigger ends up with and a weapon proc's shape rewrites it.
+	config := spelldata.ProcTrigger(character, trigger, nil,
+		weaponProcShape(cfg), spellDataProcRate(source, trigger, nil))
+	config.Name = cfg.Name
+	config.ActionID = source.actionID()
+	config.Handler = procDamageHandler(character, damageSpell, config.Callback)
+
+	// The proc's damage lands on the hit that caused it rather than on the next one, which is what
+	// the callback is called from.
+	config.TriggerImmediately = true
+
+	source.registerProc(character, character.MakeProcTriggerAura(config), source.eligibleSlots(character))
+}
+
+// The spell the proc casts, as its row states it: school, defense type, spell power share, travel
+// time and the amount it rolls. What the row cannot state is that it is a proc's spell - out of the
+// rotation, not a cast of its own, and its hits do not feed the damage-dealt listeners, which is
+// what would have a weapon's own proc answer itself.
+func spellDataProcDamageSpell(character *core.Character, damage *spelldata.Spell) core.SpellConfig {
+	config := spelldata.SpellConfig(&character.Unit, damage, damageShape(damage), spelldata.Proc())
+
+	// The proc's own hits carry no mask: what hears them is the flags below, not a hit kind.
+	config.ProcMask = core.ProcMaskEmpty
+
+	// The game casts a proc's spell off the hit that caused it. It spends neither the player's
+	// global cooldown nor the resource bar the row prices the spell at, both of which belong to
+	// casting it from the bar, and it has no cast time to spend either.
+	config.Cast.DefaultCast.GCD = 0
+	config.Cast.DefaultCast.CastTime = 0
+	config.Cast.DefaultCast.NonEmpty = false
+	config.ManaCost = core.ManaCostOptions{}
+	config.RageCost = core.RageCostOptions{}
+	config.EnergyCost = core.EnergyCostOptions{}
+	config.FocusCost = core.FocusCostOptions{}
+	config.Flags |= core.SpellFlagNoOnDamageDealt
+	if damage.IsAProc() {
+		config.Flags |= core.SpellFlagProc
+	}
+
+	defenseType := damageDefenseType(config.DefenseType, config.SpellSchool, false)
+	config.DefenseType = defenseType
+	outcome := damageOutcome(defenseType, damage.CannotCrit(), OutcomeDefault)
+	effect := damage.DamageEffect()
+
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealDamage(sim, target, effect.Roll(sim, character.Level), GetOutcome(spell, outcome))
+	}
+
+	return config
+}
+
+// Which multipliers and metrics bucket the damage belongs in. The row's defense type decides, since
+// that is what picks its hit table: a physical proc is a melee one whatever cast it in.
+func damageShape(damage *spelldata.Spell) spelldata.SpellOpt {
+	if damageDefenseType(damage.DefenseTypeCore(), damage.SpellSchool(), false) == core.DefenseTypeMelee {
+		return spelldata.Melee(core.ProcMaskEmpty)
+	}
+
+	return spelldata.Magic(core.ProcMaskEmpty)
+}
+
+// What a proc's damage lands on, for both damage constructors.
+func procDamageHandler(character *core.Character, damageSpell *core.Spell, callback core.AuraCallback) core.ProcHandler {
+	return func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+		damageSpell.Cast(sim, procDamageTarget(character, callback, spell, result))
+	}
+}
+
+// Which unit the proc answers. What the result names depends on the callback, so the callback
+// decides whether it may be read at all.
+func procDamageTarget(character *core.Character, callback core.AuraCallback, spell *core.Spell, result *core.SpellResult) *core.Unit {
+	target := character.CurrentTarget
+
+	switch {
+	case callback.Matches(core.CallbackOnSpellHitTaken):
+		// Here result.Target is the wearer - core dispatches hit-taken through
+		// result.Target.OnSpellHitTaken - so the retaliation goes to the attacker instead of
+		// into the wearer's own health. This is the shield spike shape.
+		if spell != nil && spell.Unit != nil {
+			target = spell.Unit
+		}
+
+	case callback.Matches(core.CallbackOnSpellHitDealt | core.CallbackOnPeriodicDamageDealt):
+		// Land the extra damage on whatever was hit, not on the primary target - unless that is
+		// the wearer. A sapper charge is a hit the character deals to itself, and "chance on hit
+		// to deal damage" means the enemy it is fighting, not its own health.
+		if result != nil && result.Target != nil && result.Target != &character.Unit {
+			target = result.Target
+		}
+
+	default:
+		// The heal callbacks, cast complete and apply effects carry either no result or one
+		// whose target is an ally, so nothing there can name what to damage and the current
+		// target stands. Reading result.Target regardless is what would have a heal-triggered
+		// damage proc hit the healed ally.
+	}
+
+	return target
+}
+
+func decodedCallback(s *spelldata.Spell) core.AuraCallback {
+	return core.DecodeProcTypeMask(s.ProcFlags, s.ProcHint).Callback
+}
+
+func (cfg SpellDataProc) effectSource() effectSource {
+	if cfg.EnchantID != 0 {
+		return effectSource{id: cfg.EnchantID, isEnchant: true}
+	}
+
+	return effectSource{id: cfg.ItemID}
+}
+
 func NewSimpleStatActive(itemID int32) {
 	// Soft fail to allow for overrides for bad effects
 	if core.HasItemEffect(itemID) {
@@ -397,9 +807,17 @@ func NewSimpleStatActive(itemID int32) {
 			}
 			spellConfig.Cast.SharedCD = sharedCooldown(character, itemEffect)
 
-			core.RegisterTemporaryStatsOnUseCD(character, itemEffect.BuffName, stats.FromProtoMap(itemEffect.GetScalingOptions()[int32(0)].GetStats()), time.Millisecond*time.Duration(itemEffect.EffectDurationMs), spellConfig)
+			buffStats, buffDuration := onUseStatBuff(character, itemEffect)
+			core.RegisterTemporaryStatsOnUseCD(character, itemEffect.BuffName, buffStats, buffDuration, spellConfig)
 		}
 	})
+}
+
+// The on-use buff's stats and duration, scaled by its area bonus.
+func onUseStatBuff(character *core.Character, itemEffect *proto.ItemEffect) (stats.Stats, time.Duration) {
+	amount, duration := spelldata.Find(itemEffect.BuffId).AreaBonus(&character.Env.Encounter)
+	buffStats := stats.FromProtoMap(itemEffect.GetScalingOptions()[int32(0)].GetStats()).Multiply(amount)
+	return buffStats, time.Duration(float64(itemEffect.EffectDurationMs)*duration) * time.Millisecond
 }
 
 type StackingStatBonusCD struct {
@@ -781,38 +1199,7 @@ func NewProcDamageEffect(config ProcDamageEffect) {
 		})
 
 		triggerConfig.TriggerImmediately = true
-
-		// What result.Target means depends on the callback, so the callback has to decide whether it
-		// may be read at all.
-		callback := triggerConfig.Callback
-
-		triggerConfig.Handler = func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			target := character.CurrentTarget
-
-			switch {
-			case callback.Matches(core.CallbackOnSpellHitTaken):
-				// Here result.Target is the wearer - core dispatches hit-taken through
-				// result.Target.OnSpellHitTaken - so the retaliation goes to the attacker instead of
-				// into the wearer's own health. This is the shield spike shape.
-				if spell != nil && spell.Unit != nil {
-					target = spell.Unit
-				}
-
-			case callback.Matches(core.CallbackOnSpellHitDealt | core.CallbackOnPeriodicDamageDealt):
-				// Land the extra damage on whatever was hit, not on the primary target.
-				if result != nil && result.Target != nil {
-					target = result.Target
-				}
-
-			default:
-				// The heal callbacks, cast complete and apply effects carry either no result or one
-				// whose target is an ally, so nothing there can name what to damage and the current
-				// target stands. Reading result.Target regardless is what would have a heal-triggered
-				// damage proc hit the healed ally.
-			}
-
-			damageSpell.Cast(sim, target)
-		}
+		triggerConfig.Handler = procDamageHandler(character, damageSpell, triggerConfig.Callback)
 		triggerAura := character.MakeProcTriggerAura(triggerConfig)
 
 		if isEnchant {

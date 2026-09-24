@@ -1,6 +1,6 @@
 package druid
 
-var ravageRank = spellData.Ravage.HighestRank()
+var ravageRank = spellData.Ravage.Highest()
 
 // TODO: uncalled -- Ravage is live Forever content (spellData.Ravage carries four ranks,
 // 6785/6787/9866/9867) but RegisterFeralCatSpells does not wire this up, so druid.Ravage
@@ -17,10 +17,11 @@ func (druid *Druid) registerRavageSpell() {
 	// const weaponMultiplier = 3.85
 	// const highHpCritPercentBonus = 50.0
 	//
-	// druid.Ravage = druid.RegisterSpell(Cat, core.SpellConfig{
-	// 	ActionID:         core.ActionID{SpellID: ravageRank.SpellID},
-	// 	SpellSchool:      ravageRank.SpellSchool,
-	// 	DefenseType:      ravageRank.DefenseType,
+	// druid.Ravage = druid.RegisterSpell(core.SpellConfig{
+	// 	ActionID:         core.ActionID{SpellID: ravageRank.ID},
+	// 	CastRequirement:  ravageRank.CastRequirement(),
+	// 	SpellSchool:      ravageRank.SpellSchool(),
+	// 	DefenseType:      ravageRank.DefenseTypeCore(),
 	// 	ProcMask:         core.ProcMaskMeleeMHSpecial,
 	// 	ClassSpellMask:   DruidSpellRavage,
 	// 	Flags:            core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
@@ -30,13 +31,13 @@ func (druid *Druid) registerRavageSpell() {
 	// 	MaxRange:         core.MaxMeleeRange,
 	//
 	// 	EnergyCost: core.EnergyCostOptions{
-	// 		Cost:   ravageRank.Cost,
+	// 		Cost:   int32(ravageRank.Cost()),
 	// 		Refund: 0.8,
 	// 	},
 	//
 	// 	Cast: core.CastConfig{
 	// 		DefaultCast: core.Cast{
-	// 			GCD: ravageRank.GCD,
+	// 			GCD: ravageRank.GCD(),
 	// 		},
 	//
 	// 		IgnoreHaste: true,
@@ -51,7 +52,7 @@ func (druid *Druid) registerRavageSpell() {
 	// 			spell.BonusCritPercent += highHpCritPercentBonus
 	// 		}
 	//
-	// 		baseDamage := ravageRank.Direct.Damage(sim) + spell.Unit.MHWeaponDamage(sim, spell.MeleeAttackPower(target))
+	// 		baseDamage := ravageRank.DamageEffect().Average(core.CharacterLevel) + spell.Unit.MHWeaponDamage(sim, spell.MeleeAttackPower(target))
 	// 		result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
 	//
 	// 		if result.Landed() {
@@ -70,7 +71,7 @@ func (druid *Druid) registerRavageSpell() {
 	// 			spell.BonusCritPercent += highHpCritPercentBonus
 	// 		}
 	//
-	// 		baseDamage := shared.SpellDataMin(ravageRank.Direct) + spell.Unit.AutoAttacks.MH().CalculateAverageWeaponDamage(spell.MeleeAttackPower(target))
+	// 		baseDamage := ravageRank.DamageEffect().Average(core.CharacterLevel) + spell.Unit.AutoAttacks.MH().CalculateAverageWeaponDamage(spell.MeleeAttackPower(target))
 	// 		result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeExpectedMeleeWeaponSpecialHitAndCrit)
 	//
 	// 		if sim.IsExecutePhase90() {

@@ -34,6 +34,26 @@ func HasEnchantEffect(id int32) bool {
 	return ok
 }
 
+// The items an effect is registered for, in id order. For the test that pins which items the sim
+// simulates an effect for, which is how a regeneration says what it made live and what it dropped.
+func RegisteredItemEffectIDs() []int32 {
+	return sortedKeys(itemEffects)
+}
+
+// The same for the enchant registry.
+func RegisteredEnchantEffectIDs() []int32 {
+	return sortedKeys(enchantEffects)
+}
+
+func sortedKeys(effects map[int32]ApplyEffect) []int32 {
+	ids := make([]int32, 0, len(effects))
+	for id := range effects {
+		ids = append(ids, id)
+	}
+	slices.Sort(ids)
+	return ids
+}
+
 // Registers an ApplyEffect function which will be called before the Sim
 // starts, for any Agent that is wearing the item.
 // missingItemEffects collects the items an effect was registered for that this client

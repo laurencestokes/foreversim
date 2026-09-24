@@ -10,17 +10,17 @@ func (mage *Mage) registerColdSnapSpell() {
 		return
 	}
 
-	coldSnapRank := spellData.ColdSnap.HighestRank()
+	coldSnapRank := spellData.ColdSnap.Highest()
 
 	spell := mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: coldSnapRank.SpellID},
+		ActionID:       core.ActionID{SpellID: coldSnapRank.ID},
 		Flags:          core.SpellFlagNoOnCastComplete | core.SpellFlagAPL,
 		ClassSpellMask: MageSpellColdSnap,
 
 		Cast: core.CastConfig{
 			CD: core.Cooldown{
 				Timer:    mage.NewTimer(),
-				Duration: coldSnapRank.Cooldown,
+				Duration: max(coldSnapRank.Cooldown(), coldSnapRank.CategoryCooldown()),
 			},
 		},
 		ApplyEffects: func(_ *core.Simulation, _ *core.Unit, _ *core.Spell) {

@@ -3,6 +3,7 @@ package hunter
 import (
 	"testing"
 
+	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
 	_ "github.com/wowsims/forever/sim/common" // imported to get item effects included.
 	"github.com/wowsims/forever/sim/core"
@@ -92,4 +93,26 @@ func hunterSuite(apl string, talents string) core.CharacterSuiteConfig {
 			},
 		},
 	}
+}
+
+// The site's hunter options: Thorium Headed Arrows, the Classic ammo, where the suite above
+// shoots TBC's Doomshot.
+func TestArena(t *testing.T) {
+	arenalib.Run(t, arenalib.Spec{
+		Dir:   "hunter",
+		UI:    "hunter/dps",
+		Class: proto.Class_ClassHunter,
+		Race:  proto.Race_RaceOrc,
+		SpecOptions: &proto.Player_Hunter{Hunter: &proto.Hunter{Options: &proto.Hunter_Options{
+			ClassOptions: &proto.HunterOptions{
+				Ammo:           proto.HunterOptions_ThoriumHeadedArrow,
+				QuiverBonus:    proto.HunterOptions_Speed15,
+				PetType:        proto.HunterOptions_Cat,
+				PetAttackSpeed: proto.HunterOptions_OneTwo,
+				PetUptime:      1,
+			},
+		}}},
+		Role:               arenalib.Ranged,
+		DistanceFromTarget: 30,
+	})
 }

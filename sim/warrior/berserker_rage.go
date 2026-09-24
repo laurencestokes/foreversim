@@ -9,16 +9,16 @@ import (
 const berserkerRageDamageTakenRageMultiplier = 2.0
 
 func (warrior *Warrior) registerBerserkerRage() {
-	berserkerRageRank := spellData.BerserkerRage.HighestRank()
+	berserkerRageRank := spellData.BerserkerRage.Highest()
 
-	actionID := core.ActionID{SpellID: berserkerRageRank.SpellID}
+	actionID := core.ActionID{SpellID: berserkerRageRank.ID}
 	rageMetrics := warrior.NewRageMetrics(actionID)
-	rageGain := spellData.ImprovedBerserkerRage.EffectAt(0).TenthsAt(warrior.Talents.ImprovedBerserkerRage)
+	rageGain := spellData.ImprovedBerserkerRage.EffectAt(1).TenthsAt(warrior.Talents.ImprovedBerserkerRage)
 
 	aura := warrior.RegisterAura(core.Aura{
 		Label:    "Berserker Rage",
 		ActionID: actionID,
-		Duration: berserkerRageRank.Duration,
+		Duration: berserkerRageRank.Duration(),
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			warrior.MultiplyDamageTakenRageGen(berserkerRageDamageTakenRageMultiplier)
 		},
@@ -35,12 +35,12 @@ func (warrior *Warrior) registerBerserkerRage() {
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: berserkerRageRank.GCD,
+				GCD: berserkerRageRank.GCD(),
 			},
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: berserkerRageRank.Cooldown,
+				Duration: cooldownOf(berserkerRageRank),
 			},
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {

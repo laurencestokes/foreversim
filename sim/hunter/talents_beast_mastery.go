@@ -1,8 +1,8 @@
 package hunter
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -46,7 +46,7 @@ func (hunter *Hunter) registerEnduranceTraining() {
 	// Forever drops the hunter's own health bonus: the spell carries only the pet modifier,
 	// +3% a rank.
 	hunter.Pet.MultiplyStat(stats.Health, spellData.EnduranceTraining.
-		Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_ALL_EFFECTS).
+		Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_ALL_EFFECTS)).
 		MultiplierAt(hunter.Talents.EnduranceTraining))
 }
 
@@ -55,31 +55,51 @@ func (hunter *Hunter) registerFocusedFire() {
 		return
 	}
 
-	// The single dummy effect is the 1% per rank damage bonus. Forever drops Focused Fire's Kill
-	// Command crit bonus - there is no Kill Command.
-	hunter.PseudoStats.DamageDealtMultiplier *= spellData.FocusedFire.EffectAt(0).
-		MultiplierAt(hunter.Talents.FocusedFire)
+	// The single dummy effect is the 1% per rank damage bonus, for "you and your pet" per the
+	// 1223755 tooltip. Forever drops Focused Fire's Kill Command crit bonus - there is no Kill
+	// Command.
+	multiplier := spellData.FocusedFire.EffectAt(1).MultiplierAt(hunter.Talents.FocusedFire)
+	hunter.PseudoStats.DamageDealtMultiplier *= multiplier
+	hunter.Pet.PseudoStats.DamageDealtMultiplier *= multiplier
 }
 
+// 19616's mask names the pet passive and Summon Hawk, so the hawks take it too.
 func (hunter *Hunter) registerUnleashedFury() {
-	if hunter.Pet == nil || hunter.Talents.UnleashedFury == 0 {
+	if hunter.Talents.UnleashedFury == 0 {
 		return
 	}
 
-	hunter.Pet.PseudoStats.DamageDealtMultiplier *= spellData.UnleashedFury.
-		MultiplierAt(hunter.Talents.UnleashedFury)
+	hunter.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_DamageDone_Pct,
+		FloatValue: spellData.UnleashedFury.FractionAt(hunter.Talents.UnleashedFury),
+		ClassMask:  HunterSpellSummonHawk,
+	})
+
+	if hunter.Pet != nil {
+		hunter.Pet.PseudoStats.DamageDealtMultiplier *= spellData.UnleashedFury.
+			MultiplierAt(hunter.Talents.UnleashedFury)
+	}
 }
 
+// 19598's mask names the pet passive and Summon Hawk, so the hawks take it too.
 func (hunter *Hunter) registerFerocity() {
-	if hunter.Pet == nil || hunter.Talents.Ferocity == 0 {
+	if hunter.Talents.Ferocity == 0 {
 		return
 	}
 
 	crit := spellData.Ferocity.ValueAt(hunter.Talents.Ferocity)
-	hunter.Pet.AddStats(stats.Stats{
-		stats.PhysicalCritPercent: crit,
-		stats.SpellCritPercent:    crit,
+	hunter.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_BonusCrit_Percent,
+		FloatValue: crit,
+		ClassMask:  HunterSpellSummonHawk,
 	})
+
+	if hunter.Pet != nil {
+		hunter.Pet.AddStats(stats.Stats{
+			stats.PhysicalCritPercent: crit,
+			stats.SpellCritPercent:    crit,
+		})
+	}
 }
 
 func (hunter *Hunter) registerBestialDiscipline() {
@@ -90,7 +110,7 @@ func (hunter *Hunter) registerBestialDiscipline() {
 	// The pet's focus regen is handled where the focus bar is enabled, in pet.go. This half is the
 	// hunter's own mana regen while casting.
 	hunter.PseudoStats.SpiritRegenRateCasting += spellData.BestialDiscipline.
-		Effect(shared.A_MOD_MANA_REGEN_INTERRUPT, 0).
+		Effect(dbcenums.A_MOD_MANA_REGEN_INTERRUPT, 0).
 		FractionAt(hunter.Talents.BestialDiscipline)
 }
 
@@ -99,13 +119,13 @@ func (hunter *Hunter) registerFrenzy() {
 		return
 	}
 
-	frenzyRank := spellData.FrenzyTriggered.HighestRank()
+	frenzyRank := spellData.FrenzyTriggered.Highest()
 	const speedMultiplier = 1.3
 
 	frenzy := hunter.Pet.RegisterAura(core.Aura{
 		Label:    "Frenzy Effect",
-		ActionID: core.ActionID{SpellID: frenzyRank.SpellID},
-		Duration: frenzyRank.Duration,
+		ActionID: core.ActionID{SpellID: frenzyRank.ID},
+		Duration: frenzyRank.Duration(),
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			aura.Unit.MultiplyAttackSpeed(sim, speedMultiplier)
 		},
@@ -133,14 +153,14 @@ func (hunter *Hunter) registerIntimidation() {
 		return
 	}
 
-	rank := spellData.Intimidation.ByRank(1)
-	actionID := core.ActionID{SpellID: rank.SpellID}
+	rank := spellData.Intimidation.Rank(1)
+	actionID := core.ActionID{SpellID: rank.ID}
 	const bonusCrit = 100.0
 
 	petAura := hunter.Pet.RegisterAura(core.Aura{
 		Label:    "Intimidation",
 		ActionID: actionID,
-		Duration: rank.Duration,
+		Duration: rank.Duration(),
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			aura.Unit.AddStatDynamic(sim, stats.PhysicalCritPercent, bonusCrit)
 		},
@@ -190,14 +210,14 @@ func (hunter *Hunter) registerBestialWrath() {
 		return
 	}
 
-	rank := spellData.BestialWrath.HighestRank()
-	actionID := core.ActionID{SpellID: rank.SpellID}
+	rank := spellData.BestialWrath.Highest()
+	actionID := core.ActionID{SpellID: rank.ID}
 	const damageMultiplier = 1.5
 
 	hunter.Pet.BestialWrathAura = hunter.Pet.RegisterAura(core.Aura{
 		Label:    "Bestial Wrath",
 		ActionID: actionID,
-		Duration: rank.Duration,
+		Duration: rank.Duration(),
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			hunter.Pet.PseudoStats.DamageDealtMultiplier *= damageMultiplier
 		},
@@ -221,7 +241,7 @@ func (hunter *Hunter) registerBestialWrath() {
 			},
 			CD: core.Cooldown{
 				Timer:    hunter.NewTimer(),
-				Duration: rank.Cooldown,
+				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
 			},
 		},
 

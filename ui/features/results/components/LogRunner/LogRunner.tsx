@@ -217,7 +217,7 @@ export const LogRunner = ({ active }: LogRunnerProps) => {
 				onOpenChange={setExportOpen}
 				title={i18n.t('results_tab.details.logs.export_button')}
 				allowDownload
-				downloadFileName="wowsims-log.csv"
+				downloadFileName="forever-sim-log.csv"
 				downloadMimeType="text/csv"
 				getData={exportData}
 			/>

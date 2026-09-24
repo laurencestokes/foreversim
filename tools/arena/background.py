@@ -4,7 +4,11 @@
 # edits a single Discord message as it goes rather than posting a new one every minute.
 #
 #   python tools/arena/background.py --detach --optimise
-#   python tools/arena/background.py --specs balance_druid,mage
+#   python tools/arena/background.py --specs druid/balance,mage
+#   ARENA_REF=arena/port python tools/arena/background.py --detach --optimise   # a local branch
+#
+# --specs matches package paths (sim/druid/balance; sim/priest holds both priests), not the
+# page's spec keys.
 #
 # --detach hands the work to a process that outlives whatever started it, which is the point:
 # a search is hours, and the session that kicks it off is usually a chat turn that ends in
@@ -32,8 +36,11 @@ ARENA_OUT = os.path.join(REPO, 'arena-out')
 # the new data and every one before it the old. arena-out stays in the main checkout - it is
 # untracked, so git never touches it, and subset runs need the other specs' files to merge.
 WORK = REPO + '-arena'
-# The branch the run checks out. forever-next until it becomes master.
-BRANCH = os.environ.get('ARENA_BRANCH', 'forever-next')
+# The branch the run checks out, and pushes the leaderboard to with --push.
+BRANCH = os.environ.get('ARENA_BRANCH', 'master')
+# What the worktree is reset to: the branch's tip on origin, or any ref this repository has -
+# a local branch, to search something that is not merged yet.
+REF = os.environ.get('ARENA_REF', f'origin/{BRANCH}')
 RESULTS = 'ui/app/arena/results.json'
 WEBHOOK_FILE = os.path.expanduser('~/.openclaw-alfred/secrets/forever_webhook.url')
 # Discord's edge refuses a default python or powershell user agent with a bare 403 that reads
@@ -85,13 +92,13 @@ def run_git(*args, check=True):
 
 
 def prepare_worktree():
-    """A detached worktree at the tip of origin/BRANCH, created on first use."""
+    """A detached worktree at REF, created on first use."""
     subprocess.run(['git', 'fetch', '-q', 'origin'], cwd=REPO, check=True)
     if not os.path.isdir(WORK):
-        subprocess.run(['git', 'worktree', 'add', '--detach', WORK, f'origin/{BRANCH}'], cwd=REPO, check=True)
+        subprocess.run(['git', 'worktree', 'add', '--detach', WORK, REF], cwd=REPO, check=True)
     else:
-        run_git('checkout', '-q', '--detach', f'origin/{BRANCH}')
-        run_git('reset', '-q', '--hard', f'origin/{BRANCH}')
+        run_git('checkout', '-q', '--detach', REF)
+        run_git('reset', '-q', '--hard', REF)
     # The generated protos are gitignored, so a worktree has none and every package fails setup -
     # which is exactly how the first run from here ended, 30 seconds in. There is no protoc on this
     # machine to generate them, so they come from the main checkout, which is built from the same
@@ -101,12 +108,6 @@ def prepare_worktree():
     for name in os.listdir(os.path.join(REPO, generated)):
         if name.endswith('.pb.go'):
             shutil.copy2(os.path.join(REPO, generated, name), os.path.join(WORK, generated, name))
-
-
-def has_arena():
-    """master's arena runner (sim/arenalib) has not been ported to forever-next yet. Until it is, the
-    parity check's equal-stat run of the fifteen specs is the arena's input, one build per spec."""
-    return os.path.isdir(os.path.join(WORK, 'sim', 'arenalib'))
 
 
 def packages(specs):
@@ -122,6 +123,18 @@ def packages(specs):
         if not found:
             sys.exit('no packages matched: ' + ', '.join(specs))
     return found
+
+
+def arena_entries(pkgs):
+    """How many spec files the run will write: the arenalib.Run calls in the packages it tests.
+    Both priests are one package, and most of ./sim/... is core and shared code with none."""
+    count = 0
+    for pkg in pkgs:
+        directory = os.path.join(WORK, *pkg.split('/')[3:])  # github.com/wowsims/forever/...
+        for name in os.listdir(directory):
+            if name.endswith('_test.go'):
+                count += open(os.path.join(directory, name), encoding='utf-8').read().count('arenalib.Run(')
+    return count
 
 
 def written_since(start):
@@ -152,48 +165,53 @@ def main():
     parser.add_argument('--specs', default='', help='comma separated, substring matched')
     parser.add_argument('--detach', action='store_true', help='run in a process that outlives this one')
     args = parser.parse_args()
+    if args.push and REF != f'origin/{BRANCH}':
+        # The push is HEAD:BRANCH, and HEAD would carry REF's unmerged commits along with it.
+        sys.exit(f'--push only from origin/{BRANCH}; ARENA_REF={REF} would push that ref to {BRANCH}')
 
     if args.detach:
         command = [sys.executable, os.path.abspath(__file__)] + [a for a in sys.argv[1:] if a != '--detach']
-        # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP: no console, and no parent to die with.
-        flags = (0x00000008 | 0x00000200) if os.name == 'nt' else 0
-        child = subprocess.Popen(command, cwd=REPO, creationflags=flags, close_fds=True,
-                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
-        print(f'detached as pid {child.pid}')
+        # Its own output goes to a file: a run that fails before go test starts (the fetch, the
+        # worktree, go list) would otherwise fail into DEVNULL and say nothing at all.
+        os.makedirs(ARENA_OUT, exist_ok=True)
+        out = open(os.path.join(ARENA_OUT, 'background.log'), 'w')
+        # CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP: a hidden console that go and the test
+        # binaries share. DETACHED_PROCESS left them none, and Windows opens a window for every
+        # console program started without one. BREAKAWAY_FROM_JOB lets the run outlive a session
+        # that lives in a job object; where the job forbids it, it starts without.
+        options = dict(cwd=REPO, close_fds=True, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
+        if os.name == 'nt':
+            flags = 0x08000000 | 0x00000200
+            try:
+                child = subprocess.Popen(command, creationflags=flags | 0x01000000, **options)
+            except OSError:
+                child = subprocess.Popen(command, creationflags=flags, **options)
+        else:
+            child = subprocess.Popen(command, start_new_session=True, **options)
+        print(f'detached as pid {child.pid}, log in {out.name}')
         return
 
     prepare_worktree()
-    global ARENA_OUT
-    if not has_arena():
-        # Its own directory, so the parity rows never merge with a real arena run's files.
-        ARENA_OUT += '-parity'
     specs = [s for s in args.specs.split(',') if s]
     pkgs = packages(specs)
-    # Most of ./sim/... is not a spec - core, common, the shared test helpers - so the package
-    # count makes a bar that stops at 43% and looks stuck. The spec files already on disk are the
-    # honest denominator when the whole arena is being run.
-    # ponytail: uses the previous run's output; a brand new checkout falls back to packages.
-    expected = len([f for f in os.listdir(ARENA_OUT) if f.endswith('.json')]) if not specs and os.path.isdir(ARENA_OUT) else 0
-    total = expected or len(pkgs)
+    total = arena_entries(pkgs)
     what = 'talent search' if args.optimise else 'arena rebuild'
     url = webhook()
     start = time.time()
 
     message = discord(url, f'**{what}** starting - {total} specs')
 
-    iterations = os.environ.get('PARITY_ITERATIONS', '5000')
+    # What the merge says each build was run for: sim/arenalib's iterations.
     environment = dict(os.environ, ARENA_OUT=ARENA_OUT, ARENA_OPTIMISE='1' if args.optimise else '',
-                       PARITY_ITERATIONS=iterations, ARENA_ITERATIONS=iterations)
+                       ARENA_ITERATIONS='5000')
     os.makedirs(ARENA_OUT, exist_ok=True)
     # -timeout 0 is the whole reason this runs here and not on a GitHub runner.
     # Kept, not discarded. The first long search threw its output away, so when seven specs came
     # back without an exhaustive result there was nothing to read to find out why.
     log = open(os.path.join(ARENA_OUT, 'run.log'), 'w')
-    if has_arena():
-        command = ['go', 'test', '--tags=with_db', '-timeout', '0', '-p', '1', '-v', '-run', 'TestArena'] + pkgs
-    else:
-        # ponytail: no talent search or gear sets on this path; --optimise and --specs do nothing here.
-        command = ['go', 'test', '--tags=with_db', '-timeout', '0', '-count=1', '-v', '-run', '^TestParity$', './tools/parity']
+    # One package at a time: a spec's search keeps every core busy on its own. -count=1 because a
+    # cached pass writes nothing, and the test cache cannot know the files are the point.
+    command = ['go', 'test', '--tags=with_db', '-timeout', '0', '-count=1', '-p', '1', '-v', '-run', 'TestArena'] + pkgs
     run = subprocess.Popen(command, cwd=WORK, env=environment, stdout=log, stderr=subprocess.STDOUT)
 
     done = 0

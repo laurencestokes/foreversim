@@ -1,29 +1,31 @@
 package hunter
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 )
 
 func (hunter *Hunter) registerSerpentStingSpell() {
-	rank := spellData.SerpentSting.HighestRank()
-	tick := rank.Periodic.(shared.SpellDataPeriodic)
+	rank := spellData.SerpentSting.Highest()
+	tick := rank.PeriodicEffect()
+	tickLength := tick.Period()
+	tickDamage := tick.Average(core.CharacterLevel)
+	numberOfTicks := int32(rank.Duration() / tickLength)
 
 	// The beta client carries no spell power coefficient on Serpent Sting at all, so Classic's
 	// stands: the full-duration 1.0 split across the ticks.
-	spellCoeff := 1.0 / float64(tick.NumberOfTicks)
+	spellCoeff := 1.0 / float64(numberOfTicks)
 
 	hunter.SerpentSting = hunter.RegisterRangedSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ClassSpellMask: HunterSpellSerpentSting,
 		ProcMask:       core.ProcMaskRangedSpecial,
 		Flags:          core.SpellFlagAPL | core.SpellFlagPoison,
-		MissileSpeed:   rank.MissileSpeed,
+		MissileSpeed:   float64(rank.Speed),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 
 		Dot: core.DotConfig{
@@ -31,15 +33,15 @@ func (hunter *Hunter) registerSerpentStingSpell() {
 				Label: "Serpent Sting",
 				Tag:   "Sting",
 			},
-			NumberOfTicks:    tick.NumberOfTicks,
-			TickLength:       tick.TickLength,
+			NumberOfTicks:    numberOfTicks,
+			TickLength:       tickLength,
 			BonusCoefficient: spellCoeff,
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, tick.Damage(sim))
+				dot.Snapshot(target, tickDamage)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, shared.PeriodicTickOutcome(rank, dot))
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, rank.TickOutcome(dot))
 			},
 		},
 

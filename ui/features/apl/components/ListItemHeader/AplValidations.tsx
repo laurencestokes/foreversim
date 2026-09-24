@@ -7,6 +7,7 @@ import type { Player } from '@sim/player/player';
 import { ActionId } from '@sim/proto/action_id';
 import { subscribePlayerField } from '@sim/state/subscriptions';
 import { ListItemAction } from '@ui-kit/ListPicker';
+import { NOTICE_COLOR, NOTICE_ICON, type NoticeLevel } from '@ui-kit/NoticeLevel';
 import { Tooltip } from '@ui-kit/Tooltip';
 import { Fragment, useEffect, useId, useRef, useState } from 'react';
 
@@ -15,18 +16,24 @@ export interface AplValidationsProps {
 	getValidations: (player: Player<any>) => Array<APLValidation>;
 }
 
-const DISPLAY = new Map<LogLevel, { icon: string; header: string }>([
-	[LogLevel.Information, { icon: 'fa-info-circle', header: i18n.t('common.list_picker.additional_information') }],
-	[LogLevel.Warning, { icon: 'fa-exclamation-triangle', header: i18n.t('common.list_picker.action_has_warnings') }],
-	[LogLevel.Error, { icon: 'fa-exclamation-triangle', header: i18n.t('common.list_picker.action_has_errors') }],
+const LEVEL = new Map<LogLevel, NoticeLevel>([
+	[LogLevel.Information, 'info'],
+	[LogLevel.Warning, 'warning'],
+	[LogLevel.Error, 'error'],
+]);
+
+const HEADER = new Map<LogLevel, string>([
+	[LogLevel.Information, i18n.t('common.list_picker.additional_information')],
+	[LogLevel.Warning, i18n.t('common.list_picker.action_has_warnings')],
+	[LogLevel.Error, i18n.t('common.list_picker.action_has_errors')],
 ]);
 
 /** Written out rather than derived: `LogLevel` is a numeric enum, so iterating it yields the reverse mappings too. */
 const LEVEL_CLASS = new Map<LogLevel, string>([
 	[LogLevel.Undefined, 'apl-validation-undefined'],
-	[LogLevel.Information, 'apl-validation-information text-off-white text-shadow-glow-link'],
-	[LogLevel.Warning, 'apl-validation-warning text-link-warning text-shadow-glow-danger'],
-	[LogLevel.Error, 'apl-validation-error text-danger text-shadow-glow-offwhite'],
+	[LogLevel.Information, `apl-validation-information ${NOTICE_COLOR.info}`],
+	[LogLevel.Warning, `apl-validation-warning ${NOTICE_COLOR.warning}`],
+	[LogLevel.Error, `apl-validation-error ${NOTICE_COLOR.error}`],
 ]);
 
 const sameValidations = (a: Array<APLValidation>, b: Array<APLValidation>) =>
@@ -53,7 +60,7 @@ const format = async (validations: Array<APLValidation>): Promise<Formatted> => 
 		if (group) group.push(entry.validation);
 		else grouped.set(entry.logLevel, [entry.validation]);
 	}
-	return { maxLogLevel, groups: Array.from(grouped, ([logLevel, messages]) => ({ header: DISPLAY.get(logLevel)?.header, messages })) };
+	return { maxLogLevel, groups: Array.from(grouped, ([logLevel, messages]) => ({ header: HEADER.get(logLevel), messages })) };
 };
 
 /**
@@ -92,7 +99,8 @@ export const AplValidations = ({ getValidations }: AplValidationsProps) => {
 		};
 	}, [validations]);
 
-	const icon = formatted ? DISPLAY.get(formatted.maxLogLevel)?.icon : 'fa-exclamation-triangle';
+	const level = formatted ? LEVEL.get(formatted.maxLogLevel) : undefined;
+	const icon = level ? NOTICE_ICON[level] : NOTICE_ICON.warning;
 
 	return (
 		<>

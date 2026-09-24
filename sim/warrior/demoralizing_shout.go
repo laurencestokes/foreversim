@@ -10,26 +10,26 @@ import (
 // shared shout aura rework, both are passed as 0.
 func (warrior *Warrior) registerDemoralizingShout() {
 	// TODO: Ingame research needed if this adds flat threat
-	demoralizingShoutRank := spellData.DemoralizingShout.HighestRank()
+	demoralizingShoutRank := spellData.DemoralizingShout.Highest()
 
 	warrior.DemoralizingShoutAuras = warrior.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		return core.DemoralizingShoutAura(target, 0, 0)
 	})
 
 	warrior.DemoralizingShout = warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: demoralizingShoutRank.SpellID},
-		SpellSchool:    demoralizingShoutRank.SpellSchool,
-		DefenseType:    demoralizingShoutRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: demoralizingShoutRank.ID},
+		SpellSchool:    demoralizingShoutRank.SpellSchool(),
+		DefenseType:    demoralizingShoutRank.DefenseTypeCore(),
 		ClassSpellMask: SpellMaskDemoralizingShout,
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL,
 
 		RageCost: core.RageCostOptions{
-			Cost: demoralizingShoutRank.Cost,
+			Cost: int32(demoralizingShoutRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: demoralizingShoutRank.GCD,
+				GCD: demoralizingShoutRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},

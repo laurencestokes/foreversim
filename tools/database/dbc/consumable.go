@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
@@ -101,8 +102,8 @@ func (s ConsumableClass) ToProto() proto.ConsumableType {
 // A consumable's effects that restore a resource rather than grant a stat, which the sim wires up
 // separately.
 var consumableRestoreEffectTypes = map[SpellEffectType]bool{
-	E_HEAL:     true,
-	E_ENERGIZE: true,
+	dbcenums.E_HEAL:     true,
+	dbcenums.E_ENERGIZE: true,
 }
 
 func (consumable *Consumable) GetNonStatEffectIds() []int32 {
@@ -114,12 +115,12 @@ func (consumable *Consumable) GetNonStatEffectIds() []int32 {
 		if effect.ID != 0 {
 			if spellEffects, ok := dbcInstance.SpellEffects[effect.SpellID]; ok {
 				for _, spellEffect := range spellEffects {
-					if consumableRestoreEffectTypes[spellEffect.EffectType] || spellEffect.EffectAura == A_PERIODIC_ENERGIZE || spellEffect.EffectAura == A_PERIODIC_HEAL {
+					if consumableRestoreEffectTypes[spellEffect.EffectType] || spellEffect.EffectAura == dbcenums.A_PERIODIC_ENERGIZE || spellEffect.EffectAura == dbcenums.A_PERIODIC_HEAL {
 						effectIds = append(effectIds, int32(spellEffect.ID))
 					}
 					// Aura effects triggered on use (e.g. Fel Mana Potion's spell damage
 					// reduction) carry the stats the sim applies as a temporary aura.
-					if spellEffect.EffectType == E_TRIGGER_SPELL {
+					if spellEffect.EffectType == dbcenums.E_TRIGGER_SPELL {
 						for _, subEffect := range dbcInstance.SpellEffects[spellEffect.EffectTriggerSpell] {
 							if _, ok := subEffect.ParseStatEffect(false, 0); ok {
 								effectIds = append(effectIds, int32(subEffect.ID))
@@ -157,7 +158,7 @@ func (consumable *Consumable) GetStatModifiers() *stats.Stats {
 func consumableEffectStats(effect SpellEffect, depth int) stats.Stats {
 	value := effect.EffectBasePoints + effect.EffectDieSides
 	switch {
-	case depth < 2 && effect.EffectAura == A_PERIODIC_TRIGGER_SPELL_WITH_VALUE && effect.EffectAuraPeriod == 10000:
+	case depth < 2 && effect.EffectAura == dbcenums.A_PERIODIC_TRIGGER_SPELL_WITH_VALUE && effect.EffectAuraPeriod == 10000:
 		total := stats.Stats{}
 		for _, sub := range dbcInstance.SpellEffectsInOrder(effect.EffectTriggerSpell) {
 			sub.EffectBasePoints, sub.EffectDieSides = value, 0
@@ -165,16 +166,16 @@ func consumableEffectStats(effect SpellEffect, depth int) stats.Stats {
 			total.AddInplace(&s)
 		}
 		return total
-	case depth < 2 && effect.EffectType == E_TRIGGER_SPELL:
+	case depth < 2 && effect.EffectType == dbcenums.E_TRIGGER_SPELL:
 		total := stats.Stats{}
 		for _, sub := range dbcInstance.SpellEffectsInOrder(effect.EffectTriggerSpell) {
 			s := consumableEffectStats(sub, depth+1)
 			total.AddInplace(&s)
 		}
 		return total
-	case effect.EffectAura == A_MOD_CRIT_PCT && effect.EffectType == E_APPLY_AURA:
+	case effect.EffectAura == dbcenums.A_MOD_CRIT_PCT && effect.EffectType == dbcenums.E_APPLY_AURA:
 		return stats.Stats{proto.Stat_StatMeleeCritRating: value * core.PhysicalCritRatingPerCritPercent}
-	case effect.EffectAura == A_MOD_MAX_POWER && effect.EffectMiscValues[0] == POWER_TYPE_MANA:
+	case effect.EffectAura == dbcenums.A_MOD_MAX_POWER && effect.EffectMiscValues[0] == POWER_TYPE_MANA:
 		return stats.Stats{proto.Stat_StatMana: value}
 	}
 	s, _ := effect.ParseStatEffect(effect.Coefficient != 0, 0)

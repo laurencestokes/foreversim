@@ -9,15 +9,15 @@ import (
 // The client ships Demon Skin and Demon Armor and no Fel Armor, so the Fel Armor option buffs
 // nothing. Demonic Aegis raises both halves by 15% a point (1235316).
 func (warlock *Warlock) registerArmors() {
-	rank := spellData.DemonArmor.HighestRank()
+	rank := spellData.DemonArmor.Highest()
 	aegis := spellData.DemonicAegis.MultiplierAt(warlock.Talents.DemonicAegis)
 
-	armorBonus := spellData.DemonArmor.EffectAt(0).ValueAt(rank.Rank) * aegis
-	shadowResBonus := spellData.DemonArmor.EffectAt(1).ValueAt(rank.Rank) * aegis
+	armorBonus := rank.EffectN(1).Average(core.CharacterLevel) * aegis
+	shadowResBonus := rank.EffectN(2).Average(core.CharacterLevel) * aegis
 
 	warlock.DemonArmor = warlock.RegisterAura(core.Aura{
 		Label:    "Demon Armor",
-		ActionID: core.ActionID{SpellID: rank.SpellID},
+		ActionID: core.ActionID{SpellID: rank.ID},
 		Duration: core.NeverExpires,
 	}).AttachStatBuff(stats.Armor, armorBonus).AttachStatBuff(stats.ShadowResistance, shadowResBonus)
 

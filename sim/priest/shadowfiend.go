@@ -6,20 +6,20 @@ import (
 
 // The ability exists as spell 401977 on the Shadow Magic line. It has no rank subtext, so the
 // generated table holds a single row.
-var ShadowfiendRank = spellData.Shadowfiend.HighestRank()
+var ShadowfiendRank = spellData.Shadowfiend.Highest()
 
 func (priest *Priest) registerShadowfiendSpell() {
 	if !priest.SelfBuffs.UseShadowfiend {
 		return
 	}
 
-	actionID := core.ActionID{SpellID: ShadowfiendRank.SpellID}
+	actionID := core.ActionID{SpellID: ShadowfiendRank.ID}
 
 	// Timeline aura, and what the tier 4 two piece lengthens.
 	priest.ShadowfiendAura = priest.RegisterAura(core.Aura{
 		ActionID: actionID,
 		Label:    "Shadowfiend",
-		Duration: ShadowfiendRank.Duration,
+		Duration: ShadowfiendRank.Duration(),
 	})
 
 	priest.Shadowfiend = priest.RegisterSpell(core.SpellConfig{
@@ -36,7 +36,7 @@ func (priest *Priest) registerShadowfiendSpell() {
 			},
 			CD: core.Cooldown{
 				Timer:    priest.NewTimer(),
-				Duration: ShadowfiendRank.Cooldown,
+				Duration: max(ShadowfiendRank.Cooldown(), ShadowfiendRank.CategoryCooldown()),
 			},
 		},
 

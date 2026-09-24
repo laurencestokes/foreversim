@@ -5,6 +5,7 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -88,7 +89,7 @@ func (mage *Mage) registerSpells() {
 	mage.registerManaGems()
 	mage.registerScorchSpell()
 
-	FlameStrikeRankMap.RegisterAll(mage.registerFlamestrike)
+	FlameStrikeRankMap.Each(func(_ int32, rankConfig *spelldata.Spell) { mage.registerFlamestrike(rankConfig) })
 
 	//TalentSpells
 	mage.registerPresenceOfMindSpell()

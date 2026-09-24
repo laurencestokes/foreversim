@@ -1,38 +1,37 @@
 package druid
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 )
 
 // The client carries no threat for Lacerate, so the 3.33x multiplier is still Season of Discovery's.
-var lacerateRank = spellData.Lacerate.HighestRank()
-var lacerateTick = lacerateRank.Periodic.(shared.SpellDataPeriodic)
+var lacerateRank = spellData.Lacerate.Highest()
+var lacerateTick = lacerateRank.PeriodicEffect()
 
 // The hit is a share of weapon damage per stack, which the client states on the rank's dummy
 // effect (10 at every rank).
-var lacerateWeaponPctPerStack = spellData.Lacerate.EffectAt(1).FractionAt(lacerateRank.Rank)
+var lacerateWeaponPctPerStack = spellData.Lacerate.EffectAt(2).FractionAt(lacerateRank.RankNumber())
 
 const LacerateMaxStacks int32 = 5
 
 // Forever's bleed no longer scales with attack power: the client states a flat tick per stack.
 func (druid *Druid) registerLacerateSpell() {
 	druid.Lacerate = druid.RegisterSpell(Bear, core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: lacerateRank.SpellID},
-		SpellSchool:    lacerateRank.SpellSchool,
-		DefenseType:    lacerateRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: lacerateRank.ID},
+		SpellSchool:    lacerateRank.SpellSchool(),
+		DefenseType:    lacerateRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		ClassSpellMask: DruidSpellLacerate,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		Rank:           lacerateRank.Rank,
+		Rank:           lacerateRank.RankNumber(),
 
 		RageCost: core.RageCostOptions{
-			Cost:   lacerateRank.Cost,
+			Cost:   int32(lacerateRank.Cost()),
 			Refund: lacerateRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: lacerateRank.GCD,
+				GCD: lacerateRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},
@@ -45,16 +44,16 @@ func (druid *Druid) registerLacerateSpell() {
 			Aura: core.Aura{
 				Label:     "Lacerate",
 				MaxStacks: LacerateMaxStacks,
-				Duration:  lacerateRank.Duration,
+				Duration:  lacerateRank.Duration(),
 			},
-			NumberOfTicks: lacerateTick.NumberOfTicks,
-			TickLength:    lacerateTick.TickLength,
+			NumberOfTicks: int32(lacerateRank.Duration() / lacerateTick.Period()),
+			TickLength:    lacerateTick.Period(),
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.SnapshotPhysical(target, lacerateTick.Tick*float64(dot.Aura.GetStacks()))
+				dot.SnapshotPhysical(target, lacerateTick.Average(core.CharacterLevel)*float64(dot.Aura.GetStacks()))
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, shared.PeriodicTickOutcome(lacerateRank, dot))
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, periodicTickOutcome(lacerateRank, dot))
 			},
 		},
 

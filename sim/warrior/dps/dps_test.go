@@ -3,6 +3,7 @@ package dps
 import (
 	"testing"
 
+	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
 	_ "github.com/wowsims/forever/sim/common" // imported to get item effects included.
 	"github.com/wowsims/forever/sim/core"
@@ -102,4 +103,16 @@ var DefaultConsumables = &proto.ConsumesSpec{
 	PotId:   22838,
 	FlaskId: 22854,
 	FoodId:  27658,
+}
+
+// The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
+func TestArena(t *testing.T) {
+	arenalib.Run(t, arenalib.Spec{
+		Dir:         "warrior",
+		UI:          "warrior/dps",
+		Class:       proto.Class_ClassWarrior,
+		Race:        proto.Race_RaceOrc,
+		SpecOptions: DefaultOptions,
+		Role:        arenalib.Melee,
+	})
 }

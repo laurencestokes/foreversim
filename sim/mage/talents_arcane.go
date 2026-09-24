@@ -3,8 +3,8 @@ package mage
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -78,12 +78,12 @@ func (mage *Mage) registerArcaneSubtlety() {
 	mage.AddStaticMod(core.SpellModConfig{
 		ClassMask:  MageSpellsAll,
 		School:     core.SpellSchoolArcane,
-		FloatValue: spellData.ArcaneSubtlety.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_THREAT).FractionAt(mage.Talents.ArcaneSubtlety),
+		FloatValue: spellData.ArcaneSubtlety.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_THREAT)).FractionAt(mage.Talents.ArcaneSubtlety),
 		Kind:       core.SpellMod_ThreatMultiplier_Pct,
 	})
 
 	// The client states the penetration as a negative target resistance.
-	mage.AddStat(stats.SpellPiercing, -spellData.ArcaneSubtlety.Effect(shared.A_MOD_TARGET_RESISTANCE, 126).ValueAt(mage.Talents.ArcaneSubtlety))
+	mage.AddStat(stats.SpellPiercing, -spellData.ArcaneSubtlety.Effect(dbcenums.A_MOD_TARGET_RESISTANCE, 126).ValueAt(mage.Talents.ArcaneSubtlety))
 }
 
 // Only the resistance half; the mana returned on a resisted spell is not modelled.
@@ -92,7 +92,7 @@ func (mage *Mage) registerMagicAbsorption() {
 		return
 	}
 
-	resist := spellData.MagicAbsorption.Effect(shared.A_MOD_RESISTANCE, 124).ValueAt(mage.Talents.MagicAbsorption)
+	resist := spellData.MagicAbsorption.Effect(dbcenums.A_MOD_RESISTANCE, 124).ValueAt(mage.Talents.MagicAbsorption)
 	mage.AddStats(stats.Stats{
 		stats.ArcaneResistance: resist,
 		stats.FireResistance:   resist,
@@ -107,12 +107,12 @@ func (mage *Mage) registerArcaneConcentration() {
 		return
 	}
 
-	clearcastingRank := spellData.ArcaneConcentrationTriggered.HighestRank()
+	clearcastingRank := spellData.ArcaneConcentrationTriggered.Highest()
 
 	mage.ClearcastingAura = mage.RegisterAura(core.Aura{
 		Label:    "Clearcasting",
-		ActionID: core.ActionID{SpellID: clearcastingRank.SpellID},
-		Duration: clearcastingRank.Duration,
+		ActionID: core.ActionID{SpellID: clearcastingRank.ID},
+		Duration: clearcastingRank.Duration(),
 		OnGain: func(aura *core.Aura, _ *core.Simulation) {
 			aura.Unit.PseudoStats.SpellCostPercentModifier -= 100
 		},
@@ -133,13 +133,15 @@ func (mage *Mage) registerArcaneConcentration() {
 	})
 
 	// Forever states a flat SpellAuraOptions.ProcChance of 100 on the talent spell and puts the
-	// real per-rank chance on the effect, so ProcChanceAt would read 100% at every rank.
+	// real per-rank chance on the effect, so ProcChanceAt would read 100% at every rank. 11213's
+	// ProcCategoryRecovery holds it to one proc a second.
 	mage.MakeProcTriggerAura(core.ProcTrigger{
 		Name:               "Arcane Concentration",
 		Callback:           core.CallbackOnSpellHitDealt,
 		ClassSpellMask:     MageSpellsAllDamaging,
 		Outcome:            core.OutcomeLanded,
-		ProcChance:         spellData.ArcaneConcentration.EffectAt(0).FractionAt(mage.Talents.ArcaneConcentration),
+		ProcChance:         spellData.ArcaneConcentration.EffectAt(1).FractionAt(mage.Talents.ArcaneConcentration),
+		ICD:                spellData.ArcaneConcentration.Highest().ICD(),
 		TriggerImmediately: true,
 		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
 			mage.ClearcastingAura.Activate(sim)
@@ -260,11 +262,11 @@ func (mage *Mage) registerArcaneMind() {
 		return
 	}
 
-	mage.MultiplyStat(stats.Intellect, spellData.ArcaneMind.Effect(shared.A_MOD_TOTAL_STAT_PERCENTAGE, 0).MultiplierAt(mage.Talents.ArcaneMind))
+	mage.MultiplyStat(stats.Intellect, spellData.ArcaneMind.Effect(dbcenums.A_MOD_TOTAL_STAT_PERCENTAGE, 0).MultiplierAt(mage.Talents.ArcaneMind))
 	mage.AddStaticMod(core.SpellModConfig{
 		ClassMask:  MageSpellsAll,
 		School:     core.SpellSchoolArcane,
-		FloatValue: spellData.ArcaneMind.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_CRIT_DAMAGE_BONUS).FractionAt(mage.Talents.ArcaneMind),
+		FloatValue: spellData.ArcaneMind.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_CRIT_DAMAGE_BONUS)).FractionAt(mage.Talents.ArcaneMind),
 		Kind:       core.SpellMod_CritMultiplier_Flat,
 	})
 }
@@ -276,12 +278,12 @@ func (mage *Mage) registerArcaneInstability() {
 
 	mage.AddStaticMod(core.SpellModConfig{
 		ClassMask:  MageSpellsAll,
-		FloatValue: spellData.ArcaneInstability.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DAMAGE).FractionAt(mage.Talents.ArcaneInstability),
+		FloatValue: spellData.ArcaneInstability.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(mage.Talents.ArcaneInstability),
 		Kind:       core.SpellMod_DamageDone_Flat,
 	})
 	mage.AddStaticMod(core.SpellModConfig{
 		ClassMask:  MageSpellsAll,
-		FloatValue: spellData.ArcaneInstability.Effect(shared.A_MOD_CRIT_PCT, 0).ValueAt(mage.Talents.ArcaneInstability),
+		FloatValue: spellData.ArcaneInstability.Effect(dbcenums.A_MOD_CRIT_PCT, 0).ValueAt(mage.Talents.ArcaneInstability),
 		Kind:       core.SpellMod_BonusCrit_Percent,
 	})
 }

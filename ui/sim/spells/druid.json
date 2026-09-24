@@ -6,6 +6,22 @@
 		"source": "forever",
 		"tooltip": "30 Energy\nMelee Range\nInstant\nFinishing move that causes damage over time. Damage increases per combo point and by your Attack Power:\n1 point: 44.4 damage over 12 sec.\n2 points: 70.8 damage over 12 sec.\n3 points: 97.2 damage over 12 sec.\n4 points: 123.6 damage over 12 sec.\n5 points: 150 damage over 12 sec."
 	},
+	"1235827": {
+		"ability": "Lacerate",
+		"assumptions": ["The 3.33x threat is Season of Discovery's; the client tables do not carry threat."],
+		"file": "sim/druid/lacerate.go",
+		"note": "Rank 3, which the sim now carries for both the hit and the bleed. Beta client 1.60.1.69893: 15 Rage, 10% weapon damage per stack on the hit, 15 a tick per stack every 3 sec for 15 sec with no attack power scaling, 5 stacks.",
+		"source": "assumed",
+		"tooltip": "15 Rage\nMelee Range\nInstant\nLacerates the enemy target, making them bleed for 75 damage over 15 sec plus 10% weapon damage per existing application of Lacerate on the target. Causes a high amount of threat. This effect stacks up to 5 times on the same target."
+	},
+	"1238073": {
+		"ability": "Mangle (Bear)",
+		"assumptions": ["The 1.5x threat is Season of Discovery's; the client tables do not carry threat."],
+		"file": "sim/druid/mangle.go",
+		"note": "Rank 4, Forever's own id, which the sim now carries in place of the Burning Crusade 33878. Beta client 1.60.1.69893: 20 Rage, 6 sec cooldown, 100% weapon damage plus 77. While Berserk is up the cooldown is lifted and the strike hits 3 targets.",
+		"source": "assumed",
+		"tooltip": "20 Rage\nMelee Range\nInstant\n6 sec cooldown\nMangle the target for 100% normal damage plus 77. Requires Bear Form."
+	},
 	"1495": {
 		"ability": "Mongoose Bite Rank 1",
 		"file": "sim/hunter/mongoose_bite.go",

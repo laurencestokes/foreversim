@@ -3,8 +3,8 @@ package druid
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -51,8 +51,8 @@ func (druid *Druid) applyThickHide() {
 		return
 	}
 
-	perDefense := spellData.ThickHide.EffectAt(0).FractionAt(druid.Talents.ThickHide)
-	perLevel := spellData.ThickHide.EffectAt(1).ValueAt(druid.Talents.ThickHide)
+	perDefense := spellData.ThickHide.EffectAt(1).FractionAt(druid.Talents.ThickHide)
+	perLevel := spellData.ThickHide.EffectAt(2).ValueAt(druid.Talents.ThickHide)
 
 	// Defense skill is the rating the gear carries divided by the rating a point costs.
 	defenseSkill := druid.EquipStats()[stats.DefenseRating] / core.DefenseRatingPerDefenseLevel
@@ -74,7 +74,7 @@ func (druid *Druid) applyPredatoryInstincts() {
 		ClassMask:  DruidSpellsAll,
 		School:     core.SpellSchoolPhysical,
 		Kind:       core.SpellMod_CritMultiplier_Flat,
-		FloatValue: spellData.PredatoryInstincts.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_CRIT_DAMAGE_BONUS).FractionAt(druid.Talents.PredatoryInstincts),
+		FloatValue: spellData.PredatoryInstincts.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_CRIT_DAMAGE_BONUS)).FractionAt(druid.Talents.PredatoryInstincts),
 	})
 }
 
@@ -85,23 +85,23 @@ func (druid *Druid) applyHeartOfTheWild() {
 		return
 	}
 
-	druid.MultiplyStat(stats.Intellect, spellData.HeartOfTheWild.Effect(shared.A_MOD_TOTAL_STAT_PERCENTAGE, 0).MultiplierAt(druid.Talents.HeartOfTheWild))
+	druid.MultiplyStat(stats.Intellect, spellData.HeartOfTheWild.Effect(dbcenums.A_MOD_TOTAL_STAT_PERCENTAGE, 0).MultiplierAt(druid.Talents.HeartOfTheWild))
 }
 
 // +2% Strength a rank in Cat Form; the client files it under a dummy effect.
 func heartOfTheWildFormMultiplier(points int32) float64 {
-	return spellData.HeartOfTheWild.EffectAt(2).MultiplierAt(points)
+	return spellData.HeartOfTheWild.EffectAt(3).MultiplierAt(points)
 }
 
 // +4% Stamina a rank in Bear Form.
 func heartOfTheWildBearStaminaMultiplier(points int32) float64 {
-	return spellData.HeartOfTheWild.EffectAt(1).MultiplierAt(points)
+	return spellData.HeartOfTheWild.EffectAt(2).MultiplierAt(points)
 }
 
 // Sharpened Claws: +3% critical strike chance a rank while in Cat or Bear Form, applied through
 // the form's stat bonus.
 func sharpenedClawsCritPercent(points int32) float64 {
-	return spellData.SharpenedClaws.Effect(shared.A_MOD_CRIT_PCT, 0).ValueAt(points)
+	return spellData.SharpenedClaws.Effect(dbcenums.A_MOD_CRIT_PCT, 0).ValueAt(points)
 }
 
 func (druid *Druid) applySharpenedClaws() {
@@ -110,7 +110,7 @@ func (druid *Druid) applySharpenedClaws() {
 
 // Predatory Strikes: attack power off level while in Cat or Bear Form.
 func predatoryStrikesAPPerLevel(points int32) float64 {
-	return spellData.PredatoryStrikes.EffectAt(0).FractionAt(points)
+	return spellData.PredatoryStrikes.EffectAt(1).FractionAt(points)
 }
 
 func (druid *Druid) applyPredatoryStrikes() {
@@ -123,7 +123,7 @@ func (druid *Druid) applyFeralSwiftness() {
 	}
 
 	bonus := stats.Stats{
-		stats.DodgeRating: core.DodgeRatingPerDodgePercent * spellData.FeralSwiftness.Effect(shared.A_MOD_DODGE_PERCENT, 0).ValueAt(druid.Talents.FeralSwiftness),
+		stats.DodgeRating: core.DodgeRatingPerDodgePercent * spellData.FeralSwiftness.Effect(dbcenums.A_MOD_DODGE_PERCENT, 0).ValueAt(druid.Talents.FeralSwiftness),
 	}
 	if druid.CatFormAura != nil {
 		druid.CatFormAura.AttachStatsBuff(bonus)
@@ -157,7 +157,7 @@ func (druid *Druid) applySavageFury() {
 	druid.AddStaticMod(core.SpellModConfig{
 		ClassMask:  DruidSpellRake | DruidSpellShred | DruidSpellMaul | DruidSpellSwipe,
 		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.SavageFury.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DAMAGE).FractionAt(druid.Talents.SavageFury),
+		FloatValue: spellData.SavageFury.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(druid.Talents.SavageFury),
 	})
 }
 
@@ -170,13 +170,13 @@ func (druid *Druid) applyShreddingAttacks() {
 	druid.AddStaticMod(core.SpellModConfig{
 		ClassMask: DruidSpellShred,
 		Kind:      core.SpellMod_PowerCost_Flat,
-		IntValue:  int32(spellData.ShreddingAttacks.EffectAt(0).ValueAt(druid.Talents.ShreddingAttacks)),
+		IntValue:  int32(spellData.ShreddingAttacks.EffectAt(1).ValueAt(druid.Talents.ShreddingAttacks)),
 	})
 
 	druid.AddStaticMod(core.SpellModConfig{
 		ClassMask: DruidSpellLacerate,
 		Kind:      core.SpellMod_PowerCost_Flat,
-		IntValue:  int32(spellData.ShreddingAttacks.EffectAt(1).ValueAt(druid.Talents.ShreddingAttacks)) / 10,
+		IntValue:  int32(spellData.ShreddingAttacks.EffectAt(2).ValueAt(druid.Talents.ShreddingAttacks)) / 10,
 	})
 }
 
@@ -187,11 +187,11 @@ func (druid *Druid) applyPrimalFury() {
 		return
 	}
 
-	procChance := spellData.PrimalFury.EffectAt(0).FractionAt(druid.Talents.PrimalFury)
-	triggered := spellData.PrimalFuryTriggered.HighestRank()
-	actionID := core.ActionID{SpellID: triggered.SpellID}
+	procChance := spellData.PrimalFury.EffectAt(1).FractionAt(druid.Talents.PrimalFury)
+	triggered := spellData.PrimalFuryTriggered.Highest()
+	actionID := core.ActionID{SpellID: triggered.ID}
 	// The client's E_ENERGIZE is in its own units: 50 is 5 Rage.
-	rage := spellData.PrimalFuryTriggered.EffectAt(0).ValueAt(triggered.Rank) / 10
+	rage := triggered.EffectN(1).BaseValue() / 10
 	rageMetrics := druid.NewRageMetrics(actionID)
 	cpMetrics := druid.NewComboPointMetrics(actionID)
 
@@ -235,7 +235,7 @@ func (druid *Druid) applyFeralInstincts() {
 	druid.AddStaticMod(core.SpellModConfig{
 		ClassMask:  DruidSpellSwipe,
 		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.FeralInstinct.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DAMAGE).FractionAt(druid.Talents.FeralInstinct),
+		FloatValue: spellData.FeralInstinct.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(druid.Talents.FeralInstinct),
 	})
 }
 
@@ -268,16 +268,16 @@ func (druid *Druid) applyNaturalReaction() {
 		return
 	}
 
-	druid.AddStat(stats.DodgeRating, core.DodgeRatingPerDodgePercent*spellData.NaturalReaction.Effect(shared.A_MOD_DODGE_PERCENT, 0).ValueAt(druid.Talents.NaturalReaction))
+	druid.AddStat(stats.DodgeRating, core.DodgeRatingPerDodgePercent*spellData.NaturalReaction.Effect(dbcenums.A_MOD_DODGE_PERCENT, 0).ValueAt(druid.Talents.NaturalReaction))
 
-	procChance := spellData.NaturalReaction.EffectAt(1).FractionAt(druid.Talents.NaturalReaction)
-	triggered := spellData.NaturalReactionTriggered.HighestRank()
-	rage := spellData.NaturalReactionTriggered.EffectAt(0).ValueAt(triggered.Rank) / 10
-	rageMetrics := druid.NewRageMetrics(core.ActionID{SpellID: triggered.SpellID})
+	procChance := spellData.NaturalReaction.EffectAt(2).FractionAt(druid.Talents.NaturalReaction)
+	triggered := spellData.NaturalReactionTriggered.Highest()
+	rage := triggered.EffectN(1).BaseValue() / 10
+	rageMetrics := druid.NewRageMetrics(core.ActionID{SpellID: triggered.ID})
 
 	druid.MakeProcTriggerAura(core.ProcTrigger{
 		Name:       "Natural Reaction",
-		ActionID:   core.ActionID{SpellID: triggered.SpellID},
+		ActionID:   core.ActionID{SpellID: triggered.ID},
 		Callback:   core.CallbackOnSpellHitTaken,
 		Outcome:    core.OutcomeDodge,
 		ProcChance: procChance,
@@ -296,7 +296,7 @@ func (druid *Druid) applyRendAndTear() {
 		return
 	}
 
-	multiplier := spellData.RendAndTear.EffectAt(0).MultiplierAt(druid.Talents.RendAndTear)
+	multiplier := spellData.RendAndTear.EffectAt(1).MultiplierAt(druid.Talents.RendAndTear)
 
 	for _, target := range druid.Env.Encounter.AllTargetUnits {
 		target.AddDynamicDamageTakenModifier(func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult, _ bool) {
@@ -315,7 +315,7 @@ func (druid *Druid) IsBleeding(target *core.Unit) bool {
 
 // Berserk, new in Forever (client 417141): 3 minute cooldown (SpellCooldowns), and for 15 seconds
 // +100% critical strike chance on the Combo Point builders (effect 0). Its Mangle half (no
-// cooldown, up to 3 targets): the cooldown reset is in mangle.go, the cleave is not modelled.
+// cooldown, up to 3 targets) is in mangle.go.
 func (druid *Druid) applyBerserk() {
 	if !druid.Talents.Berserk {
 		return

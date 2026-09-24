@@ -303,8 +303,8 @@ export const EvidencePage = () => {
 				</ul>
 
 				<p className="m-0 mt-4 text-sm text-gray-400">
-					Written against the previous engine, where <code>sim/spell_sources_test.go</code> would not let an ability be registered without saying
-					where its numbers came from; that check has not been carried over to this one yet. The entries themselves live in{' '}
+					Every spell that deals damage in a build the arena ranks has to be listed here; each spec&apos;s <code>TestArena</code> fails otherwise. The
+					entries themselves live in{' '}
 					<a href={`${SITE_REPO_URL}/tree/master/ui/sim/spells`} target="_blank" rel="noreferrer">
 						ui/sim/spells
 					</a>

@@ -97,13 +97,19 @@ func (unit *Unit) GetOrInitTimer(timer **Timer) *Timer {
 	return *timer
 }
 
+// The category is the client's SpellCategory: casting any spell in it puts the whole category on
+// cooldown. Created through NewTimer, so it is reset with the unit's other timers each iteration.
+func (unit *Unit) CategoryTimer(category int32) *Timer {
+	if unit.categoryTimers == nil {
+		unit.categoryTimers = make(map[int32]*Timer)
+	}
+	if unit.categoryTimers[category] == nil {
+		unit.categoryTimers[category] = unit.NewTimer()
+	}
+	return unit.categoryTimers[category]
+}
+
 // Helper for timers keyed by spellCategoryID so that we can keep shared cooldowns for on use effects locked to these
 func (u *Character) GetOrInitSpellCategoryTimer(spellCategoryID int32) *Timer {
-	if u.spellCategoryTimers == nil {
-		u.spellCategoryTimers = make(map[int32]*Timer)
-	}
-	if u.spellCategoryTimers[spellCategoryID] == nil {
-		u.spellCategoryTimers[spellCategoryID] = u.NewTimer()
-	}
-	return u.spellCategoryTimers[spellCategoryID]
+	return u.CategoryTimer(spellCategoryID)
 }

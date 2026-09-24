@@ -5,28 +5,28 @@ import (
 )
 
 func (warrior *Warrior) registerIntimidatingShout() {
-	intimidatingShoutRank := spellData.IntimidatingShout.HighestRank()
+	intimidatingShoutRank := spellData.IntimidatingShout.Highest()
 
 	warrior.IntimidatingShout = warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: intimidatingShoutRank.SpellID},
+		ActionID:       core.ActionID{SpellID: intimidatingShoutRank.ID},
 		SpellSchool:    core.SpellSchoolPhysical,
 		DefenseType:    core.DefenseTypeMagic,
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: SpellMaskIntimidatingShout,
-		MaxRange:       intimidatingShoutRank.MaxRange,
+		MaxRange:       float64(intimidatingShoutRank.MaxRange),
 
 		RageCost: core.RageCostOptions{
-			Cost: intimidatingShoutRank.Cost,
+			Cost: int32(intimidatingShoutRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: intimidatingShoutRank.GCD,
+				GCD: intimidatingShoutRank.GCD(),
 			},
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: intimidatingShoutRank.Cooldown,
+				Duration: cooldownOf(intimidatingShoutRank),
 			},
 		},
 

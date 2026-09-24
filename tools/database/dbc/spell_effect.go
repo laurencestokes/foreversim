@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
@@ -66,14 +67,14 @@ func (se *SpellEffect) ToProto() *proto.SpellEffect {
 		spellEffect.EffectSpread = float64(se.EffectDieSides)
 	}
 	switch se.EffectType {
-	case E_ENERGIZE:
+	case dbcenums.E_ENERGIZE:
 		spellEffect.MiscValue0 = &proto.SpellEffect_ResourceType{ResourceType: MapPowerTypeEnumToResourceType[int32(se.EffectMiscValues[0])]}
-	case E_HEAL:
+	case dbcenums.E_HEAL:
 		spellEffect.MiscValue0 = &proto.SpellEffect_ResourceType{ResourceType: proto.ResourceType_ResourceTypeHealth}
-	case E_APPLY_AURA:
-		if se.EffectAura == A_PERIODIC_ENERGIZE {
+	case dbcenums.E_APPLY_AURA:
+		if se.EffectAura == dbcenums.A_PERIODIC_ENERGIZE {
 			spellEffect.MiscValue0 = &proto.SpellEffect_ResourceType{ResourceType: MapPowerTypeEnumToResourceType[int32(se.EffectMiscValues[0])]}
-		} else if se.EffectAura == A_PERIODIC_HEAL {
+		} else if se.EffectAura == dbcenums.A_PERIODIC_HEAL {
 			spellEffect.MiscValue0 = &proto.SpellEffect_ResourceType{ResourceType: proto.ResourceType_ResourceTypeHealth}
 		}
 	}
@@ -190,7 +191,7 @@ func (s *SpellEffect) scaledDelta(budget float64) float64 {
 // Scaled minimum calculation
 func (s *SpellEffect) scaledMin(avg, delta float64) float64 {
 	result := avg - delta/2
-	if s.EffectType == E_WEAPON_PERCENT_DAMAGE {
+	if s.EffectType == dbcenums.E_WEAPON_PERCENT_DAMAGE {
 		result *= 0.01
 	}
 	return result
@@ -199,7 +200,7 @@ func (s *SpellEffect) scaledMin(avg, delta float64) float64 {
 // Scaled maximum calculation
 func (s *SpellEffect) scaledMax(avg, delta float64) float64 {
 	result := avg + delta/2
-	if s.EffectType == E_WEAPON_PERCENT_DAMAGE {
+	if s.EffectType == dbcenums.E_WEAPON_PERCENT_DAMAGE {
 		result *= 0.01
 	}
 	return result
@@ -208,14 +209,13 @@ func (s *SpellEffect) scaledMax(avg, delta float64) float64 {
 // Reports whether the aura fires another spell when its owner procs. Both forms are the same edge
 // for the purposes of walking a trigger chain; only the amount differs.
 func (effect *SpellEffect) IsProcTrigger() bool {
-	return effect.EffectAura == A_PROC_TRIGGER_SPELL ||
-		effect.EffectAura == A_PROC_TRIGGER_SPELL_WITH_VALUE
+	return effect.EffectAura.IsProcTrigger()
 }
 
 // Reports whether the aura resolves to nothing on its own. Either the client applies it as a
 // marker, or its real behaviour is server-scripted and not present in DBC at all.
 func (effect *SpellEffect) IsDummy() bool {
-	return effect.EffectAura == A_DUMMY || effect.EffectAura == A_PERIODIC_DUMMY
+	return effect.EffectAura == dbcenums.A_DUMMY || effect.EffectAura == dbcenums.A_PERIODIC_DUMMY
 }
 
 // The aura types capable of resolving to stats. resolveStatsSpell walks a trigger chain looking for
@@ -224,16 +224,16 @@ func (effect *SpellEffect) IsDummy() bool {
 // need not hold: A_MOD_TARGET_RESISTANCE ends the walk on a spell ParseStatEffect then declines,
 // which is the existing behaviour.
 var statAuraTypes = map[EffectAuraType]bool{
-	A_MOD_STAT:                true,
-	A_MOD_RATING:              true,
-	A_MOD_RANGED_ATTACK_POWER: true,
-	A_MOD_ATTACK_POWER:        true,
-	A_MOD_DAMAGE_DONE:         true,
-	A_MOD_TARGET_RESISTANCE:   true,
-	A_MOD_RESISTANCE:          true,
-	A_MOD_INCREASE_ENERGY:     true,
-	A_MOD_INCREASE_HEALTH_2:   true,
-	A_PERIODIC_TRIGGER_SPELL:  true,
+	dbcenums.A_MOD_STAT:                true,
+	dbcenums.A_MOD_RATING:              true,
+	dbcenums.A_MOD_RANGED_ATTACK_POWER: true,
+	dbcenums.A_MOD_ATTACK_POWER:        true,
+	dbcenums.A_MOD_DAMAGE_DONE:         true,
+	dbcenums.A_MOD_TARGET_RESISTANCE:   true,
+	dbcenums.A_MOD_RESISTANCE:          true,
+	dbcenums.A_MOD_INCREASE_ENERGY:     true,
+	dbcenums.A_MOD_INCREASE_HEALTH_2:   true,
+	dbcenums.A_PERIODIC_TRIGGER_SPELL:  true,
 }
 
 // Reports whether the effect's aura is one of the types that can carry stats.
@@ -243,17 +243,17 @@ func (effect *SpellEffect) GrantsStats() bool {
 
 func (effect *SpellEffect) IsDirectDamageEffect() bool {
 	types := []SpellEffectType{
-		E_HEAL, E_SCHOOL_DAMAGE, E_HEALTH_LEECH,
-		E_NORMALIZED_WEAPON_DMG, E_WEAPON_DAMAGE, E_WEAPON_PERCENT_DAMAGE,
+		dbcenums.E_HEAL, dbcenums.E_SCHOOL_DAMAGE, dbcenums.E_HEALTH_LEECH,
+		dbcenums.E_NORMALIZED_WEAPON_DMG, dbcenums.E_WEAPON_DAMAGE, dbcenums.E_WEAPON_PERCENT_DAMAGE,
 	}
 	return slices.Contains(types, effect.EffectType)
 }
 
 func (effect *SpellEffect) IsPeriodicDamageEffect() bool {
 	subtypes := []EffectAuraType{
-		A_PERIODIC_DAMAGE, A_PERIODIC_LEECH, A_PERIODIC_HEAL,
+		dbcenums.A_PERIODIC_DAMAGE, dbcenums.A_PERIODIC_LEECH, dbcenums.A_PERIODIC_HEAL,
 	}
-	if effect.EffectType == E_APPLY_AURA {
+	if effect.EffectType == dbcenums.E_APPLY_AURA {
 		return slices.Contains(subtypes, effect.EffectAura)
 	}
 	return false
@@ -290,19 +290,19 @@ func (effect *SpellEffect) ParseStatEffect(scalesWithIlvl bool, ilvl int) (stats
 	stat, _ := MapMainStatToStat(effect.EffectMiscValues[0])
 
 	switch {
-	case effect.EffectAura == A_MOD_RANGED_ATTACK_POWER:
+	case effect.EffectAura == dbcenums.A_MOD_RANGED_ATTACK_POWER:
 		if effect.Coefficient != 0 && scalesWithIlvl {
 			effectStats[proto.Stat_StatRangedAttackPower] = effect.CalcCoefficientStatValue(ilvl)
 			break
 		}
 		effectStats[proto.Stat_StatRangedAttackPower] = float64(effect.EffectBasePoints + effect.EffectDieSides)
-	case effect.EffectAura == A_MOD_ATTACK_POWER:
+	case effect.EffectAura == dbcenums.A_MOD_ATTACK_POWER:
 		if effect.Coefficient != 0 && scalesWithIlvl {
 			effectStats[proto.Stat_StatAttackPower] = effect.CalcCoefficientStatValue(ilvl)
 			break
 		}
 		effectStats[proto.Stat_StatAttackPower] = float64(effect.EffectBasePoints + effect.EffectDieSides)
-	case effect.EffectMiscValues[0] == -1 && effect.EffectAura == A_MOD_STAT && effect.EffectType == E_APPLY_AURA:
+	case effect.EffectMiscValues[0] == -1 && effect.EffectAura == dbcenums.A_MOD_STAT && effect.EffectType == dbcenums.E_APPLY_AURA:
 		// -1 represents ALL STATS if present in MiscValue 0
 		for _, s := range []proto.Stat{
 			proto.Stat_StatAgility, proto.Stat_StatIntellect, proto.Stat_StatSpirit,
@@ -314,7 +314,7 @@ func (effect *SpellEffect) ParseStatEffect(scalesWithIlvl bool, ilvl int) (stats
 			}
 			effectStats[s] = float64(effect.EffectBasePoints + effect.EffectDieSides)
 		}
-	case effect.EffectAura == A_MOD_STAT && effect.EffectType == E_APPLY_AURA:
+	case effect.EffectAura == dbcenums.A_MOD_STAT && effect.EffectType == dbcenums.E_APPLY_AURA:
 		if effect.Coefficient != 0 && effect.ScalingType != 0 {
 			effectStats[stat] = effect.CalcCoefficientStatValue(core.TernaryInt(scalesWithIlvl, ilvl, 0))
 			break
@@ -322,7 +322,7 @@ func (effect *SpellEffect) ParseStatEffect(scalesWithIlvl bool, ilvl int) (stats
 
 		// if Coefficient is not set, we fall back to EffectBasePoints
 		effectStats[stat] = float64(effect.EffectBasePoints + effect.EffectDieSides)
-	case effect.EffectAura == A_MOD_DAMAGE_DONE && effect.EffectType == E_APPLY_AURA:
+	case effect.EffectAura == dbcenums.A_MOD_DAMAGE_DONE && effect.EffectType == dbcenums.E_APPLY_AURA:
 		school := SpellSchool(effect.EffectMiscValues[0])
 		if school == ALL_SPELL_DAMAGE {
 			stat := ConvertEffectAuraToStatIndex(effect.EffectAura, effect.EffectMiscValues[0])
@@ -344,14 +344,14 @@ func (effect *SpellEffect) ParseStatEffect(scalesWithIlvl bool, ilvl int) (stats
 				}
 			}
 		}
-	case effect.EffectAura == A_MOD_HEALING_DONE && effect.EffectType == E_APPLY_AURA:
+	case effect.EffectAura == dbcenums.A_MOD_HEALING_DONE && effect.EffectType == dbcenums.E_APPLY_AURA:
 		if effect.Coefficient != 0 && effect.ScalingType != 0 {
 			effectStats[proto.Stat_StatHealingPower] = effect.CalcCoefficientStatValue(core.TernaryInt(scalesWithIlvl, ilvl, 0))
 			break
 		}
 		// Apply spell power, A_MOD_HEALING_DONE is also a possibility for healing power
 		effectStats[proto.Stat_StatHealingPower] = float64(effect.EffectBasePoints + effect.EffectDieSides)
-	case effect.EffectAura == A_MOD_RESISTANCE:
+	case effect.EffectAura == dbcenums.A_MOD_RESISTANCE:
 		school := SpellSchool(effect.EffectMiscValues[0])
 		for schoolType, stat := range SpellSchoolToResistanceStat {
 			if school.Has(schoolType) && stat > -1 {
@@ -364,7 +364,7 @@ func (effect *SpellEffect) ParseStatEffect(scalesWithIlvl bool, ilvl int) (stats
 			}
 		}
 
-	case effect.EffectAura == A_MOD_RATING:
+	case effect.EffectAura == dbcenums.A_MOD_RATING:
 		scaled := effect.Coefficient != 0 && scalesWithIlvl
 		var scaledValue float64
 		if scaled {
@@ -386,35 +386,35 @@ func (effect *SpellEffect) ParseStatEffect(scalesWithIlvl bool, ilvl int) (stats
 				effectStats[statMod] = float64(effect.EffectBasePoints + effect.EffectDieSides)
 			}
 		}
-	case effect.EffectAura == A_MOD_INCREASE_ENERGY:
+	case effect.EffectAura == dbcenums.A_MOD_INCREASE_ENERGY:
 		// MiscValue 0 is the power type. Only mana has a matching stat; rage, focus, energy
 		// and the rest are resources the sim tracks per spec, not stats, so treating every
 		// power type as mana just invents mana out of nothing.
 		if effect.EffectMiscValues[0] == POWER_TYPE_MANA {
 			effectStats[proto.Stat_StatMana] = float64(effect.EffectBasePoints + effect.EffectDieSides)
 		}
-	case effect.EffectAura == A_MOD_INCREASE_HEALTH_2:
+	case effect.EffectAura == dbcenums.A_MOD_INCREASE_HEALTH_2:
 		effectStats[proto.Stat_StatHealth] = float64(effect.EffectBasePoints + effect.EffectDieSides)
-	case effect.EffectAura == A_PERIODIC_TRIGGER_SPELL && effect.EffectAuraPeriod == 10000:
+	case effect.EffectAura == dbcenums.A_PERIODIC_TRIGGER_SPELL && effect.EffectAuraPeriod == 10000:
 		for _, sub := range dbcInstance.SpellEffectsInOrder(effect.EffectTriggerSpell) {
 			if subStats, ok := sub.ParseStatEffect(false, 0); ok {
 				effectStats.AddInplace(&subStats)
 			}
 		}
-	case effect.EffectAura == A_MOD_TARGET_RESISTANCE:
+	case effect.EffectAura == dbcenums.A_MOD_TARGET_RESISTANCE:
 		resist := ConvertTargetResistanceFlagToPenetrationStat(effect.EffectMiscValues[0])
 		effectStats[resist] = math.Abs(float64(effect.EffectBasePoints + effect.EffectDieSides))
-	case effect.EffectAura == A_MOD_SHIELD_BLOCKVALUE:
+	case effect.EffectAura == dbcenums.A_MOD_SHIELD_BLOCKVALUE:
 		effectStats[proto.Stat_StatBlockValue] = float64(effect.EffectBasePoints + effect.EffectDieSides)
-	case effect.EffectAura == A_MOD_INCREASE_HEALTH:
+	case effect.EffectAura == dbcenums.A_MOD_INCREASE_HEALTH:
 		effectStats[proto.Stat_StatHealth] = float64(effect.EffectBasePoints + effect.EffectDieSides)
-	case effect.EffectAura == A_MOD_POWER_REGEN && effect.EffectType == E_APPLY_AURA:
+	case effect.EffectAura == dbcenums.A_MOD_POWER_REGEN && effect.EffectType == dbcenums.E_APPLY_AURA:
 		if effect.Coefficient != 0 && effect.ScalingType != 0 {
 			effectStats[proto.Stat_StatMP5] = effect.CalcCoefficientStatValue(core.TernaryInt(scalesWithIlvl, ilvl, 0))
 			break
 		}
 		effectStats[proto.Stat_StatMP5] = float64(effect.EffectBasePoints + effect.EffectDieSides)
-	case effect.EffectAura == A_MOD_SPELL_CRIT_CHANCE:
+	case effect.EffectAura == dbcenums.A_MOD_SPELL_CRIT_CHANCE:
 		effectStats[proto.Stat_StatSpellCritRating] = float64(effect.EffectBasePoints+effect.EffectDieSides) * core.SpellCritRatingPerCritPercent
 	}
 

@@ -1,5 +1,7 @@
 package dbc
 
+import "github.com/wowsims/forever/sim/core/dbcenums"
+
 type Spell struct {
 	NameLang              string
 	ID                    int32
@@ -44,44 +46,45 @@ type Spell struct {
 	Variables             string
 	MaxCumulativeStacks   int32
 	MaxTargets            int32
+	RequiredAreasID       int32
 	IconPath              string
 }
 
-func (s *Spell) HasAttributeAt(index int, flag int) bool {
+func (s *Spell) HasAttributeAt(index int, flag uint32) bool {
 	if index < 0 || index >= len(s.Attributes) {
 		return false
 	}
-	return (s.Attributes[index] & flag) != 0
+	return (uint32(s.Attributes[index]) & flag) != 0
 }
 
 // Reports whether the spell's effect amounts come from the item level of the item carrying it
 // rather than from a class curve. On such an effect EffectBasePoints is a stale snapshot and
 // only the scaling coefficient resolves the real amount.
 func (s *Spell) ScalesWithItemLevel() bool {
-	return s.HasAttributeAt(ATTR_INDEX_EX_11, ATTR_EX_11_SCALES_WITH_ITEM_LEVEL)
+	return s.HasAttributeAt(dbcenums.ATTR_INDEX_EX_11, dbcenums.ATTR_EX_11_SCALES_WITH_ITEM_LEVEL)
 }
 
 // Reports whether the listener aura also fires from hits of triggered spells that lack
 // ATTR_EX_3_NOT_A_PROC. Emitted as ProcTrigger.CanProcFromProcs.
 func (s *Spell) CanProcFromProcs() bool {
-	return s.HasAttributeAt(ATTR_INDEX_EX_3, ATTR_EX_3_CAN_PROC_FROM_PROCS)
+	return s.HasAttributeAt(dbcenums.ATTR_INDEX_EX_3, dbcenums.ATTR_EX_3_CAN_PROC_FROM_PROCS)
 }
 
 // Reports whether a triggered spell's hits count as ability hits to aura listeners rather than
 // as proc hits. A damage proc built from a spell without it gets SpellFlagProc.
 func (s *Spell) NotAProc() bool {
-	return s.HasAttributeAt(ATTR_INDEX_EX_3, ATTR_EX_3_NOT_A_PROC)
+	return s.HasAttributeAt(dbcenums.ATTR_INDEX_EX_3, dbcenums.ATTR_EX_3_NOT_A_PROC)
 }
 
 // Reports whether weapon procs ignore this spell's hits. Emitted as SpellFlagSuppressWeaponProcs.
 func (s *Spell) SuppressesWeaponProcs() bool {
-	return s.HasAttributeAt(ATTR_INDEX_EX_4, ATTR_EX_4_SUPPRESS_WEAPON_PROCS)
+	return s.HasAttributeAt(dbcenums.ATTR_INDEX_EX_4, dbcenums.ATTR_EX_4_SUPPRESS_WEAPON_PROCS)
 }
 
 // Reports whether the listener aura, although not a weapon proc, ignores hits that suppress
 // weapon procs. Emitted as SpellFlagsExclude: SpellFlagSuppressWeaponProcs.
 func (s *Spell) IsWeaponProcAura() bool {
-	return s.HasAttributeAt(ATTR_INDEX_EX_6, ATTR_EX_6_AURA_IS_WEAPON_PROC)
+	return s.HasAttributeAt(dbcenums.ATTR_INDEX_EX_6, dbcenums.ATTR_EX_6_AURA_IS_WEAPON_PROC)
 }
 
 // Reports whether the spell is barred from critically striking. Seal of Light, Judgement of Wisdom,
@@ -89,10 +92,10 @@ func (s *Spell) IsWeaponProcAura() bool {
 // A damage proc built from one of these has to roll an outcome that cannot crit, or it gains crit
 // damage the game never gives it.
 func (s *Spell) CannotCrit() bool {
-	return s.HasAttributeAt(ATTR_INDEX_EX_2, ATTR_EX_2_CANT_CRIT)
+	return s.HasAttributeAt(dbcenums.ATTR_INDEX_EX_2, dbcenums.ATTR_EX_2_CANT_CRIT)
 }
 
 // Reports whether the spell only procs from class abilities rather than from any hit.
 func (s *Spell) OnlyProcsFromClassAbilities() bool {
-	return s.HasAttributeAt(ATTR_INDEX_EX_12, ATTR_EX_12_ONLY_PROC_FROM_CLASS_ABILITIES)
+	return s.HasAttributeAt(dbcenums.ATTR_INDEX_EX_12, dbcenums.ATTR_EX_12_ONLY_PROC_FROM_CLASS_ABILITIES)
 }

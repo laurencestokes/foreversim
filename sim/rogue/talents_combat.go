@@ -3,8 +3,8 @@ package rogue
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
@@ -55,7 +55,7 @@ func (rogue *Rogue) registerImprovedSinisterStrike() {
 	rogue.AddStaticMod(core.SpellModConfig{
 		Kind:      core.SpellMod_PowerCost_Flat,
 		ClassMask: RogueSpellSinisterStrike,
-		IntValue:  int32(spellData.ImprovedSinisterStrike.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_COST).ValueAt(rogue.Talents.ImprovedSinisterStrike)),
+		IntValue:  int32(spellData.ImprovedSinisterStrike.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).ValueAt(rogue.Talents.ImprovedSinisterStrike)),
 	})
 }
 
@@ -81,9 +81,9 @@ func (rogue *Rogue) registerPrecision() {
 	}
 
 	// Precision covers Poisons in Forever, and those roll against the spell hit table.
-	hit := spellData.Precision.EffectAt(0).ValueAt(rogue.Talents.Precision)
+	hit := spellData.Precision.EffectAt(1).ValueAt(rogue.Talents.Precision)
 	rogue.AddStat(stats.PhysicalHitPercent, hit)
-	rogue.AddStat(stats.SpellHitPercent, spellData.Precision.EffectAt(1).ValueAt(rogue.Talents.Precision))
+	rogue.AddStat(stats.SpellHitPercent, spellData.Precision.EffectAt(2).ValueAt(rogue.Talents.Precision))
 }
 
 // registerEndurance implements Endurance.
@@ -111,7 +111,7 @@ func (rogue *Rogue) registerFlawlessExecution() {
 	rogue.AddStaticMod(core.SpellModConfig{
 		Kind:      core.SpellMod_PowerCost_Flat,
 		ClassMask: RogueSpellEviscerate,
-		IntValue:  int32(spellData.FlawlessExecution.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_COST).ValueAt(1)),
+		IntValue:  int32(spellData.FlawlessExecution.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).ValueAt(1)),
 	})
 }
 
@@ -132,9 +132,9 @@ func (rogue *Rogue) registerBladeFlurry() {
 		return
 	}
 
-	bladeFlurryRank := spellData.BladeFlurry.HighestRank()
-	actionID := core.ActionID{SpellID: bladeFlurryRank.SpellID}
-	attackSpeed := 1 + bladeFlurryRank.Effect(shared.A_MOD_MELEE_HASTE_3, 0).Value/100
+	bladeFlurryRank := spellData.BladeFlurry.Highest()
+	actionID := core.ActionID{SpellID: bladeFlurryRank.ID}
+	attackSpeed := 1 + bladeFlurryRank.Effect(dbcenums.A_MOD_MELEE_HASTE_3, 0).Average(core.CharacterLevel)/100
 
 	var curDmg float64
 	bfHit := rogue.GetOrRegisterSpell(core.SpellConfig{
@@ -154,7 +154,7 @@ func (rogue *Rogue) registerBladeFlurry() {
 	rogue.BladeFlurryAura = rogue.GetOrRegisterAura(core.Aura{
 		Label:    "Blade Flurry",
 		ActionID: actionID,
-		Duration: bladeFlurryRank.Duration,
+		Duration: bladeFlurryRank.Duration(),
 
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 			if sim.ActiveTargetCount() < 2 {
@@ -178,16 +178,16 @@ func (rogue *Rogue) registerBladeFlurry() {
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: bladeFlurryRank.GCD,
+				GCD: bladeFlurryRank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    rogue.NewTimer(),
-				Duration: bladeFlurryRank.Cooldown,
+				Duration: max(bladeFlurryRank.Cooldown(), bladeFlurryRank.CategoryCooldown()),
 			},
 			IgnoreHaste: true,
 		},
 		EnergyCost: core.EnergyCostOptions{
-			Cost: bladeFlurryRank.Cost,
+			Cost: int32(bladeFlurryRank.Cost()),
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
@@ -221,7 +221,7 @@ func (rogue *Rogue) registerHackAndSlash() {
 			Callback:           core.CallbackOnSpellHitDealt,
 			ProcMask:           mask,
 			Outcome:            core.OutcomeLanded,
-			ProcChance:         spellData.HackAndSlash.EffectAt(0).ValueAt(points) / 100,
+			ProcChance:         spellData.HackAndSlash.EffectAt(1).ValueAt(points) / 100,
 			ICD:                time.Millisecond * 200,
 			TriggerImmediately: true,
 			Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
@@ -229,8 +229,8 @@ func (rogue *Rogue) registerHackAndSlash() {
 			},
 		})
 	}
-	crit := spellData.HackAndSlash.EffectAt(2).ValueAt(points)
-	armorIgnore := spellData.HackAndSlash.EffectAt(1).ValueAt(points) / 100
+	crit := spellData.HackAndSlash.EffectAt(3).ValueAt(points)
+	armorIgnore := spellData.HackAndSlash.EffectAt(2).ValueAt(points) / 100
 
 	// Daggers and fists: crit. The character pane shows the bonus for the main hand, so an
 	// off-hand-only qualifier gets it on off-hand hits alone.
@@ -294,14 +294,14 @@ func (rogue *Rogue) registerAdrenalineRush() {
 		return
 	}
 
-	adrenalineRushRank := spellData.AdrenalineRush.HighestRank()
-	actionID := core.ActionID{SpellID: adrenalineRushRank.SpellID}
-	regenMultiplier := 1 + adrenalineRushRank.Effect(shared.A_MOD_POWER_REGEN_PERCENT, 3).Value/100
+	adrenalineRushRank := spellData.AdrenalineRush.Highest()
+	actionID := core.ActionID{SpellID: adrenalineRushRank.ID}
+	regenMultiplier := 1 + adrenalineRushRank.Effect(dbcenums.A_MOD_POWER_REGEN_PERCENT, 3).Average(core.CharacterLevel)/100
 
 	rogue.AdrenalineRushAura = rogue.GetOrRegisterAura(core.Aura{
 		Label:    "Adrenaline Rush",
 		ActionID: actionID,
-		Duration: adrenalineRushRank.Duration,
+		Duration: adrenalineRushRank.Duration(),
 
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			rogue.MultiplyEnergyRegenSpeed(sim, regenMultiplier)
@@ -320,10 +320,10 @@ func (rogue *Rogue) registerAdrenalineRush() {
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    rogue.NewTimer(),
-				Duration: adrenalineRushRank.Cooldown,
+				Duration: max(adrenalineRushRank.Cooldown(), adrenalineRushRank.CategoryCooldown()),
 			},
 			DefaultCast: core.Cast{
-				GCD: adrenalineRushRank.GCD,
+				GCD: adrenalineRushRank.GCD(),
 			},
 		},
 
@@ -349,16 +349,16 @@ func (rogue *Rogue) registerRiposte() {
 		return
 	}
 
-	riposteRank := spellData.Riposte.HighestRank()
-	actionID := core.ActionID{SpellID: riposteRank.SpellID}
-	weaponDamage := riposteRank.Effect(shared.A_NONE, 0).Value / 100
+	riposteRank := spellData.Riposte.Highest()
+	actionID := core.ActionID{SpellID: riposteRank.ID}
+	weaponDamage := riposteRank.Effect(dbcenums.A_NONE, 0).Average(core.CharacterLevel) / 100
 
 	var riposteReady *core.Aura
 
 	rogue.GetOrRegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
-		SpellSchool:    riposteRank.SpellSchool,
-		DefenseType:    riposteRank.DefenseType,
+		SpellSchool:    riposteRank.SpellSchool(),
+		DefenseType:    riposteRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 		ClassSpellMask: RogueSpellRiposte,
@@ -370,7 +370,7 @@ func (rogue *Rogue) registerRiposte() {
 		Cast: core.CastConfig{
 			CD: core.Cooldown{
 				Timer:    rogue.NewTimer(),
-				Duration: riposteRank.Cooldown,
+				Duration: max(riposteRank.Cooldown(), riposteRank.CategoryCooldown()),
 			},
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
@@ -392,7 +392,7 @@ func (rogue *Rogue) registerRiposte() {
 	riposteReady = rogue.RegisterAura(core.Aura{
 		Label:    "Riposte Ready",
 		ActionID: actionID,
-		Duration: riposteRank.Duration,
+		Duration: riposteRank.Duration(),
 	})
 
 	rogue.MakeProcTriggerAura(core.ProcTrigger{

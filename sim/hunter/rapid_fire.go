@@ -3,19 +3,19 @@ package hunter
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
 func (hunter *Hunter) registerRapidFireCD() {
-	rank := spellData.RapidFire.HighestRank()
-	actionID := core.ActionID{SpellID: rank.SpellID}
-	hasteMultiplier := 1 + rank.Effect(shared.A_MOD_RANGED_HASTE, 0).Value/100
+	rank := spellData.RapidFire.Highest()
+	actionID := core.ActionID{SpellID: rank.ID}
+	hasteMultiplier := 1 + rank.Effect(dbcenums.A_MOD_RANGED_HASTE, 0).Average(core.CharacterLevel)/100
 
 	hunter.RapidFireAura = hunter.RegisterAura(core.Aura{
 		Label:    "Rapid Fire",
 		ActionID: actionID,
-		Duration: rank.Duration,
+		Duration: rank.Duration(),
 
 		// Forever: ranged and melee attack speed, where Classic's was ranged only.
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
@@ -29,18 +29,18 @@ func (hunter *Hunter) registerRapidFireCD() {
 	// Rapid Killing takes a minute off a rank (client curve -60000/-120000 ms). The buff a kill
 	// grants (415407: 20% on the next Shot within 20 sec) is not modelled, nothing dies in a boss
 	// fight.
-	cooldown := rank.Cooldown + time.Duration(spellData.RapidKilling.
-		Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_COOLDOWN).
+	cooldown := max(rank.Cooldown(), rank.CategoryCooldown()) + time.Duration(spellData.RapidKilling.
+		Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COOLDOWN)).
 		ValueAt(hunter.Talents.RapidKilling))*time.Millisecond
 
 	hunter.RapidFire = hunter.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
-		SpellSchool:    rank.SpellSchool,
+		SpellSchool:    rank.SpellSchool(),
 		ClassSpellMask: HunterSpellRapidFire,
 		ProcMask:       core.ProcMaskEmpty,
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{

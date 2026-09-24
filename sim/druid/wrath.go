@@ -4,37 +4,37 @@ import (
 	"github.com/wowsims/forever/sim/core"
 )
 
-var wrathRank = spellData.Wrath.HighestRank()
+var wrathRank = spellData.Wrath.Highest()
 
 func (druid *Druid) registerWrathSpell() {
 	druid.Wrath = druid.RegisterSpell(Humanoid|Moonkin, core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: wrathRank.SpellID},
-		SpellSchool:    wrathRank.SpellSchool,
-		DefenseType:    wrathRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: wrathRank.ID},
+		SpellSchool:    wrathRank.SpellSchool(),
+		DefenseType:    wrathRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		ClassSpellMask: DruidSpellWrath,
 		Flags:          core.SpellFlagAPL,
-		MissileSpeed:   wrathRank.MissileSpeed,
-		Rank:           wrathRank.Rank,
+		MissileSpeed:   float64(wrathRank.Speed),
+		Rank:           wrathRank.RankNumber(),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: wrathRank.Cost,
+			FlatCost: int32(wrathRank.Cost()),
 		},
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD:      wrathRank.GCD,
-				CastTime: wrathRank.CastTime,
+				GCD:      wrathRank.GCD(),
+				CastTime: wrathRank.CastTime(),
 			},
 		},
 
-		BonusCoefficient: wrathRank.Direct.BonusCoefficient(),
+		BonusCoefficient: wrathRank.DamageEffect().Coeff(),
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		MaxRange:         wrathRank.MaxRange,
+		MaxRange:         float64(wrathRank.MaxRange),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, wrathRank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			result := spell.CalcDamage(sim, target, wrathRank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 
 			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
 				spell.DealDamage(sim, result)

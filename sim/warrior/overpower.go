@@ -5,18 +5,18 @@ import (
 )
 
 func (warrior *Warrior) registerOverpower() {
-	overpowerRank := spellData.Overpower.BySpellID(11585)
-	overpowerBaseDamage, _ := overpowerRank.Direct.Range()
+	overpowerRank := spellData.Overpower.ByID(11585)
+	overpowerBaseDamage := overpowerRank.DamageEffect().Average(core.CharacterLevel)
 	// The window a dodge opens: the aura Offensive State (DND) fires on the hit.
-	overpowerWindow := spellData.OffensiveStateTriggered.HighestRank()
+	overpowerWindow := spellData.OffensiveStateTriggered.Highest()
 
-	actionID := core.ActionID{SpellID: overpowerRank.SpellID}
-	overpowerCD := overpowerRank.Cooldown
+	actionID := core.ActionID{SpellID: overpowerRank.ID}
+	overpowerCD := cooldownOf(overpowerRank)
 
 	warrior.OverpowerAura = warrior.RegisterAura(core.Aura{
-		ActionID: core.ActionID{SpellID: overpowerWindow.SpellID},
+		ActionID: core.ActionID{SpellID: overpowerWindow.ID},
 		Label:    "Overpower Aura",
-		Duration: overpowerWindow.Duration,
+		Duration: overpowerWindow.Duration(),
 	})
 
 	warrior.MakeProcTriggerAura(core.ProcTrigger{
@@ -39,12 +39,12 @@ func (warrior *Warrior) registerOverpower() {
 		MaxRange:       core.MaxMeleeRange,
 
 		RageCost: core.RageCostOptions{
-			Cost:   overpowerRank.Cost,
+			Cost:   int32(overpowerRank.Cost()),
 			Refund: overpowerRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: overpowerRank.GCD,
+				GCD: overpowerRank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),

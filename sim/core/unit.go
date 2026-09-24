@@ -4,6 +4,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
@@ -112,6 +113,11 @@ type Unit struct {
 
 	PseudoStats stats.PseudoStats
 
+	// The client form the unit is in; the class writes it.
+	ShapeshiftForm dbcenums.ShapeshiftForm
+	// Leaves the current form, for a cast the form refuses but no form allows. Nil: none.
+	AutoUnshift func(sim *Simulation)
+
 	currentPowerBar PowerBarType
 	healthBar
 	manaBar
@@ -141,6 +147,8 @@ type Unit struct {
 	Metrics UnitMetrics
 
 	cdTimers []*Timer
+
+	categoryTimers map[int32]*Timer
 
 	AttackTables                 []*AttackTable
 	DynamicDamageTakenModifiers  []DynamicDamageTakenModifier

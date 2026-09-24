@@ -33,7 +33,7 @@ export const LandingHeader = () => {
 						<a href="#" className="m-0 flex items-center p-0 text-lg whitespace-nowrap text-white">
 							<img className="mr-4 w-24 max-md:w-12" src="/forever/assets/img/WoW-Simulator-Icon.png" alt="" />
 							<div className="flex flex-col">
-								<h2 className="m-0 text-fluid-5xl leading-none font-bold text-brand" data-testid="wowsims-title">
+								<h2 className="m-0 text-fluid-5xl leading-none font-bold text-brand" data-testid="site-title">
 									{i18n.t('landing.header.wowsims')}
 								</h2>
 								<h3 className="m-0 w-full text-expansion" data-testid="expansion-title">

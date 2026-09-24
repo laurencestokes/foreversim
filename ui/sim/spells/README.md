@@ -62,14 +62,9 @@ the hook into the tooltip markup.
 `classic` is a claim that the ability is untouched, not a shrug. An ability nobody has
 checked is `assumed` or `unreviewed`.
 
-`sim/spell_sources_test.go` holds four rules: every id the sim registers appears here, every
-entry is well formed, the count of `unreviewed` entries only ever falls, and every
-registration site resolves to an id.
-
-That last rule is the one that decides whether the rest means anything. Only a minority of
-the sim's abilities write their id as a literal in the `ActionID`; the ranked ones build it
-from a table, either a local one indexed by rank, a package level one indexed by level, or
-a rank struct passed in. A walk that reads literals alone sees 314 ids and misses every
-rank of Shred, Rip, Moonfire and Tiger's Fury, which is most of what Forever changed about
-the druid. Following the tables finds 991. Nineteen sites still build their id somewhere
-the walk cannot follow; they are listed by the test and that count only falls too.
+Each spec's `TestArena` (`sim/arenalib`) keeps the files honest: without `ARENA_OUT` set it
+runs every build the arena ranks for a few iterations and fails on any spell id that deals
+damage and has no entry here. It replaces `sim/spell_sources_test.go`, which walked the old
+engine's syntax tree for registered ids and was lost in the engine switch; since the
+classes read their ranks from the client spell store (`spellData.X.Highest()`), a walk of
+the source can no longer see which rank is cast, and running the sim can.

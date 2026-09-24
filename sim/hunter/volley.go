@@ -12,24 +12,24 @@ import (
 var volleyTickDamage = [4]float64{0, 70, 91, 112}
 
 func (hunter *Hunter) registerVolleySpell() {
-	rank := spellData.Volley.HighestRank()
-	baseDamage := volleyTickDamage[rank.Rank]
+	rank := spellData.Volley.Highest()
+	baseDamage := volleyTickDamage[rank.RankNumber()]
 
 	hunter.Volley = hunter.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ClassSpellMask: HunterSpellVolley,
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagChanneled | core.SpellFlagAPL,
-		MaxRange:       rank.MaxRange,
+		MaxRange:       float64(rank.MaxRange),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: rank.Cost,
+			FlatCost: int32(rank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: rank.GCD,
+				GCD: rank.GCD(),
 			},
 			IgnoreHaste: true,
 		},
@@ -59,7 +59,7 @@ func (hunter *Hunter) registerVolleySpell() {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			hunter.AutoAttacks.DelayRangedUntil(sim, sim.CurrentTime+rank.Duration)
+			hunter.AutoAttacks.DelayRangedUntil(sim, sim.CurrentTime+rank.Duration())
 			spell.AOEDot().Apply(sim)
 		},
 	})

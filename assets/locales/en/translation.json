@@ -13,8 +13,7 @@
 		},
 		"header": {
 			"wowsims": "ForeverSim",
-			"expansion": "Forever",
-			"supportDevs": "Support our devs"
+			"expansion": "Forever"
 		}
 	},
 	"common": {
@@ -71,6 +70,19 @@
 			"humanoid": "Humanoid",
 			"mechanical": "Mechanical",
 			"undead": "Undead"
+		},
+		"area_types": {
+			"unknown": "None",
+			"forest_grassland": "Forest and Grassland",
+			"mountainous": "Mountainous",
+			"snowy": "Snowy",
+			"desert": "Desert",
+			"swamp": "Marsh and Swamp",
+			"wasteland": "Wasteland",
+			"haunted": "Haunted",
+			"cavernous": "Cavernous or Underground",
+			"volcanic": "Volcanic",
+			"strongholds_cities": "Strongholds and Cities"
 		},
 		"sources": {
 			"unknown": "Unknown",
@@ -289,8 +301,7 @@
 		},
 		"unlaunched": {
 			"title": "This sim is currently not supported.",
-			"contribute_message": "Want to contribute?",
-			"discord_message": "Found something wrong? Open an issue on",
+			"contribute_message": "Want to help? Issues and pull requests are welcome on GitHub.",
 			"old_sim_message": "You can find the old Sim for this spec here:"
 		},
 		"notifications": {
@@ -803,6 +814,18 @@
 			"encounter_preset": {
 				"label": "Encounter",
 				"tooltip": "Selects a preset encounter configuration."
+			},
+			"zone": {
+				"label": "Zone",
+				"tooltip": "Picks every kind of area the zone counts as; picking a preset boss fills it in from the boss's zone. Custom means the areas below were set by hand."
+			},
+			"area_types": {
+				"label": "Area",
+				"placeholder": "Select area type(s)",
+				"empty": "No kind of area matches",
+				"open": "Show all kinds of area",
+				"remove": "Remove area",
+				"tooltip": "Every kind of area the fight's zone counts as. Effects that only work in certain areas, such as Rune of the Guard Captain's extra attack power in Forest and Grassland areas, apply when their area is picked. A zone can count as several: Redridge Mountains is Forest and Mountainous, Deadwind Pass is Mountainous, Wasteland and Haunted."
 			},
 			"advanced": "Advanced",
 			"target": "Target",
@@ -2293,8 +2316,6 @@
 		"known_issues": "Known Issues",
 		"bug_report": "Report a bug or Request a feature",
 		"sim_options": "Sim Options",
-		"discord": "Join us on Discord",
-		"patreon": "Support us on Patreon",
 		"github": "Contribute on GitHub",
 		"status": {
 			"unlaunched": "This sim is a WORK IN PROGRESS. It is not fully developed and should not be used for general purposes.",

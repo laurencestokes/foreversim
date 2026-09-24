@@ -4,8 +4,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
@@ -73,12 +73,12 @@ func (rogue *Rogue) registerMurder() {
 		return
 	}
 
+	// 14158 is MOD_DAMAGE_DONE_VERSUS on creature mask 80, Humanoid and Giant, with no crit damage part.
 	multiplier := spellData.Murder.MultiplierAt(rogue.Talents.Murder)
 	rogue.Env.RegisterPostFinalizeEffect(func() {
 		for _, at := range rogue.AttackTables {
-			if slices.Contains([]proto.MobType{proto.MobType_MobTypeHumanoid, proto.MobType_MobTypeGiant, proto.MobType_MobTypeBeast, proto.MobType_MobTypeDragonkin}, at.Defender.MobType) {
+			if slices.Contains([]proto.MobType{proto.MobType_MobTypeHumanoid, proto.MobType_MobTypeGiant}, at.Defender.MobType) {
 				at.DamageDealtMultiplier *= multiplier
-				at.CritMultiplier *= multiplier
 			}
 		}
 	})
@@ -89,17 +89,17 @@ func (rogue *Rogue) registerPuncturingWounds() {
 		return
 	}
 
-	// Effect 1 is the combo point trigger, handled in backstab.go. The two crit modifiers share
-	// an aura and misc pair, so each has to be named by index: 0 is Backstab, 2 is Mutilate.
+	// Effect 2 is the combo point trigger, handled in backstab.go. The two crit modifiers share
+	// an aura and misc pair, so each has to be named by position: 1 is Backstab, 3 is Mutilate.
 	rogue.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_BonusCrit_Percent,
 		ClassMask:  RogueSpellBackstab,
-		FloatValue: spellData.PuncturingWounds.EffectAt(0).ValueAt(rogue.Talents.PuncturingWounds),
+		FloatValue: spellData.PuncturingWounds.EffectAt(1).ValueAt(rogue.Talents.PuncturingWounds),
 	})
 	rogue.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_BonusCrit_Percent,
 		ClassMask:  RogueSpellMutilate | RogueSpellMutilateHit,
-		FloatValue: spellData.PuncturingWounds.EffectAt(2).ValueAt(rogue.Talents.PuncturingWounds),
+		FloatValue: spellData.PuncturingWounds.EffectAt(3).ValueAt(rogue.Talents.PuncturingWounds),
 	})
 }
 
@@ -113,13 +113,13 @@ func (rogue *Rogue) registerImprovedExposeArmor() {
 	rogue.AddStaticMod(core.SpellModConfig{
 		Kind:      core.SpellMod_PowerCost_Flat,
 		ClassMask: RogueSpellExposeArmor,
-		IntValue:  int32(spellData.ImprovedExposeArmor.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_COST).ValueAt(rogue.Talents.ImprovedExposeArmor)),
+		IntValue:  int32(spellData.ImprovedExposeArmor.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).ValueAt(rogue.Talents.ImprovedExposeArmor)),
 	})
 
 	// A dummy aura so the APL can ask whether the talent is taken.
 	core.MakePermanent(rogue.RegisterAura(core.Aura{
 		Label:    "Improved Expose Armor",
-		ActionID: core.ActionID{SpellID: spellData.ImprovedExposeArmor.HighestRank().SpellID},
+		ActionID: core.ActionID{SpellID: spellData.ImprovedExposeArmor.Highest().ID},
 	}))
 }
 
@@ -143,7 +143,7 @@ func (rogue *Rogue) registerVilePoisons() {
 	rogue.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DamageDone_Flat,
 		ClassMask:  RogueSpellPoisons,
-		FloatValue: spellData.VilePoisons.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DAMAGE).FractionAt(rogue.Talents.VilePoisons),
+		FloatValue: spellData.VilePoisons.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(rogue.Talents.VilePoisons),
 	})
 }
 
@@ -152,8 +152,8 @@ func (rogue *Rogue) registerColdBlood() {
 		return
 	}
 
-	coldBloodRank := spellData.ColdBlood.HighestRank()
-	actionID := core.ActionID{SpellID: coldBloodRank.SpellID}
+	coldBloodRank := spellData.ColdBlood.Highest()
+	actionID := core.ActionID{SpellID: coldBloodRank.ID}
 
 	cbAura := rogue.GetOrRegisterAura(core.Aura{
 		Label:    "Cold Blood",
@@ -161,14 +161,14 @@ func (rogue *Rogue) registerColdBlood() {
 		Duration: core.NeverExpires,
 
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if spell.Matches(RogueSpellActives) {
+			if spell.Matches(RogueSpellColdBlooded) {
 				aura.Deactivate(sim)
 			}
 		},
 	}).AttachSpellMod(core.SpellModConfig{
 		Kind:       core.SpellMod_BonusCrit_Percent,
-		ClassMask:  RogueSpellActives,
-		FloatValue: coldBloodRank.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_CRITICAL_CHANCE).Value,
+		ClassMask:  RogueSpellColdBlooded,
+		FloatValue: coldBloodRank.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CRITICAL_CHANCE)).Average(core.CharacterLevel),
 	})
 
 	rogue.ColdBlood = rogue.GetOrRegisterSpell(core.SpellConfig{
@@ -179,7 +179,7 @@ func (rogue *Rogue) registerColdBlood() {
 		Cast: core.CastConfig{
 			CD: core.Cooldown{
 				Timer:    rogue.NewTimer(),
-				Duration: coldBloodRank.Cooldown,
+				Duration: max(coldBloodRank.Cooldown(), coldBloodRank.CategoryCooldown()),
 			},
 			IgnoreHaste: true,
 		},
@@ -204,8 +204,8 @@ func (rogue *Rogue) registerSealFate() {
 
 	rogue.MakeProcTriggerAura(core.ProcTrigger{
 		Name:     "Seal Fate Trigger",
-		ActionID: core.ActionID{SpellID: spellData.SealFate.HighestRank().SpellID},
-		// Forever puts the real per-rank chance on the effect; ProcChanceAt reads a flat 100%.
+		ActionID: core.ActionID{SpellID: spellData.SealFate.Highest().ID},
+		// Forever puts the real per-rank chance on the effect; the row's ProcChance reads a flat 100%.
 		ProcChance: spellData.SealFate.FractionAt(rogue.Talents.SealFate),
 		Callback:   core.CallbackOnSpellHitDealt,
 		Outcome:    core.OutcomeCrit,
@@ -219,9 +219,9 @@ func (rogue *Rogue) registerSealFate() {
 
 // Was 34413; Forever reworked Mutilate onto an entirely new set of spell ids, so this
 // follows the highest rank the client actually ships.
-var MutilateSpellID int32 = spellData.Mutilate.HighestRank().SpellID
+var MutilateSpellID int32 = spellData.Mutilate.Highest().ID
 
-var mutilateRank = spellData.Mutilate.BySpellID(MutilateSpellID)
+var mutilateRank = spellData.Mutilate.ByID(MutilateSpellID)
 
 func (rogue *Rogue) registerMutilate() {
 	if !rogue.Talents.Mutilate {
@@ -233,20 +233,20 @@ func (rogue *Rogue) registerMutilate() {
 
 	rogue.Mutilate = rogue.RegisterSpell(core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: MutilateSpellID, Tag: 0},
-		SpellSchool:    mutilateRank.SpellSchool,
-		DefenseType:    mutilateRank.DefenseType,
+		SpellSchool:    mutilateRank.SpellSchool(),
+		DefenseType:    mutilateRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 		ClassSpellMask: RogueSpellMutilate,
 		MaxRange:       core.MaxMeleeRange,
 
 		EnergyCost: core.EnergyCostOptions{
-			Cost:   mutilateRank.Cost,
+			Cost:   int32(mutilateRank.Cost()),
 			Refund: mutilateRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: mutilateRank.GCD,
+				GCD: mutilateRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},
@@ -274,7 +274,7 @@ func (rogue *Rogue) registerMutilate() {
 
 // The client energizes off the rank's own effect, 2 combo points.
 func mutilateComboPoints() int32 {
-	min, _ := mutilateRank.Energize.Range()
+	min := mutilateRank.EnergizeEffect().Average(core.CharacterLevel)
 	return int32(min)
 }
 
@@ -298,15 +298,15 @@ func (rogue *Rogue) newMutilateHitSpell(isMH bool) *core.Spell {
 
 	mutBaseDamage := mutilateFlatDamage[MutilateSpellID]
 	// Every hit rank states the same 75% weapon share.
-	weaponDamage := spellData.MutilateTriggered.EffectAt(1).ValueAt(1) / 100
+	weaponDamage := spellData.MutilateTriggered.EffectAt(2).ValueAt(1) / 100
 	// Mutilate hits harder while one of the rogue's lingering poisons is on the target; the
 	// client states the bonus as a percentage on the parent rank's dummy effect.
-	poisonBonus := spellData.Mutilate.EffectAt(3).ValueAt(mutilateRank.Rank) / 100
+	poisonBonus := mutilateRank.EffectN(4).Average(core.CharacterLevel) / 100
 
 	return rogue.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
-		SpellSchool:    mutilateRank.SpellSchool,
-		DefenseType:    mutilateRank.DefenseType,
+		SpellSchool:    mutilateRank.SpellSchool(),
+		DefenseType:    mutilateRank.DefenseTypeCore(),
 		ProcMask:       procMask,
 		Flags:          core.SpellFlagMeleeMetrics | SpellFlagBuilder,
 		ClassSpellMask: RogueSpellMutilateHit,
@@ -353,11 +353,11 @@ func (rogue *Rogue) registerVenom() {
 		return
 	}
 
-	venomRank := spellData.Venom.HighestRank()
-	actionID := core.ActionID{SpellID: venomRank.SpellID}
+	venomRank := spellData.Venom.Highest()
+	actionID := core.ActionID{SpellID: venomRank.ID}
 
-	damageBonus := venomRank.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DAMAGE).Value / 100
-	chanceBonus := venomRank.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_CHANCE_OF_SUCCESS).Value / 100
+	damageBonus := venomRank.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).Average(core.CharacterLevel) / 100
+	chanceBonus := venomRank.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CHANCE_OF_SUCCESS)).Average(core.CharacterLevel) / 100
 
 	rogue.VenomAura = rogue.RegisterAura(core.Aura{
 		Label:    "Venom",
@@ -383,11 +383,11 @@ func (rogue *Rogue) registerVenom() {
 		ClassSpellMask: RogueSpellVenom,
 
 		EnergyCost: core.EnergyCostOptions{
-			Cost: venomRank.Cost,
+			Cost: int32(venomRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: venomRank.GCD,
+				GCD: venomRank.GCD(),
 			},
 			IgnoreHaste: true,
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {

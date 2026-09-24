@@ -3,6 +3,7 @@ package rogue
 import (
 	"testing"
 
+	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
 	_ "github.com/wowsims/forever/sim/common" // imported to get item effects included.
 	"github.com/wowsims/forever/sim/core"
@@ -97,4 +98,18 @@ var DefaultConsumables = &proto.ConsumesSpec{
 	ConjuredId: 7676,
 	MhImbueId:  26891, // Instant Poison
 	OhImbueId:  27186, // Deadly Poison
+}
+
+// The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
+func TestArena(t *testing.T) {
+	arenalib.Run(t, arenalib.Spec{
+		Dir:         "rogue",
+		UI:          "rogue/dps",
+		Class:       proto.Class_ClassRogue,
+		Race:        proto.Race_RaceHuman,
+		SpecOptions: DefaultOptions,
+		Role:        arenalib.Melee,
+		// Poisons are a rogue ability, not something on the vendor list.
+		ClassImbues: arenalib.ClassImbues{OffHand: 26891}, // Instant Poison
+	})
 }

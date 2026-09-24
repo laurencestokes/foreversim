@@ -3,8 +3,8 @@ package mage
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 // One of each gem is carried and all four share the conjured cooldown, so a small gem that goes off
@@ -13,12 +13,12 @@ import (
 func (mage *Mage) registerManaGems() {
 	gems := []struct {
 		itemID int32
-		row    shared.SpellData
+		row    *spelldata.Spell
 	}{
-		{5514, spellData.ConjureManaAgateTriggered.HighestRank()},
-		{5513, spellData.ConjureManaJadeTriggered.HighestRank()},
-		{8007, spellData.ConjureManaCitrineTriggered.HighestRank()},
-		{8008, spellData.ConjureManaRubyTriggered.HighestRank()},
+		{5514, spellData.ConjureManaAgateTriggered.Highest()},
+		{5513, spellData.ConjureManaJadeTriggered.Highest()},
+		{8007, spellData.ConjureManaCitrineTriggered.Highest()},
+		{8008, spellData.ConjureManaRubyTriggered.Highest()},
 	}
 
 	used := make([]bool, len(gems))
@@ -38,7 +38,7 @@ func (mage *Mage) registerManaGems() {
 	for idx, gem := range gems {
 		actionID := core.ActionID{ItemID: gem.itemID}
 		manaMetrics := mage.NewManaMetrics(actionID)
-		manaGain := gem.row.Energize.Damage(nil)
+		manaGain := gem.row.EnergizeEffect().Average(core.CharacterLevel)
 
 		spell := mage.RegisterSpell(core.SpellConfig{
 			ActionID:       actionID,

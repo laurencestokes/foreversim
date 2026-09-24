@@ -15,7 +15,10 @@ SpellMod implementation.
 */
 
 type SpellModConfig struct {
-	ClassMask         int64
+	ClassMask int64
+	// The client's EffectSpellClassMask: the spells this mod names. A mod that sets both this and
+	// ClassMask applies only to the spells both name.
+	ClassFlags        ClassFlags
 	Kind              SpellModType
 	School            SpellSchool
 	DefenseType       DefenseType // Only apply to spells with a matching DefenseType
@@ -34,6 +37,7 @@ type SpellModConfig struct {
 
 type SpellMod struct {
 	ClassMask      int64
+	ClassFlags     ClassFlags
 	Kind           SpellModType
 	School         SpellSchool
 	DefenseType    DefenseType
@@ -49,6 +53,31 @@ type SpellMod struct {
 	IsActive       bool
 	AffectedSpells []*Spell
 	OnReset        SpellModOnReset
+
+	// The auras this mod has written to, for the kinds that change an aura rather than the spell
+	// pointing at it. One aura is routinely shared by every rank of a family and a class mask names
+	// every rank, so the value would otherwise land on that aura once per rank.
+	touchedAuras []*Aura
+}
+
+// Whether the mod may write to this aura, which it may once until it gives the aura up again.
+func (mod *SpellMod) claimAura(aura *Aura) bool {
+	if slices.Contains(mod.touchedAuras, aura) {
+		return false
+	}
+	mod.touchedAuras = append(mod.touchedAuras, aura)
+	return true
+}
+
+// Whether the mod has written to this aura, giving it up if it has, so that turning the mod on again
+// writes to it again.
+func (mod *SpellMod) releaseAura(aura *Aura) bool {
+	i := slices.Index(mod.touchedAuras, aura)
+	if i < 0 {
+		return false
+	}
+	mod.touchedAuras = slices.Delete(mod.touchedAuras, i, i+1)
+	return true
 }
 
 type SpellModApply func(mod *SpellMod, spell *Spell)
@@ -96,6 +125,7 @@ func buildMod(unit *Unit, config SpellModConfig) *SpellMod {
 
 	mod := &SpellMod{
 		ClassMask:    config.ClassMask,
+		ClassFlags:   config.ClassFlags,
 		Kind:         config.Kind,
 		School:       config.School,
 		DefenseType:  config.DefenseType,
@@ -180,6 +210,10 @@ func shouldApply(spell *Spell, mod *SpellMod) bool {
 	}
 
 	if mod.ClassMask > 0 && !spell.Matches(mod.ClassMask) {
+		return false
+	}
+
+	if !mod.ClassFlags.IsZero() && !spell.MatchesFlags(mod.ClassFlags) {
 		return false
 	}
 
@@ -269,7 +303,7 @@ func (mod *SpellMod) Deactivate() {
 }
 
 // Mod implmentations
-type SpellModType uint32
+type SpellModType uint64
 
 const (
 	// Will multiply the spell.DamageDoneMultiplier. +5% = 0.05
@@ -402,6 +436,25 @@ const (
 	// Will multiply the spell.FlatThreatBonus. +5% = 0.05
 	// Uses FloatValue
 	SpellMod_FlatThreatBonus_Pct
+
+	// Add/subtract duration from every duration the spell has: its dots and hots, its self-buff
+	// and every aura array it is related to. Targets the spell does not have are left alone.
+	// Uses: TimeValue
+	SpellMod_Duration_Flat
+
+	// Add/subtract to the maximum stacks of the spell's self-buff and of the stacking auras in
+	// its aura arrays. Auras that do not stack stay non-stacking.
+	// Uses: IntValue
+	SpellMod_BuffMaxStacks_Flat
+
+	// Add/subtract to the spell's maximum range in yards. Only spells registered with a range
+	// constraint check their range at all, so the mod is inert on the others.
+	// Uses: FloatValue
+	SpellMod_Range_Flat
+
+	// Will add the value to spell.DirectDamageMultiplierAdditive, which only direct hits read.
+	// Uses FloatValue
+	SpellMod_DirectDamageDone_Flat
 )
 
 var spellModMap = map[SpellModType]*SpellModFunctions{
@@ -552,6 +605,27 @@ var spellModMap = map[SpellModType]*SpellModFunctions{
 	SpellMod_FlatThreatBonus_Pct: {
 		Apply:  applyFlatThreatBonusPercent,
 		Remove: removeFlatThreatBonusPercent,
+	},
+
+	SpellMod_Duration_Flat: {
+		Apply:  applyDurationFlat,
+		Remove: removeDurationFlat,
+	},
+
+	SpellMod_BuffMaxStacks_Flat: {
+		Apply:  applyBuffMaxStacksFlat,
+		Remove: removeBuffMaxStacksFlat,
+	},
+
+	SpellMod_Range_Flat: {
+		Apply:  applyRangeFlat,
+		Remove: removeRangeFlat,
+	},
+
+	SpellMod_DirectDamageDone_Flat: {
+		Apply:   applyDirectDamageDoneAdd,
+		Remove:  removeDirectDamageDoneAdd,
+		OnReset: onResetDirectDamageDoneAdd,
 	},
 }
 
@@ -771,7 +845,7 @@ func removeBonusExpertiseRating(mod *SpellMod, spell *Spell) {
 	spell.BonusExpertiseRating -= mod.floatValue
 }
 
-func applyDebuffDurationFlat(mod *SpellMod, spell *Spell) {
+func modDebuffDurationFlat(mod *SpellMod, spell *Spell, value time.Duration, claim func(*Aura) bool) {
 	debuffAuraArray := spell.RelatedAuraArrays[mod.keyValue]
 
 	if debuffAuraArray == nil {
@@ -779,38 +853,37 @@ func applyDebuffDurationFlat(mod *SpellMod, spell *Spell) {
 	}
 
 	for _, debuffAura := range debuffAuraArray {
-		if debuffAura != nil {
-			debuffAura.Duration += mod.timeValue
+		if debuffAura != nil && claim(debuffAura) {
+			debuffAura.Duration += value
 		}
 	}
 }
 
+func applyDebuffDurationFlat(mod *SpellMod, spell *Spell) {
+	modDebuffDurationFlat(mod, spell, mod.timeValue, mod.claimAura)
+}
+
 func removeDebuffDurationFlat(mod *SpellMod, spell *Spell) {
-	debuffAuraArray := spell.RelatedAuraArrays[mod.keyValue]
+	modDebuffDurationFlat(mod, spell, -mod.timeValue, mod.releaseAura)
+}
 
-	if debuffAuraArray == nil {
-		panic("No debuff found for key: " + mod.keyValue)
+// The shared cooldown belongs to the spell rather than to the buff, so every spell the mod names
+// takes it while the buff takes the duration once.
+func modBuffDurationFlat(spell *Spell, value time.Duration, claim func(*Aura) bool) {
+	if spell.SharedCD.Duration != 0 {
+		spell.SharedCD.Duration += value
 	}
-
-	for _, debuffAura := range debuffAuraArray {
-		if debuffAura != nil {
-			debuffAura.Duration -= mod.timeValue
-		}
+	if spell.RelatedSelfBuff != nil && claim(spell.RelatedSelfBuff) {
+		spell.RelatedSelfBuff.Duration += value
 	}
 }
 
 func applyBuffDurationFlat(mod *SpellMod, spell *Spell) {
-	if spell.SharedCD.Duration != 0 {
-		spell.SharedCD.Duration += mod.timeValue
-	}
-	spell.RelatedSelfBuff.Duration += mod.timeValue
+	modBuffDurationFlat(spell, mod.timeValue, mod.claimAura)
 }
 
 func removeBuffDurationFlat(mod *SpellMod, spell *Spell) {
-	if spell.SharedCD.Duration != 0 {
-		spell.SharedCD.Duration -= mod.timeValue
-	}
-	spell.RelatedSelfBuff.Duration -= mod.timeValue
+	modBuffDurationFlat(spell, -mod.timeValue, mod.releaseAura)
 }
 
 func applyModChargesFlat(mod *SpellMod, spell *Spell) {
@@ -947,4 +1020,108 @@ func applyFlatThreatBonusPercent(mod *SpellMod, spell *Spell) {
 
 func removeFlatThreatBonusPercent(mod *SpellMod, spell *Spell) {
 	spell.FlatThreatBonus /= (1 + mod.floatValue)
+}
+
+// A dot belongs to the spell that ticks it, so every spell the mod names takes the value; the auras
+// are shared between the ranks of a family and take it once each.
+func modDurationFlat(spell *Spell, value time.Duration, claim func(*Aura) bool) {
+	for _, dot := range spell.dots {
+		if dot != nil {
+			dot.BaseDurationFlat += value
+		}
+	}
+
+	if spell.aoeDot != nil {
+		spell.aoeDot.BaseDurationFlat += value
+	}
+
+	if spell.RelatedSelfBuff != nil && claim(spell.RelatedSelfBuff) {
+		spell.RelatedSelfBuff.Duration += value
+	}
+
+	for _, auraArray := range spell.RelatedAuraArrays {
+		for _, aura := range auraArray {
+			if aura != nil && claim(aura) {
+				aura.Duration += value
+			}
+		}
+	}
+}
+
+func applyDurationFlat(mod *SpellMod, spell *Spell) {
+	modDurationFlat(spell, mod.timeValue, mod.claimAura)
+}
+
+func removeDurationFlat(mod *SpellMod, spell *Spell) {
+	modDurationFlat(spell, -mod.timeValue, mod.releaseAura)
+}
+
+// An aura the client never gives stacks stays at MaxStacks 0, which is what SetStacks refuses to touch.
+func modBuffMaxStacksFlat(spell *Spell, value int32, claim func(*Aura) bool) {
+	if spell.RelatedSelfBuff != nil && spell.RelatedSelfBuff.MaxStacks > 0 && claim(spell.RelatedSelfBuff) {
+		spell.RelatedSelfBuff.MaxStacks = addBuffMaxStacks(spell.RelatedSelfBuff, value)
+	}
+
+	for _, auraArray := range spell.RelatedAuraArrays {
+		for _, aura := range auraArray {
+			if aura != nil && aura.MaxStacks > 0 && claim(aura) {
+				aura.MaxStacks = addBuffMaxStacks(aura, value)
+			}
+		}
+	}
+}
+
+// Both loops above skip an aura at 0 stacks, so a mod that took one there could not give them back
+// when it is removed. Refusing it keeps apply and remove symmetric, the way applyModChargesFlat does.
+func addBuffMaxStacks(aura *Aura, value int32) int32 {
+	stacks := aura.MaxStacks + value
+	if stacks <= 0 {
+		panic(fmt.Sprintf("Spell mod would leave the aura %s at %d max stacks. Something seems wrong.",
+			aura.Label, stacks))
+	}
+	return stacks
+}
+
+func applyBuffMaxStacksFlat(mod *SpellMod, spell *Spell) {
+	modBuffMaxStacksFlat(spell, mod.intValue, mod.claimAura)
+}
+
+func removeBuffMaxStacksFlat(mod *SpellMod, spell *Spell) {
+	modBuffMaxStacksFlat(spell, -mod.intValue, mod.releaseAura)
+}
+
+// MaxRange 0 is no range check at all, so there is nothing for the mod to move: writing to it would
+// hand the spell a range the client never gave it. A spell that does state one may not be shortened
+// past nothing.
+func applyRangeFlat(mod *SpellMod, spell *Spell) {
+	if spell.MaxRange == 0 {
+		return
+	}
+	if spell.MaxRange+mod.floatValue <= 0 {
+		panic(fmt.Sprintf("Spell mod would leave %s at %0.1f yards of range. Something seems wrong.",
+			spell.ActionID, spell.MaxRange+mod.floatValue))
+	}
+	spell.MaxRange += mod.floatValue
+}
+
+func removeRangeFlat(mod *SpellMod, spell *Spell) {
+	if spell.MaxRange == 0 {
+		return
+	}
+	spell.MaxRange -= mod.floatValue
+}
+
+func applyDirectDamageDoneAdd(mod *SpellMod, spell *Spell) {
+	spell.DirectDamageMultiplierAdditive += mod.floatValue
+}
+
+func removeDirectDamageDoneAdd(mod *SpellMod, spell *Spell) {
+	spell.DirectDamageMultiplierAdditive -= mod.floatValue
+}
+
+// Required to round floating point errors that might leak between iterations
+func onResetDirectDamageDoneAdd(mod *SpellMod) {
+	for _, spell := range mod.AffectedSpells {
+		spell.DirectDamageMultiplierAdditive = math.Round(spell.DirectDamageMultiplierAdditive*10000) / 10000
+	}
 }

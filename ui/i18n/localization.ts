@@ -1,4 +1,5 @@
 import {
+	AreaType,
 	ArmorType,
 	ItemQuality,
 	ItemSlot,
@@ -23,6 +24,7 @@ import i18n from './config';
 import {
 	aplItemLabelI18nKeys,
 	classNameToClassKey,
+	getAreaTypeI18nKey,
 	getArmorTypeI18nKey,
 	getBulkSlotI18nKey,
 	getClassI18nKey,
@@ -92,6 +94,12 @@ export const translateSpellSchool = (spellSchool: SpellSchool): string => {
 export const translateMobType = (mobType: MobType): string => {
 	return i18n.t(`common.mob_types.${getMobTypeI18nKey(mobType)}`, {
 		defaultValue: MobType[mobType],
+	});
+};
+
+export const translateAreaType = (areaType: AreaType): string => {
+	return i18n.t(`common.area_types.${getAreaTypeI18nKey(areaType)}`, {
+		defaultValue: AreaType[areaType],
 	});
 };
 

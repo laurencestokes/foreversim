@@ -26,5 +26,5 @@
 		}
 	},
 	"include": ["."],
-	"exclude": ["node_modules", "dist", "binary_dist", ".history", "ui/generated/proto/*"]
+	"exclude": ["node_modules", "dist", "binary_dist", ".history", "ui/generated/proto/*", ".vscode/extensions/wowsims-spelldata", "tools/vscode-spelldata"]
 }

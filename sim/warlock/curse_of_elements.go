@@ -9,7 +9,7 @@ import (
 // does. Malediction is no longer a bonus on the curse - the beta client makes it a flat damage
 // modifier on the warlock's own spells - so no ranks are passed in.
 func (warlock *Warlock) registerCurseOfElements() {
-	rank := spellData.CurseOfTheElements.HighestRank()
+	rank := spellData.CurseOfTheElements.Highest()
 
 	// Untagged (caster 0), not tagged with our raid index: the APLs ask for aura 27228 on the target,
 	// which only an untagged aura answers. Tagged, every warlock but the raid's first never saw its
@@ -20,17 +20,17 @@ func (warlock *Warlock) registerCurseOfElements() {
 	})
 
 	warlock.CurseOfElements = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellCurseOfElements,
 
-		ManaCost: core.ManaCostOptions{FlatCost: rank.Cost},
+		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: rank.GCD,
+				GCD: rank.GCD(),
 			},
 		},
 

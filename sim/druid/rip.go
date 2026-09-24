@@ -1,12 +1,11 @@
 package druid
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 )
 
-var ripRank = spellData.Rip.HighestRank()
-var ripTick = ripRank.Periodic.(shared.SpellDataPeriodic)
+var ripRank = spellData.Rip.Highest()
+var ripTick = ripRank.PeriodicEffect()
 
 // The per-combo-point damage and the attack power share are not in the generated table - the client
 // states the tick base only - so they stay the sim's client-read values: 25.5 a point a tick at rank
@@ -15,21 +14,21 @@ const ripTickPerComboPoint = 25.5
 
 func (druid *Druid) registerRipSpell() {
 	druid.Rip = druid.RegisterSpell(Cat, core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: ripRank.SpellID},
-		SpellSchool:    ripRank.SpellSchool,
-		DefenseType:    ripRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: ripRank.ID},
+		SpellSchool:    ripRank.SpellSchool(),
+		DefenseType:    ripRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		ClassSpellMask: DruidSpellRip,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		Rank:           ripRank.Rank,
+		Rank:           ripRank.RankNumber(),
 
 		EnergyCost: core.EnergyCostOptions{
-			Cost:   ripRank.Cost,
+			Cost:   int32(ripRank.Cost()),
 			Refund: ripRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: ripRank.GCD,
+				GCD: ripRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},
@@ -45,15 +44,15 @@ func (druid *Druid) registerRipSpell() {
 			Aura: core.Aura{
 				Label: "Rip",
 			},
-			NumberOfTicks: ripTick.NumberOfTicks,
-			TickLength:    ripTick.TickLength,
+			NumberOfTicks: int32(ripRank.Duration() / ripTick.Period()),
+			TickLength:    ripTick.Period(),
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 				dot.SnapshotPhysical(target, ripTickDamage(float64(druid.ComboPoints()), dot.Spell.MeleeAttackPower(target)))
 				druid.UpdateBleedPower(druid.Rip, sim, target, true, true)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, shared.PeriodicTickOutcome(ripRank, dot))
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, periodicTickOutcome(ripRank, dot))
 			},
 		},
 
@@ -87,7 +86,7 @@ func (druid *Druid) registerRipSpell() {
 }
 
 func ripTickDamage(comboPoints float64, attackPower float64) float64 {
-	return ripTick.Tick + ripTickPerComboPoint*comboPoints + 0.01*min(comboPoints, 4)*attackPower
+	return ripTick.Average(core.CharacterLevel) + ripTickPerComboPoint*comboPoints + 0.01*min(comboPoints, 4)*attackPower
 }
 
 func (druid *Druid) CurrentRipCost() float64 {

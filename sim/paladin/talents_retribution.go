@@ -60,7 +60,7 @@ func (paladin *Paladin) applyBenediction() {
 	}
 
 	paladin.AddStaticMod(core.SpellModConfig{
-		ClassMask:  SpellMaskInstantSpells,
+		ClassMask:  SpellMaskBenediction,
 		Kind:       core.SpellMod_PowerCost_Pct_Add,
 		FloatValue: spellData.Benediction.FractionAt(paladin.Talents.Benediction),
 	})
@@ -297,8 +297,10 @@ func (paladin *Paladin) applyVengeance() {
 	row := spellData.VengeanceTriggered.HighestRank()
 	perStack := spellData.Vengeance.FractionAt(paladin.Talents.Vengeance)
 
+	// 20050 is damage done (A79), which never raises a heal.
 	damageMod := paladin.AddDynamicMod(core.SpellModConfig{
 		School:     core.SpellSchoolHoly | core.SpellSchoolPhysical,
+		ProcMask:   ^core.ProcMaskSpellHealing,
 		Kind:       core.SpellMod_DamageDone_Pct,
 		FloatValue: perStack,
 	})

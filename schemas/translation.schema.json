@@ -47,13 +47,10 @@
 						},
 						"expansion": {
 							"type": "string"
-						},
-						"supportDevs": {
-							"type": "string"
 						}
 					},
 					"additionalProperties": false,
-					"required": ["wowsims", "expansion", "supportDevs"]
+					"required": ["wowsims", "expansion"]
 				}
 			},
 			"additionalProperties": false,
@@ -229,6 +226,58 @@
 					},
 					"additionalProperties": false,
 					"required": ["unknown", "beast", "demon", "dragonkin", "elemental", "giant", "humanoid", "mechanical", "undead"]
+				},
+				"area_types": {
+					"type": "object",
+					"properties": {
+						"unknown": {
+							"type": "string"
+						},
+						"forest_grassland": {
+							"type": "string"
+						},
+						"mountainous": {
+							"type": "string"
+						},
+						"snowy": {
+							"type": "string"
+						},
+						"desert": {
+							"type": "string"
+						},
+						"swamp": {
+							"type": "string"
+						},
+						"wasteland": {
+							"type": "string"
+						},
+						"haunted": {
+							"type": "string"
+						},
+						"cavernous": {
+							"type": "string"
+						},
+						"volcanic": {
+							"type": "string"
+						},
+						"strongholds_cities": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false,
+					"required": [
+						"unknown",
+						"forest_grassland",
+						"mountainous",
+						"snowy",
+						"desert",
+						"swamp",
+						"wasteland",
+						"haunted",
+						"cavernous",
+						"volcanic",
+						"strongholds_cities"
+					]
 				},
 				"sources": {
 					"type": "object",
@@ -971,6 +1020,7 @@
 				"tanks",
 				"status",
 				"mob_types",
+				"area_types",
 				"sources",
 				"raids",
 				"armor_types",
@@ -1052,15 +1102,12 @@
 						"contribute_message": {
 							"type": "string"
 						},
-						"discord_message": {
-							"type": "string"
-						},
 						"old_sim_message": {
 							"type": "string"
 						}
 					},
 					"additionalProperties": false,
-					"required": ["title", "contribute_message", "discord_message", "old_sim_message"]
+					"required": ["title", "contribute_message", "old_sim_message"]
 				},
 				"notifications": {
 					"type": "object",
@@ -2844,6 +2891,44 @@
 							"additionalProperties": false,
 							"required": ["label", "tooltip"]
 						},
+						"zone": {
+							"type": "object",
+							"properties": {
+								"label": {
+									"type": "string"
+								},
+								"tooltip": {
+									"type": "string"
+								}
+							},
+							"additionalProperties": false,
+							"required": ["label", "tooltip"]
+						},
+						"area_types": {
+							"type": "object",
+							"properties": {
+								"label": {
+									"type": "string"
+								},
+								"empty": {
+									"type": "string"
+								},
+								"open": {
+									"type": "string"
+								},
+								"placeholder": {
+									"type": "string"
+								},
+								"remove": {
+									"type": "string"
+								},
+								"tooltip": {
+									"type": "string"
+								}
+							},
+							"additionalProperties": false,
+							"required": ["label", "placeholder", "empty", "open", "remove", "tooltip"]
+						},
 						"advanced": {
 							"type": "string"
 						},
@@ -3034,6 +3119,8 @@
 						"execute_duration_45",
 						"duration_below_high_hp",
 						"encounter_preset",
+						"zone",
+						"area_types",
 						"advanced",
 						"target",
 						"num_allies",
@@ -8098,12 +8185,6 @@
 				"sim_options": {
 					"type": "string"
 				},
-				"discord": {
-					"type": "string"
-				},
-				"patreon": {
-					"type": "string"
-				},
 				"github": {
 					"type": "string"
 				},
@@ -8209,7 +8290,7 @@
 				}
 			},
 			"additionalProperties": false,
-			"required": ["known_issues", "bug_report", "sim_options", "discord", "patreon", "github", "status", "options"]
+			"required": ["known_issues", "bug_report", "sim_options", "github", "status", "options"]
 		},
 		"sidebar": {
 			"type": "object",

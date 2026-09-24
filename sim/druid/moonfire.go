@@ -1,12 +1,11 @@
 package druid
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 )
 
-var moonfireRank = spellData.Moonfire.HighestRank()
-var moonfireTick = moonfireRank.Periodic.(shared.SpellDataPeriodic)
+var moonfireRank = spellData.Moonfire.Highest()
+var moonfireTick = moonfireRank.PeriodicEffect()
 
 func (druid *Druid) registerMoonfireSpell() {
 	druid.registerMoonfireImpactSpell()
@@ -15,9 +14,9 @@ func (druid *Druid) registerMoonfireSpell() {
 
 func (druid *Druid) registerMoonfireDoTSpell() {
 	druid.Moonfire.RelatedDotSpell = druid.Unit.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: moonfireRank.SpellID}.WithTag(1),
-		SpellSchool:    moonfireRank.SpellSchool,
-		DefenseType:    moonfireRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: moonfireRank.ID}.WithTag(1),
+		SpellSchool:    moonfireRank.SpellSchool(),
+		DefenseType:    moonfireRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		ClassSpellMask: DruidSpellMoonfireDoT,
 		Flags:          core.SpellFlagPassiveSpell,
@@ -29,16 +28,16 @@ func (druid *Druid) registerMoonfireDoTSpell() {
 			Aura: core.Aura{
 				Label: "Moonfire",
 			},
-			NumberOfTicks:       moonfireTick.NumberOfTicks,
-			TickLength:          moonfireTick.TickLength,
+			NumberOfTicks:       int32(moonfireRank.Duration() / moonfireTick.Period()),
+			TickLength:          moonfireTick.Period(),
 			AffectedByCastSpeed: false,
-			BonusCoefficient:    moonfireTick.Coef,
+			BonusCoefficient:    moonfireTick.Coeff(),
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, moonfireTick.Tick)
+				dot.Snapshot(target, moonfireTick.Average(core.CharacterLevel))
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, shared.PeriodicTickOutcome(moonfireRank, dot))
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, periodicTickOutcome(moonfireRank, dot))
 			},
 		},
 
@@ -53,30 +52,30 @@ func (druid *Druid) registerMoonfireDoTSpell() {
 
 func (druid *Druid) registerMoonfireImpactSpell() {
 	druid.Moonfire = druid.RegisterSpell(Humanoid|Moonkin, core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: moonfireRank.SpellID},
-		SpellSchool:    moonfireRank.SpellSchool,
-		DefenseType:    moonfireRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: moonfireRank.ID},
+		SpellSchool:    moonfireRank.SpellSchool(),
+		DefenseType:    moonfireRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		ClassSpellMask: DruidSpellMoonfireInitial,
 		Flags:          core.SpellFlagAPL,
-		Rank:           moonfireRank.Rank,
+		Rank:           moonfireRank.RankNumber(),
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: moonfireRank.Cost,
+			FlatCost: int32(moonfireRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: moonfireRank.GCD,
+				GCD: moonfireRank.GCD(),
 			},
 		},
 
-		BonusCoefficient: moonfireRank.Direct.BonusCoefficient(),
+		BonusCoefficient: moonfireRank.DamageEffect().Coeff(),
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		MaxRange:         moonfireRank.MaxRange,
+		MaxRange:         float64(moonfireRank.MaxRange),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, moonfireRank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			result := spell.CalcDamage(sim, target, moonfireRank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 
 			if result.Landed() {
 				druid.Moonfire.RelatedDotSpell.Cast(sim, target)

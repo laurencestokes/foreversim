@@ -8,11 +8,11 @@ import (
 // the row's Direct is nil and the damage is read off the effect. The 0.214 coefficient is ours: the
 // client states none for a leech.
 func (warlock *Warlock) registerDeathCoil() {
-	rank := spellData.DeathCoil.HighestRank()
-	baseDamage := spellData.DeathCoil.EffectAt(0).ValueAt(rank.Rank)
+	rank := spellData.DeathCoil.Highest()
+	baseDamage := rank.EffectN(1).Average(core.CharacterLevel)
 
 	healingSpell := warlock.GetOrRegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: rank.SpellID}.WithTag(1),
+		ActionID:    core.ActionID{SpellID: rank.ID}.WithTag(1),
 		SpellSchool: core.SpellSchoolPhysical,
 		ProcMask:    core.ProcMaskSpellHealing,
 		Flags:       core.SpellFlagPassiveSpell | core.SpellFlagHelpful,
@@ -22,23 +22,23 @@ func (warlock *Warlock) registerDeathCoil() {
 	})
 
 	warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.SpellID},
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL | core.SpellFlagBinary,
 		ClassSpellMask: WarlockSpellDeathCoil,
-		MissileSpeed:   rank.MissileSpeed,
-		MaxRange:       rank.MaxRange,
+		MissileSpeed:   float64(rank.Speed),
+		MaxRange:       float64(rank.MaxRange),
 
-		ManaCost: core.ManaCostOptions{FlatCost: rank.Cost},
+		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: rank.GCD,
+				GCD: rank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    warlock.NewTimer(),
-				Duration: rank.Cooldown,
+				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
 			},
 		},
 

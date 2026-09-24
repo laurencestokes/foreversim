@@ -5,31 +5,31 @@ import (
 )
 
 func (warrior *Warrior) registerExecute() {
-	executeRank := spellData.Execute.HighestRank()
+	executeRank := spellData.Execute.Highest()
 	// TODO: The dummy effect carries the base damage; Execute has no Direct role, and both of its
 	// effects share the aura/misc pair Effect() selects on.
-	executeBaseDamage := executeRank.Effects[0].Value
+	executeBaseDamage := executeRank.EffectN(1).Average(core.CharacterLevel)
 	// The tooltip's $*10;F1: the dummy's chain amplitude, times 10, per extra point of rage.
-	executeDamagePerRage := executeRank.Effects[0].ChainAmplitude * 10
+	executeDamagePerRage := float64(executeRank.EffectN(1).ChainAmp) * 10
 
 	var rageMetrics *core.ResourceMetrics
 
 	spell := warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: executeRank.SpellID},
-		SpellSchool:    executeRank.SpellSchool,
-		DefenseType:    executeRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: executeRank.ID},
+		SpellSchool:    executeRank.SpellSchool(),
+		DefenseType:    executeRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 		ClassSpellMask: SpellMaskExecute,
 		MaxRange:       core.MaxMeleeRange,
 
 		RageCost: core.RageCostOptions{
-			Cost:   executeRank.Cost,
+			Cost:   int32(executeRank.Cost()),
 			Refund: executeRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: executeRank.GCD,
+				GCD: executeRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},

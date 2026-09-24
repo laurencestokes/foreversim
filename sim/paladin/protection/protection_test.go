@@ -3,6 +3,7 @@ package protection
 import (
 	"testing"
 
+	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common" // imported to get item effects included.
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
@@ -102,4 +103,17 @@ var DefaultConsumables = &proto.ConsumesSpec{
 	FlaskId: 22854,
 	FoodId:  27658,
 	PotId:   22838,
+}
+
+// The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
+func TestArena(t *testing.T) {
+	arenalib.Run(t, arenalib.Spec{
+		Dir:         "protection_paladin",
+		UI:          "paladin/protection",
+		Class:       proto.Class_ClassPaladin,
+		Race:        proto.Race_RaceHuman,
+		SpecOptions: DefaultOptions,
+		Role:        arenalib.Melee,
+		IsTank:      true,
+	})
 }

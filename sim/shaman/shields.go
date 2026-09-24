@@ -98,27 +98,27 @@ func (shaman *Shaman) registerWaterShieldSpell() {
 	})
 }
 
-var lightningShieldRank = spellData.LightningShield.HighestRank()
+var lightningShieldRank = spellData.LightningShield.Highest()
 
 // The shield spell itself carries no damage (its Direct row is the placeholder 1 with a 0 coefficient);
 // the orb that fires is a separate spell, and rank 7's is 26363.
-var lightningShieldOrb = spellData.LightningShieldTriggered.BySpellID(26363)
+var lightningShieldOrb = spellData.LightningShieldTriggered.ByID(26363)
 
 func (shaman *Shaman) registerLightningShieldSpell() {
-	actionID := core.ActionID{SpellID: lightningShieldRank.SpellID}
+	actionID := core.ActionID{SpellID: lightningShieldRank.ID}
 
 	lsDamage := shaman.RegisterSpell(core.SpellConfig{
-		ActionID:         core.ActionID{SpellID: lightningShieldOrb.SpellID},
-		SpellSchool:      lightningShieldOrb.SpellSchool,
-		DefenseType:      lightningShieldOrb.DefenseType,
+		ActionID:         core.ActionID{SpellID: lightningShieldOrb.ID},
+		SpellSchool:      lightningShieldOrb.SpellSchool(),
+		DefenseType:      lightningShieldOrb.DefenseTypeCore(),
 		ProcMask:         core.ProcMaskEmpty,
 		Flags:            SpellFlagShamanSpell | core.SpellFlagPassiveSpell,
 		ClassSpellMask:   SpellMaskLightningShield,
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		BonusCoefficient: lightningShieldOrb.Direct.BonusCoefficient(),
+		BonusCoefficient: lightningShieldOrb.DamageEffect().Coeff(),
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			baseDamage := lightningShieldOrb.Direct.Damage(sim)
+			baseDamage := lightningShieldOrb.DamageEffect().Average(core.CharacterLevel)
 			spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMagicHitAndCrit)
 		},
 	})
@@ -126,8 +126,8 @@ func (shaman *Shaman) registerLightningShieldSpell() {
 	shaman.LightningShieldAura = shaman.RegisterAura(core.Aura{
 		Label:     "Lightning Shield",
 		ActionID:  actionID,
-		Duration:  lightningShieldRank.Duration,
-		MaxStacks: lightningShieldRank.ProcCharges,
+		Duration:  lightningShieldRank.Duration(),
+		MaxStacks: int32(lightningShieldRank.ProcCharges),
 	}).AttachProcTrigger(core.ProcTrigger{
 		Name:           "Lightning Shield Trigger",
 		Callback:       core.CallbackOnSpellHitTaken,
@@ -145,17 +145,17 @@ func (shaman *Shaman) registerLightningShieldSpell() {
 		DefenseType: core.DefenseTypeMagic,
 		Flags:       core.SpellFlagAPL | SpellFlagInstant,
 		ManaCost: core.ManaCostOptions{
-			FlatCost: lightningShieldRank.Cost,
+			FlatCost: int32(lightningShieldRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: lightningShieldRank.GCD,
+				GCD: lightningShieldRank.GCD(),
 			},
 		},
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			shaman.deactivateShields(sim)
 			shaman.LightningShieldAura.Activate(sim)
-			shaman.LightningShieldAura.SetStacks(sim, lightningShieldRank.ProcCharges)
+			shaman.LightningShieldAura.SetStacks(sim, int32(lightningShieldRank.ProcCharges))
 		},
 		RelatedSelfBuff: shaman.LightningShieldAura,
 	})

@@ -42,7 +42,8 @@
 		}
 	},
 	"[go]": {
-		"editor.defaultFormatter": "golang.go"
+		"editor.defaultFormatter": "golang.go",
+		"editor.hover.above": false
 	},
 	"[json]": {
 		"editor.formatOnSave": false,
@@ -151,5 +152,6 @@
 		"tinsert",
 		"UIParent"
 	],
-	"makefile.configureOnOpen": false
+	"makefile.configureOnOpen": false,
+	"wowsims-spelldata.goBinary": "/usr/local/go/bin/go"
 }

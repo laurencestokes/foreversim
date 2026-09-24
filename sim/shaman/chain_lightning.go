@@ -1,8 +1,8 @@
 package shaman
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 var ChainLightningRankMap = spellData.ChainLightning
@@ -10,33 +10,33 @@ var ChainLightningRankMap = spellData.ChainLightning
 func (shaman *Shaman) registerChainLightningSpell() {
 	maxHits := min(3, shaman.Env.TotalTargetCount())
 	sharedCDTimer := shaman.NewTimer()
-	shaman.ChainLightningOverloads = make(map[int32][]*core.Spell, len(ChainLightningRankMap))
-	ChainLightningRankMap.RegisterAll(func(config shared.SpellData) {
-		shaman.newChainLightningSpell(config, false, sharedCDTimer)
+	shaman.ChainLightningOverloads = make(map[int32][]*core.Spell, ChainLightningRankMap.Len())
+	ChainLightningRankMap.Each(func(rank int32, config *spelldata.Spell) {
+		shaman.newChainLightningSpell(config, rank, false, sharedCDTimer)
 		for range maxHits {
-			shaman.ChainLightningOverloads[config.Rank] = append(shaman.ChainLightningOverloads[config.Rank], shaman.newChainLightningSpell(config, true, nil))
+			shaman.ChainLightningOverloads[rank] = append(shaman.ChainLightningOverloads[rank], shaman.newChainLightningSpell(config, rank, true, nil))
 		}
 	})
 }
 
-func (shaman *Shaman) newChainLightningSpell(config shared.SpellData, isElementalOverload bool, sharedCDTimer *core.Timer) *core.Spell {
+func (shaman *Shaman) newChainLightningSpell(config *spelldata.Spell, rank int32, isElementalOverload bool, sharedCDTimer *core.Timer) *core.Spell {
 	shamConfig := ShamSpellConfig{
-		ActionID:            core.ActionID{SpellID: config.SpellID},
-		Rank:                config.Rank,
+		ActionID:            core.ActionID{SpellID: config.ID},
+		Rank:                rank,
 		IsElementalOverload: isElementalOverload,
-		BaseFlatCost:        config.Cost,
-		BonusCoefficient:    config.Direct.BonusCoefficient(),
+		BaseFlatCost:        int32(config.Cost()),
+		BonusCoefficient:    config.DamageEffect().Coeff(),
 		SpellSchool:         core.SpellSchoolNature,
 		Overloads:           shaman.ChainLightningOverloads,
 		BounceReduction:     0.7,
 		ClassSpellMask:      core.TernaryInt64(isElementalOverload, SpellMaskChainLightningOverload, SpellMaskChainLightning),
-		BaseCastTime:        config.CastTime,
+		BaseCastTime:        config.CastTime(),
 	}
 	spellConfig := shaman.newElectricSpellConfig(shamConfig)
 	if !isElementalOverload {
 		spellConfig.Cast.CD = core.Cooldown{
 			Timer:    sharedCDTimer,
-			Duration: config.Cooldown,
+			Duration: max(config.Cooldown(), config.CategoryCooldown()),
 		}
 	}
 	maxHits := int32(3)
@@ -51,7 +51,7 @@ func (shaman *Shaman) newChainLightningSpell(config shared.SpellData, isElementa
 		numHits := min(maxHits, shaman.Env.ActiveTargetCount())
 		results := make([]*core.SpellResult, numHits)
 		for hitIndex := range numHits {
-			baseDamage := config.Direct.Damage(sim)
+			baseDamage := config.DamageEffect().Average(core.CharacterLevel)
 			results[hitIndex] = spell.CalcDamage(sim, curTarget, baseDamage, spell.OutcomeMagicHitAndCrit)
 
 			curTarget = sim.Environment.NextActiveTargetUnit(curTarget)
@@ -60,7 +60,7 @@ func (shaman *Shaman) newChainLightningSpell(config shared.SpellData, isElementa
 
 		for hitIndex := range numHits {
 			if !isElementalOverload && results[hitIndex].Landed() && sim.Proc(shaman.GetOverloadChance()/3, "Chain Lightning Elemental Overload") {
-				shamConfig.Overloads[config.Rank][hitIndex].Cast(sim, results[hitIndex].Target)
+				shamConfig.Overloads[rank][hitIndex].Cast(sim, results[hitIndex].Target)
 			}
 			spell.DealDamage(sim, results[hitIndex])
 			spell.DamageMultiplier /= bounce

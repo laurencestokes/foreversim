@@ -2,19 +2,20 @@ package warrior
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
 func (warrior *Warrior) registerBloodrage() {
-	bloodrageRank := spellData.Bloodrage.HighestRank()
-	bloodrageOverTime := spellData.BloodrageTriggered.HighestRank().Energize.AsPeriodic()
+	bloodrageRank := spellData.Bloodrage.Highest()
+	bloodrageOverTime := spellData.BloodrageTriggered.Highest()
 
-	actionID := core.ActionID{SpellID: bloodrageRank.SpellID}
+	actionID := core.ActionID{SpellID: bloodrageRank.ID}
 	rageMetrics := warrior.NewRageMetrics(actionID)
-	healthCost := warrior.GetBaseStats()[stats.Health] * bloodrageRank.PowerCostPct / 100
+	healthCost := warrior.GetBaseStats()[stats.Health] * float64(bloodrageRank.Power(dbcenums.POWER_HEALTH).CostPct) / 100
 	improvedBloodrage := spellData.ImprovedBloodrage.MultiplierAt(warrior.Talents.ImprovedBloodrage)
-	instantRage := spellData.Bloodrage.EffectAt(0).TenthsAt(1) * improvedBloodrage
-	ragePerTick := bloodrageOverTime.Tenths() * improvedBloodrage
+	instantRage := spellData.Bloodrage.EffectAt(1).TenthsAt(1) * improvedBloodrage
+	ragePerTick := bloodrageOverTime.PeriodicEffect().Tenths() * improvedBloodrage
 
 	spell := warrior.RegisterSpell(core.SpellConfig{
 		ActionID: actionID,
@@ -25,7 +26,7 @@ func (warrior *Warrior) registerBloodrage() {
 			},
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: bloodrageRank.Cooldown,
+				Duration: cooldownOf(bloodrageRank),
 			},
 		},
 
@@ -34,8 +35,8 @@ func (warrior *Warrior) registerBloodrage() {
 			warrior.RemoveHealth(sim, healthCost)
 
 			core.StartPeriodicAction(sim, core.PeriodicActionOptions{
-				NumTicks: int(bloodrageOverTime.NumberOfTicks),
-				Period:   bloodrageOverTime.TickLength,
+				NumTicks: int(bloodrageOverTime.Duration() / bloodrageOverTime.PeriodicEffect().Period()),
+				Period:   bloodrageOverTime.PeriodicEffect().Period(),
 				OnAction: func(sim *core.Simulation) {
 					warrior.AddRage(sim, ragePerTick, rageMetrics)
 				},

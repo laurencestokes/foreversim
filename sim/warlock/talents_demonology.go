@@ -1,8 +1,8 @@
 package warlock
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
@@ -51,7 +51,7 @@ func (warlock *Warlock) applyImprovedImp() {
 
 	warlock.Imp.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.ImprovedImp.EffectAt(1).FractionAt(warlock.Talents.ImprovedImp),
+		FloatValue: spellData.ImprovedImp.EffectAt(2).FractionAt(warlock.Talents.ImprovedImp),
 		ClassMask:  WarlockSpellImpFireBolt,
 	})
 }
@@ -62,7 +62,7 @@ func (warlock *Warlock) applyDemonicEmbrace() {
 		return
 	}
 
-	warlock.MultiplyStat(stats.Stamina, spellData.DemonicEmbrace.EffectAt(0).MultiplierAt(warlock.Talents.DemonicEmbrace))
+	warlock.MultiplyStat(stats.Stamina, spellData.DemonicEmbrace.EffectAt(1).MultiplierAt(warlock.Talents.DemonicEmbrace))
 }
 
 // 2% more pet damage a point (18769).
@@ -83,7 +83,7 @@ func (warlock *Warlock) applyFelVitality() {
 		return
 	}
 
-	multiplier := spellData.FelVitality.EffectAt(0).MultiplierAt(warlock.Talents.FelVitality)
+	multiplier := spellData.FelVitality.EffectAt(1).MultiplierAt(warlock.Talents.FelVitality)
 	warlock.MultiplyStat(stats.Mana, multiplier)
 	for _, pet := range warlock.BasePets {
 		pet.MultiplyStat(stats.Health, multiplier)
@@ -99,7 +99,7 @@ func (warlock *Warlock) applyImprovedSayaad() {
 
 	warlock.Succubus.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.ImprovedSayaad.EffectAt(1).FractionAt(warlock.Talents.ImprovedSayaad),
+		FloatValue: spellData.ImprovedSayaad.EffectAt(2).FractionAt(warlock.Talents.ImprovedSayaad),
 		ClassMask:  WarlockSpellSuccubusLashOfPain,
 	})
 }
@@ -120,20 +120,45 @@ func (warlock *Warlock) applyDemonicSacrifice() {
 		spellID, school = 18789, stats.SchoolIndexShadow
 	case proto.WarlockOptions_Succubus:
 		spellID, school = 18791, stats.SchoolIndexFire
+	case proto.WarlockOptions_Voidwalker:
+		warlock.applyFelEnergy()
+		return
 	default:
-		// The Voidwalker's mana and the Felhunter's health are regeneration, not damage; they are
-		// left out until the sim needs them.
+		// The Felhunter's health is survival only; it is left out until the sim needs it.
 		return
 	}
 
-	row := spellData.DemonicSacrificeTriggered.BySpellID(spellID)
-	multiplier := 1 + row.Effects[0].Value/100
+	row := spellData.DemonicSacrificeTriggered.ByID(spellID)
+	multiplier := 1 + row.EffectN(1).Percent()
 
 	core.MakePermanent(warlock.RegisterAura(core.Aura{
 		Label:    "Demonic Sacrifice",
 		ActionID: core.ActionID{SpellID: spellID},
-		Duration: row.Duration,
+		Duration: row.Duration(),
 	}).AttachMultiplicativePseudoStatBuff(&warlock.PseudoStats.SchoolDamageDealtMultiplier[school], multiplier))
+}
+
+// The Voidwalker's sacrifice, Fel Energy (18792): 2% of total mana every 4 s.
+func (warlock *Warlock) applyFelEnergy() {
+	row := spellData.DemonicSacrificeTriggered.ByID(18792)
+	manaFraction := row.EffectN(1).Percent()
+	period := row.EffectN(1).Period()
+	manaMetrics := warlock.NewManaMetrics(core.ActionID{SpellID: row.ID})
+
+	core.MakePermanent(warlock.RegisterAura(core.Aura{
+		Label:    "Demonic Sacrifice",
+		ActionID: core.ActionID{SpellID: row.ID},
+		Duration: row.Duration(),
+		OnGain: func(_ *core.Aura, sim *core.Simulation) {
+			core.StartPeriodicAction(sim, core.PeriodicActionOptions{
+				Period:   period,
+				Priority: core.ActionPriorityRegen,
+				OnAction: func(sim *core.Simulation) {
+					warlock.AddMana(sim, warlock.MaxMana()*manaFraction, manaMetrics)
+				},
+			})
+		},
+	}))
 }
 
 // Shadow Bolt and Searing Pain hit 3% harder a point below 35% health, and Soul Fire casts 20% a
@@ -144,25 +169,25 @@ func (warlock *Warlock) applyDecimation() {
 	}
 
 	points := warlock.Talents.Decimation
-	triggered := spellData.DecimationTriggered.HighestRank()
+	triggered := spellData.DecimationTriggered.Highest()
 
 	warlock.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_Cooldown_Multiplier,
-		FloatValue: 1 + spellData.Decimation.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_COOLDOWN).FractionAt(points),
+		FloatValue: 1 + spellData.Decimation.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COOLDOWN)).FractionAt(points),
 		ClassMask:  WarlockSpellSoulFire,
 	})
 
 	warlock.DecimationAura = warlock.RegisterAura(core.Aura{
 		Label:    "Decimation",
-		ActionID: core.ActionID{SpellID: triggered.SpellID},
-		Duration: triggered.Duration,
+		ActionID: core.ActionID{SpellID: triggered.ID},
+		Duration: triggered.Duration(),
 	}).AttachSpellMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.Decimation.EffectAt(3).FractionAt(points),
+		FloatValue: spellData.Decimation.EffectAt(4).FractionAt(points),
 		ClassMask:  WarlockSpellShadowBolt | WarlockSpellSearingPain,
 	}).AttachSpellMod(core.SpellModConfig{
 		Kind:       core.SpellMod_CastTime_Pct,
-		FloatValue: spellData.Decimation.EffectAt(0).FractionAt(points),
+		FloatValue: spellData.Decimation.EffectAt(1).FractionAt(points),
 		ClassMask:  WarlockSpellSoulFire,
 	})
 
@@ -184,20 +209,21 @@ func (warlock *Warlock) applyDecimation() {
 // Searing Pain sheds 17/33/50% of its threat and arms the demon with 2/4/6 branded attacks
 // (1293695 / 1293696).
 //
-// TODO: the client writes the pet hit as a $<minDam> to $<maxDam> formula the exported tables do not
-// carry, so the 39 to 42 from the BlizzCon tooltip is kept.
+// The branded hit is the client's SpellDescriptionVariables formula for 1293696/1293697 (beta
+// 1.60.1.69977, the same text Wowhead's Forever tooltip resolves): ((level-26)*1.5)+14 to +17, plus
+// 7.8% of the warlock's Shadow spell power, so 65 to 68 at level 60.
 func (warlock *Warlock) applyDemonicBrand() {
 	if warlock.Talents.DemonicBrand == 0 {
 		return
 	}
 
 	points := warlock.Talents.DemonicBrand
-	triggered := spellData.DemonicBrandTriggered.HighestRank()
-	actionID := core.ActionID{SpellID: triggered.SpellID}
+	triggered := spellData.DemonicBrandTriggered.Highest()
+	actionID := core.ActionID{SpellID: triggered.ID}
 
 	warlock.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_ThreatMultiplier_Pct,
-		FloatValue: spellData.DemonicBrand.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_THREAT).FractionAt(points),
+		FloatValue: spellData.DemonicBrand.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_THREAT)).FractionAt(points),
 		ClassMask:  WarlockSpellSearingPain,
 	})
 
@@ -205,7 +231,7 @@ func (warlock *Warlock) applyDemonicBrand() {
 		return
 	}
 
-	charges := int32(spellData.DemonicBrand.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_CHARGES).ValueAt(points))
+	charges := int32(spellData.DemonicBrand.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CHARGES)).ValueAt(points))
 
 	for _, pet := range warlock.BasePets {
 		brandSpell := pet.RegisterSpell(core.SpellConfig{
@@ -219,14 +245,17 @@ func (warlock *Warlock) applyDemonicBrand() {
 			ThreatMultiplier: 3,
 
 			ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-				spell.CalcAndDealDamage(sim, target, sim.Roll(39, 42), spell.OutcomeMagicHit)
+				levelBonus := float64(core.CharacterLevel-26) * 1.5
+				spellPower := warlock.GetStat(stats.SpellDamage) + warlock.GetStat(stats.ShadowDamage)
+				damage := sim.Roll(levelBonus+14, levelBonus+17) + 0.078*spellPower
+				spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMagicHit)
 			},
 		})
 
 		pet.DemonicBrandAura = pet.RegisterAura(core.Aura{
 			Label:     "Demonic Brand",
 			ActionID:  actionID,
-			Duration:  triggered.Duration,
+			Duration:  triggered.Duration(),
 			MaxStacks: charges,
 			OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 				if result.Landed() && spell.ProcMask.Matches(core.ProcMaskMelee) {
@@ -260,9 +289,9 @@ func (warlock *Warlock) applySoulLink() {
 		return
 	}
 
-	row := spellData.SoulLinkTriggered.BySpellID(25228)
-	damageDealt := 1 + row.Effects[0].Value/100
-	damageTaken := 1 - row.Effects[1].Value/100
+	row := spellData.SoulLinkTriggered.ByID(25228)
+	damageDealt := 1 + row.EffectN(1).Percent()
+	damageTaken := 1 - row.EffectN(2).Percent()
 
 	config := func(unit *core.Unit) core.Aura {
 		return core.Aura{
@@ -286,7 +315,8 @@ func (warlock *Warlock) applySoulLink() {
 	}
 }
 
-// The demon lends the warlock 33/67/100% of its level in spell power while it is out (412732).
+// 33/67/100% of the warlock's level in spell power for the warlock and the demon while it is out
+// (412732).
 func (warlock *Warlock) applyDemonicKnowledge() {
 	if warlock.Talents.DemonicKnowledge == 0 || warlock.Options.SacrificeSummon {
 		return
@@ -294,42 +324,49 @@ func (warlock *Warlock) applyDemonicKnowledge() {
 
 	bonus := spellData.DemonicKnowledge.FractionAt(warlock.Talents.DemonicKnowledge) * float64(core.CharacterLevel)
 
-	core.MakePermanent(warlock.RegisterAura(core.Aura{
+	config := core.Aura{
 		Label:    "Demonic Knowledge",
 		ActionID: core.ActionID{SpellID: 412732},
 		Duration: core.NeverExpires,
-	}).AttachStatBuff(stats.SpellDamage, bonus))
+	}
+	core.MakePermanent(warlock.RegisterAura(config).AttachStatBuff(stats.SpellDamage, bonus))
+	for _, pet := range warlock.BasePets {
+		core.MakePermanent(pet.RegisterAura(config).AttachStatBuff(stats.SpellDamage, bonus))
+	}
 }
 
 // 2% a point, on the school the demon out matches (23785): Fire for the Imp, Shadow for the
-// Succubus, damage taken for the Voidwalker and the Felhunter.
+// Succubus, damage taken for the Voidwalker and the Felhunter. Both the warlock and the demon get it.
 func (warlock *Warlock) applyMasterDemonologist() {
 	if warlock.Talents.MasterDemonologist == 0 || warlock.Options.SacrificeSummon {
 		return
 	}
 
-	fraction := spellData.MasterDemonologist.EffectAt(0).FractionAt(warlock.Talents.MasterDemonologist)
+	fraction := spellData.MasterDemonologist.EffectAt(1).FractionAt(warlock.Talents.MasterDemonologist)
 
-	var buff *core.Aura
+	var label string
+	var tag int32
+	var school stats.SchoolIndex
 	switch warlock.Options.Summon {
 	case proto.WarlockOptions_Imp:
-		buff = warlock.RegisterAura(core.Aura{
-			Label:    "Master Demonologist (Imp)",
-			ActionID: core.ActionID{SpellID: 23785, Tag: 1},
-			Duration: core.NeverExpires,
-		}).AttachMultiplicativePseudoStatBuff(&warlock.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexFire], 1+fraction)
+		label, tag, school = "Master Demonologist (Imp)", 1, stats.SchoolIndexFire
 	case proto.WarlockOptions_Succubus:
-		buff = warlock.RegisterAura(core.Aura{
-			Label:    "Master Demonologist (Succubus)",
-			ActionID: core.ActionID{SpellID: 23785, Tag: 3},
-			Duration: core.NeverExpires,
-		}).AttachMultiplicativePseudoStatBuff(&warlock.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexShadow], 1+fraction)
+		label, tag, school = "Master Demonologist (Succubus)", 3, stats.SchoolIndexShadow
 	default:
 		// The Voidwalker's and the Felhunter's halves only cut damage taken.
 		return
 	}
 
-	warlock.MasterDemonologistAura = core.MakePermanent(buff)
+	buff := func(unit *core.Unit) *core.Aura {
+		return core.MakePermanent(unit.RegisterAura(core.Aura{
+			Label:    label,
+			ActionID: core.ActionID{SpellID: 23785, Tag: tag},
+			Duration: core.NeverExpires,
+		}).AttachMultiplicativePseudoStatBuff(&unit.PseudoStats.SchoolDamageDealtMultiplier[school], 1+fraction))
+	}
+
+	warlock.MasterDemonologistAura = buff(&warlock.Unit)
+	buff(&warlock.ActivePet.Unit)
 }
 
 // applyImprovedHealthFunnel implements Improved Health Funnel, new in Forever.

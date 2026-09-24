@@ -6,12 +6,12 @@ import (
 	"github.com/wowsims/forever/sim/core"
 )
 
-var stealthRank = spellData.Stealth.BySpellID(1784)
+var stealthRank = spellData.Stealth.ByID(1784)
 
 func (rogue *Rogue) registerStealthAura() {
 	rogue.StealthAura = rogue.RegisterAura(core.Aura{
 		Label:    "Stealth",
-		ActionID: core.ActionID{SpellID: stealthRank.SpellID},
+		ActionID: core.ActionID{SpellID: stealthRank.ID},
 		Duration: core.NeverExpires,
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			if rogue.MasterOfSubtletyAura != nil {
@@ -30,15 +30,15 @@ func (rogue *Rogue) registerStealthAura() {
 	})
 
 	rogue.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: stealthRank.SpellID},
-		SpellSchool:    stealthRank.SpellSchool,
+		ActionID:       core.ActionID{SpellID: stealthRank.ID},
+		SpellSchool:    stealthRank.SpellSchool(),
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: RogueSpellStealth,
 
 		Cast: core.CastConfig{
 			CD: core.Cooldown{
 				Timer:    rogue.NewTimer(),
-				Duration: stealthRank.Cooldown,
+				Duration: max(stealthRank.Cooldown(), stealthRank.CategoryCooldown()),
 			},
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {

@@ -1,39 +1,38 @@
 package warlock
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 )
 
 func (warlock *Warlock) registerImmolate() {
-	rank := spellData.Immolate.HighestRank()
-	tick := rank.Periodic.(shared.SpellDataPeriodic)
-	actionID := core.ActionID{SpellID: rank.SpellID}
-	warlock.ImmolateTickBaseDamage = tick.Tick
+	rank := spellData.Immolate.Highest()
+	tick := rank.PeriodicEffect()
+	actionID := core.ActionID{SpellID: rank.ID}
+	warlock.ImmolateTickBaseDamage = tick.Average(core.CharacterLevel)
 
 	warlock.Immolate = warlock.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellImmolate,
 
-		ManaCost: core.ManaCostOptions{FlatCost: rank.Cost},
+		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD:      rank.GCD,
-				CastTime: rank.CastTime,
+				GCD:      rank.GCD(),
+				CastTime: rank.CastTime(),
 			},
 		},
 
 		DamageMultiplierAdditive: 1,
 		DamageMultiplier:         1,
 		ThreatMultiplier:         1,
-		BonusCoefficient:         rank.Direct.BonusCoefficient(),
+		BonusCoefficient:         rank.DamageEffect().Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, rank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			result := spell.CalcDamage(sim, target, rank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 			if result.Landed() {
 				spell.RelatedDotSpell.Dot(target).Apply(sim)
 			}
@@ -43,8 +42,8 @@ func (warlock *Warlock) registerImmolate() {
 
 	warlock.Immolate.RelatedDotSpell = warlock.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID.WithTag(1),
-		SpellSchool:    rank.SpellSchool,
-		DefenseType:    rank.DefenseType,
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		ClassSpellMask: WarlockSpellImmolateDot,
 		Flags:          core.SpellFlagPassiveSpell,
@@ -57,14 +56,14 @@ func (warlock *Warlock) registerImmolate() {
 			Aura: core.Aura{
 				Label: "Immolate (DoT)",
 			},
-			NumberOfTicks:    tick.NumberOfTicks,
-			TickLength:       tick.TickLength,
-			BonusCoefficient: tick.Coef,
+			NumberOfTicks:    int32(rank.Duration() / tick.Period()),
+			TickLength:       tick.Period(),
+			BonusCoefficient: tick.Coeff(),
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 				dot.Snapshot(target, warlock.ImmolateTickBaseDamage)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, shared.PeriodicTickOutcome(rank, dot))
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, periodicTickOutcome(rank, dot))
 			},
 		},
 
@@ -73,7 +72,7 @@ func (warlock *Warlock) registerImmolate() {
 			if useSnapshot {
 				return dot.CalcSnapshotDamage(sim, target, spell.OutcomeExpectedMagicAlwaysHit)
 			}
-			return spell.CalcPeriodicDamage(sim, target, tick.Tick, spell.OutcomeExpectedMagicAlwaysHit)
+			return spell.CalcPeriodicDamage(sim, target, tick.Average(core.CharacterLevel), spell.OutcomeExpectedMagicAlwaysHit)
 		},
 	})
 }

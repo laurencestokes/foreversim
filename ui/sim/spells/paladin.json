@@ -188,6 +188,12 @@
 		"note": "Beta client 1.60.1.69893 matches Classic: 70% weapon damage, 0.29 coefficient. Every rank of the seal triggers this one proc in both clients, so the sim uses it for all five.",
 		"source": "classic"
 	},
+	"20425": {
+		"ability": "Judgement of Command",
+		"file": "sim/paladin/seal_of_command.go",
+		"note": "Rank 1's judgement dummy, which the sim now carries as the judgement's action id; in the client it casts the damage spell 20467 (listed). Beta client 1.60.1.69893 matches Classic Era, 0.429 coefficient, the stunned number halved otherwise.",
+		"source": "classic"
+	},
 	"20467": {
 		"ability": "Judgement of Command",
 		"file": "sim/paladin/soc.go",
@@ -302,6 +308,18 @@
 		"source": "forever",
 		"tooltip": "Deals 221 Holy damage to an attacker whose melee attack you block."
 	},
+	"20961": {
+		"ability": "Judgement of Command",
+		"file": "sim/paladin/seal_of_command.go",
+		"note": "Rank 3's judgement dummy, which the sim now carries as the judgement's action id; in the client it casts the damage spell 20964 (listed). Beta client 1.60.1.69893 matches Classic Era, 0.429 coefficient, the stunned number halved otherwise.",
+		"source": "classic"
+	},
+	"20962": {
+		"ability": "Judgement of Command",
+		"file": "sim/paladin/seal_of_command.go",
+		"note": "Rank 2's judgement dummy, which the sim now carries as the judgement's action id; in the client it casts the damage spell 20963 (listed). Beta client 1.60.1.69893 matches Classic Era, 0.429 coefficient, the stunned number halved otherwise.",
+		"source": "classic"
+	},
 	"20963": {
 		"ability": "Judgement of Command",
 		"file": "sim/paladin/soc.go",
@@ -324,6 +342,18 @@
 		"ability": "Judgement of Command",
 		"file": "sim/paladin/soc.go",
 		"note": "Beta client 1.60.1.69893 matches Classic, 0.429 coefficient.",
+		"source": "classic"
+	},
+	"20967": {
+		"ability": "Judgement of Command",
+		"file": "sim/paladin/seal_of_command.go",
+		"note": "Rank 4's judgement dummy, which the sim now carries as the judgement's action id; in the client it casts the damage spell 20965 (listed). Beta client 1.60.1.69893 matches Classic Era, 0.429 coefficient, the stunned number halved otherwise.",
+		"source": "classic"
+	},
+	"20968": {
+		"ability": "Judgement of Command",
+		"file": "sim/paladin/seal_of_command.go",
+		"note": "Rank 5's judgement dummy, which the sim now carries as the judgement's action id; in the client it casts the damage spell 20966 (listed). Beta client 1.60.1.69893 matches Classic Era, 0.429 coefficient, the stunned number halved otherwise.",
 		"source": "classic"
 	},
 	"21183": {
@@ -549,5 +579,15 @@
 		"note": "Beta client 1.60.1.69893: rank 1 damage 90-102 -> 79-91 at its top level; cost, cooldown and the 0.429 coefficient are Classic's.",
 		"source": "forever",
 		"tooltip": "85 Mana\n30 yd range\nInstant\n15 sec cooldown\nCauses 79 to 91 Holy damage to an Undead or Demon target."
+	},
+	"9799": {
+		"ability": "Eye for an Eye",
+		"assumptions": [
+			"10% at rank 2 is rank 1's 5% doubled: only rank 1 has been seen (a beta tooltip), and the client's 15 on 9799 is the base point the talent's rank curve replaces."
+		],
+		"file": "sim/paladin/talents_retribution.go",
+		"note": "Beta client 1.60.1.69893: Forever folds both ranks into 9799 and widens it from spell criticals to all critical strikes, so melee crits reflect too. The reflected share is capped at half the paladin's health, as in Classic.",
+		"source": "assumed",
+		"tooltip": "Passive\nAll critical strikes against you cause 5/10% of the damage taken to the attacker as well. The damage caused by Eye for an Eye will not exceed 50% of the Paladin's total health."
 	}
 }

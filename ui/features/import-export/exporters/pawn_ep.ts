@@ -80,7 +80,7 @@ export const PAWN_EP_EXPORTER: ExporterDefinition = {
 		});
 
 		return (
-			`( Pawn: v1: "${player.getPlayerSpec().friendlyName} WoWSims Weights": Class=${player.getPlayerClass().friendlyName},` +
+			`( Pawn: v1: "${player.getPlayerSpec().friendlyName} Forever Sim Weights": Class=${player.getPlayerClass().friendlyName},` +
 			Object.keys(namesToWeights)
 				.map(statName => `${statName}=${namesToWeights[statName].toFixed(3)}`)
 				.join(',') +

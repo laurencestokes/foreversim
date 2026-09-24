@@ -225,6 +225,21 @@
 		"note": "sim/mage/evocation.go is byte identical to the pre-Forever file: 8 sec channel, 8 min cooldown, 15x Spirit regen.",
 		"source": "classic"
 	},
+	"1239700": {
+		"ability": "Arcane Blast",
+		"file": "sim/mage/arcane_blast.go",
+		"note": "Rank 5, Forever's own id, which the sim now carries in place of the later expansion's 30451. Beta client 1.60.1.69893: 364-424, coefficient .714, 15% of base mana, 2.5 sec cast. The 10%, 175%, 4 stacks and 8 sec come from its buff, 400573.",
+		"source": "forever",
+		"tooltip": "15% of base mana\n2.5 sec cast\nBlasts the target with energy, dealing 364 to 424 Arcane damage.\nEach cast increases the damage of all your other spells by 10% and the mana cost of Arcane Blast by 175%, stacking up to 4 times. Lasts 8 sec or until any other damage spell is cast."
+	},
+	"1240047": {
+		"ability": "Ice Lance",
+		"assumptions": ["Spell power coefficient .143. The beta client carries no coefficient on the damage effect at all, so it cannot confirm one."],
+		"file": "sim/mage/ice_lance.go",
+		"note": "Rank 6, Forever's own id, which the sim now carries in place of the later expansion's 30455. Beta client 1.60.1.69893: 133-157 plus its growth to level 60 = 136-161, 160 mana, 300% against frozen targets.",
+		"source": "assumed",
+		"tooltip": "160 Mana\nInstant\nDeals 136 to 161 Frost damage to an enemy target.\nDeals 300% increased damage to a frozen target, which against a raid boss means one held by Fingers of Frost."
+	},
 	"12472": {
 		"ability": "Cold Snap",
 		"file": "sim/mage/talents.go",
@@ -516,6 +531,13 @@
 		"source": "forever",
 		"tooltip": "655 Mana\nChanneled\nLaunches Arcane Missiles at the enemy, causing 209 Arcane damage each second for 5 sec."
 	},
+	"25346": {
+		"ability": "Arcane Missiles",
+		"file": "sim/mage/arcane_missiles.go",
+		"note": "Rank 8's missile, which the sim now registers for the damage; the channel is 25345. Beta client 1.60.1.69893: 209 Arcane damage a missile, .286 coefficient, down from Era's 230 and up from .24.",
+		"source": "forever",
+		"tooltip": "Arcane Missile\nDeals 209 Arcane damage."
+	},
 	"26129": {
 		"ability": "Enigma's Answer",
 		"file": "sim/mage/item_sets_pve.go",
@@ -558,6 +580,13 @@
 		"note": "Beta client 1.60.1.69893: lower damage at every rank from 2 up (rank 12 596-760 -> 425-541, dot 76 -> 60) and no downranking penalty (rank 1 coefficient .123 -> .429). Cast times and costs are Classic's.",
 		"source": "forever",
 		"tooltip": "95 Mana\n3 sec cast\nHurls a fiery ball that causes 66 to 91 Fire damage and an additional 12 Fire damage over 8 sec."
+	},
+	"412538": {
+		"ability": "Ignite",
+		"file": "sim/mage/talents_fire.go",
+		"note": "The Ignite burn, the sim's action id since it reads the client spell store; see 12654. The 8% per point (11119) and the 2 ticks over 4 sec are the client's, but under the Forever ruleset every other dot can crit and this one is deliberately held out, and the ticks carry SpellFlagIgnoreModifiers so the crit's multipliers are not paid twice.",
+		"source": "forever",
+		"tooltip": "Periodic\nYour critical strikes with Fire damage spells burn the target for an extra 8% of the strike's damage per talent point, 40% at 5/5, in two ticks over 4 sec.\nThe burn pays out exactly that share: it cannot critically strike, it does not take your damage multipliers a second time, and a fresh crit rolls the damage still owed into the new burn instead of restarting it."
 	},
 	"44404": {
 		"ability": "Missile Barrage",

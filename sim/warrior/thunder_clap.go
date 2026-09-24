@@ -5,9 +5,9 @@ import (
 )
 
 func (warrior *Warrior) registerThunderClap() {
-	thunderClapRank := spellData.ThunderClap.HighestRank()
-	thunderClapBaseDamage, _ := thunderClapRank.Direct.Range()
-	thunderClapSlow := thunderClapRank.Effects[1].Fraction()
+	thunderClapRank := spellData.ThunderClap.Highest()
+	thunderClapBaseDamage := thunderClapRank.DamageEffect().Average(core.CharacterLevel)
+	thunderClapSlow := thunderClapRank.Effects[1].Percent()
 
 	auras := warrior.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		// The priority below rescales core's flat 20% for the Conqueror's set bonus.
@@ -22,28 +22,28 @@ func (warrior *Warrior) registerThunderClap() {
 	})
 
 	warrior.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: thunderClapRank.SpellID},
-		SpellSchool: thunderClapRank.SpellSchool,
+		ActionID:    core.ActionID{SpellID: thunderClapRank.ID},
+		SpellSchool: thunderClapRank.SpellSchool(),
 		// Thunder Clap is Physical but Magic in SpellCategories: it rolls on the spell hit table
 		// (logs show full resists next to armor mitigation) and crits on spell crit chance for
 		// 1.5x. Warriors have no base spell crit, so logs without Totem of Wrath show none
 		// (0 of 799 landed hits from 6 prot warriors on fresh.warcraftlogs.com, 2026-09-14).
-		DefenseType:    thunderClapRank.DefenseType,
+		DefenseType:    thunderClapRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskRangedSpecial,
 		Flags:          core.SpellFlagAPL | core.SpellFlagBinary,
 		ClassSpellMask: SpellMaskThunderClap,
 
 		RageCost: core.RageCostOptions{
-			Cost: thunderClapRank.Cost,
+			Cost: int32(thunderClapRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: thunderClapRank.GCD,
+				GCD: thunderClapRank.GCD(),
 			},
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: thunderClapRank.Cooldown,
+				Duration: cooldownOf(thunderClapRank),
 			},
 		},
 
@@ -56,7 +56,7 @@ func (warrior *Warrior) registerThunderClap() {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			results := spell.CalcCleaveDamage(sim, target, thunderClapRank.MaxTargets, thunderClapBaseDamage, spell.OutcomeMagicHitAndCrit)
+			results := spell.CalcCleaveDamage(sim, target, int32(thunderClapRank.MaxTargets), thunderClapBaseDamage, spell.OutcomeMagicHitAndCrit)
 			warrior.CastNormalizedSweepingStrikesAttack(results, sim)
 
 			for _, result := range results {

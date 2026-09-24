@@ -3,13 +3,13 @@ package rogue
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
 // Hemorrhage has no rank subtext, so the generator gives it a single row.
-var hemorrhageRank = spellData.Hemorrhage.BySpellID(16511)
+var hemorrhageRank = spellData.Hemorrhage.ByID(16511)
 
 func (rogue *Rogue) registerSubtletyTalents() {
 	// Tier 1
@@ -54,7 +54,7 @@ func (rogue *Rogue) registerOpportunity() {
 	rogue.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DamageDone_Flat,
 		ClassMask:  RogueSpellBackstab | RogueSpellMutilate | RogueSpellMutilateHit | RogueSpellAmbush | RogueSpellGarrote,
-		FloatValue: spellData.Opportunity.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DAMAGE).FractionAt(rogue.Talents.Opportunity),
+		FloatValue: spellData.Opportunity.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(rogue.Talents.Opportunity),
 	})
 }
 
@@ -63,12 +63,12 @@ func (rogue *Rogue) registerInitiative() {
 		return
 	}
 
-	initMetrics := rogue.NewComboPointMetrics(core.ActionID{SpellID: spellData.InitiativeTriggered.HighestRank().SpellID})
+	initMetrics := rogue.NewComboPointMetrics(core.ActionID{SpellID: spellData.InitiativeTriggered.Highest().ID})
 
 	rogue.MakeProcTriggerAura(core.ProcTrigger{
 		Name:     "Initiative Trigger",
-		ActionID: core.ActionID{SpellID: spellData.Initiative.HighestRank().SpellID},
-		// The beta rounds rank 2 up to 67% rather than doubling rank 1's 33%; ProcChanceAt would
+		ActionID: core.ActionID{SpellID: spellData.Initiative.Highest().ID},
+		// The beta rounds rank 2 up to 67% rather than doubling rank 1's 33%; the row's ProcChance would
 		// read the flat 100 the talent spell carries.
 		ProcChance:     spellData.Initiative.FractionAt(rogue.Talents.Initiative),
 		Callback:       core.CallbackOnSpellHitDealt,
@@ -85,37 +85,37 @@ func (rogue *Rogue) registerGhostlyStrike() {
 		return
 	}
 
-	ghostlyStrikeRank := spellData.GhostlyStrike.HighestRank()
-	actionID := core.ActionID{SpellID: ghostlyStrikeRank.SpellID}
+	ghostlyStrikeRank := spellData.GhostlyStrike.Highest()
+	actionID := core.ActionID{SpellID: ghostlyStrikeRank.ID}
 
-	// Effect 0 is the plain weapon share, effect 3 the larger one a dagger gets.
-	weaponDamage := spellData.GhostlyStrike.EffectAt(0).ValueAt(1) / 100
+	// Effect 1 is the plain weapon share, effect 4 the larger one a dagger gets.
+	weaponDamage := spellData.GhostlyStrike.EffectAt(1).ValueAt(1) / 100
 	if rogue.HasDagger(core.MainHand) {
-		weaponDamage = spellData.GhostlyStrike.EffectAt(3).ValueAt(1) / 100
+		weaponDamage = spellData.GhostlyStrike.EffectAt(4).ValueAt(1) / 100
 	}
 
 	dodgeAura := rogue.RegisterAura(core.Aura{
 		Label:    "Ghostly Strike Buff",
 		ActionID: actionID,
-		Duration: ghostlyStrikeRank.Duration,
-	}).AttachStatBuff(stats.DodgeRating, ghostlyStrikeRank.Effect(shared.A_MOD_DODGE_PERCENT, 0).Value*core.DodgeRatingPerDodgePercent)
+		Duration: ghostlyStrikeRank.Duration(),
+	}).AttachStatBuff(stats.DodgeRating, ghostlyStrikeRank.Effect(dbcenums.A_MOD_DODGE_PERCENT, 0).Average(core.CharacterLevel)*core.DodgeRatingPerDodgePercent)
 
 	rogue.GhostlyStrike = rogue.GetOrRegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
 		ClassSpellMask: RogueSpellGhostlyStrike,
-		SpellSchool:    ghostlyStrikeRank.SpellSchool,
-		DefenseType:    ghostlyStrikeRank.DefenseType,
+		SpellSchool:    ghostlyStrikeRank.SpellSchool(),
+		DefenseType:    ghostlyStrikeRank.DefenseTypeCore(),
 		Flags:          core.SpellFlagAPL | core.SpellFlagMeleeMetrics | SpellFlagBuilder,
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		MaxRange:       core.MaxMeleeRange,
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: ghostlyStrikeRank.GCD,
+				GCD: ghostlyStrikeRank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    rogue.NewTimer(),
-				Duration: ghostlyStrikeRank.Cooldown,
+				Duration: max(ghostlyStrikeRank.Cooldown(), ghostlyStrikeRank.CategoryCooldown()),
 			},
 			IgnoreHaste: true,
 		},
@@ -166,7 +166,7 @@ func (rogue *Rogue) registerElusiveness() {
 	rogue.AddStaticMod(core.SpellModConfig{
 		Kind:      core.SpellMod_Cooldown_Flat,
 		ClassMask: RogueSpellVanish,
-		TimeValue: time.Duration(spellData.Elusiveness.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_COOLDOWN).ValueAt(rogue.Talents.Elusiveness)) * time.Millisecond,
+		TimeValue: time.Duration(spellData.Elusiveness.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COOLDOWN)).ValueAt(rogue.Talents.Elusiveness)) * time.Millisecond,
 	})
 }
 
@@ -177,11 +177,11 @@ func (rogue *Rogue) registerSerratedBlades() {
 		return
 	}
 
-	rogue.addArmorIgnore(spellData.SerratedBlades.EffectAt(0).ValueAt(rogue.Talents.SerratedBlades) / 100)
+	rogue.addArmorIgnore(spellData.SerratedBlades.EffectAt(1).ValueAt(rogue.Talents.SerratedBlades) / 100)
 	rogue.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DamageDone_Flat,
 		ClassMask:  RogueSpellRupture,
-		FloatValue: spellData.SerratedBlades.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DOT).FractionAt(rogue.Talents.SerratedBlades),
+		FloatValue: spellData.SerratedBlades.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DOT)).FractionAt(rogue.Talents.SerratedBlades),
 	})
 }
 
@@ -190,20 +190,20 @@ func (rogue *Rogue) registerPreparation() {
 		return
 	}
 
-	preparationRank := spellData.Preparation.HighestRank()
+	preparationRank := spellData.Preparation.Highest()
 
 	rogue.Preparation = rogue.GetOrRegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: preparationRank.SpellID},
+		ActionID:       core.ActionID{SpellID: preparationRank.ID},
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: RogueSpellPreparation,
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: preparationRank.GCD,
+				GCD: preparationRank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    rogue.NewTimer(),
-				Duration: preparationRank.Cooldown,
+				Duration: max(preparationRank.Cooldown(), preparationRank.CategoryCooldown()),
 			},
 			IgnoreHaste: true,
 		},
@@ -236,7 +236,7 @@ func (rogue *Rogue) registerDirtyDeeds() {
 	rogue.AddStaticMod(core.SpellModConfig{
 		Kind:      core.SpellMod_PowerCost_Flat,
 		ClassMask: RogueSpellGarrote,
-		IntValue:  int32(spellData.DirtyDeeds.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_COST).ValueAt(rogue.Talents.DirtyDeeds)),
+		IntValue:  int32(spellData.DirtyDeeds.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).ValueAt(rogue.Talents.DirtyDeeds)),
 	})
 }
 
@@ -249,39 +249,39 @@ func (rogue *Rogue) registerHemorrhage() {
 		return
 	}
 
-	actionID := core.ActionID{SpellID: hemorrhageRank.SpellID}
+	actionID := core.ActionID{SpellID: hemorrhageRank.ID}
 
 	rogue.HemorrhageAuras = rogue.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		return target.GetOrRegisterAura(core.Aura{
 			Label:    "Hemorrhage-" + rogue.Label,
 			ActionID: actionID,
-			Duration: hemorrhageRank.Duration,
+			Duration: hemorrhageRank.Duration(),
 		})
 	})
 
-	// The plain weapon share is effect 3 (100%); effect 4 is the larger one a dagger gets.
-	weaponDamage := spellData.Hemorrhage.EffectAt(3).ValueAt(1) / 100
+	// The plain weapon share is effect 4 (100%); effect 5 is the larger one a dagger gets.
+	weaponDamage := spellData.Hemorrhage.EffectAt(4).ValueAt(1) / 100
 	if rogue.HasDagger(core.MainHand) {
-		weaponDamage = spellData.Hemorrhage.EffectAt(4).ValueAt(1) / 100
+		weaponDamage = spellData.Hemorrhage.EffectAt(5).ValueAt(1) / 100
 	}
 
 	rogue.Hemorrhage = rogue.GetOrRegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
 		ClassSpellMask: RogueSpellHemorrhage,
-		SpellSchool:    hemorrhageRank.SpellSchool,
-		DefenseType:    hemorrhageRank.DefenseType,
+		SpellSchool:    hemorrhageRank.SpellSchool(),
+		DefenseType:    hemorrhageRank.DefenseTypeCore(),
 		Flags:          core.SpellFlagAPL | core.SpellFlagMeleeMetrics | SpellFlagBuilder,
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		MaxRange:       core.MaxMeleeRange,
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: hemorrhageRank.GCD,
+				GCD: hemorrhageRank.GCD(),
 			},
 			IgnoreHaste: true,
 		},
 		EnergyCost: core.EnergyCostOptions{
-			Cost:   hemorrhageRank.Cost,
+			Cost:   int32(hemorrhageRank.Cost()),
 			Refund: hemorrhageRank.MissRefund(),
 		},
 
@@ -289,7 +289,7 @@ func (rogue *Rogue) registerHemorrhage() {
 		DamageMultiplierAdditive: 1,
 		ThreatMultiplier:         1,
 
-		BonusCoefficient: hemorrhageRank.Direct.BonusCoefficient(),
+		BonusCoefficient: hemorrhageRank.DamageEffect().Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			rogue.BreakStealth(sim)
@@ -320,10 +320,10 @@ func (rogue *Rogue) registerPremeditation() {
 		return
 	}
 
-	premeditationRank := spellData.Premeditation.HighestRank()
-	actionID := core.ActionID{SpellID: premeditationRank.SpellID}
+	premeditationRank := spellData.Premeditation.Highest()
+	actionID := core.ActionID{SpellID: premeditationRank.ID}
 	comboMetrics := rogue.NewComboPointMetrics(actionID)
-	points, _ := premeditationRank.Energize.Range()
+	points := premeditationRank.EnergizeEffect().Average(core.CharacterLevel)
 
 	rogue.Premeditation = rogue.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
@@ -338,7 +338,7 @@ func (rogue *Rogue) registerPremeditation() {
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    rogue.NewTimer(),
-				Duration: premeditationRank.Cooldown,
+				Duration: max(premeditationRank.Cooldown(), premeditationRank.CategoryCooldown()),
 			},
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
@@ -358,7 +358,8 @@ func (rogue *Rogue) registerPremeditation() {
 	})
 }
 
-// Quietus, new in Forever: the rogue's strikes hit harder once the target is in execute range.
+// Quietus, new in Forever: Sinister Strike, Ghostly Strike and Hemorrhage hit harder once the target is
+// in execute range.
 func (rogue *Rogue) registerQuietus() {
 	if rogue.Talents.Quietus == 0 {
 		return
@@ -366,12 +367,12 @@ func (rogue *Rogue) registerQuietus() {
 
 	quietusAura := rogue.GetOrRegisterAura(core.Aura{
 		Label:    "Quietus",
-		ActionID: core.ActionID{SpellID: spellData.Quietus.HighestRank().SpellID},
+		ActionID: core.ActionID{SpellID: spellData.Quietus.Highest().ID},
 		Duration: core.NeverExpires,
 	}).AttachSpellMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DamageDone_Flat,
-		ClassMask:  RogueSpellStrikes,
-		FloatValue: spellData.Quietus.EffectAt(0).FractionAt(rogue.Talents.Quietus),
+		ClassMask:  RogueSpellQuietus,
+		FloatValue: spellData.Quietus.EffectAt(1).FractionAt(rogue.Talents.Quietus),
 	})
 
 	rogue.RegisterResetEffect(func(sim *core.Simulation) {
@@ -390,17 +391,17 @@ func (rogue *Rogue) registerCutthroat() {
 		return
 	}
 
-	triggered := spellData.CutthroatTriggered.HighestRank()
+	triggered := spellData.CutthroatTriggered.Highest()
 
 	rogue.CutthroatAura = rogue.RegisterAura(core.Aura{
 		Label:    "Cutthroat",
-		ActionID: core.ActionID{SpellID: triggered.SpellID},
-		Duration: triggered.Duration,
+		ActionID: core.ActionID{SpellID: triggered.ID},
+		Duration: triggered.Duration(),
 	})
 
 	rogue.MakeProcTriggerAura(core.ProcTrigger{
 		Name:           "Cutthroat Trigger",
-		ActionID:       core.ActionID{SpellID: spellData.Cutthroat.HighestRank().SpellID},
+		ActionID:       core.ActionID{SpellID: spellData.Cutthroat.Highest().ID},
 		ProcChance:     spellData.Cutthroat.FractionAt(rogue.Talents.Cutthroat),
 		Callback:       core.CallbackOnSpellHitDealt,
 		Outcome:        core.OutcomeLanded,
@@ -412,32 +413,45 @@ func (rogue *Rogue) registerCutthroat() {
 }
 
 // Thousand Cuts, new in Forever: Rupture's ticks discount the next Hemorrhage or Backstab.
-// The client ships no ranked spell for it, so the numbers are our Forever sim's.
 func (rogue *Rogue) registerThousandCuts() {
 	if !rogue.Talents.ThousandCuts {
 		return
 	}
 
+	// 1310723 takes its energy off per stack, up to 5 stacks; the talent 1310721 has a 1.9 s proc ICD.
+	buff := spellData.ThousandCutsTriggered.Highest()
+	costPerStack := int32(buff.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).Average(core.CharacterLevel))
+	costMod := rogue.AddDynamicMod(core.SpellModConfig{
+		Kind:      core.SpellMod_PowerCost_Flat,
+		ClassMask: RogueSpellBackstab | RogueSpellHemorrhage,
+	})
+
 	rogue.ThousandCutsAura = rogue.RegisterAura(core.Aura{
 		Label:     "Thousand Cuts",
-		ActionID:  core.ActionID{SpellID: 1310714},
-		Duration:  time.Second * 10,
-		MaxStacks: 5,
+		ActionID:  core.ActionID{SpellID: buff.ID},
+		Duration:  buff.Duration(),
+		MaxStacks: int32(buff.MaxStack),
+		OnGain: func(_ *core.Aura, _ *core.Simulation) {
+			costMod.Activate()
+		},
+		OnExpire: func(_ *core.Aura, _ *core.Simulation) {
+			costMod.Deactivate()
+		},
+		OnStacksChange: func(_ *core.Aura, _ *core.Simulation, _ int32, newStacks int32) {
+			costMod.UpdateIntValue(costPerStack * newStacks)
+		},
 		OnApplyEffects: func(aura *core.Aura, sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			if spell.Matches(RogueSpellBackstab | RogueSpellHemorrhage) {
 				aura.Deactivate(sim)
 			}
 		},
-	}).AttachSpellMod(core.SpellModConfig{
-		Kind:      core.SpellMod_PowerCost_Flat,
-		ClassMask: RogueSpellBackstab | RogueSpellHemorrhage,
-		IntValue:  -3,
 	})
 
 	rogue.MakeProcTriggerAura(core.ProcTrigger{
 		Name:           "Thousand Cuts Trigger",
 		Callback:       core.CallbackOnPeriodicDamageDealt,
 		ClassSpellMask: RogueSpellRupture,
+		ICD:            spellData.ThousandCuts.Highest().ICD(),
 		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 			rogue.ThousandCutsAura.Activate(sim)
 			rogue.ThousandCutsAura.AddStack(sim)

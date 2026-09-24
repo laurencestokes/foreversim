@@ -8,35 +8,35 @@ import (
 // to 400623, the copies the Season of Discovery rune passive Overheat (400615) swaps onto the action
 // bar. Overheat is an Engrave grant with no place in Forever, and the generator drops its stand-ins.
 func (mage *Mage) registerFireBlastSpell() {
-	fireBlastRank := spellData.FireBlast.HighestRank()
+	fireBlastRank := spellData.FireBlast.Highest()
 
 	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: fireBlastRank.SpellID},
-		SpellSchool:    fireBlastRank.SpellSchool,
-		DefenseType:    fireBlastRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: fireBlastRank.ID},
+		SpellSchool:    fireBlastRank.SpellSchool(),
+		DefenseType:    fireBlastRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: MageSpellFireBlast,
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: fireBlastRank.Cost,
+			FlatCost: int32(fireBlastRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: fireBlastRank.GCD,
+				GCD: fireBlastRank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    mage.NewTimer(),
-				Duration: fireBlastRank.Cooldown,
+				Duration: max(fireBlastRank.Cooldown(), fireBlastRank.CategoryCooldown()),
 			},
 		},
 
 		DamageMultiplier: 1,
-		BonusCoefficient: fireBlastRank.Direct.BonusCoefficient(),
+		BonusCoefficient: fireBlastRank.DamageEffect().Coeff(),
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, fireBlastRank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			spell.CalcAndDealDamage(sim, target, fireBlastRank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 		},
 	})
 }

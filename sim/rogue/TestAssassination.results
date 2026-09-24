@@ -90,8 +90,8 @@ dps_results: {
 dps_results: {
  key: "TestAssassination-AllItems-BlazefuryMedallion-17111"
  value: {
-  dps: 530.97514
-  tps: 263.89465
+  dps: 530.76944
+  tps: 263.79241
  }
 }
 dps_results: {
@@ -193,13 +193,6 @@ dps_results: {
  }
 }
 dps_results: {
- key: "TestAssassination-AllItems-DormantHeartoftheMountain-249473"
- value: {
-  dps: 520.18422
-  tps: 258.53156
- }
-}
-dps_results: {
  key: "TestAssassination-AllItems-DraconicInfusedEmblem-22268"
  value: {
   dps: 520.18422
@@ -239,13 +232,6 @@ dps_results: {
  value: {
   dps: 548.997
   tps: 272.85151
- }
-}
-dps_results: {
- key: "TestAssassination-AllItems-EnchantWeapon-IcyChill-1894"
- value: {
-  dps: 448.36833
-  tps: 222.83906
  }
 }
 dps_results: {
@@ -291,6 +277,13 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestAssassination-AllItems-GoldenBanana-270226"
+ value: {
+  dps: 521.33536
+  tps: 259.10368
+ }
+}
+dps_results: {
  key: "TestAssassination-AllItems-Gri'lek'sCharmofValor-19952"
  value: {
   dps: 520.41989
@@ -328,8 +321,8 @@ dps_results: {
 dps_results: {
  key: "TestAssassination-AllItems-HighborneResearchTablet-260205"
  value: {
-  dps: 668.99846
-  tps: 332.49224
+  dps: 669.02737
+  tps: 332.5066
  }
 }
 dps_results: {
@@ -643,8 +636,8 @@ dps_results: {
 dps_results: {
  key: "TestAssassination-Average-Default"
  value: {
-  dps: 522.52829
-  tps: 259.69656
+  dps: 522.52978
+  tps: 259.6973
  }
 }
 dps_results: {

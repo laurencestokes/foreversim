@@ -3,15 +3,15 @@ package mage
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
 // Evocation raises spirit regen by the row's 1500% and lets it run in full while channeling.
 func (mage *Mage) registerEvocation() {
-	evocationRank := spellData.Evocation.HighestRank()
-	regenMultiplier := evocationRank.Effect(shared.A_MOD_POWER_REGEN_PERCENT, 0).Value / 100
-	actionID := core.ActionID{SpellID: evocationRank.SpellID}
+	evocationRank := spellData.Evocation.Highest()
+	regenMultiplier := evocationRank.Effect(dbcenums.A_MOD_POWER_REGEN_PERCENT, 0).Average(core.CharacterLevel) / 100
+	actionID := core.ActionID{SpellID: evocationRank.ID}
 
 	// The row states the channel's length, not a period; ticks only mark the channel.
 	tickLength := time.Millisecond * 250
@@ -39,11 +39,11 @@ func (mage *Mage) registerEvocation() {
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: evocationRank.GCD,
+				GCD: evocationRank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    mage.NewTimer(),
-				Duration: evocationRank.Cooldown,
+				Duration: max(evocationRank.Cooldown(), evocationRank.CategoryCooldown()),
 			},
 		},
 
@@ -58,7 +58,7 @@ func (mage *Mage) registerEvocation() {
 					regenAura.Deactivate(sim)
 				},
 			},
-			NumberOfTicks: int32(evocationRank.Duration / tickLength),
+			NumberOfTicks: int32(evocationRank.Duration() / tickLength),
 			TickLength:    tickLength,
 			OnTick:        func(_ *core.Simulation, _ *core.Unit, _ *core.Dot) {},
 		},

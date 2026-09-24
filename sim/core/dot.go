@@ -49,8 +49,9 @@ type Dot struct {
 
 	BaseTickCount          int32 // base tick count without haste applied
 	remainingTicks         int32
-	tmpExtraTicks          int32   // extra ticks that are added during the runtime of the dot
-	BaseDurationMultiplier float64 // Some effects extend the BaseDuration - i.E. 50% - the DoTs will be subject to normal DoT fitting for base duration extend
+	tmpExtraTicks          int32         // extra ticks that are added during the runtime of the dot
+	BaseDurationMultiplier float64       // Some effects extend the BaseDuration - i.E. 50% - the DoTs will be subject to normal DoT fitting for base duration extend
+	BaseDurationFlat       time.Duration // Added to the BaseDuration; the DoT fits it into whole extra ticks
 
 	BonusCoefficient float64 // EffectBonusCoefficient in SpellEffect client DB table, "SP mod" on Wowhead (not necessarily shown there even if > 0)
 
@@ -166,7 +167,7 @@ func (dot *Dot) OutstandingDmg() float64 {
 }
 
 func (dot *Dot) BaseDuration() time.Duration {
-	return time.Duration(float64(dot.BaseTickCount) * float64(dot.BaseTickLength) * dot.BaseDurationMultiplier)
+	return time.Duration(float64(dot.BaseTickCount)*float64(dot.BaseTickLength)*dot.BaseDurationMultiplier) + dot.BaseDurationFlat
 }
 
 // Adds a tick to the current active dot and extends it's duration

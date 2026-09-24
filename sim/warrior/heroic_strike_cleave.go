@@ -8,20 +8,20 @@ import (
 // 20569, which Bloodthirst and Mortal Strike lack), so both queue onto the next main hand swing
 // instead of firing as instant specials.
 func (warrior *Warrior) registerHeroicStrike() {
-	heroicStrikeRank := spellData.HeroicStrike.HighestRank()
-	heroicStrikeBaseDamage, _ := heroicStrikeRank.Direct.Range()
+	heroicStrikeRank := spellData.HeroicStrike.Highest()
+	heroicStrikeBaseDamage := heroicStrikeRank.DamageEffect().Average(core.CharacterLevel)
 
 	spell := warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: heroicStrikeRank.SpellID},
-		SpellSchool:    heroicStrikeRank.SpellSchool,
-		DefenseType:    heroicStrikeRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: heroicStrikeRank.ID},
+		SpellSchool:    heroicStrikeRank.SpellSchool(),
+		DefenseType:    heroicStrikeRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMH,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagNoOnCastComplete,
 		ClassSpellMask: SpellMaskHeroicStrike,
 		MaxRange:       core.MaxMeleeRange,
 
 		RageCost: core.RageCostOptions{
-			Cost:   heroicStrikeRank.Cost,
+			Cost:   int32(heroicStrikeRank.Cost()),
 			Refund: heroicStrikeRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
@@ -53,23 +53,23 @@ func (warrior *Warrior) registerHeroicStrike() {
 }
 
 func (warrior *Warrior) registerCleave() {
-	cleaveRank := spellData.Cleave.HighestRank()
-	cleaveBaseDamage, _ := cleaveRank.Direct.Range()
+	cleaveRank := spellData.Cleave.Highest()
+	cleaveBaseDamage := cleaveRank.DamageEffect().Average(core.CharacterLevel)
 
 	const maxTargets int32 = 2
 	results := make(core.SpellResultSlice, 0, maxTargets)
 
 	spell := warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: cleaveRank.SpellID},
-		SpellSchool:    cleaveRank.SpellSchool,
-		DefenseType:    cleaveRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: cleaveRank.ID},
+		SpellSchool:    cleaveRank.SpellSchool(),
+		DefenseType:    cleaveRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMH,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagNoOnCastComplete,
 		ClassSpellMask: SpellMaskCleave,
 		MaxRange:       core.MaxMeleeRange,
 
 		RageCost: core.RageCostOptions{
-			Cost:   cleaveRank.Cost,
+			Cost:   int32(cleaveRank.Cost()),
 			Refund: cleaveRank.MissRefund(),
 		},
 		Cast: core.CastConfig{

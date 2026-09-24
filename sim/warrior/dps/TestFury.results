@@ -298,13 +298,6 @@ dps_results: {
  }
 }
 dps_results: {
- key: "TestFury-AllItems-DormantHeartoftheMountain-249473"
- value: {
-  dps: 518.42498
-  tps: 325.91625
- }
-}
-dps_results: {
  key: "TestFury-AllItems-DraconicInfusedEmblem-22268"
  value: {
   dps: 518.42498
@@ -344,13 +337,6 @@ dps_results: {
  value: {
   dps: 522.84183
   tps: 323.45476
- }
-}
-dps_results: {
- key: "TestFury-AllItems-EnchantWeapon-IcyChill-1894"
- value: {
-  dps: 415.04418
-  tps: 257.64337
  }
 }
 dps_results: {
@@ -417,6 +403,13 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestFury-AllItems-GoldenBanana-270226"
+ value: {
+  dps: 518.34406
+  tps: 325.76611
+ }
+}
+dps_results: {
  key: "TestFury-AllItems-GreenDragonMail"
  value: {
   dps: 518.42498
@@ -461,8 +454,8 @@ dps_results: {
 dps_results: {
  key: "TestFury-AllItems-HighborneResearchTablet-260205"
  value: {
-  dps: 622.95866
-  tps: 384.45511
+  dps: 622.91343
+  tps: 384.42978
  }
 }
 dps_results: {

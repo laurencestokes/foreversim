@@ -3,8 +3,8 @@ package hunter
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -45,11 +45,12 @@ func (hunter *Hunter) registerEfficiency() {
 		return
 	}
 
-	// The tooltip reads "Shots, Stings and melee abilities".
+	// The tooltip reads "Shots, Stings and melee abilities", but 19416's class mask leaves out
+	// Sniper Shot and Strider Kick.
 	hunter.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_PowerCost_Pct_Add,
-		ClassMask:  HunterSpellsShotsAndStings | HunterSpellsMelee,
-		FloatValue: spellData.Efficiency.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_COST).FractionAt(hunter.Talents.Efficiency),
+		ClassMask:  HunterSpellsShotsAndStings | HunterSpellsMelee&^HunterSpellStriderKick,
+		FloatValue: spellData.Efficiency.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(hunter.Talents.Efficiency),
 	})
 }
 
@@ -62,7 +63,7 @@ func (hunter *Hunter) registerImprovedArcaneShot() {
 		Kind:      core.SpellMod_Cooldown_Flat,
 		ClassMask: HunterSpellArcaneShot,
 		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedArcaneShot.
-			Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_COOLDOWN).
+			Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COOLDOWN)).
 			ValueAt(hunter.Talents.ImprovedArcaneShot)),
 	})
 }
@@ -77,7 +78,7 @@ func (hunter *Hunter) registerImprovedStings() {
 	hunter.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DotDamageDone_Pct,
 		ClassMask:  HunterSpellSerpentSting,
-		FloatValue: spellData.ImprovedStings.Effect(shared.A_ADD_PCT_MODIFIER, shared.SPELLMOD_DOT).FractionAt(hunter.Talents.ImprovedStings),
+		FloatValue: spellData.ImprovedStings.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DOT)).FractionAt(hunter.Talents.ImprovedStings),
 	})
 }
 
@@ -109,7 +110,7 @@ func (hunter *Hunter) registerBarrage() {
 	hunter.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DamageDone_Flat,
 		ClassMask:  HunterSpellMultiShot | HunterSpellAimedShot | HunterSpellVolley,
-		FloatValue: spellData.Barrage.EffectAt(0).FractionAt(hunter.Talents.Barrage),
+		FloatValue: spellData.Barrage.EffectAt(1).FractionAt(hunter.Talents.Barrage),
 	})
 }
 
@@ -152,7 +153,7 @@ func (hunter *Hunter) registerHawkEye() {
 		return
 	}
 
-	bonusRange := spellData.HawkEye.Effect(shared.A_ADD_FLAT_MODIFIER, shared.SPELLMOD_RANGE).ValueAt(hunter.Talents.HawkEye)
+	bonusRange := spellData.HawkEye.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_RANGE)).ValueAt(hunter.Talents.HawkEye)
 
 	if ranged := hunter.AutoAttacks.Ranged(); ranged != nil {
 		ranged.MaxRange += bonusRange
@@ -200,13 +201,13 @@ func (hunter *Hunter) registerRapidRecuperation() {
 		return
 	}
 
-	buff := spellData.RapidRecuperationTriggered.HighestRank()
-	regen := spellData.RapidRecuperation.EffectAt(0).FractionAt(hunter.Talents.RapidRecuperation)
+	buff := spellData.RapidRecuperationTriggered.Highest()
+	regen := spellData.RapidRecuperation.EffectAt(1).FractionAt(hunter.Talents.RapidRecuperation)
 
 	procAura := hunter.RegisterAura(core.Aura{
 		Label:    "Rapid Recuperation",
-		ActionID: core.ActionID{SpellID: buff.SpellID},
-		Duration: buff.Duration,
+		ActionID: core.ActionID{SpellID: buff.ID},
+		Duration: buff.Duration(),
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
 			hunter.PseudoStats.SpiritRegenRateCasting += regen
 		},

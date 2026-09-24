@@ -1,22 +1,22 @@
 package warrior
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 )
 
 func (warrior *Warrior) registerShieldWall() {
-	shieldWallRank := spellData.ShieldWall.HighestRank()
+	shieldWallRank := spellData.ShieldWall.Highest()
 
-	actionID := core.ActionID{SpellID: shieldWallRank.SpellID}
+	actionID := core.ActionID{SpellID: shieldWallRank.ID}
 	aura := warrior.RegisterAura(core.Aura{
 		Label:    "Shield Wall",
 		ActionID: actionID,
-		Duration: shieldWallRank.Duration,
+		Duration: shieldWallRank.Duration(),
 	}).AttachMultiplicativePseudoStatBuff(
 		&warrior.PseudoStats.DamageTakenMultiplier,
-		shieldWallRank.Effect(shared.A_MOD_DAMAGE_PERCENT_TAKEN, 127).Multiplier(),
+		1+shieldWallRank.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_TAKEN, 127).Percent(),
 	)
 
 	spell := warrior.RegisterSpell(core.SpellConfig{
@@ -26,12 +26,12 @@ func (warrior *Warrior) registerShieldWall() {
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: shieldWallRank.GCD,
+				GCD: shieldWallRank.GCD(),
 			},
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: shieldWallRank.Cooldown,
+				Duration: cooldownOf(shieldWallRank),
 			},
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {

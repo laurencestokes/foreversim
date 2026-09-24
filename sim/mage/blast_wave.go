@@ -9,35 +9,35 @@ func (mage *Mage) registerBlastWaveSpell() {
 		return
 	}
 
-	blastWaveRank := spellData.BlastWave.HighestRank()
+	blastWaveRank := spellData.BlastWave.Highest()
 
 	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: blastWaveRank.SpellID},
+		ActionID:       core.ActionID{SpellID: blastWaveRank.ID},
 		Flags:          core.SpellFlagAPL | core.SpellFlagBinary,
-		SpellSchool:    blastWaveRank.SpellSchool,
-		DefenseType:    blastWaveRank.DefenseType,
+		SpellSchool:    blastWaveRank.SpellSchool(),
+		DefenseType:    blastWaveRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		ClassSpellMask: MageSpellBlastWave,
 
-		BonusCoefficient: blastWaveRank.Direct.BonusCoefficient(),
+		BonusCoefficient: blastWaveRank.DamageEffect().Coeff(),
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
 
 		ManaCost: core.ManaCostOptions{
-			FlatCost: blastWaveRank.Cost,
+			FlatCost: int32(blastWaveRank.Cost()),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: blastWaveRank.GCD,
+				GCD: blastWaveRank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    mage.NewTimer(),
-				Duration: blastWaveRank.Cooldown,
+				Duration: max(blastWaveRank.Cooldown(), blastWaveRank.CategoryCooldown()),
 			},
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealAoeDamage(sim, blastWaveRank.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			spell.CalcAndDealAoeDamage(sim, blastWaveRank.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 		},
 	})
 }

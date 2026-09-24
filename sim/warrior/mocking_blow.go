@@ -5,30 +5,30 @@ import (
 )
 
 func (warrior *Warrior) registerMockingBlow() {
-	mockingBlowRank := spellData.MockingBlow.HighestRank()
-	mockingBlowBaseDamage, _ := mockingBlowRank.Direct.Range()
+	mockingBlowRank := spellData.MockingBlow.Highest()
+	mockingBlowBaseDamage := mockingBlowRank.DamageEffect().Average(core.CharacterLevel)
 
 	warrior.MockingBlow = warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: mockingBlowRank.SpellID},
-		SpellSchool:    mockingBlowRank.SpellSchool,
-		DefenseType:    mockingBlowRank.DefenseType,
+		ActionID:       core.ActionID{SpellID: mockingBlowRank.ID},
+		SpellSchool:    mockingBlowRank.SpellSchool(),
+		DefenseType:    mockingBlowRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 		ClassSpellMask: SpellMaskMockingBlow,
-		MaxRange:       mockingBlowRank.MaxRange,
+		MaxRange:       float64(mockingBlowRank.MaxRange),
 
 		RageCost: core.RageCostOptions{
-			Cost:   mockingBlowRank.Cost,
+			Cost:   int32(mockingBlowRank.Cost()),
 			Refund: mockingBlowRank.MissRefund(),
 		},
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: mockingBlowRank.GCD,
+				GCD: mockingBlowRank.GCD(),
 			},
 			IgnoreHaste: true,
 			CD: core.Cooldown{
 				Timer:    warrior.NewTimer(),
-				Duration: mockingBlowRank.Cooldown,
+				Duration: cooldownOf(mockingBlowRank),
 			},
 		},
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -242,7 +243,7 @@ func (druid *Druid) registerFormBreakingConsumes() {
 }
 
 func (druid *Druid) RegisterBalanceSpells() {
-	StarfireRankMap.RegisterAll(druid.registerStarfireSpell)
+	StarfireRankMap.Each(func(_ int32, r *spelldata.Spell) { druid.registerStarfireSpell(r) })
 	druid.registerMoonfireSpell()
 	druid.registerWrathSpell()
 	druid.registerHurricaneSpell()
@@ -362,4 +363,19 @@ func (druid *Druid) UpdateBleedPower(bleedSpell *DruidSpell, sim *core.Simulatio
 // Agent is a generic way to access underlying druid on any of the agents (for example balance druid.)
 type DruidAgent interface {
 	GetDruid() *Druid
+}
+
+// The tick outcome the family tables' shared.PeriodicTickOutcome picked: a crit roll where the row
+// marks Periodic Can Crit, a plain tick otherwise, and never a hit roll. The store's TickOutcome rolls
+// hit on magic ticks, which would move every dot, so the old choice is kept here.
+func periodicTickOutcome(rank *spelldata.Spell, dot *core.Dot) core.OutcomeApplier {
+	magic := rank.DefenseTypeCore() == core.DefenseTypeMagic
+	switch {
+	case rank.PeriodicCanCrit() && magic:
+		return dot.Spell.OutcomeTickMagicCrit
+	case rank.PeriodicCanCrit():
+		return dot.Spell.OutcomeTickPhysicalCrit
+	default:
+		return dot.OutcomeTick
+	}
 }

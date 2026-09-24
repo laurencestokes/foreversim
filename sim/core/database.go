@@ -558,6 +558,26 @@ func ProtoToEquipment(es *proto.EquipmentSpec) Equipment {
 	return NewEquipmentSet(ProtoToEquipmentSpec(es))
 }
 
+// Folds the stats of every matching area into Stats.
+func (item Item) inArea(areaTypes []proto.AreaType) Item {
+	if item.ID == 0 {
+		return item
+	}
+	for _, areaStats := range item.ScalingOptions[0].GetAreaStats() {
+		if slices.Contains(areaTypes, areaStats.AreaType) {
+			item.Stats = item.Stats.Add(stats.FromProtoMap(areaStats.Stats))
+		}
+	}
+	return item
+}
+
+func (equipment Equipment) inArea(areaTypes []proto.AreaType) Equipment {
+	for i := range equipment {
+		equipment[i] = equipment[i].inArea(areaTypes)
+	}
+	return equipment
+}
+
 // Like ItemSpec, but uses names for reference instead of ID.
 type ItemStringSpec struct {
 	Name    string

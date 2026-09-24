@@ -1,7 +1,7 @@
 import { initBulk } from '@features/bulk/model/init';
 import { watchTargetDummies } from '@features/encounter/model/target_dummies';
 import { repairTargetInputs } from '@features/encounter/model/target_inputs';
-import { registerSetBonusNotices } from '@features/gear/item_notices';
+import { registerAreaStatsNotices, registerSetBonusNotices } from '@features/gear/item_notices';
 import { createLink } from '@features/import-export';
 import { ReforgeSidebarGroup } from '@features/reforge/components/ReforgePanel';
 import { createReforgeOptimizer, type ReforgeOptimizerModel, type ReforgeOptimizerOptions } from '@features/reforge/model/reforge_optimizer';
@@ -134,6 +134,7 @@ export class SimHostObject<SpecType extends Spec> implements IndividualSimHost<S
 		// first callback invoked from waitForInit().
 		this.sim.waitForInit().then(() => {
 			registerSetBonusNotices(this.sim.db);
+			registerAreaStatsNotices(this.sim.db);
 			this.loadSettings();
 
 			// Gear planners never simulate, so the healing-sim disclaimer does not apply to them.
