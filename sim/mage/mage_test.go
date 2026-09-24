@@ -104,6 +104,53 @@ func TestHotStreakSpentByPyroblast(t *testing.T) {
 	}
 }
 
+// The gnome's Eureka! (1259817): registered only for a gnome mage, and the next covered cast
+// spends one of its three charges.
+func TestEurekaGnome(t *testing.T) {
+	newMageSim := func(race proto.Race) (*core.Simulation, *Mage) {
+		sim := core.NewSim(&proto.RaidSimRequest{
+			SimOptions: &proto.SimOptions{RandomSeed: 1},
+			Raid: &proto.Raid{Parties: []*proto.Party{{Buffs: &proto.PartyBuffs{}, Players: []*proto.Player{{
+				Name: "Mage", Class: proto.Class_ClassMage, Race: race, TalentsString: FrostTalents,
+				Equipment: &proto.EquipmentSpec{}, Buffs: &proto.IndividualBuffs{},
+				Spec:     &proto.Player_Mage{Mage: &proto.Mage{Options: &proto.Mage_Options{ClassOptions: &proto.MageOptions{}}}},
+				Rotation: &proto.APLRotation{Type: proto.APLRotation_TypeAPL},
+			}}}}},
+			Encounter: core.MakeSingleTargetEncounter(0),
+		}, simsignals.CreateSignals())
+		sim.Reset()
+		return sim, sim.Raid.Parties[0].Players[0].(MageAgent).GetMage()
+	}
+
+	if _, nonGnome := newMageSim(proto.Race_RaceTroll); nonGnome.GetSpell(core.ActionID{SpellID: 1259817}) != nil {
+		t.Error("a non-gnome mage should not register Eureka!")
+	}
+
+	sim, gnome := newMageSim(proto.Race_RaceGnome)
+	eureka := gnome.GetSpell(core.ActionID{SpellID: 1259817})
+	if eureka == nil {
+		t.Fatal("a gnome mage should register Eureka!")
+	}
+	if !eureka.Cast(sim, gnome.CurrentTarget) {
+		t.Fatal("Eureka! did not cast")
+	}
+	aura := gnome.GetAura("Eureka!")
+	if aura == nil || aura.GetStacks() != 3 {
+		t.Fatal("Eureka! did not start with 3 charges")
+	}
+
+	frostbolt := gnome.GetSpell(core.ActionID{SpellID: spellData.Frostbolt.Highest().ID})
+	if !frostbolt.Cast(sim, gnome.CurrentTarget) {
+		t.Fatal("Frostbolt did not cast")
+	}
+	for sim.CurrentTime < 5*time.Second && aura.GetStacks() == 3 {
+		sim.Step()
+	}
+	if got := aura.GetStacks(); got != 2 {
+		t.Errorf("Eureka! has %d charges after a covered cast, want 2", got)
+	}
+}
+
 // The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
 func TestArena(t *testing.T) {
 	arenalib.Run(t, arenaSpec)

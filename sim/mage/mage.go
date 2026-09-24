@@ -118,6 +118,20 @@ func NewMage(character *core.Character, options *proto.Player) *Mage {
 
 	core.FillTalentsProto(mage.Talents.ProtoReflect(), options.TalentsString, TalentTreeSizes)
 
+	// The gnome's Eureka! (1259817): its SpellEffect class mask read against the mage's damaging
+	// spells. Frostfire Bolt is on the client's list too, but the sim has no implementation of it
+	// yet (frostfire_bolt.go), so it is left out here. Arcane Missiles' tick is a spell of its own
+	// (MageSpellArcaneMissilesTick) and takes the bonus, but only the cast that opens the channel
+	// (MageSpellArcaneMissilesCast) spends a charge. Blizzard's periodic damage is likewise cast as
+	// its own spell each tick (blizzard.go), but unlike Arcane Missiles it reuses the channel's own
+	// mask (MageSpellBlizzard) rather than a tick-only one, so there is no bit that names just the
+	// opening cast; Blizzard stays in the damage mask but out of the charge mask; the mage's other
+	// Eureka!-covered casts spend the charges instead.
+	mage.EurekaSpellMask = MageSpellFrostbolt | MageSpellFireball | MageSpellPyroblast | MageSpellScorch | MageSpellFireBlast |
+		MageSpellArcaneMissilesCast | MageSpellArcaneMissilesTick | MageSpellArcaneBlast | MageSpellArcaneExplosion |
+		MageSpellBlizzard | MageSpellConeOfCold | MageSpellFlamestrike | MageSpellBlastWave | MageSpellIceLance
+	mage.EurekaChargeMask = mage.EurekaSpellMask &^ (MageSpellArcaneMissilesTick | MageSpellBlizzard)
+
 	mage.EnableManaBar()
 	mage.AddStatDependency(stats.Agility, stats.PhysicalCritPercent, core.CritPerAgiMaxLevel[character.Class])
 
