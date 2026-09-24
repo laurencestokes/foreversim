@@ -270,8 +270,9 @@ const Caveats = () => (
 				vary; this is the least certain number on the page, and it is why Undead tops so many lists.
 			</li>
 			<li>
-				Eureka! (Gnome) is modelled for warriors, rogues and warlocks only. Gnome mages and priests are ranked without it, on Expansive Mind alone. A
-				rogue&apos;s Eureka! is assumed not to spend a charge on Blade Flurry, which deals no damage itself.
+				Eureka! (Gnome) is modelled for warriors, rogues, warlocks, mages and priests. A rogue&apos;s Eureka! is assumed not to spend a charge on Blade
+				Flurry, which deals no damage itself, and a priest&apos;s is assumed not to spend one on heals, since the tooltip reads &ldquo;damaging
+				abilities&rdquo;.
 			</li>
 			<li>
 				Cooldown racials - Blood Fury, Berserking, Elune&apos;s Light, Eureka! - fire when each page&apos;s rotation fires its cooldowns, not at an

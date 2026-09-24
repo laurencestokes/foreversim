@@ -276,7 +276,7 @@ func racials(raceName string, class string, target string, weaponRacial bool) st
 	case "Night Elf":
 		add(true, "Elune's Light")
 	case "Gnome":
-		eureka := class == "Warrior" || class == "Rogue" || class == "Warlock"
+		eureka := class == "Warrior" || class == "Rogue" || class == "Warlock" || class == "Mage" || class == "Priest"
 		add(eureka, "Eureka!")
 		add(true, "Expansive Mind")
 	case "Orc":

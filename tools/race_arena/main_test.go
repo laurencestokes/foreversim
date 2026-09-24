@@ -102,7 +102,8 @@ func TestRacials(t *testing.T) {
 		{"Skyborne", "Mage", "Elemental", false, "Wind Blessed (+1% haste) + Elemental Insight"},
 		{"Dwarf", "Warrior", "Beast", true, "mace crit + Big Game Hunter"},
 		{"Dwarf", "Priest", "Mechanical", false, "base stats only"},
-		{"Gnome", "Mage", "Mechanical", false, "Expansive Mind"},
+		{"Gnome", "Mage", "Mechanical", false, "Eureka! + Expansive Mind"},
+		{"Gnome", "Priest", "Mechanical", false, "Eureka! + Expansive Mind"},
 		{"Gnome", "Warlock", "Mechanical", false, "Eureka! + Expansive Mind"},
 		{"Human", "Rogue", "Mechanical", false, "base stats only"},
 	}
