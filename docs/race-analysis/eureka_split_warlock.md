@@ -2,7 +2,7 @@
 
 | Build | Gnome, Eureka! off | Whole Eureka! | Cost cut alone | Damage bonus alone | Overlap |
 |---|---|---|---|---|---|
-| Warlock, Deep Affliction (Pre-BiS) | 481.9 ± 0.1 | +6.5 (+1.35%) | +1.8 (+0.36%) | +4.8 (+0.99%) | -0.0 (≈0) |
-| Warlock, DS/Ruin Pandemic (Pre-BiS) | 494.3 ± 0.1 | +7.0 (+1.41%) | +2.1 (+0.43%) | +4.9 (+0.99%) | +0.0 (≈0) |
-| Warlock, Shadow and Flame (Pre-BiS) | 464.4 ± 0.1 | +6.3 (+1.37%) | +2.3 (+0.49%) | +4.1 (+0.88%) | -0.0 (≈0) |
-| Warlock, Demonic Pact (Pre-BiS) | 495.9 ± 0.1 | +7.7 (+1.56%) | +3.5 (+0.71%) | +4.2 (+0.85%) | -0.0 (≈0) |
+| Warlock, Deep Affliction (Pre-BiS) | 469.5 ± 0.1 | +5.7 (+1.22%) | +3.5 (+0.74%) | +2.3 (+0.49%) | -0.0 (≈0) |
+| Warlock, DS/Ruin Pandemic (Pre-BiS) | 471.5 ± 0.1 | +5.6 (+1.19%) | +3.7 (+0.78%) | +2.0 (+0.43%) | -0.1 (≈0) |
+| Warlock, Shadow and Flame (Pre-BiS) | 444.7 ± 0.1 | +5.8 (+1.30%) | +3.8 (+0.85%) | +1.9 (+0.44%) | +0.0 (≈0) |
+| Warlock, Demonic Pact (Pre-BiS) | 494.6 ± 0.1 | +5.7 (+1.15%) | +3.8 (+0.78%) | +1.8 (+0.36%) | +0.0 (≈0) |
