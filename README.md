@@ -64,6 +64,22 @@ EUREKA_SPLIT=1 go test --tags=with_db ./sim/rogue/ -run TestEurekaSplit -v
 `RACE_BREAKDOWN_OUT` / `EUREKA_SPLIT_OUT` write the tables to a file. See `core.RacialBreakdown` in
 [sim/core/racial_breakdown.go](sim/core/racial_breakdown.go) for how each column is measured.
 
+## The race tier list
+
+The [race tier list](https://laurencestokes.github.io/foreversim/forever/race_arena/) ranks every race
+on each DPS spec's community builds, S to D, with the method and caveats at the top of the page. The page
+only renders `ui/app/race_arena/results.json`; to regenerate it (about a quarter of an hour on 16 threads):
+
+```sh
+RACE_ARENA_OUT=race-arena-out go test --tags=with_db -count=1 -timeout 120m -run TestRaceArena $(go list ./sim/... | grep -v /sim/web)
+go run ./tools/race_arena race-arena-out ui/app/race_arena/results.json
+```
+
+Without `RACE_ARENA_OUT` every `TestRaceArena` skips. `RACE_ARENA_ITERATIONS` overrides the 50,000
+iterations for a quick check, and `RACE_ARENA_COMMIT` names the commit when git cannot (a container over a
+worktree). The manual **Build Race Arena** workflow does the same run and commits the file. See
+[sim/arenalib/race_arena.go](sim/arenalib/race_arena.go) for the method.
+
 ## Keeping up with upstream
 
 Upstream changes are merged by hand, after review and a test run:
