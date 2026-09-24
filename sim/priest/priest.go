@@ -102,6 +102,19 @@ func New(char *core.Character, selfBuffs SelfBuffs, talents string) *Priest {
 	}
 
 	core.FillTalentsProto(priest.Talents.ProtoReflect(), talents, TalentTreeSizes)
+
+	// The gnome's Eureka! (1259823): its SpellEffect class mask read against the priest's damaging
+	// abilities. The client's mask also covers the heals (Flash Heal, Greater Heal, Heal, Renew,
+	// etc.), but the tooltip reads "damaging abilities", so those are left out. Mana Burn is on the
+	// client's list too, but the sim has no implementation of it (talents_discipline.go, Improved
+	// Mana Burn's TODO). Every covered cast here snapshots or deals its own periodic damage
+	// in-line (holy_fire.go, shadow_word_pain.go, devouring_plague.go, starshards.go, penance.go,
+	// talents_shadow.go's Mind Flay) rather than casting a separate tick spell the way the mage's
+	// Blizzard does, so the DoT/channel ticks share the cast's own mask and need no separate charge
+	// mask: only the cast itself ever completes a cast or lands a non-periodic hit.
+	priest.EurekaSpellMask = PriestSpellSmite | PriestSpellHolyFire | PriestSpellMindBlast | PriestSpellMindFlay |
+		PriestSpellShadowWordPain | PriestSpellDevouringPlague | PriestSpellStarshards | PriestSpellPenance | PriestSpellHolyNova
+
 	priest.EnableManaBar()
 	if selfBuffs.Armor == proto.PriestOptions_InnerFire {
 		// Inner Fire rank 7: +1580 armor. The charges never run out on a caster that is not hit.

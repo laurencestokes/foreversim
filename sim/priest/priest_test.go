@@ -2,11 +2,13 @@ package priest
 
 import (
 	"testing"
+	"time"
 
 	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/simsignals"
 )
 
 func init() {
@@ -75,6 +77,54 @@ func priestSuite(apl string, talents string, preShadowform bool) core.CharacterS
 			// casters.
 			EnchantBlacklist: []int32{2673, 3225, 3273},
 		},
+	}
+}
+
+// The gnome's Eureka! (1259823): registered only for a gnome priest, and the next covered cast
+// spends one of its three charges. Its own heals are not covered (see racials.go and
+// ui/sim/spells/core.json), so this checks a damaging spell, Smite.
+func TestEurekaGnome(t *testing.T) {
+	newPriestSim := func(race proto.Race) (*core.Simulation, *Priest) {
+		sim := core.NewSim(&proto.RaidSimRequest{
+			SimOptions: &proto.SimOptions{RandomSeed: 1},
+			Raid: &proto.Raid{Parties: []*proto.Party{{Buffs: &proto.PartyBuffs{}, Players: []*proto.Player{{
+				Name: "Priest", Class: proto.Class_ClassPriest, Race: race, TalentsString: SmiteTalents,
+				Equipment: &proto.EquipmentSpec{}, Buffs: &proto.IndividualBuffs{},
+				Spec:     arenaPriestOptions,
+				Rotation: &proto.APLRotation{Type: proto.APLRotation_TypeAPL},
+			}}}}},
+			Encounter: core.MakeSingleTargetEncounter(0),
+		}, simsignals.CreateSignals())
+		sim.Reset()
+		return sim, sim.Raid.Parties[0].Players[0].(PriestAgent).GetPriest()
+	}
+
+	if _, nonGnome := newPriestSim(proto.Race_RaceTroll); nonGnome.GetSpell(core.ActionID{SpellID: 1259823}) != nil {
+		t.Error("a non-gnome priest should not register Eureka!")
+	}
+
+	sim, gnome := newPriestSim(proto.Race_RaceGnome)
+	eureka := gnome.GetSpell(core.ActionID{SpellID: 1259823})
+	if eureka == nil {
+		t.Fatal("a gnome priest should register Eureka!")
+	}
+	if !eureka.Cast(sim, gnome.CurrentTarget) {
+		t.Fatal("Eureka! did not cast")
+	}
+	aura := gnome.GetAura("Eureka!")
+	if aura == nil || aura.GetStacks() != 3 {
+		t.Fatal("Eureka! did not start with 3 charges")
+	}
+
+	smite := gnome.GetSpell(core.ActionID{SpellID: spellData.Smite.Highest().ID})
+	if !smite.Cast(sim, gnome.CurrentTarget) {
+		t.Fatal("Smite did not cast")
+	}
+	for sim.CurrentTime < 5*time.Second && aura.GetStacks() == 3 {
+		sim.Step()
+	}
+	if got := aura.GetStacks(); got != 2 {
+		t.Errorf("Eureka! has %d charges after a covered cast, want 2", got)
 	}
 }
 
