@@ -53,6 +53,9 @@ func (rogue *Rogue) registerGarrote() {
 				dot.SnapshotPhysical(target, tickDamage+dot.Spell.MeleeAttackPower(target)*0.03)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
+				// The attack power share isn't spell power, so it doesn't go through
+				// BonusCoefficient/BonusDamage; refresh the raw base by hand each tick.
+				dot.SnapshotRawBaseDamage = tickDamage + dot.Spell.MeleeAttackPower(target)*0.03
 				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, garroteRank.TickOutcome(dot))
 			},
 		},

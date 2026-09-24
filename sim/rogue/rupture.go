@@ -19,6 +19,16 @@ func (rogue *Rogue) registerRupture() {
 	// The beta client cut the per combo point step with the tick (rank 6: 60 + 8 -> 35 + 4.73).
 	// The table carries the 35; the step sits on a dummy effect the generator reads as 0.
 	const damagePerComboPoint = 4.73
+	apCoeffByComboPoint := []float64{0, 0.01, 0.02, 0.03, 0.03, 0.03}
+
+	// Combo points spent and the Hemorrhage bonus are fixed at cast; only the attack power share
+	// is dynamic, so both are captured here and reused by OnTick to rebuild the raw base with
+	// current attack power every tick.
+	var comboPointsAtCast int32
+	var hemoMultiplierAtCast float64
+	rawBaseDamage := func(meleeAttackPower float64) float64 {
+		return (tickDamage + damagePerComboPoint*float64(comboPointsAtCast) + apCoeffByComboPoint[comboPointsAtCast]*meleeAttackPower) * hemoMultiplierAtCast
+	}
 
 	rogue.Rupture = rogue.RegisterSpell(core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: ruptureRank.ID},
@@ -61,13 +71,12 @@ func (rogue *Rogue) registerRupture() {
 			TickLength:    tickLength,
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				damage := rogue.ruptureDamage(target, rogue.ComboPoints(), tickDamage, damagePerComboPoint)
-				if rogue.isHemorrhaging(target) {
-					damage *= HemorrhageRuptureMultiplier
-				}
-				dot.SnapshotPhysical(target, damage)
+				comboPointsAtCast = rogue.ComboPoints()
+				hemoMultiplierAtCast = core.TernaryFloat64(rogue.isHemorrhaging(target), HemorrhageRuptureMultiplier, 1)
+				dot.SnapshotPhysical(target, rawBaseDamage(dot.Spell.MeleeAttackPower(target)))
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
+				dot.SnapshotRawBaseDamage = rawBaseDamage(dot.Spell.MeleeAttackPower(target))
 				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, ruptureRank.TickOutcome(dot))
 			},
 		},
@@ -86,10 +95,4 @@ func (rogue *Rogue) registerRupture() {
 			spell.DealOutcome(sim, result)
 		},
 	})
-}
-
-func (rogue *Rogue) ruptureDamage(target *core.Unit, comboPoints int32, baseDamage float64, damagePerComboPoint float64) float64 {
-	return baseDamage +
-		damagePerComboPoint*float64(comboPoints) +
-		[]float64{0, 0.01, 0.02, 0.03, 0.03, 0.03}[comboPoints]*rogue.Rupture.MeleeAttackPower(target)
 }
