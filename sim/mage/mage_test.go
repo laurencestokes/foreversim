@@ -106,15 +106,28 @@ func TestHotStreakSpentByPyroblast(t *testing.T) {
 
 // The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
 func TestArena(t *testing.T) {
-	arenalib.Run(t, arenalib.Spec{
-		Dir:   "mage",
-		UI:    "mage/dps",
-		Class: proto.Class_ClassMage,
-		Race:  proto.Race_RaceGnome,
-		SpecOptions: &proto.Player_Mage{Mage: &proto.Mage{Options: &proto.Mage_Options{
-			ClassOptions: &proto.MageOptions{DefaultMageArmor: proto.MageArmor_MageArmorMageArmor},
-		}}},
-		Role:               arenalib.Caster,
-		DistanceFromTarget: 30,
-	})
+	arenalib.Run(t, arenaSpec)
+}
+
+// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
+func TestRaceArena(t *testing.T) {
+	arenalib.RunRaceArena(t, arenaSpec)
+}
+
+var arenaSpec = arenalib.Spec{
+	Dir:   "mage",
+	UI:    "mage/dps",
+	Class: proto.Class_ClassMage,
+	Race:  proto.Race_RaceGnome,
+	SpecOptions: &proto.Player_Mage{Mage: &proto.Mage{Options: &proto.Mage_Options{
+		ClassOptions: &proto.MageOptions{DefaultMageArmor: proto.MageArmor_MageArmorMageArmor},
+	}}},
+	Role:               arenalib.Caster,
+	DistanceFromTarget: 30,
+	// The page plays each build with the rotation of its deepest tree (autoRotation).
+	RaceBuilds: map[string]arenalib.RaceBuild{
+		"Arcane 35/0/16": {Rotation: "arcane"},
+		"Fire 0/35/16":   {Rotation: "fire"},
+		"Frost 14/0/37":  {Rotation: "frost"},
+	},
 }

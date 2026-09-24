@@ -60,14 +60,25 @@ var DefaultRangedWeaponTypes = []proto.RangedWeaponType{
 
 // The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
 func TestArena(t *testing.T) {
-	arenalib.Run(t, arenalib.Spec{
-		Dir:   "balance_druid",
-		UI:    "druid/balance",
-		Class: proto.Class_ClassDruid,
-		Race:  proto.Race_RaceNightElf,
-		SpecOptions: &proto.Player_BalanceDruid{BalanceDruid: &proto.BalanceDruid{
-			Options: &proto.BalanceDruid_Options{ClassOptions: &proto.DruidOptions{}},
-		}},
-		Role: arenalib.Caster,
-	})
+	arenalib.Run(t, arenaSpec)
+}
+
+// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
+func TestRaceArena(t *testing.T) {
+	arenalib.RunRaceArena(t, arenaSpec)
+}
+
+var arenaSpec = arenalib.Spec{
+	Dir:   "balance_druid",
+	UI:    "druid/balance",
+	Class: proto.Class_ClassDruid,
+	Race:  proto.Race_RaceNightElf,
+	SpecOptions: &proto.Player_BalanceDruid{BalanceDruid: &proto.BalanceDruid{
+		Options: &proto.BalanceDruid_Options{ClassOptions: &proto.DruidOptions{}},
+	}},
+	Role: arenalib.Caster,
+	// The page's automatic rotation is its Launch one, whatever the talents.
+	RaceBuilds: map[string]arenalib.RaceBuild{
+		"Moonkin 38/0/13": {Rotation: "launch"},
+	},
 }

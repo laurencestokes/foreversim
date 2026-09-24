@@ -102,14 +102,30 @@ var DefaultConsumables = &proto.ConsumesSpec{
 
 // The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
 func TestArena(t *testing.T) {
-	arenalib.Run(t, arenalib.Spec{
-		Dir:         "rogue",
-		UI:          "rogue/dps",
-		Class:       proto.Class_ClassRogue,
-		Race:        proto.Race_RaceHuman,
-		SpecOptions: DefaultOptions,
-		Role:        arenalib.Melee,
-		// Poisons are a rogue ability, not something on the vendor list.
-		ClassImbues: arenalib.ClassImbues{OffHand: 26891}, // Instant Poison
-	})
+	arenalib.Run(t, arenaSpec)
+}
+
+// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
+func TestRaceArena(t *testing.T) {
+	arenalib.RunRaceArena(t, arenaSpec)
+}
+
+var arenaSpec = arenalib.Spec{
+	Dir:         "rogue",
+	UI:          "rogue/dps",
+	Class:       proto.Class_ClassRogue,
+	Race:        proto.Race_RaceHuman,
+	SpecOptions: DefaultOptions,
+	Role:        arenalib.Melee,
+	// Poisons are a rogue ability, not something on the vendor list.
+	ClassImbues: arenalib.ClassImbues{OffHand: 26891}, // Instant Poison
+	// The page's default set is swords, which it plays with Sinister Strike (autoRotation). Mutilate
+	// needs daggers, so that build wears the page's dagger set of the same tier and keeps them for
+	// every race. Hemorrhage takes any weapon; the Hemo build plays the page's Hemorrhage rotation,
+	// whose Ambush opener simply does not fire off daggers.
+	RaceBuilds: map[string]arenalib.RaceBuild{
+		"Combat Dual-Wield 15/33/3":      {Rotation: "combat_sinister_strike"},
+		"Assassination Mutilate 31/20/0": {Gear: "combat_backstab_prebis", Rotation: "forever_mutilate", KeepWeaponType: true},
+		"Subtlety Hemo 15/0/36":          {Rotation: "forever_hemorrhage"},
+	},
 }

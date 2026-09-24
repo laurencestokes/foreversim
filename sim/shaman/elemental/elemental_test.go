@@ -63,16 +63,23 @@ var DefaultRangedWeaponTypes = []proto.RangedWeaponType{
 
 // The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
 func TestArena(t *testing.T) {
-	arenalib.Run(t, arenalib.Spec{
-		Dir:   "elemental_shaman",
-		UI:    "shaman/elemental",
-		Class: proto.Class_ClassShaman,
-		Race:  proto.Race_RaceOrc,
-		SpecOptions: &proto.Player_ElementalShaman{ElementalShaman: &proto.ElementalShaman{
-			Options: &proto.ElementalShaman_Options{ClassOptions: &proto.ShamanOptions{}},
-		}},
-		Role: arenalib.Caster,
-		// Flame Shock is 20 yd in the client (SpellRange 3).
-		DistanceFromTarget: 20,
-	})
+	arenalib.Run(t, arenaSpec)
+}
+
+// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
+func TestRaceArena(t *testing.T) {
+	arenalib.RunRaceArena(t, arenaSpec)
+}
+
+var arenaSpec = arenalib.Spec{
+	Dir:   "elemental_shaman",
+	UI:    "shaman/elemental",
+	Class: proto.Class_ClassShaman,
+	Race:  proto.Race_RaceOrc,
+	SpecOptions: &proto.Player_ElementalShaman{ElementalShaman: &proto.ElementalShaman{
+		Options: &proto.ElementalShaman_Options{ClassOptions: &proto.ShamanOptions{}},
+	}},
+	Role: arenalib.Caster,
+	// Flame Shock is 20 yd in the client (SpellRange 3).
+	DistanceFromTarget: 20,
 }

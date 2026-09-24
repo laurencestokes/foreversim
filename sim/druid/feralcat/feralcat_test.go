@@ -140,12 +140,25 @@ func TestClearcastingSpentByNextCostedAbility(t *testing.T) {
 
 // The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
 func TestArena(t *testing.T) {
-	arenalib.Run(t, arenalib.Spec{
-		Dir:         "feral_druid",
-		UI:          "druid/feralcat",
-		Class:       proto.Class_ClassDruid,
-		Race:        proto.Race_RaceTauren,
-		SpecOptions: DefaultSpecOptions,
-		Role:        arenalib.Melee,
-	})
+	arenalib.Run(t, arenaSpec)
+}
+
+// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
+func TestRaceArena(t *testing.T) {
+	arenalib.RunRaceArena(t, arenaSpec)
+}
+
+var arenaSpec = arenalib.Spec{
+	Dir:         "feral_druid",
+	UI:          "druid/feralcat",
+	Class:       proto.Class_ClassDruid,
+	Race:        proto.Race_RaceTauren,
+	SpecOptions: DefaultSpecOptions,
+	Role:        arenalib.Melee,
+	// The page's default set (Pre-BiS) is its eight Wildheart pieces and nothing else - no weapon,
+	// rings or trinkets - so the build wears the page's Launch set, its one full set short of P2,
+	// with the rotation the page picks automatically.
+	RaceBuilds: map[string]arenalib.RaceBuild{
+		"Feral Cat 9/35/7": {Gear: "launch", Rotation: "default"},
+	},
 }

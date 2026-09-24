@@ -105,20 +105,27 @@ func TestStormstrikeOnlyBoostsCastersBoltsAndEarthShock(t *testing.T) {
 
 // The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
 func TestArena(t *testing.T) {
-	arenalib.Run(t, arenalib.Spec{
-		Dir:   "enhancement_shaman",
-		UI:    "shaman/enhancement",
-		Class: proto.Class_ClassShaman,
-		Race:  proto.Race_RaceDwarf,
-		SpecOptions: &proto.Player_EnhancementShaman{EnhancementShaman: &proto.EnhancementShaman{
-			Options: &proto.EnhancementShaman_Options{
-				SyncType:     proto.ShamanSyncType_Auto,
-				ImbueOh:      proto.ShamanImbue_WindfuryWeapon,
-				ClassOptions: &proto.ShamanOptions{ImbueMh: proto.ShamanImbue_WindfuryWeapon},
-			},
-		}},
-		Role: arenalib.Melee,
-		// Windfury Weapon is the shaman casting on their own weapons, not a totem somebody drops.
-		ClassImbues: arenalib.ClassImbues{Windfury: true},
-	})
+	arenalib.Run(t, arenaSpec)
+}
+
+// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
+func TestRaceArena(t *testing.T) {
+	arenalib.RunRaceArena(t, arenaSpec)
+}
+
+var arenaSpec = arenalib.Spec{
+	Dir:   "enhancement_shaman",
+	UI:    "shaman/enhancement",
+	Class: proto.Class_ClassShaman,
+	Race:  proto.Race_RaceDwarf,
+	SpecOptions: &proto.Player_EnhancementShaman{EnhancementShaman: &proto.EnhancementShaman{
+		Options: &proto.EnhancementShaman_Options{
+			SyncType:     proto.ShamanSyncType_Auto,
+			ImbueOh:      proto.ShamanImbue_WindfuryWeapon,
+			ClassOptions: &proto.ShamanOptions{ImbueMh: proto.ShamanImbue_WindfuryWeapon},
+		},
+	}},
+	Role: arenalib.Melee,
+	// Windfury Weapon is the shaman casting on their own weapons, not a totem somebody drops.
+	ClassImbues: arenalib.ClassImbues{Windfury: true},
 }

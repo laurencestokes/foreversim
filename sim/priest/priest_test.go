@@ -81,34 +81,52 @@ func priestSuite(apl string, talents string, preShadowform bool) core.CharacterS
 // Both priests share ui/specs/priest/dps, so each takes its own talents, gear and rotation out
 // of it. The site's options, which leave Inner Fire and Shadowfiend off.
 func TestArenaShadow(t *testing.T) {
-	arenalib.Run(t, arenalib.Spec{
-		Dir:         "shadow_priest",
-		UI:          "priest/dps",
-		Class:       proto.Class_ClassPriest,
-		Race:        proto.Race_RaceUndead,
-		SpecOptions: arenaPriestOptions,
-		Role:        arenalib.Caster,
-		// Mind Flay is 20 yd in the client (SpellRange 3).
-		DistanceFromTarget: 20,
-		Talents:            "Shadow",
-		GearSets:           []string{"launch", "p0.bis", "p1.bis"},
-		Rotations:          []string{"shadow"},
-	})
+	arenalib.Run(t, arenaShadow)
 }
 
 func TestArenaSmite(t *testing.T) {
-	arenalib.Run(t, arenalib.Spec{
-		Dir:                "smite_priest",
-		UI:                 "priest/dps",
-		Class:              proto.Class_ClassPriest,
-		Race:               proto.Race_RaceUndead,
-		SpecOptions:        arenaPriestOptions,
-		Role:               arenalib.Caster,
-		DistanceFromTarget: 30,
-		Talents:            "Smite",
-		GearSets:           []string{"smite_launch"},
-		Rotations:          []string{"smite"},
-	})
+	arenalib.Run(t, arenaSmite)
+}
+
+// The race tier lists for both priests; skipped unless RACE_ARENA_OUT is set. See
+// sim/arenalib/race_arena.go.
+func TestRaceArenaShadow(t *testing.T) {
+	arenalib.RunRaceArena(t, arenaShadow)
+}
+
+func TestRaceArenaSmite(t *testing.T) {
+	arenalib.RunRaceArena(t, arenaSmite)
+}
+
+var arenaShadow = arenalib.Spec{
+	Dir:         "shadow_priest",
+	UI:          "priest/dps",
+	Class:       proto.Class_ClassPriest,
+	Race:        proto.Race_RaceUndead,
+	SpecOptions: arenaPriestOptions,
+	Role:        arenalib.Caster,
+	// Mind Flay is 20 yd in the client (SpellRange 3).
+	DistanceFromTarget: 20,
+	Talents:            "Shadow",
+	GearSets:           []string{"launch", "p0.bis", "p1.bis"},
+	Rotations:          []string{"shadow"},
+}
+
+var arenaSmite = arenalib.Spec{
+	Dir:                "smite_priest",
+	UI:                 "priest/dps",
+	Class:              proto.Class_ClassPriest,
+	Race:               proto.Race_RaceUndead,
+	SpecOptions:        arenaPriestOptions,
+	Role:               arenalib.Caster,
+	DistanceFromTarget: 30,
+	Talents:            "Smite",
+	GearSets:           []string{"smite_launch"},
+	Rotations:          []string{"smite"},
+	// The page's default gear is the Shadow set; Smite has its own.
+	RaceBuilds: map[string]arenalib.RaceBuild{
+		"Smite 31/17/3": {Gear: "smite_launch"},
+	},
 }
 
 var arenaPriestOptions = &proto.Player_DpsPriest{DpsPriest: &proto.DpsPriest{Options: &proto.DpsPriest_Options{
