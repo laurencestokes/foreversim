@@ -225,12 +225,14 @@ func (hp *HunterPet) newScorpidPoison() *core.Spell {
 			TickLength:    time.Second * 2,
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				// Only the first stack snapshots the multiplier.
-				if dot.GetStacks() <= 1 {
-					dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(dot.Spell.Unit.AttackTables[target.Index], true)
-					dot.SnapshotBaseDamage = 0
+				// Each stack adds another flat tick; the multiplier no longer needs to special-case
+				// the first stack since SnapshotPhysical keeps it live every tick regardless (see
+				// core.Dot.computeSnapshot).
+				rawBase := baseDamageTick
+				if dot.GetStacks() > 1 {
+					rawBase += dot.SnapshotRawBaseDamage
 				}
-				dot.SnapshotBaseDamage += baseDamageTick
+				dot.SnapshotPhysical(target, rawBase)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
