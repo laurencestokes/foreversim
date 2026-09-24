@@ -77,19 +77,43 @@ func warlockSuite(apl string, talents string, options *proto.WarlockOptions) cor
 
 // One demon for every rotation: the Succubus, kept out, as the Affliction builds run it.
 func TestArena(t *testing.T) {
-	arenalib.Run(t, arenalib.Spec{
-		Dir:   "warlock",
-		UI:    "warlock/dps",
-		Class: proto.Class_ClassWarlock,
-		Race:  proto.Race_RaceOrc,
-		SpecOptions: &proto.Player_Warlock{Warlock: &proto.Warlock{Options: &proto.Warlock_Options{
-			ClassOptions: &proto.WarlockOptions{
-				Summon:       proto.WarlockOptions_Succubus,
-				Armor:        proto.WarlockOptions_DemonArmor,
-				CurseOptions: proto.WarlockOptions_Elements,
-			},
-		}}},
-		Role:               arenalib.Caster,
-		DistanceFromTarget: 30,
-	})
+	arenalib.Run(t, arenaSpec)
 }
+
+// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
+func TestRaceArena(t *testing.T) {
+	arenalib.RunRaceArena(t, arenaSpec)
+}
+
+var arenaSpec = arenalib.Spec{
+	Dir:   "warlock",
+	UI:    "warlock/dps",
+	Class: proto.Class_ClassWarlock,
+	Race:  proto.Race_RaceOrc,
+	SpecOptions: &proto.Player_Warlock{Warlock: &proto.Warlock{Options: &proto.Warlock_Options{
+		ClassOptions: &proto.WarlockOptions{
+			Summon:       proto.WarlockOptions_Succubus,
+			Armor:        proto.WarlockOptions_DemonArmor,
+			CurseOptions: proto.WarlockOptions_Elements,
+		},
+	}}},
+	Role:               arenalib.Caster,
+	DistanceFromTarget: 30,
+	// The page's build presets (ui/specs/warlock/dps/presets.ts): each community build's rotation,
+	// and its demon where that is not the Succubus above - the DS/Ruin builds sacrifice an Imp.
+	RaceBuilds: map[string]arenalib.RaceBuild{
+		"Demonic Pact 2/31/18":      {Rotation: "demonic_pact"},
+		"Deep Affliction 35/0/16":   {Rotation: "affliction"},
+		"DS/Ruin Pandemic 24/11/16": {Rotation: "ds_ruin", SpecOptions: arenaSacrificedImp},
+		"Shadow and Flame 13/11/27": {Rotation: "destruction", SpecOptions: arenaSacrificedImp},
+	},
+}
+
+var arenaSacrificedImp = &proto.Player_Warlock{Warlock: &proto.Warlock{Options: &proto.Warlock_Options{
+	ClassOptions: &proto.WarlockOptions{
+		Summon:          proto.WarlockOptions_Imp,
+		SacrificeSummon: true,
+		Armor:           proto.WarlockOptions_DemonArmor,
+		CurseOptions:    proto.WarlockOptions_Elements,
+	},
+}}}

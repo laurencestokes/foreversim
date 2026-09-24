@@ -98,21 +98,35 @@ func hunterSuite(apl string, talents string) core.CharacterSuiteConfig {
 // The site's hunter options: Thorium Headed Arrows, the Classic ammo, where the suite above
 // shoots TBC's Doomshot.
 func TestArena(t *testing.T) {
-	arenalib.Run(t, arenalib.Spec{
-		Dir:   "hunter",
-		UI:    "hunter/dps",
-		Class: proto.Class_ClassHunter,
-		Race:  proto.Race_RaceOrc,
-		SpecOptions: &proto.Player_Hunter{Hunter: &proto.Hunter{Options: &proto.Hunter_Options{
-			ClassOptions: &proto.HunterOptions{
-				Ammo:           proto.HunterOptions_ThoriumHeadedArrow,
-				QuiverBonus:    proto.HunterOptions_Speed15,
-				PetType:        proto.HunterOptions_Cat,
-				PetAttackSpeed: proto.HunterOptions_OneTwo,
-				PetUptime:      1,
-			},
-		}}},
-		Role:               arenalib.Ranged,
-		DistanceFromTarget: 30,
-	})
+	arenalib.Run(t, arenaSpec)
+}
+
+// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
+func TestRaceArena(t *testing.T) {
+	arenalib.RunRaceArena(t, arenaSpec)
+}
+
+var arenaSpec = arenalib.Spec{
+	Dir:   "hunter",
+	UI:    "hunter/dps",
+	Class: proto.Class_ClassHunter,
+	Race:  proto.Race_RaceOrc,
+	SpecOptions: &proto.Player_Hunter{Hunter: &proto.Hunter{Options: &proto.Hunter_Options{
+		ClassOptions: &proto.HunterOptions{
+			Ammo:           proto.HunterOptions_ThoriumHeadedArrow,
+			QuiverBonus:    proto.HunterOptions_Speed15,
+			PetType:        proto.HunterOptions_Cat,
+			PetAttackSpeed: proto.HunterOptions_OneTwo,
+			PetUptime:      1,
+		},
+	}}},
+	Role:               arenalib.Ranged,
+	DistanceFromTarget: 30,
+	// The page's automatic rotation is Marksmanship whatever the talents, and it ships a rotation
+	// named for each tree; each build plays its own.
+	RaceBuilds: map[string]arenalib.RaceBuild{
+		"Beast Mastery 35/16/0": {Rotation: "bm"},
+		"Marksmanship 0/39/12":  {Rotation: "mm"},
+		"Survival 0/15/36":      {Rotation: "sv"},
+	},
 }

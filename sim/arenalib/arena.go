@@ -133,6 +133,11 @@ type Spec struct {
 	Talents   string
 	GearSets  []string
 	Rotations []string
+
+	// How the race arena (race_arena.go) plays a community build, keyed by its talent preset's
+	// name, where the page decides it in code rather than in a file the arena can read. A build
+	// not listed plays the page's default gear set and the spec's one rotation.
+	RaceBuilds map[string]RaceBuild
 }
 
 type TalentBuild struct {
@@ -438,36 +443,12 @@ func runAt(spec Spec, talent TalentBuild, gear string, rotation string, iteratio
 		rotationProto = core.GetAplRotation(filepath.Join(uiDir, "apls"), rotation).Rotation
 	}
 
-	distance := spec.DistanceFromTarget
-	if distance == 0 {
-		distance = 5
-	}
-
-	player := core.WithSpec(&proto.Player{
-		Class:              spec.Class,
-		Race:               spec.Race,
-		Equipment:          gearCombo.GearSet,
-		Consumables:        environment.Consumables,
-		Buffs:              environment.Player,
-		TalentsString:      talent.Talents,
-		Profession1:        proto.Profession_Engineering,
-		Rotation:           rotationProto,
-		DistanceFromTarget: distance,
-		ReactionTimeMs:     150,
-		ChannelClipDelayMs: 50,
-	}, spec.SpecOptions)
-
-	raid := core.SinglePlayerRaidProto(player, environment.Party, environment.Raid, environment.Debuffs)
-	if spec.IsTank {
-		raid.Tanks = append(raid.Tanks, &proto.UnitReference{Type: proto.UnitReference_Player, Index: 0})
-	}
-
 	result := core.RunRaidSim(&proto.RaidSimRequest{
-		Raid:      raid,
+		Raid:      arenaRaid(spec, environment, spec.Race, gearCombo.GearSet, talent.Talents, rotationProto, spec.SpecOptions),
 		Encounter: core.MakeSingleTargetEncounter(0),
 		SimOptions: &proto.SimOptions{
 			Iterations: iterations,
-			RandomSeed: 101,
+			RandomSeed: arenaSeed,
 		},
 	})
 	if result.Error != nil {
@@ -486,6 +467,39 @@ func runAt(spec Spec, talent TalentBuild, gear string, rotation string, iteratio
 		collect(&row, pet)
 	}
 	return row
+}
+
+// Every arena run uses the same random stream, so two builds, or two races, meet the same rolls.
+const arenaSeed = 101
+
+// The one character an arena run simulates, in the spec's environment and at the spec's
+// distance. The race arena (race_arena.go) builds its characters here too, so a tier list and a
+// leaderboard row cannot quietly be run under different conditions.
+func arenaRaid(spec Spec, environment core.BuffsCombo, race proto.Race, equipment *proto.EquipmentSpec, talents string, rotation *proto.APLRotation, specOptions interface{}) *proto.Raid {
+	distance := spec.DistanceFromTarget
+	if distance == 0 {
+		distance = 5
+	}
+
+	player := core.WithSpec(&proto.Player{
+		Class:              spec.Class,
+		Race:               race,
+		Equipment:          equipment,
+		Consumables:        environment.Consumables,
+		Buffs:              environment.Player,
+		TalentsString:      talents,
+		Profession1:        proto.Profession_Engineering,
+		Rotation:           rotation,
+		DistanceFromTarget: distance,
+		ReactionTimeMs:     150,
+		ChannelClipDelayMs: 50,
+	}, specOptions)
+
+	raid := core.SinglePlayerRaidProto(player, environment.Party, environment.Raid, environment.Debuffs)
+	if spec.IsTank {
+		raid.Tanks = append(raid.Tanks, &proto.UnitReference{Type: proto.UnitReference_Player, Index: 0})
+	}
+	return raid
 }
 
 // Without ARENA_OUT the arena still runs every build, briefly, to hold the evidence manifest

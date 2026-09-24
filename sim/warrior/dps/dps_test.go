@@ -107,12 +107,29 @@ var DefaultConsumables = &proto.ConsumesSpec{
 
 // The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
 func TestArena(t *testing.T) {
-	arenalib.Run(t, arenalib.Spec{
-		Dir:         "warrior",
-		UI:          "warrior/dps",
-		Class:       proto.Class_ClassWarrior,
-		Race:        proto.Race_RaceOrc,
-		SpecOptions: DefaultOptions,
-		Role:        arenalib.Melee,
-	})
+	arenalib.Run(t, arenaSpec)
+}
+
+// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
+func TestRaceArena(t *testing.T) {
+	arenalib.RunRaceArena(t, arenaSpec)
+}
+
+var arenaSpec = arenalib.Spec{
+	Dir:         "warrior",
+	UI:          "warrior/dps",
+	Class:       proto.Class_ClassWarrior,
+	Race:        proto.Race_RaceOrc,
+	SpecOptions: DefaultOptions,
+	Role:        arenalib.Melee,
+	// The page plays every build with its No Reck rotation (autoRotation). Arms is a two-hander build
+	// and the page's default set dual wields, so Arms wears the page's one two-hander set short of P1.
+	// That set's two-hander is an axe, and Arms takes Weaponmaster, which pays swords (extra attacks)
+	// well over axes (crit) or maces (armor penetration) whatever the race: on the axe only the
+	// Human's relabel would reach the sword branch. So it runs as a sword for every race, and the
+	// Orc and Dwarf try theirs on top.
+	RaceBuilds: map[string]arenalib.RaceBuild{
+		"Fury 17/34/0": {Rotation: "dps_no_reck"},
+		"Arms 39/12/0": {Gear: "arms_launch", Rotation: "dps_no_reck", WeaponType: proto.WeaponType_WeaponTypeSword},
+	},
 }

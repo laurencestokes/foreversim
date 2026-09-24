@@ -92,12 +92,19 @@ var DefaultConsumables = &proto.ConsumesSpec{
 
 // The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
 func TestArena(t *testing.T) {
-	arenalib.Run(t, arenalib.Spec{
-		Dir:         "retribution_paladin",
-		UI:          "paladin/retribution",
-		Class:       proto.Class_ClassPaladin,
-		Race:        proto.Race_RaceHuman,
-		SpecOptions: DefaultOptions,
-		Role:        arenalib.Melee,
-	})
+	arenalib.Run(t, arenaSpec)
+}
+
+// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
+func TestRaceArena(t *testing.T) {
+	arenalib.RunRaceArena(t, arenaSpec)
+}
+
+var arenaSpec = arenalib.Spec{
+	Dir:         "retribution_paladin",
+	UI:          "paladin/retribution",
+	Class:       proto.Class_ClassPaladin,
+	Race:        proto.Race_RaceHuman,
+	SpecOptions: DefaultOptions,
+	Role:        arenalib.Melee,
 }
