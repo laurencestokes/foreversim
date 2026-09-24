@@ -266,8 +266,8 @@ const Caveats = () => (
 				Touch of the Grave (Undead) is modelled as a drain of 5% of the caster&apos;s maximum health as Shadow damage. It can be resisted, cannot crit,
 				and procs from hits and from applying a damage over time spell, not from its ticks: a 5% chance for warriors, paladins and rogues, 10% for
 				priests, mages and warlocks, at most once a second. Its damage follows maximum health, so the environment&apos;s health buffs (Fortitude, Kings,
-				and Flask of the Titans on the melee list) raise it. The client&apos;s tooltip says &ldquo;up to 5%&rdquo;, so the real drain may be smaller
-				or vary; this is the least certain number on the page, and it is why Undead tops so many lists.
+				and Flask of the Titans on the melee list) raise it. The client&apos;s tooltip says &ldquo;up to 5%&rdquo;, so the real drain may be smaller or
+				vary; this is the least certain number on the page, and it is why Undead tops so many lists.
 			</li>
 			<li>
 				Eureka! (Gnome) is modelled for warriors, rogues and warlocks only. Gnome mages and priests are ranked without it, on Expansive Mind alone. A
