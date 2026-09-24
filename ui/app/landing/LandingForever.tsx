@@ -13,6 +13,7 @@ const PRODUCT_LINKS: Array<{ href: string; title: string; status: string }> = [
 	{ href: 'stat_weights/', title: 'Stat Weights', status: 'Launch - Alpha' },
 	{ href: 'changelog/', title: 'What changed for Forever', status: 'Changelog and sources' },
 	{ href: 'arena/', title: 'The build arena', status: 'Every build, ranked' },
+	{ href: 'race_arena/', title: 'Race tier list', status: 'Every race, every spec' },
 	{ href: 'evidence/', title: 'Where every number came from', status: '996 abilities, one reason each' },
 ];
 
