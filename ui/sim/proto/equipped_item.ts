@@ -1,4 +1,15 @@
-import { type AreaType, GemColor, ItemRandomSuffix, ItemSlot, ItemSpec, Profession, PseudoStat, ScalingItemProperties } from '@generated/proto/common';
+import {
+	type AreaType,
+	GemColor,
+	ItemRandomSuffix,
+	ItemSlot,
+	ItemSpec,
+	ItemType,
+	Profession,
+	PseudoStat,
+	ScalingItemProperties,
+	WeaponType,
+} from '@generated/proto/common';
 import { UIEnchant as Enchant, UIGem as Gem, UIItem as Item } from '@generated/proto/ui';
 
 import { distinct } from '../utils/collections';
@@ -32,6 +43,7 @@ type EquippedItemOptions = {
 	enchant?: Enchant | null;
 	gems?: Array<Gem | null>;
 	randomSuffix?: ItemRandomSuffix | null;
+	weaponTypeOverride?: WeaponType;
 };
 
 /**
@@ -44,14 +56,18 @@ export class EquippedItem {
 	readonly _randomSuffix: ItemRandomSuffix | null;
 	readonly _enchant: Enchant | null;
 	readonly _gems: Array<Gem | null>;
+	// Debug relabel of this weapon's type; see withWeaponTypeOverride and effectiveWeaponType.
+	// WeaponTypeUnknown means no override -- use the item's own type.
+	readonly _weaponTypeOverride: WeaponType;
 
 	readonly numPossibleSockets: number;
 
-	constructor({ item, enchant, gems, randomSuffix }: EquippedItemOptions) {
+	constructor({ item, enchant, gems, randomSuffix, weaponTypeOverride }: EquippedItemOptions) {
 		this._item = item;
 		this._enchant = enchant || null;
 		this._gems = gems || [];
 		this._randomSuffix = randomSuffix || null;
+		this._weaponTypeOverride = weaponTypeOverride || WeaponType.WeaponTypeUnknown;
 
 		this.numPossibleSockets = this.numSockets();
 
@@ -92,6 +108,21 @@ export class EquippedItem {
 		return this.item.scalingOptions[0].ilvl;
 	}
 
+	// The raw debug override, or WeaponTypeUnknown if none is set. Mainly useful for driving the
+	// override select in the item editor; most callers that care about "what type is this weapon
+	// actually being treated as" want effectiveWeaponType instead.
+	get weaponTypeOverride(): WeaponType {
+		return this._weaponTypeOverride;
+	}
+
+	// The weapon type that type-keyed effects (racials like Sword/Axe/Mace Specialization,
+	// talents, ability requirements like Backstab/Mutilate needing a dagger) should key on: the
+	// debug override when one is active, otherwise the item's own type. Item browsing/filtering
+	// should keep using item.weaponType -- only "what is currently wielded" checks want this.
+	get effectiveWeaponType(): WeaponType {
+		return this._weaponTypeOverride !== WeaponType.WeaponTypeUnknown ? this._weaponTypeOverride : this._item.weaponType;
+	}
+
 	getBaseScalingItemProperties(): ScalingItemProperties {
 		return this._item.scalingOptions[0];
 	}
@@ -99,6 +130,7 @@ export class EquippedItem {
 	equals(other: EquippedItem, ignoreEnchants?: boolean, ignoreGems?: boolean) {
 		if (this.id != other.id) return false;
 		if (!Item.equals(this._item, other.item)) return false;
+		if (this._weaponTypeOverride != other.weaponTypeOverride) return false;
 
 		if ((this._randomSuffix == null) != (other.randomSuffix == null)) return false;
 
@@ -123,6 +155,9 @@ export class EquippedItem {
 
 	/**
 	 * Replaces the item and tries to keep the existing enchants/gems if possible.
+	 *
+	 * The weapon type override is deliberately NOT carried over: it's a relabel of this specific
+	 * weapon, and a different item picked here isn't necessarily even a weapon.
 	 */
 	withItem(item: Item): EquippedItem {
 		let newEnchant = null;
@@ -165,6 +200,30 @@ export class EquippedItem {
 			enchant,
 			gems: this._gems,
 			randomSuffix: this._randomSuffix,
+			weaponTypeOverride: this._weaponTypeOverride,
+		});
+	}
+
+	/**
+	 * Returns a new EquippedItem with its weapon type debug-relabelled (e.g. a sword displayed
+	 * and treated as an axe). Stats and effects are unchanged; only the type tag that type-keyed
+	 * effects read via effectiveWeaponType changes. Pass WeaponTypeUnknown to clear the override
+	 * and go back to the item's own type.
+	 *
+	 * A no-op (override cleared) for non-weapons, and for held off-hands/shields on either end --
+	 * relabelling into or out of those would confuse dual-wield and hand-type logic. Mirrors
+	 * sim/core/database.go's NewItem.
+	 */
+	withWeaponTypeOverride(weaponType: WeaponType): EquippedItem {
+		const excluded = [WeaponType.WeaponTypeOffHand, WeaponType.WeaponTypeShield];
+		const canOverride = this._item.type === ItemType.ItemTypeWeapon && !excluded.includes(this._item.weaponType) && !excluded.includes(weaponType);
+
+		return new EquippedItem({
+			item: this._item,
+			enchant: this._enchant,
+			gems: this._gems,
+			randomSuffix: this._randomSuffix,
+			weaponTypeOverride: canOverride ? weaponType : WeaponType.WeaponTypeUnknown,
 		});
 	}
 
@@ -184,6 +243,7 @@ export class EquippedItem {
 			enchant: this._enchant,
 			gems: newGems,
 			randomSuffix: this._randomSuffix,
+			weaponTypeOverride: this._weaponTypeOverride,
 		});
 	}
 
@@ -232,6 +292,7 @@ export class EquippedItem {
 			enchant: this._enchant,
 			gems: this._gems,
 			randomSuffix,
+			weaponTypeOverride: this._weaponTypeOverride,
 		});
 	}
 
@@ -259,6 +320,7 @@ export class EquippedItem {
 			enchant: this._enchant,
 			gems: this._gems,
 			randomSuffix: this._randomSuffix,
+			weaponTypeOverride: this._weaponTypeOverride,
 		});
 	}
 
@@ -281,6 +343,7 @@ export class EquippedItem {
 			randomSuffix: this._randomSuffix?.id,
 			enchant: this._enchant?.effectId,
 			gems: this._gems.map(gem => gem?.id || 0),
+			weaponTypeOverride: this._weaponTypeOverride || undefined,
 		});
 	}
 

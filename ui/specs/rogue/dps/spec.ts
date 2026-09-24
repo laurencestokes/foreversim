@@ -150,7 +150,7 @@ export default defineSpec<Spec.SpecRogue>({
 	// Master's: daggers get Mutilate, Hemorrhage or Backstab by talents, anything else Sinister Strike.
 	autoRotation: (player: Player<Spec.SpecRogue>): APLRotation => {
 		const talents = player.getTalents();
-		if (player.getEquippedItem(ItemSlot.ItemSlotMainHand)?.item.weaponType === WeaponType.WeaponTypeDagger) {
+		if (player.getEquippedItem(ItemSlot.ItemSlotMainHand)?.effectiveWeaponType === WeaponType.WeaponTypeDagger) {
 			if (talents.mutilate) return Presets.ROTATION_PRESET_MUTILATE.rotation.rotation!;
 			if (talents.hemorrhage) return Presets.ROTATION_PRESET_HEMORRHAGE.rotation.rotation!;
 			return Presets.ROTATION_PRESET_BACKSTAB.rotation.rotation!;

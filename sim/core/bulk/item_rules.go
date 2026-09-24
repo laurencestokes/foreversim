@@ -11,6 +11,10 @@ func replaceItem(existing core.Item, option bulkSimCandidateOption) core.Item {
 	itemSpec := existing.ToItemSpecProto()
 	itemSpec.Id = option.spec.GetId()
 	itemSpec.RandomSuffix = option.spec.GetRandomSuffix()
+	// The override is a property of the candidate's own spec (like RandomSuffix), not
+	// something that should leak from the item being replaced: a plain database candidate
+	// has no override and should equip with its real type.
+	itemSpec.WeaponTypeOverride = option.spec.GetWeaponTypeOverride()
 
 	if !enchantAppliesToItem(itemSpec.GetEnchant(), option.item) {
 		itemSpec.Enchant = 0
@@ -18,19 +22,21 @@ func replaceItem(existing core.Item, option bulkSimCandidateOption) core.Item {
 	itemSpec.Gems = mergeGems(existing, option, option.item)
 
 	return core.NewItem(core.ItemSpec{
-		ID:           itemSpec.GetId(),
-		RandomSuffix: itemSpec.GetRandomSuffix(),
-		Enchant:      itemSpec.GetEnchant(),
-		Gems:         slices.Clone(itemSpec.GetGems()),
+		ID:                 itemSpec.GetId(),
+		RandomSuffix:       itemSpec.GetRandomSuffix(),
+		Enchant:            itemSpec.GetEnchant(),
+		Gems:               slices.Clone(itemSpec.GetGems()),
+		WeaponTypeOverride: itemSpec.GetWeaponTypeOverride(),
 	})
 }
 
 func createSelectedItem(option bulkSimCandidateOption) core.Item {
 	return core.NewItem(core.ItemSpec{
-		ID:           option.spec.GetId(),
-		RandomSuffix: option.spec.GetRandomSuffix(),
-		Enchant:      option.spec.GetEnchant(),
-		Gems:         slices.Clone(option.spec.GetGems()),
+		ID:                 option.spec.GetId(),
+		RandomSuffix:       option.spec.GetRandomSuffix(),
+		Enchant:            option.spec.GetEnchant(),
+		Gems:               slices.Clone(option.spec.GetGems()),
+		WeaponTypeOverride: option.spec.GetWeaponTypeOverride(),
 	})
 }
 

@@ -3,3 +3,4 @@ export { ItemCell, type ItemCellProps } from '@ui-kit/ItemCell';
 export { ItemCellAnchor, type ItemCellAnchorProps } from './ItemCellAnchor';
 export { ItemDetailCell, type ItemDetailCellProps } from './ItemDetailCell';
 export { NameDescriptionLabel, type NameDescriptionLabelProps } from './NameDescriptionLabel';
+export { WeaponTypeOverrideLabel, type WeaponTypeOverrideLabelProps } from './WeaponTypeOverrideLabel';

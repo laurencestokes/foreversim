@@ -39,6 +39,16 @@ Then open http://localhost:8080/forever/. Stop it with `docker rm -f foreversim`
 after any change. For a development setup with live reload, see [docs/installation.md](docs/installation.md)
 and [docs/commands.md](docs/commands.md).
 
+## Debug: weapon type override
+
+Every equipped main-hand or off-hand weapon has a "Weapon type (debug override)" selector in its gear
+picker. Choosing a type (say, a sword relabelled as an axe) changes only what the weapon counts as for
+effects that key on weapon type: racials such as Human Sword, Orc Axe and Dwarf Mace Specialization,
+talents such as the rogue's Hack and Slash, and ability requirements such as Backstab and Mutilate
+needing a dagger. Its stats, procs and every other effect are unchanged. An overridden weapon shows an
+"as <type>" badge in the gear list. It exists to compare races fairly on otherwise identical gear; it
+has no in-game equivalent.
+
 ## The race analysis tests
 
 Opt-in Go tests, skipped unless their variable is set. With Go, protoc and the generated protos in place

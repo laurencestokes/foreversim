@@ -366,24 +366,24 @@ export class Gear extends BaseGear {
 		return (
 			weapon != null &&
 			![HandType.HandTypeOffHand].includes(weapon.item.handType) &&
-			![WeaponType.WeaponTypeOffHand, WeaponType.WeaponTypeShield].includes(weapon.item.weaponType)
+			![WeaponType.WeaponTypeOffHand, WeaponType.WeaponTypeShield].includes(weapon.effectiveWeaponType)
 		);
 	}
 	hasBluntMHWeapon(): boolean {
 		const weapon = this.getEquippedItem(ItemSlot.ItemSlotMainHand);
-		return weapon != null && isBluntWeaponType(weapon.item.weaponType);
+		return weapon != null && isBluntWeaponType(weapon.effectiveWeaponType);
 	}
 	hasSharpMHWeapon(): boolean {
 		const weapon = this.getEquippedItem(ItemSlot.ItemSlotMainHand);
-		return weapon != null && isSharpWeaponType(weapon.item.weaponType);
+		return weapon != null && isSharpWeaponType(weapon.effectiveWeaponType);
 	}
 	hasBluntOHWeapon(): boolean {
 		const weapon = this.getEquippedItem(ItemSlot.ItemSlotOffHand);
-		return weapon != null && isBluntWeaponType(weapon.item.weaponType);
+		return weapon != null && isBluntWeaponType(weapon.effectiveWeaponType);
 	}
 	hasSharpOHWeapon(): boolean {
 		const weapon = this.getEquippedItem(ItemSlot.ItemSlotOffHand);
-		return weapon != null && isSharpWeaponType(weapon.item.weaponType);
+		return weapon != null && isSharpWeaponType(weapon.effectiveWeaponType);
 	}
 	// Rewrites the MH/OH weapon stone imbues to match the equipped weapon types, returning the
 	// original ConsumesSpec unchanged if nothing needs adjusting.

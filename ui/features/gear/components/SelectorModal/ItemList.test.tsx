@@ -1,7 +1,7 @@
-import { Class, GemColor, ItemQuality, ItemSlot, ScalingItemProperties } from '@generated/proto/common';
+import { Class, GemColor, ItemQuality, ItemSlot, ItemType, ScalingItemProperties, WeaponType } from '@generated/proto/common';
 import { DatabaseFilters, UIItem as Item } from '@generated/proto/ui';
 import { SimHostProvider } from '@sim/context/SimHostContext';
-import type { EquippedItem } from '@sim/proto/equipped_item';
+import { EquippedItem } from '@sim/proto/equipped_item';
 import type { IndividualSimHost } from '@sim/sim_host';
 import { createSimStore, patchSlice, type SimStore } from '@sim/state/sim_store';
 import { fakeHost } from '@sim/testing';
@@ -299,5 +299,89 @@ describe('ItemList', () => {
 			store.notify();
 		});
 		expect(names(container)).toEqual(['Gamma', 'Beta', 'Alpha']);
+	});
+
+	describe('weapon type override', () => {
+		const swordItem = () =>
+			Item.create({
+				id: 19324,
+				name: 'The Lobotomizer',
+				type: ItemType.ItemTypeWeapon,
+				weaponType: WeaponType.WeaponTypeSword,
+				scalingOptions: { 0: ScalingItemProperties.create({ ilvl: 76 }) },
+			});
+		const shieldItem = () =>
+			Item.create({
+				id: 17066,
+				name: 'Drillborer Disk',
+				type: ItemType.ItemTypeWeapon,
+				weaponType: WeaponType.WeaponTypeShield,
+				scalingOptions: { 0: ScalingItemProperties.create({ ilvl: 76 }) },
+			});
+
+		// A warrior can use axes, swords and (as an off-hand item, not a "type") shields.
+		const withWarriorWeaponTypes = () => {
+			(host.player as any).getPlayerClass = () => ({
+				weaponTypes: [
+					{ weaponType: WeaponType.WeaponTypeAxe },
+					{ weaponType: WeaponType.WeaponTypeSword },
+					{ weaponType: WeaponType.WeaponTypeShield },
+				],
+			});
+		};
+
+		const selectFor = (container: HTMLElement) => container.querySelector<HTMLSelectElement>('[data-testid="selector-modal-weapon-type-override"] select');
+
+		it('offers "as item" plus the class weapon types, excluding shield/off-hand, for an equipped main-hand weapon', () => {
+			withWarriorWeaponTypes();
+			const equipped = new EquippedItem({ item: swordItem() });
+			(host.player as any).getEquippedItem = () => equipped;
+
+			const { container } = setup({ slot: ItemSlot.ItemSlotMainHand, equipped });
+			const select = selectFor(container);
+			expect(select).not.toBeNull();
+
+			// i18n resources are not loaded in this test environment, so labels fall back to their
+			// keys / enum names rather than "As item (Sword)" / "Axe" / "Sword" -- assert on the
+			// substrings that survive that fallback instead of the localized text.
+			const optionLabels = Array.from(select!.options).map(option => option.textContent);
+			expect(optionLabels).toHaveLength(3); // as-item + Axe + Sword; Shield excluded
+			expect(optionLabels[0]).toContain('as_item');
+			expect(optionLabels[1]).toContain('Axe');
+			expect(optionLabels[2]).toContain('Sword');
+		});
+
+		it('is hidden for a held shield, and outside the main/off hand slots', () => {
+			withWarriorWeaponTypes();
+			const shield = new EquippedItem({ item: shieldItem() });
+			(host.player as any).getEquippedItem = () => shield;
+			const shieldSlot = setup({ slot: ItemSlot.ItemSlotOffHand, equipped: shield });
+			expect(selectFor(shieldSlot.container)).toBeNull();
+			shieldSlot.unmount();
+
+			const sword = new EquippedItem({ item: swordItem() });
+			(host.player as any).getEquippedItem = () => sword;
+			const headSlot = setup({ slot: ItemSlot.ItemSlotHead, equipped: sword });
+			expect(selectFor(headSlot.container)).toBeNull();
+		});
+
+		it('equips the relabelled item through player.equipItem when a type is chosen', () => {
+			withWarriorWeaponTypes();
+			const equipped = new EquippedItem({ item: swordItem() });
+			const equipItem = vi.fn();
+			(host.player as any).getEquippedItem = () => equipped;
+			(host.player as any).equipItem = equipItem;
+
+			const { container } = setup({ slot: ItemSlot.ItemSlotMainHand, equipped });
+			const select = selectFor(container)!;
+
+			fireEvent.change(select, { target: { value: String(WeaponType.WeaponTypeAxe) } });
+
+			expect(equipItem).toHaveBeenCalledTimes(1);
+			const [slotArg, itemArg] = equipItem.mock.calls[0];
+			expect(slotArg).toBe(ItemSlot.ItemSlotMainHand);
+			expect((itemArg as EquippedItem).weaponTypeOverride).toBe(WeaponType.WeaponTypeAxe);
+			expect((itemArg as EquippedItem).effectiveWeaponType).toBe(WeaponType.WeaponTypeAxe);
+		});
 	});
 });

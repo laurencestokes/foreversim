@@ -18,6 +18,7 @@ import { ItemNoticeIcon } from '../GearPicker/ItemNoticeIcon';
 import { GemSocket } from './GemSocket';
 import { ItemCellAnchor } from './ItemCellAnchor';
 import { NameDescriptionLabel } from './NameDescriptionLabel';
+import { WeaponTypeOverrideLabel } from './WeaponTypeOverrideLabel';
 
 export interface ItemDetailCellProps {
 	/** Drives the empty-state icon and the empty-state name. */
@@ -118,6 +119,7 @@ export const ItemDetailCell = ({
 										flush={nameDescriptionFlush}
 									/>
 								)}
+								<WeaponTypeOverrideLabel weaponTypeOverride={item.weaponTypeOverride} />
 							</>
 						) : (
 							translateSlotName(slot)
