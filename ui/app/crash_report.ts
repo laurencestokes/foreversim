@@ -55,7 +55,7 @@ export async function reportSimCrash(error: any, ctx: CrashReportContext): Promi
 		const hash = hashCode(errorStr);
 		const link = ctx.toLink();
 		const rngSeed = ctx.getLastUsedRngSeed();
-		fetch('https://api.github.com/search/issues?q=is:issue+is:open+repo:wowsims/forever+' + hash)
+		fetch('https://api.github.com/search/issues?q=is:issue+is:open+repo:laurencestokes/foreversim+' + hash)
 			.then(resp => {
 				resp.json().then(issues => {
 					if (issues.total_count > 0) {

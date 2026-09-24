@@ -16,7 +16,7 @@ export const SocialLink = ({ social }: SocialLinkProps) => {
 		<>
 			<Button as="a" variant="unstyled" href={social.href} target="_blank" className={social.className} aria-label={tooltip} {...tooltipAnchorProps(id)}>
 				<Icon name={social.icon} style="brands" size="lg" />
-				{'label' in social && social.label}
+				{social.label}
 			</Button>
 			<Tooltip id={id} content={tooltip} />
 		</>

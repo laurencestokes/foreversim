@@ -1,30 +1,75 @@
-# WoW Forever Simulator
+# ForeverSim
 
-Welcome to the WoW Forever simulator! If you have questions or are thinking about contributing, [join our discord](https://discord.gg/jJMPr9JWwx) to chat!
+An unofficial DPS, tank and healing simulator for World of Warcraft®: Forever, the Classic+ relaunch
+announced at BlizzCon 2026. Not affiliated with Blizzard or the WoWSims team.
 
-The primary goal of this project is to provide a framework that makes it easy to build a DPS sim for any class/spec, with a polished UI and accurate results. Each community will have ownership / responsibility over their portion of the sim, to ensure accuracy and that their community is represented.
+**Live site:** https://laurencestokes.github.io/foreversim/forever/
 
-This project is licensed with MIT license. We request that anyone using this software in their own project to make sure there is a user visible link back to the original project.
+## Where it comes from
 
-[Live sims can be found here.](https://wowsims.com/forever)
+This repository is built on:
 
-[Support our devs via Patreon.](https://www.patreon.com/wowsims)
+- [wowsims/forever](https://github.com/wowsims/forever), the official WoWSims Forever sim, whose engine
+  this is, and
+- [ElliotWood/Forever](https://github.com/ElliotWood/Forever), which layers Forever's rule changes, data
+  tooling, documentation and product pages on top of it.
 
-## Downloading Sim
+Both are MIT licensed, as is this repository (see [LICENSE](LICENSE)). WoWSims asks that anyone using the
+software keeps a user-visible link back to the original project; the site's landing page does.
 
-Links for latest Sim build:
+What this repository adds so far:
 
-- [Windows Sim](https://github.com/wowsims/forever/releases/latest/download/wowsimforever-windows.exe.zip)
-- [MacOS Sim](https://github.com/wowsims/forever/releases/latest/download/wowsimforever-amd64-darwin.zip)
-- [Linux Sim](https://github.com/wowsims/forever/releases/latest/download/wowsimforever-amd64-linux.zip)
+- **Forever racials** from the beta client's own data (build 1.60.1.69977): the reworked racials, the
+  Skyborne, Forever's race and class pairings, and Eureka! for warriors, warlocks and rogues. Every value
+  is listed with its spell id in [docs/forever_rules.md](docs/forever_rules.md#racials).
+- **Race analysis** tests that take each race's DPS apart, piece by piece, on identical gear
+  ([results](docs/race-analysis/)).
+- No analytics, and nothing a visitor drops on the site leaves their browser.
 
-Then unzip the downloaded file, then open the unzipped file to open the sim in your browser!
+## Running it locally
 
-Alternatively, you can choose from a specific relase on the [Releases](https://github.com/wowsims/forever/releases) page and click the suitable link under "Assets"
+The simplest way is Docker. From the repository folder:
 
-## Documentation
+```sh
+docker build --target prod -t foreversim:local .
+docker run -d --name foreversim -p 8080:8080 foreversim:local
+```
 
-- [Installation Guide](docs/installation.md)
-- [Development Commands](docs/commands.md)
-- [Adding a New Sim](docs/adding_sim.md)
-- [Internationalization](docs/i18n_guide.md)
+Then open http://localhost:8080/forever/. Stop it with `docker rm -f foreversim`, and rebuild the image
+after any change. For a development setup with live reload, see [docs/installation.md](docs/installation.md)
+and [docs/commands.md](docs/commands.md).
+
+## The race analysis tests
+
+Opt-in Go tests, skipped unless their variable is set. With Go, protoc and the generated protos in place
+(`make proto`):
+
+```sh
+RACE_BREAKDOWN=1 go test --tags=with_db ./sim/warrior/dps/ -run TestRaceBreakdown -v
+RACE_BREAKDOWN=1 go test --tags=with_db ./sim/warlock/ -run TestRaceBreakdown -v
+RACE_BREAKDOWN=1 go test --tags=with_db ./sim/rogue/ -run TestRaceBreakdown -v
+EUREKA_SPLIT=1 go test --tags=with_db ./sim/rogue/ -run TestEurekaSplit -v
+```
+
+`RACE_BREAKDOWN_OUT` / `EUREKA_SPLIT_OUT` write the tables to a file. See `core.RacialBreakdown` in
+[sim/core/racial_breakdown.go](sim/core/racial_breakdown.go) for how each column is measured.
+
+## Keeping up with upstream
+
+Upstream changes are merged by hand, after review and a test run:
+
+```sh
+git remote add elliot https://github.com/ElliotWood/Forever.git
+git remote add wowsims https://github.com/wowsims/forever.git
+git fetch elliot wowsims
+git merge elliot/master      # or wowsims/master
+```
+
+Engine fixes that belong upstream are offered to [wowsims/forever](https://github.com/wowsims/forever) as
+pull requests of their own.
+
+## Deploying
+
+Every push to `master` runs the tests, builds the site and publishes it to this repository's GitHub Pages
+(`.github/workflows/deploy.yml`). Pages must be set to deploy from GitHub Actions
+(Settings > Pages > Source).

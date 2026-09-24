@@ -37,23 +37,31 @@ const Panel = ({ summary, children }: { summary: string; children: ReactNode }) 
 export const LandingForever = () => (
 	<div className="flex w-3/4 flex-col gap-4 max-lg:w-full" data-testid="landing-forever">
 		<p id="description" className="m-0 text-fluid-xl">
-			An unofficial, personal sim for World of Warcraft®: Forever, the Classic+ relaunch announced at BlizzCon 2026. It carries Forever&apos;s talent
-			trees, races and ruleset through every spec.
+			An unofficial sim for World of Warcraft®: Forever, the Classic+ relaunch announced at BlizzCon 2026. It carries Forever&apos;s talent trees, races
+			and ruleset through every spec.
 		</p>
 		<p className="m-0 opacity-80">
-			<strong>Unaffiliated with any official or community sim project.</strong> One person writes it, every bug here is mine, and every number is
-			provisional &mdash; useful for catching the sim doing something obviously wrong, not as a statement about Forever.
+			<strong>Not affiliated with Blizzard or the WoWSims team.</strong> Every number is provisional &mdash; useful for catching the sim doing something
+			obviously wrong, not as a statement about Forever. Problems and evidence are welcome as{' '}
+			<a href={`${SITE_REPO_URL}/issues`} target="_blank" rel="noreferrer">
+				GitHub issues
+			</a>
+			.
 		</p>
 		<p className="m-0 opacity-80" data-testid="wowsims-credit">
 			Built on the open-source{' '}
 			<a href="https://github.com/wowsims" target="_blank" rel="noreferrer">
 				WoWSims
 			</a>{' '}
-			simulators, used under their{' '}
+			simulators and{' '}
+			<a href="https://github.com/ElliotWood/Forever" target="_blank" rel="noreferrer">
+				Elliot Wood&apos;s Forever sim
+			</a>
+			, used under their{' '}
 			<a href={`${SITE_REPO_URL}/blob/master/LICENSE`} target="_blank" rel="noreferrer">
 				MIT licence
 			</a>
-			. The engine is their work.
+			. The engine and most of the Forever modelling are their work.
 		</p>
 		<p className="m-0 flex flex-wrap gap-3">
 			<Cta href="arena/" icon="trophy">
@@ -66,42 +74,6 @@ export const LandingForever = () => (
 				How you can help
 			</Cta>
 		</p>
-		<div className="flex flex-col gap-3 border border-brand bg-black/50 p-4">
-			<h2 className="m-0 text-xl text-brand">Playing the beta? Two files here are worth more than anything I can datamine.</h2>
-			<p className="m-0">
-				This sim reads Blizzard&apos;s data tables, which say what an ability is <em>meant</em> to do. Your client holds two files that say things the
-				tables cannot, and between them they close the two largest gaps on this page.
-			</p>
-			<ul className="m-0 flex flex-col gap-2 pl-5">
-				<li>
-					<strong>
-						<code>DBCache.bin</code> &mdash; what Blizzard changed after the build shipped.
-					</strong>{' '}
-					Hotfixes never reach a datamining site, so a value here can be stale the moment it is tuned and there is no way to tell from the outside.
-					Carries no personal data; send it as it is.
-				</li>
-				<li>
-					<strong>
-						<code>DamageMeter.bin</code> &mdash; what the server actually paid out.
-					</strong>{' '}
-					Forever blocks addons from reading damage, so the client&apos;s own meter is the only measurement there will be. Twelve abilities have been
-					confirmed this way so far, out of 996. It does carry character names, so it gets scrubbed in your browser first.{' '}
-					<strong>Getting one out is fiddly:</strong> open the meter, fight things, log out to character select, then copy the file before logging
-					back in &mdash; logging in deletes it.
-				</li>
-			</ul>
-			<p className="m-0 flex flex-wrap gap-3">
-				<Cta href="scrub/#hotfix-drop" icon="upload">
-					Send DBCache.bin
-				</Cta>
-				<Cta href="scrub/#meter-drop" icon="upload">
-					Send DamageMeter.bin
-				</Cta>
-			</p>
-			<p className="m-0 text-sm opacity-75">
-				Drag, drop, done. No account and no form. The damage meter file has its character names taken out in your browser before anything is sent.
-			</p>
-		</div>
 		<Panel summary="Where the numbers come from">
 			<p className="m-0">
 				Since the beta client was datamined on 17 September the numbers come from the client&apos;s own data tables rather than BlizzCon tooltips: build{' '}

@@ -26,25 +26,22 @@ export const CURRENT_API_VERSION: number = readMessageOption(ProtoVersion, 'prot
 
 // Github pages serves our site under the /forever directory
 export const REPO_NAME = 'forever';
-export const REPO_URL = `https://github.com/wowsims/${REPO_NAME}`;
+export const REPO_URL = 'https://github.com/laurencestokes/foreversim';
 export const REPO_RELEASES_URL = `${REPO_URL}/releases`;
 export const REPO_NEW_ISSUE_URL = `${REPO_URL}/issues/new`;
 export const REPO_CHOOSE_NEW_ISSUE_URL = `${REPO_NEW_ISSUE_URL}/choose`;
 
-export const SOCIALS = [
-	{ key: 'discord', href: 'https://discord.gg/p3DgvmnDCS', className: 'ui-social-link', icon: 'discord', tooltip: 'info.discord' },
-	{ key: 'github', href: REPO_URL, className: 'ui-social-link', icon: 'github', tooltip: 'info.github' },
-	{
-		key: 'patreon',
-		href: 'https://patreon.com/wowsims',
-		className: 'ui-social-link',
-		icon: 'patreon',
-		tooltip: 'info.patreon',
-		label: ' Patreon',
-	},
-] as const;
+// Only this repository: the Discord and Patreon links were wowsims', and this site is not theirs.
+export interface Social {
+	key: string;
+	href: string;
+	className: string;
+	icon: 'github';
+	tooltip: string;
+	label?: string;
+}
 
-export type Social = (typeof SOCIALS)[number];
+export const SOCIALS: readonly Social[] = [{ key: 'github', href: REPO_URL, className: 'ui-social-link', icon: 'github', tooltip: 'info.github' }];
 
 // Root-relative path of the individual sim page for the given spec. Resolve it
 // against the page origin at the point of use (see SimTitleDropdown) — this

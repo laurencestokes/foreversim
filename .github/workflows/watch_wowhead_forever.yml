@@ -9,9 +9,8 @@ name: Watch Forever game data
 #  client  - the raw client tables, per build, from wago.tools. Forever's beta ships under wago's
 #            `wow_classic_beta` product as version 1.60.x (first build 2026-09-16), NOT under a product with
 #            "forever" in the name. Every build stays downloadable, so the diff fetches both and stores nothing.
+# Manual only in this repository: we review and merge upstream data by hand.
 on:
-    schedule:
-        - cron: '17 */6 * * *'
     workflow_dispatch:
 
 permissions:

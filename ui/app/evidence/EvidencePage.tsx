@@ -12,7 +12,7 @@ import { Icon } from '@ui-kit/Icon';
 import clsx from 'clsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { ProductPage, SITE_BASE, SITE_REPO_URL } from '../ProductPage';
+import { ProductPage, SITE_REPO_URL } from '../ProductPage';
 
 type Tier = 'measured' | 'forever' | 'classic' | 'assumed';
 
@@ -229,10 +229,10 @@ export const EvidencePage = () => {
 					<h2 className="m-0 text-xl text-white">Most wanted</h2>
 					<p className="m-0 mt-2 max-w-208">
 						Worst first. Each of these can be closed by one person with the game open, and the top one moves every caster on the site.{' '}
-						<a className="font-semibold text-brand" href={`${SITE_BASE}scrub/`}>
-							Send a file or a screenshot
-						</a>{' '}
-						&mdash; no account, no form.
+						<a className="font-semibold text-brand" href={`${SITE_REPO_URL}/issues`} target="_blank" rel="noreferrer">
+							Open an issue with a log or a screenshot
+						</a>
+						.
 					</p>
 					<ol className="m-0 mt-4 list-none divide-y divide-white/10 p-0">
 						{NEEDS.map((need, i) => (
@@ -308,7 +308,11 @@ export const EvidencePage = () => {
 					<a href={`${SITE_REPO_URL}/tree/master/ui/sim/spells`} target="_blank" rel="noreferrer">
 						ui/sim/spells
 					</a>
-					. If you can move a row up a tier, <a href={`${SITE_BASE}scrub/`}>send the beta&apos;s own numbers</a>.
+					. If you can move a row up a tier,{' '}
+					<a href={`${SITE_REPO_URL}/issues`} target="_blank" rel="noreferrer">
+						open an issue with the beta&apos;s own numbers
+					</a>
+					.
 				</p>
 			</div>
 		</ProductPage>

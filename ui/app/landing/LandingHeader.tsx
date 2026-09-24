@@ -52,16 +52,6 @@ export const LandingHeader = () => {
 						<div className="flex flex-col max-md:relative max-md:items-start md:flex-row" data-testid="navbar-nav">
 							{toggler('times')}
 							<a
-								href="https://discord.gg/p3DgvmnDCS"
-								target="_blank"
-								rel="noreferrer"
-								className="ui-landing-nav-link flex items-center px-0 py-4 text-sm whitespace-nowrap max-md:pt-2 md:px-2">
-								<p className="m-0">
-									<Icon name="discord" style="brands" size="2x" />
-									&nbsp;
-								</p>
-							</a>
-							<a
 								href={REPO_URL}
 								target="_blank"
 								rel="noreferrer"
@@ -70,14 +60,6 @@ export const LandingHeader = () => {
 									<Icon name="github" style="brands" size="2x" />
 									&nbsp;
 								</p>
-							</a>
-							<a
-								href="https://patreon.com/wowsims"
-								target="_blank"
-								rel="noreferrer"
-								className="ui-landing-nav-link flex items-center px-0 py-4 text-sm whitespace-nowrap md:px-2">
-								<Icon name="patreon" style="brands" size="2x" className="mr-2" />
-								<span className="text-fluid-xl md:hidden lg:block">{i18n.t('landing.header.supportDevs')}</span>
 							</a>
 							<LandingLanguageMenu />
 						</div>

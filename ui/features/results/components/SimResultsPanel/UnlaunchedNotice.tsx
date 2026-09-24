@@ -1,4 +1,5 @@
 import i18n from '@i18n/config';
+import { REPO_URL } from '@sim/constants/other';
 import { Button } from '@ui-kit/Button';
 import { Icon } from '@ui-kit/Icon';
 
@@ -13,10 +14,10 @@ export const UnlaunchedNotice = () => (
 			{i18n.t('sim.unlaunched.contribute_message')}
 			<br />
 			{i18n.t('sim.unlaunched.discord_message')}{' '}
-			<Button as="a" variant="unstyled" href="https://discord.gg/p3DgvmnDCS" target="_blank">
-				Discord
+			<Button as="a" variant="unstyled" href={`${REPO_URL}/issues`} target="_blank">
+				GitHub
 			</Button>
-			!
+			.
 		</p>
 	</div>
 );
