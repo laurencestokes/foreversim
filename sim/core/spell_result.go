@@ -421,6 +421,14 @@ func (spell *Spell) CalcPeriodicDamage(sim *Simulation, target *Unit, baseDamage
 	return spell.calcDamageInternal(sim, target, baseDamage, attackerMultiplier, true, outcomeApplier)
 }
 func (dot *Dot) CalcSnapshotDamage(sim *Simulation, target *Unit, outcomeApplier OutcomeApplier) *SpellResult {
+	// Forever recalculates the caster-side part of a dot's damage every tick instead of freezing it
+	// at application; see DynamicDoTs. dynamicSnapshot is only set by Snapshot/SnapshotPhysical, so
+	// a dot whose OnTick pokes SnapshotBaseDamage/SnapshotAttackerMultiplier directly (Ignite's
+	// fixed crit share, Deep Wounds, a bleed carrying a fixed cut of the hit that triggered it) is
+	// left alone here and keeps its own, already-correct semantics.
+	if DynamicDoTs && dot.dynamicSnapshot {
+		dot.computeSnapshot(target)
+	}
 	return dot.Spell.calcDamageInternal(sim, target, dot.SnapshotBaseDamage, dot.SnapshotAttackerMultiplier, true, outcomeApplier)
 }
 
@@ -611,19 +619,31 @@ func (dot *Dot) CalcAndDealPeriodicSnapshotDamage(sim *Simulation, target *Unit,
 }
 
 func (dot *Dot) Snapshot(target *Unit, baseDamage float64) {
-	dot.SnapshotBaseDamage = baseDamage
-	attackTable := dot.Spell.Unit.AttackTables[target.UnitIndex]
-	if dot.BonusCoefficient > 0 {
-		dot.SnapshotBaseDamage += dot.BonusCoefficient * dot.Spell.BonusDamage(attackTable)
-	}
-	dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(attackTable, true) *
-		dot.PeriodicDamageMultiplier
+	dot.SnapshotRawBaseDamage = baseDamage
+	dot.dynamicSnapshot = true
+	dot.snapshotIsPhysical = false
+	dot.computeSnapshot(target)
 }
 
 func (dot *Dot) SnapshotPhysical(target *Unit, baseDamage float64) {
-	dot.SnapshotBaseDamage = baseDamage
+	dot.SnapshotRawBaseDamage = baseDamage
+	dot.dynamicSnapshot = true
+	dot.snapshotIsPhysical = true
 	// At this time, not aware of any physical-scaling DoTs that need BonusCoefficient
+	dot.computeSnapshot(target)
+}
+
+// Computes SnapshotBaseDamage/SnapshotAttackerMultiplier from SnapshotRawBaseDamage and the
+// caster's CURRENT bonus damage and attacker multipliers. Called once at application by
+// Snapshot/SnapshotPhysical, and again before every tick while DynamicDoTs is on (see
+// CalcSnapshotDamage) so the caster-side part of the dot stays live.
+func (dot *Dot) computeSnapshot(target *Unit) {
 	attackTable := dot.Spell.Unit.AttackTables[target.UnitIndex]
+	baseDamage := dot.SnapshotRawBaseDamage
+	if !dot.snapshotIsPhysical && dot.BonusCoefficient > 0 {
+		baseDamage += dot.BonusCoefficient * dot.Spell.BonusDamage(attackTable)
+	}
+	dot.SnapshotBaseDamage = baseDamage
 	dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(attackTable, true) *
 		dot.PeriodicDamageMultiplier
 }

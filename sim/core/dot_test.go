@@ -146,7 +146,32 @@ func TestDotSnapshot(t *testing.T) {
 	expectDotTickDamage(t, sim, fa.Dot, 150) // (100) * 1.5
 }
 
+// Forever's dots recalculate every tick from the caster's CURRENT spell power/attack power and
+// damage bonuses instead of snapshotting them at application (see docs/forever_rules.md and
+// core.DynamicDoTs). A spell power buff gained mid-dot should raise the very next tick, and losing
+// it again should lower the tick right back down, all without needing to reapply the dot.
 func TestDotSnapshotSpellDamage(t *testing.T) {
+	sim := SetupFakeSim()
+	fa := sim.Raid.Parties[0].Players[0].(*FakeAgent)
+
+	fa.Dot.Apply(sim)
+	expectDotTickDamage(t, sim, fa.Dot, 150) // (100) * 1.5
+
+	// A spell power buff gained mid-dot raises the next tick immediately.
+	fa.GetCharacter().AddStatDynamic(sim, stats.SpellDamage, 100)
+	expectDotTickDamage(t, sim, fa.Dot, 300) // (100 + 100) * 1.5
+
+	// Losing the buff again lowers the tick right back down.
+	fa.GetCharacter().AddStatDynamic(sim, stats.SpellDamage, -100)
+	expectDotTickDamage(t, sim, fa.Dot, 150) // (100) * 1.5
+}
+
+// With DynamicDoTs turned off, behavior matches the old, purely snapshotted engine: a buff gained
+// mid-dot has no effect on its ticks until the dot is reapplied.
+func TestDotSnapshotSpellDamageDisabled(t *testing.T) {
+	DynamicDoTs = false
+	defer func() { DynamicDoTs = true }()
+
 	sim := SetupFakeSim()
 	fa := sim.Raid.Parties[0].Players[0].(*FakeAgent)
 
