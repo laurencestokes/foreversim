@@ -22,6 +22,10 @@ Then unzip the downloaded file, then open the unzipped file to open the sim in y
 
 Alternatively, you can choose from a specific relase on the [Releases](https://github.com/wowsims/forever/releases) page and click the suitable link under "Assets"
 
+## Debug: weapon type override
+
+Every equipped main-hand or off-hand weapon has a "Weapon type (debug override)" selector in its gear picker. Choosing a type (e.g. relabelling a sword as an axe) changes only what type the weapon counts as for effects that key off weapon type — racials like Human Sword Specialization, Orc Axe Specialization and Dwarf Mace Specialization, talents like rogue Hack and Slash, and ability requirements like rogue Backstab/Mutilate needing a dagger. The item's stats, procs and all other effects are completely unchanged. An overridden weapon shows a small "as &lt;type&gt;" badge in the gear list so the relabel is never mistaken for a real item. This exists purely to let you compare races/specs fairly on an otherwise-identical set of gear; it has no in-game equivalent and should not be used to represent an actual character.
+
 ## Documentation
 
 - [Installation Guide](docs/installation.md)
