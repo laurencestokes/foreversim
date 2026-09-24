@@ -21,6 +21,7 @@ below is gated on `IsForever()` unless it says the class code is Forever-only.
 | Stormstrike's Nature vulnerability lasts its full duration instead of being consumed by Nature hits. | Tooltip | `sim/core/debuffs.go` |
 | Skinning: +5% damage to Beasts and Dragonkin. Mining: +5% health. | Panel (only professions with figures) | `sim/core/professions.go` |
 | World buffs (Rallying Cry, Songflower, Darkmoon Faire, Warchief's Blessing, Dire Maul tribute, Spirit of Zandalar) do not work inside raids; the engine ignores them and the picker hides them. | Demo report, 13 September | `sim/core/buffs.go`, `settings_tab.ts` |
+| Damage over time effects are dynamic: every tick uses the caster's current spell power, attack power and damage bonuses; rank, combo points and stacks stay as cast; tick speed is fixed at application. | Warcraft Tavern warlock guide ("every tick checks your active buffs and the target's debuffs"); forever-hunter beta-changes wiki (dots "dynamically recalculate damage rather than snapshotting Attack Power") | `sim/core/dot.go`, `sim/core/spell_result.go` |
 
 ## Racials
 
