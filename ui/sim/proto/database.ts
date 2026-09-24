@@ -328,6 +328,7 @@ export class Database {
 			enchant,
 			gems,
 			randomSuffix,
+			weaponTypeOverride: itemSpec.weaponTypeOverride,
 		});
 	}
 

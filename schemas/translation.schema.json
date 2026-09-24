@@ -1419,6 +1419,28 @@
 						},
 						"max_ranged_speed": {
 							"type": "string"
+						},
+						"weapon_type_override": {
+							"type": "object",
+							"properties": {
+								"label": {
+									"type": "string"
+								},
+								"as_item": {
+									"type": "string"
+								},
+								"tooltip": {
+									"type": "string"
+								},
+								"badge": {
+									"type": "string"
+								},
+								"badge_tooltip": {
+									"type": "string"
+								}
+							},
+							"additionalProperties": false,
+							"required": ["label", "as_item", "tooltip", "badge", "badge_tooltip"]
 						}
 					},
 					"additionalProperties": false,
@@ -1444,7 +1466,8 @@
 						"ranged_weapon_type",
 						"ranged_weapon_speed",
 						"min_ranged_speed",
-						"max_ranged_speed"
+						"max_ranged_speed",
+						"weapon_type_override"
 					]
 				},
 				"preset_configurations": {

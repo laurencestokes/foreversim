@@ -398,7 +398,14 @@
 			"ranged_weapon_type": "Ranged Weapon Type",
 			"ranged_weapon_speed": "Ranged Weapon Speed",
 			"min_ranged_speed": "Min Ranged Speed",
-			"max_ranged_speed": "Max Ranged Speed"
+			"max_ranged_speed": "Max Ranged Speed",
+			"weapon_type_override": {
+				"label": "Weapon type (debug override)",
+				"as_item": "As item ({{type}})",
+				"tooltip": "Debug override: relabels this weapon's type for comparing type-keyed effects (racials, talents, abilities) fairly. Stats and procs are unchanged.",
+				"badge": "as {{type}}",
+				"badge_tooltip": "Debug override: stats unchanged, weapon type relabelled as {{type}}."
+			}
 		},
 		"preset_configurations": {
 			"title": "Preset Configurations",

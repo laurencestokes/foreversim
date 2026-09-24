@@ -90,8 +90,8 @@ export const statDisplayString = (
 			!matchesBothHands &&
 			(mhWeaponExpertiseActive || ohWeaponExpertiseActive) &&
 			offHand !== null &&
-			offHand.item.weaponType !== WeaponType.WeaponTypeShield &&
-			offHand.item.weaponType !== WeaponType.WeaponTypeOffHand
+			offHand.effectiveWeaponType !== WeaponType.WeaponTypeShield &&
+			offHand.effectiveWeaponType !== WeaponType.WeaponTypeOffHand
 		) {
 			// The two hands disagree, so the row shows both.
 			const hideRootRating = rootRatingValue === null || (rootRatingValue === 0 && derivedPercentOrPointsValue !== null);

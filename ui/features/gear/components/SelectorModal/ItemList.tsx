@@ -1,6 +1,7 @@
-import { Class, ItemSlot } from '@generated/proto/common';
+import { Class, ItemSlot, ItemType, WeaponType } from '@generated/proto/common';
 import { UIEnchant as Enchant, UIGem as Gem, UIItem as Item } from '@generated/proto/ui';
 import i18n from '@i18n/config';
+import { translateWeaponType } from '@i18n/localization';
 import { Phase, SortDirection } from '@sim/constants/other';
 import { useSimHost } from '@sim/context/SimHostContext';
 import { useSimStore } from '@sim/hooks/useSimStore';
@@ -54,6 +55,7 @@ export const ItemList = ({ tab, slot, equippedItem }: ItemListProps) => {
 	const tooltipId = useId();
 	const searchId = useId();
 	const phaseId = useId();
+	const weaponTypeOverrideId = useId();
 
 	const filters = useStoreSubscribe(subscribeSimField(sim, 'filters'), () => sim.getFilters());
 	const phase = useSimStore('phase');
@@ -101,6 +103,31 @@ export const ItemList = ({ tab, slot, equippedItem }: ItemListProps) => {
 	const showWeaponOptions =
 		label === SelectorModalTabs.Items &&
 		(slot === ItemSlot.ItemSlotMainHand || (slot === ItemSlot.ItemSlotOffHand && player.getClass() === Class.ClassWarrior));
+
+	// Main-hand and off-hand weapons only -- not held off-hands or shields, which aren't a "type"
+	// in the sense Sword/Axe/Mace Specialization and friends care about.
+	const weaponTypeOverrideExcluded: ReadonlyArray<WeaponType> = [WeaponType.WeaponTypeOffHand, WeaponType.WeaponTypeShield];
+	const showWeaponTypeOverride =
+		label === SelectorModalTabs.Items &&
+		(slot === ItemSlot.ItemSlotMainHand || slot === ItemSlot.ItemSlotOffHand) &&
+		equippedItem?.item.type === ItemType.ItemTypeWeapon &&
+		!weaponTypeOverrideExcluded.includes(equippedItem.item.weaponType);
+
+	const weaponTypeOverrideOptions = useMemo(() => {
+		if (!showWeaponTypeOverride || !equippedItem) return [];
+		return [
+			{
+				name: i18n.t('gear_tab.gear_picker.weapon_type_override.as_item', { type: translateWeaponType(equippedItem.item.weaponType) }),
+				value: WeaponType.WeaponTypeUnknown,
+			},
+			...player
+				.getPlayerClass()
+				.weaponTypes.map(ewt => ewt.weaponType)
+				.filter(weaponType => !weaponTypeOverrideExcluded.includes(weaponType))
+				.map(weaponType => ({ name: translateWeaponType(weaponType), value: weaponType })),
+		];
+		// oxlint-disable-next-line react-hooks/exhaustive-deps
+	}, [showWeaponTypeOverride, equippedItem, player]);
 
 	return (
 		<>
@@ -170,6 +197,27 @@ export const ItemList = ({ tab, slot, equippedItem }: ItemListProps) => {
 									const next = subject.getFilters();
 									next.twoHandedWeapons = newValue;
 									subject.setFilters(next);
+								},
+							}}
+						/>
+					</div>
+				)}
+				{showWeaponTypeOverride && (
+					<div className="min-w-40" data-testid="selector-modal-weapon-type-override">
+						<EnumPicker
+							modObject={player}
+							config={{
+								id: weaponTypeOverrideId,
+								extraClassNames: ['mb-0'],
+								label: i18n.t('gear_tab.gear_picker.weapon_type_override.label'),
+								labelTooltip: i18n.t('gear_tab.gear_picker.weapon_type_override.tooltip'),
+								layout: 'inline',
+								storeField: 'gear',
+								values: weaponTypeOverrideOptions,
+								getValue: subject => subject.getEquippedItem(slot)?.weaponTypeOverride ?? WeaponType.WeaponTypeUnknown,
+								setValue: (subject, newValue) => {
+									const current = subject.getEquippedItem(slot);
+									if (current) subject.equipItem(slot, current.withWeaponTypeOverride(newValue));
 								},
 							}}
 						/>

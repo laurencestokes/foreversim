@@ -1676,11 +1676,11 @@ export class Player<SpecType extends Spec> {
 		switch (this.getRace()) {
 			case Race.RaceHuman:
 				return [
-					mainHand?.item.weaponType === WeaponType.WeaponTypeMace || mainHand?.item.weaponType === WeaponType.WeaponTypeSword,
-					offHand?.item.weaponType === WeaponType.WeaponTypeMace || offHand?.item.weaponType === WeaponType.WeaponTypeSword,
+					mainHand?.effectiveWeaponType === WeaponType.WeaponTypeMace || mainHand?.effectiveWeaponType === WeaponType.WeaponTypeSword,
+					offHand?.effectiveWeaponType === WeaponType.WeaponTypeMace || offHand?.effectiveWeaponType === WeaponType.WeaponTypeSword,
 				];
 			case Race.RaceOrc:
-				return [mainHand?.item.weaponType === WeaponType.WeaponTypeAxe, offHand?.item.weaponType === WeaponType.WeaponTypeAxe];
+				return [mainHand?.effectiveWeaponType === WeaponType.WeaponTypeAxe, offHand?.effectiveWeaponType === WeaponType.WeaponTypeAxe];
 		}
 
 		return [false, false];
