@@ -146,13 +146,13 @@ var ItemSetCorruptorRaiment = core.NewItemSet(core.ItemSet{
 						warlock.ImmolateTickBaseDamage,
 					)
 					if dot != nil && dot.IsActive() {
-						currentBaseDamage := baseDamage * warlock.T5_4PC_Multiplier[result.Target.UnitIndex][dot.Spell]
-						snapShotterBonusCoeff := dot.SnapshotBaseDamage - currentBaseDamage
-
 						warlock.T5_4PC_Multiplier[result.Target.UnitIndex][dot.Spell] *= 1.10
 
-						newBaseDamage := baseDamage * warlock.T5_4PC_Multiplier[result.Target.UnitIndex][dot.Spell]
-						dot.SnapshotBaseDamage = newBaseDamage + snapShotterBonusCoeff
+						// Dynamic dots recompute SnapshotBaseDamage from SnapshotRawBaseDamage plus
+						// the caster's CURRENT spell power every tick (core.Dot.computeSnapshot), so
+						// growing the raw base here is enough - the spell power part stays live
+						// instead of needing to be split back out and re-added by hand.
+						dot.SnapshotRawBaseDamage = baseDamage * warlock.T5_4PC_Multiplier[result.Target.UnitIndex][dot.Spell]
 					}
 				},
 			}).ExposeToAPL(37384)

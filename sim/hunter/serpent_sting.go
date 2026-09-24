@@ -15,6 +15,12 @@ func (hunter *Hunter) registerSerpentStingSpell() {
 	// stands: the full-duration 1.0 split across the ticks.
 	spellCoeff := 1.0 / float64(numberOfTicks)
 
+	// forever-hunter beta-changes wiki (2026-09-23): Serpent Sting scales with 15% of ranged attack
+	// power over its full duration - 3% a tick over 5 ticks - and, being a dynamic dot, each tick
+	// reads current RAP rather than what the hunter had when it landed.
+	// https://github.com/classic-hunter/forever-hunter/wiki/Forever-Beta-Changes
+	const rapCoeffPerTick = 0.03
+
 	hunter.SerpentSting = hunter.RegisterRangedSpell(core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: rank.ID},
 		SpellSchool:    rank.SpellSchool(),
@@ -38,9 +44,12 @@ func (hunter *Hunter) registerSerpentStingSpell() {
 			BonusCoefficient: spellCoeff,
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, tickDamage)
+				dot.Snapshot(target, tickDamage+rapCoeffPerTick*dot.Spell.RangedAttackPower(target))
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
+				// The RAP share isn't spell power, so it doesn't go through BonusCoefficient/
+				// BonusDamage; refresh the raw base by hand each tick so it tracks current RAP.
+				dot.SnapshotRawBaseDamage = tickDamage + rapCoeffPerTick*dot.Spell.RangedAttackPower(target)
 				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, rank.TickOutcome(dot))
 			},
 		},

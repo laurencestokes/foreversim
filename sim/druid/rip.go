@@ -13,6 +13,10 @@ var ripTick = ripRank.PeriodicEffect()
 const ripTickPerComboPoint = 25.5
 
 func (druid *Druid) registerRipSpell() {
+	// Combo points are spent at cast, so they stay fixed for the life of each target's Rip; only
+	// the attack power share is dynamic. Kept per target and reused by OnTick to rebuild the raw
+	// base with current attack power every tick.
+	comboPointsAtCast := map[int32]float64{}
 	druid.Rip = druid.RegisterSpell(Cat, core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: ripRank.ID},
 		SpellSchool:    ripRank.SpellSchool(),
@@ -48,10 +52,12 @@ func (druid *Druid) registerRipSpell() {
 			TickLength:    ripTick.Period(),
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.SnapshotPhysical(target, ripTickDamage(float64(druid.ComboPoints()), dot.Spell.MeleeAttackPower(target)))
+				comboPointsAtCast[target.UnitIndex] = float64(druid.ComboPoints())
+				dot.SnapshotPhysical(target, ripTickDamage(comboPointsAtCast[target.UnitIndex], dot.Spell.MeleeAttackPower(target)))
 				druid.UpdateBleedPower(druid.Rip, sim, target, true, true)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
+				dot.SnapshotRawBaseDamage = ripTickDamage(comboPointsAtCast[target.UnitIndex], dot.Spell.MeleeAttackPower(target))
 				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, periodicTickOutcome(ripRank, dot))
 			},
 		},

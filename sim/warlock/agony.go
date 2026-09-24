@@ -57,7 +57,11 @@ func (warlock *Warlock) registerCurseOfAgony() {
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, periodicTickOutcome(rank, dot))
 				if dot.TickCount()%4 == 0 {
-					dot.SnapshotBaseDamage += rampStep
+					// The ramp adds to the raw base, not the live SnapshotBaseDamage: with dynamic
+					// dots on, SnapshotBaseDamage gets recomputed from SnapshotRawBaseDamage before
+					// every tick, so poking it directly here would be overwritten and lost on the
+					// next tick.
+					dot.SnapshotRawBaseDamage += rampStep
 				}
 			},
 		},

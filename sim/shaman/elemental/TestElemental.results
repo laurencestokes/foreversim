@@ -195,8 +195,8 @@ dps_results: {
 dps_results: {
  key: "TestElemental-AllItems-DarkmoonCard:BlueDragon-19288"
  value: {
-  dps: 264.79742
-  tps: 164.77039
+  dps: 264.79518
+  tps: 164.76906
  }
 }
 dps_results: {
@@ -293,8 +293,8 @@ dps_results: {
 dps_results: {
  key: "TestElemental-AllItems-EyeofMoam-21473"
  value: {
-  dps: 267.39123
-  tps: 166.23204
+  dps: 267.27002
+  tps: 166.15992
  }
 }
 dps_results: {
@@ -342,8 +342,8 @@ dps_results: {
 dps_results: {
  key: "TestElemental-AllItems-GoldenBanana-270226"
  value: {
-  dps: 261.32078
-  tps: 162.71506
+  dps: 261.31467
+  tps: 162.71143
  }
 }
 dps_results: {
@@ -573,8 +573,8 @@ dps_results: {
 dps_results: {
  key: "TestElemental-AllItems-SerenityField-272439"
  value: {
-  dps: 270.59769
-  tps: 168.08776
+  dps: 270.56426
+  tps: 168.06787
  }
 }
 dps_results: {
@@ -678,15 +678,15 @@ dps_results: {
 dps_results: {
  key: "TestElemental-AllItems-TalismanofAscendance-22678"
  value: {
-  dps: 290.80238
-  tps: 179.82582
+  dps: 291.23559
+  tps: 180.08358
  }
 }
 dps_results: {
  key: "TestElemental-AllItems-TalismanofEphemeralPower-18820"
  value: {
-  dps: 279.34045
-  tps: 173.11669
+  dps: 278.59996
+  tps: 172.6761
  }
 }
 dps_results: {
@@ -699,15 +699,15 @@ dps_results: {
 dps_results: {
  key: "TestElemental-AllItems-TheElements"
  value: {
-  dps: 360.73011
-  tps: 221.6719
+  dps: 360.84935
+  tps: 221.74285
  }
 }
 dps_results: {
  key: "TestElemental-AllItems-TheFiveThunders"
  value: {
-  dps: 371.64062
-  tps: 228.03938
+  dps: 371.80747
+  tps: 228.13866
  }
 }
 dps_results: {
@@ -741,8 +741,8 @@ dps_results: {
 dps_results: {
  key: "TestElemental-AllItems-TheRestrainedEssenceofSapphiron-23046"
  value: {
-  dps: 301.22748
-  tps: 185.82557
+  dps: 300.96777
+  tps: 185.67104
  }
 }
 dps_results: {
@@ -804,8 +804,8 @@ dps_results: {
 dps_results: {
  key: "TestElemental-AllItems-WrathofCenarius-21190"
  value: {
-  dps: 281.4589
-  tps: 174.36863
+  dps: 281.67918
+  tps: 174.4997
  }
 }
 dps_results: {
@@ -867,22 +867,22 @@ dps_results: {
 dps_results: {
  key: "TestElemental-Settings-Orc-Naked-Standard-forever-FullBuffs-0.0yards-LongMultiTarget"
  value: {
-  dps: 633.05224
-  tps: 594.15426
+  dps: 632.9751
+  tps: 594.10836
  }
 }
 dps_results: {
  key: "TestElemental-Settings-Orc-Naked-Standard-forever-FullBuffs-0.0yards-LongSingleTarget"
  value: {
-  dps: 264.80556
-  tps: 165.01284
+  dps: 264.71701
+  tps: 164.96015
  }
 }
 dps_results: {
  key: "TestElemental-Settings-Orc-Naked-Standard-forever-FullBuffs-0.0yards-ShortSingleTarget"
  value: {
-  dps: 334.3401
-  tps: 210.30918
+  dps: 334.099
+  tps: 210.16572
  }
 }
 dps_results: {

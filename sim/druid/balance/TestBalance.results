@@ -153,8 +153,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-AllItems-DarkmoonCard:BlueDragon-19288"
  value: {
-  dps: 312.63473
-  tps: 161.24954
+  dps: 312.72349
+  tps: 161.29303
  }
 }
 dps_results: {
@@ -195,8 +195,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-AllItems-DraconicInfusedEmblem-22268"
  value: {
-  dps: 324.9223
-  tps: 167.25192
+  dps: 325.18255
+  tps: 167.37944
  }
 }
 dps_results: {
@@ -251,8 +251,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-AllItems-EyeofMoam-21473"
  value: {
-  dps: 313.5095
-  tps: 161.65965
+  dps: 313.3438
+  tps: 161.57846
  }
 }
 dps_results: {
@@ -293,8 +293,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-AllItems-GoldenBanana-270226"
  value: {
-  dps: 307.267
-  tps: 158.60684
+  dps: 307.26454
+  tps: 158.60563
  }
 }
 dps_results: {
@@ -496,8 +496,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-AllItems-SerenityField-272439"
  value: {
-  dps: 317.44646
-  tps: 163.63598
+  dps: 317.41599
+  tps: 163.62105
  }
 }
 dps_results: {
@@ -587,15 +587,15 @@ dps_results: {
 dps_results: {
  key: "TestBalance-AllItems-TalismanofAscendance-22678"
  value: {
-  dps: 332.22739
-  tps: 170.83141
+  dps: 332.53479
+  tps: 170.98204
  }
 }
 dps_results: {
  key: "TestBalance-AllItems-TalismanofEphemeralPower-18820"
  value: {
-  dps: 325.65931
-  tps: 167.61306
+  dps: 324.9723
+  tps: 167.27642
  }
 }
 dps_results: {
@@ -622,8 +622,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-AllItems-TheRestrainedEssenceofSapphiron-23046"
  value: {
-  dps: 346.79288
-  tps: 177.96851
+  dps: 344.67595
+  tps: 176.93121
  }
 }
 dps_results: {
@@ -671,8 +671,8 @@ dps_results: {
 dps_results: {
  key: "TestBalance-AllItems-WrathofCenarius-21190"
  value: {
-  dps: 319.05501
-  tps: 164.37695
+  dps: 320.24248
+  tps: 164.95881
  }
 }
 dps_results: {

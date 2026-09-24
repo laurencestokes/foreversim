@@ -311,7 +311,8 @@ func registerEureka(character *Character) {
 		})
 	}
 	if EurekaParts.Damage {
-		// Periodic damage included: a damage over time effect snapshots the multiplier when applied.
+		// Periodic damage included: with DynamicDoTs every tick reads the spell's current multiplier,
+		// so a covered damage over time effect takes the bonus while Eureka! is up.
 		aura.AttachSpellMod(SpellModConfig{
 			Kind:       SpellMod_DamageDone_Pct,
 			ClassMask:  mask,
