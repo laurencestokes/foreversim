@@ -179,12 +179,29 @@
 		"source": "forever",
 		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Rage cost reduced by 40% and deal 10% more damage."
 	},
+	"1259817": {
+		"ability": "Eureka! (mage)",
+		"file": "sim/core/racials.go",
+		"note": "Beta client build 1.60.1.69977: the next 3 of the spells on its SpellEffect class mask within 15 sec cost 50% less Mana and deal 10% more damage, periodic damage included (Fireball's and Pyroblast's DoTs, Frostfire Bolt); 2 min cooldown.",
+		"source": "forever",
+		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Mana cost reduced by 50% and deal 10% more damage."
+	},
 	"1259821": {
 		"ability": "Eureka! (warlock)",
 		"file": "sim/core/racials.go",
 		"note": "Beta client build 1.60.1.69977: the next 3 of the spells on its SpellEffect class masks within 15 sec cost 50% less Mana and deal 10% more damage, periodic damage included; 2 min cooldown.",
 		"source": "forever",
 		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Mana cost reduced by 50% and deal 10% more damage."
+	},
+	"1259823": {
+		"ability": "Eureka! (priest)",
+		"file": "sim/core/racials.go",
+		"note": "Beta client build 1.60.1.69977: the next 3 of the spells on its SpellEffect class mask within 15 sec cost 15% less Mana and deal 10% more damage; 2 min cooldown.",
+		"source": "assumed",
+		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Mana cost reduced by 15% and deal 10% more damage.",
+		"assumptions": [
+			"The client mask also covers the heals (Flash Heal, Greater Heal, Heal, Renew, etc.), but the tooltip reads \"damaging abilities\", so heals are taken not to spend a charge or take the bonus."
+		]
 	},
 	"1260198": {
 		"ability": "Touch of the Grave",
