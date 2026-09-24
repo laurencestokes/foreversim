@@ -105,32 +105,37 @@ var ClassRangedWeaponTypeCapabilities = map[proto.Class][]proto.RangedWeaponType
 	proto.Class_ClassShaman:  {proto.RangedWeaponType_RangedWeaponTypeTotem},
 }
 
+// Forever's race and class pairings, from the client's CharBaseInfo (build 1.60.1.69977). Six
+// are new (dwarf shaman, undead paladin, orc mage, troll warlock, gnome priest, human hunter), the
+// Skyborne can be warrior, hunter, rogue or druid on either side, a mage only as High Order and a
+// shaman only as Windshaper, and there are no Blood Elves or Draenei.
 var ClassRaceCapabilities = map[proto.Class][]proto.Race{
 	proto.Class_ClassWarrior: {
 		proto.Race_RaceHuman,
 		proto.Race_RaceDwarf,
 		proto.Race_RaceNightElf,
 		proto.Race_RaceGnome,
-		proto.Race_RaceDraenei,
 		proto.Race_RaceOrc,
 		proto.Race_RaceUndead,
 		proto.Race_RaceTauren,
 		proto.Race_RaceTroll,
+		proto.Race_RaceSkyborneHighOrder,
+		proto.Race_RaceSkyborneWindshaper,
 	},
 	proto.Class_ClassPaladin: {
 		proto.Race_RaceHuman,
 		proto.Race_RaceDwarf,
-		proto.Race_RaceDraenei,
-		proto.Race_RaceBloodElf,
+		proto.Race_RaceUndead,
 	},
 	proto.Class_ClassHunter: {
+		proto.Race_RaceHuman,
 		proto.Race_RaceDwarf,
 		proto.Race_RaceNightElf,
-		proto.Race_RaceDraenei,
 		proto.Race_RaceOrc,
 		proto.Race_RaceTauren,
 		proto.Race_RaceTroll,
-		proto.Race_RaceBloodElf,
+		proto.Race_RaceSkyborneHighOrder,
+		proto.Race_RaceSkyborneWindshaper,
 	},
 	proto.Class_ClassRogue: {
 		proto.Race_RaceHuman,
@@ -140,41 +145,44 @@ var ClassRaceCapabilities = map[proto.Class][]proto.Race{
 		proto.Race_RaceOrc,
 		proto.Race_RaceUndead,
 		proto.Race_RaceTroll,
-		proto.Race_RaceBloodElf,
+		proto.Race_RaceSkyborneHighOrder,
+		proto.Race_RaceSkyborneWindshaper,
 	},
 	proto.Class_ClassPriest: {
 		proto.Race_RaceHuman,
 		proto.Race_RaceDwarf,
 		proto.Race_RaceNightElf,
-		proto.Race_RaceDraenei,
+		proto.Race_RaceGnome,
 		proto.Race_RaceUndead,
 		proto.Race_RaceTroll,
-		proto.Race_RaceBloodElf,
 	},
 	proto.Class_ClassShaman: {
-		proto.Race_RaceDraenei,
+		proto.Race_RaceDwarf,
 		proto.Race_RaceOrc,
 		proto.Race_RaceTauren,
 		proto.Race_RaceTroll,
+		proto.Race_RaceSkyborneWindshaper,
 	},
 	proto.Class_ClassMage: {
 		proto.Race_RaceHuman,
 		proto.Race_RaceGnome,
-		proto.Race_RaceDraenei,
+		proto.Race_RaceOrc,
 		proto.Race_RaceUndead,
 		proto.Race_RaceTroll,
-		proto.Race_RaceBloodElf,
+		proto.Race_RaceSkyborneHighOrder,
 	},
 	proto.Class_ClassWarlock: {
 		proto.Race_RaceHuman,
 		proto.Race_RaceGnome,
 		proto.Race_RaceOrc,
 		proto.Race_RaceUndead,
-		proto.Race_RaceBloodElf,
+		proto.Race_RaceTroll,
 	},
 	proto.Class_ClassDruid: {
 		proto.Race_RaceNightElf,
 		proto.Race_RaceTauren,
+		proto.Race_RaceSkyborneHighOrder,
+		proto.Race_RaceSkyborneWindshaper,
 	},
 }
 

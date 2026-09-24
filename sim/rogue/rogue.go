@@ -179,6 +179,15 @@ func NewRogue(character *core.Character, options *proto.Player, talents string) 
 
 	core.FillTalentsProto(rogue.Talents.ProtoReflect(), talents, TalentTreeSizes)
 
+	// The gnome's Eureka! (1259812): its SpellEffect class masks read against the rogue's
+	// abilities; Rupture and Garrote also take the periodic bonus. Hemorrhage, Slice and Dice and
+	// Expose Armor are not on it, and neither is Blade Flurry, which deals no damage of its own.
+	// Mutilate's two hits take the bonus but only the Mutilate cast spends a charge.
+	eurekaCasts := RogueSpellAmbush | RogueSpellBackstab | RogueSpellEviscerate | RogueSpellGarrote | RogueSpellGouge |
+		RogueSpellRupture | RogueSpellSinisterStrike | RogueSpellMutilate | RogueSpellGhostlyStrike | RogueSpellRiposte
+	rogue.EurekaSpellMask = eurekaCasts | RogueSpellMutilateHit
+	rogue.EurekaChargeMask = eurekaCasts
+
 	// Slice and Dice and Venom share this ladder, and talents are applied before Initialize, so
 	// it is filled here rather than in the spell that owns it.
 	rogue.sliceAndDiceDurations = [6]time.Duration{

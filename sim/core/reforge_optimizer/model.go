@@ -104,10 +104,8 @@ func scoreCoeffMap(coeffs map[string]float64, weights core.UnitStats) map[string
 // resolving the stat onto its child pseudo-stats when the root stat itself carries no EP.
 func (o *reforgeOptimizer) applyReforgeStat(coeffs map[string]float64, stat stats.Stat, amount float64, preCapEPs core.UnitStats) {
 	race := o.player.GetRace()
+	// Forever's The Human Spirit is Classic's 5%; Expansive Mind no longer touches Intellect.
 	if stat == stats.Spirit && race == proto.Race_RaceHuman {
-		amount *= 1.1
-	}
-	if stat == stats.Intellect && race == proto.Race_RaceGnome {
 		amount *= 1.05
 	}
 

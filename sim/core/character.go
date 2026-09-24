@@ -67,6 +67,13 @@ type Character struct {
 
 	professions [2]proto.Profession
 
+	// The class abilities the gnome's Eureka! racial covers, set by the class. Zero leaves the
+	// racial unregistered for that class. See registerEureka in racials.go.
+	EurekaSpellMask int64
+	// The casts that spend a Eureka! charge, when narrower than EurekaSpellMask (a strike whose
+	// hits are spells of their own). Zero means EurekaSpellMask.
+	EurekaChargeMask int64
+
 	// Used for effects like "Increased Armor Value from Items"
 	*EquipScalingManager
 

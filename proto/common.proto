@@ -82,6 +82,12 @@ enum Race {
 	RaceTauren = 8;
 	RaceTroll = 9;
 	RaceUndead = 10;
+
+	// The Skyborne pick a faction at character creation (client ChrRaces 95 and 96). Faction is
+	// derived from race everywhere in the sim, so each half gets its own entry. Blood Elf and
+	// Draenei stay in the enum for old links but no class can pick them.
+	RaceSkyborneHighOrder = 11;
+	RaceSkyborneWindshaper = 12;
 }
 
 enum Faction {

@@ -24,16 +24,26 @@ below is gated on `IsForever()` unless it says the class code is Forever-only.
 
 ## Racials
 
+Read from the client, build 1.60.1.69977: each race's racial skill line in `SkillLineAbility`, then
+`SpellEffect`, `SpellCooldowns`, `SpellMisc`/`SpellDuration`, `SpellAuraOptions` (charges, proc chance
+and proc cooldown) and `SpellEquippedItems` (weapon types). Race and class pairings are `CharBaseInfo`.
+All in `sim/core/racials.go` unless noted.
+
 | Rule | Source | Here |
 |---|---|---|
-| Every +10 resistance racial is removed. | Racials guide | `sim/core/racials.go` |
-| Weapon skill racials become +1% crit (both pools) while the matching weapon is held; Mace Specialization moves to Dwarves. | Racials guide, *demo* | `sim/core/specializations.go` |
-| Dwarf gains Beast Slaying-style +5% vs Beasts ("Big Game Hunter"). Troll keeps Beast Slaying; both ranged specializations removed. | Racials guide | `sim/core/racials.go` |
-| Orc: Command removed (Shatter Curse replaces it). Blood Fury: 10% attack power and spell power. | Racials guide, *demo* | `sim/core/racials.go` |
-| Gnome Expansive Mind raises the resource pool (mana modelled) rather than Intellect. Eureka! cooldown/cost figures unpublished. | Racials guide | `sim/core/racials.go` |
-| Night Elf Elune's Light: +10% crit for 15 s, 3 min cooldown. | Racials guide, cooldown confirmed by search | `sim/core/racials.go` |
-| Skyborne (both factions) racials incl. Elemental Insight +5% vs Elementals; Windshaper and High Order variants by faction. | Skyborne first look | `sim/core/racials.go` |
-| Racial cooldowns with no published cooldown assume 3 minutes. | Assumption | `forever_beta_checklist.md` |
+| Every +10 resistance racial is removed. Blood Elf and Draenei are not Forever races: no class can pick them (their TBC racials stay only so old saved settings build). | Client: `CharBaseInfo`, racial skill lines | `sim/core/character_constants.go` |
+| Race and class pairings follow the client: dwarf shaman, undead paladin, orc mage, troll warlock, gnome priest and human hunter are new; Skyborne are warrior, hunter, rogue or druid on either side, mage only as High Order, shaman only as Windshaper. Skyborne base attributes are the class baseline. | Client: `CharBaseInfo`; Wowhead gear planner `raceOffsets` 95/96 | `sim/core/character_constants.go`, `base_stats.go` |
+| Weapon racials pay crit to attacks and spells while a weapon of the type (one- or two-handed) is in either hand: Human swords +2% (20597), Dwarf maces +1% (1259719, moved from the Humans), Orc axes +1% (20574). | Client | `applyWeaponCritSpecialization` |
+| Human: The Human Spirit is +5% Spirit (20598), not TBC's 10%. | Client | |
+| Dwarf: Big Game Hunter +5% damage vs Beasts (1259721). Stoneform is -10% Physical damage taken for 8 s, 3 min (20594); no armor. | Client | |
+| Orc: Blood Fury +10% attack power, ranged attack power and spell power for 15 s, 2 min (20572). Command is gone; Shatter Curse is -15% magic damage taken for 8 s, 3 min (1299026). | Client | |
+| Night Elf: Quickness +1% dodge (20582). Elune's Light +10% crit for 15 s, 3 min (1259799). | Client | |
+| Gnome: Expansive Mind +5% maximum rage, energy or mana by class (1259802/1259803/20591), not Intellect. Eureka! (one spell per class): the next 3 damaging abilities within 15 s cost less (warrior 40%, rogue 20%, mage 50%, warlock 50%, priest 15%) and deal 10% more, 2 min. Wired for the warrior, warlock and rogue ability lists so far (`Character.EurekaSpellMask`, set in `sim/warrior/warrior.go`, `sim/warlock/warlock.go` and `sim/rogue/rogue.go`; `EurekaChargeMask` when an ability's hits are spells of their own, as Mutilate's are). The rogue list leaves out Blade Flurry, which is on the client mask but deals no damage itself, per the tooltip's "damaging abilities". Mage and priest get no Eureka! until theirs is. | Client | `registerEureka` |
+| Tauren: Endurance +5% health and +1% hit with attacks and spells (20550). | Client | |
+| Troll: Beast Slaying +5% vs Beasts (20557). Berserking is a flat +10% attack and casting speed for 10 s, 3 min, no cost (20554). No ranged weapon specializations. | Client | |
+| Undead: Touch of the Grave, 5% (melee classes, 1260189) or 10% (casters, 1260201) chance on a landed hit, 1 s proc cooldown, drains 5% of the caster's maximum health as Shadow damage (1260198). Applying a damage-over-time spell can proc it; its ticks cannot (beta testing, although the client's proc flags include periodic damage). | Client | `registerTouchOfTheGrave` |
+| Skyborne (both halves, skill line 2980): Wind Blessed +1% melee, ranged and cast haste (1259710); Elemental Insight +5% vs Elementals (1259707). The client has no Windshaper-only cooldown; the earlier model's 10% attack power cooldown is removed. | Client | |
+| Damage-vs-creature racials also raise the crit multiplier, as every such aura did in Vanilla and TBC. | Engine convention | `applyMobTypeDamageBonus` |
 
 ## Warrior
 

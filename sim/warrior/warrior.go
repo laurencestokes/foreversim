@@ -222,6 +222,12 @@ func NewWarrior(character *core.Character, options *proto.WarriorOptions, talent
 	}
 	core.FillTalentsProto(warrior.Talents.ProtoReflect(), talents, TalentTreeSizes)
 
+	// The gnome's Eureka! (1259813): its SpellEffect class mask read against the warrior's
+	// abilities. Revenge, Sunder Armor and the shouts are not on it.
+	warrior.EurekaSpellMask = SpellMaskBloodthirst | SpellMaskCleave | SpellMaskConcussionBlow | SpellMaskExecute |
+		SpellMaskHamstring | SpellMaskHeroicStrike | SpellMaskMockingBlow | SpellMaskMortalStrike | SpellMaskOverpower |
+		SpellMaskRend | SpellMaskShieldSlam | SpellMaskSlam | SpellMaskThunderClap | SpellMaskWhirlwind | SpellMaskWhirlwindOh
+
 	warrior.EnableRageBar(core.RageBarOptions{
 		MaxRage:            100 + spellData.BoundlessRage.TenthsAt(warrior.Talents.BoundlessRage),
 		BaseRageMultiplier: 1,

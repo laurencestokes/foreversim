@@ -117,6 +117,10 @@ var RaceOffsets = map[proto.Race]stats.Stats{
 		stats.Spirit:    2,
 		stats.Stamina:   -1,
 	},
+	// The Skyborne sit at the class baseline: races 95 and 96 in the gear planner's
+	// baseStats.raceOffsets are zero for all five attributes, as the human's are.
+	proto.Race_RaceSkyborneHighOrder:  {},
+	proto.Race_RaceSkyborneWindshaper: {},
 }
 
 var ClassBaseStats = map[proto.Class]stats.Stats{
@@ -318,4 +322,12 @@ func init() {
 	AddBaseStatsCombo(proto.Race_RaceTauren, proto.Class_ClassWarrior)
 	AddBaseStatsCombo(proto.Race_RaceTroll, proto.Class_ClassWarrior)
 	AddBaseStatsCombo(proto.Race_RaceUndead, proto.Class_ClassWarrior)
+
+	// Every Forever pairing, including the new ones (dwarf shaman, undead paladin, orc mage and
+	// the rest) and the Skyborne, which the list above predates.
+	for class, races := range ClassRaceCapabilities {
+		for _, race := range races {
+			AddBaseStatsCombo(race, class)
+		}
+	}
 }

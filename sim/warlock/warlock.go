@@ -143,6 +143,13 @@ func NewWarlock(character *core.Character, options *proto.Player, warlockOptions
 
 	core.FillTalentsProto(warlock.Talents.ProtoReflect(), options.TalentsString, TalentTreeSizes)
 
+	// The gnome's Eureka! (1259821): its SpellEffect class masks read against the warlock's spells.
+	// Incinerate, Siphon Life, Hellfire, Wrack, Life Tap and the non-damaging curses are not on it.
+	warlock.EurekaSpellMask = WarlockSpellShadowBolt | WarlockSpellImmolate | WarlockSpellImmolateDot | WarlockSpellCorruption |
+		WarlockSpellCurseOfAgony | WarlockSpellCurseOfDoom | WarlockSpellDrainLife | WarlockSpellDrainSoul |
+		WarlockSpellSearingPain | WarlockSpellSoulFire | WarlockSpellShadowBurn | WarlockSpellConflagrate |
+		WarlockSpellDeathCoil | WarlockSpellRainOfFire
+
 	if raid.Debuffs != nil {
 		switch warlock.Options.CurseOptions {
 		case proto.WarlockOptions_Elements:

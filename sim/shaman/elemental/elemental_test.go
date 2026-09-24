@@ -18,7 +18,7 @@ func TestElemental(t *testing.T) {
 		{
 			Class:      proto.Class_ClassShaman,
 			Race:       proto.Race_RaceTroll,
-			OtherRaces: []proto.Race{proto.Race_RaceOrc, proto.Race_RaceDraenei},
+			OtherRaces: []proto.Race{proto.Race_RaceOrc, proto.Race_RaceDwarf},
 			SpecOptions: core.SpecOptionsCombo{Label: "Standard", SpecOptions: &proto.Player_ElementalShaman{
 				ElementalShaman: &proto.ElementalShaman{
 					Options: &proto.ElementalShaman_Options{

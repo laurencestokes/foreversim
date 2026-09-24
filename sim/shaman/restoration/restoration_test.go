@@ -25,7 +25,7 @@ func TestRestorationShaman(t *testing.T) {
 		player := core.WithSpec(
 			&proto.Player{
 				Class:         proto.Class_ClassShaman,
-				Race:          proto.Race_RaceDraenei,
+				Race:          proto.Race_RaceDwarf,
 				Equipment:     &proto.EquipmentSpec{},
 				Consumables:   FullConsumes,
 				Buffs:         core.FullIndividualBuffs,
