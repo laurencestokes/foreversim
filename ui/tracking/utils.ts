@@ -1,10 +1,6 @@
-export const trackPageView = (title: string, slug: string) => {
-	const normalizedSlug = slug.startsWith('/') ? slug.slice(1) : slug;
-	gtag('event', 'page_view', {
-		page_title: title,
-		page_location: `${window.location.href}${normalizedSlug}`,
-	});
-};
+// ForeverSim sends no analytics. The trackers stay as no-ops so the call sites shared with
+// upstream need no changes.
+export const trackPageView = (_title: string, _slug: string) => {};
 
 export type TrackEventProps = {
 	action: 'settings' | 'sim' | 'click';
@@ -14,11 +10,4 @@ export type TrackEventProps = {
 	additionalData?: Record<string, string | number>;
 };
 
-export const trackEvent = ({ action, category, label, value, additionalData }: TrackEventProps) => {
-	gtag('event', action, {
-		event_category: category,
-		event_label: label,
-		event_value: typeof value !== 'undefined' ? String(value) : undefined,
-		...additionalData,
-	});
-};
+export const trackEvent = (_event: TrackEventProps) => {};
