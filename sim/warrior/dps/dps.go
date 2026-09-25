@@ -42,7 +42,7 @@ func NewDpsWarrior(character *core.Character, options *proto.Player) *DpsWarrior
 
 	war := &DpsWarrior{
 		Warrior: warrior.NewWarrior(character, dpsOptions.ClassOptions, options.TalentsString, warrior.WarriorInputs{
-			DefaultShout:   classOptions.DefaultShout,
+			UseBattleShout: classOptions.UseBattleShout,
 			DefaultStance:  classOptions.DefaultStance,
 			StartingRage:   classOptions.StartingRage,
 			QueueDelay:     classOptions.QueueDelay,

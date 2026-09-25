@@ -48,7 +48,6 @@ export const MITIGATION_STATS: ReadonlyArray<Stat> = [
 	Stat.StatParryRating,
 	Stat.StatBlockRating,
 	Stat.StatBlockValue,
-	Stat.StatResilienceRating,
 ];
 
 // The sim normalises damage-taken EP against armor, not the spec's reference (DTPSReferenceStat in sim/core/statweight.go).

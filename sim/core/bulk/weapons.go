@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	adamantiteSharpeningStoneID int32 = 29453
-	adamantiteWeightstoneID     int32 = 34340
+	denseSharpeningStoneID int32 = 16138
+	denseWeightstoneID     int32 = 16622
 )
 
 func isSharpWeaponType(wt proto.WeaponType) bool {
@@ -30,11 +30,10 @@ func isBluntWeaponType(wt proto.WeaponType) bool {
 	}
 }
 
-// adjustWeaponImbueID rewrites the Adamantite sharpening/weightstone pair to match the equipped
-// weapon type; all other imbue ids pass through unchanged. Returns 0 when neither stone family is
-// valid for the weapon (no weapon, or a shield / offhand-only item).
+// Swaps the Dense sharpening stone and weightstone to match the weapon, 0 when neither fits it;
+// any other imbue passes through.
 func adjustWeaponImbueID(imbueID int32, weapon *proto.ItemSpec) int32 {
-	if imbueID != adamantiteSharpeningStoneID && imbueID != adamantiteWeightstoneID {
+	if imbueID != denseSharpeningStoneID && imbueID != denseWeightstoneID {
 		return imbueID
 	}
 	if weapon == nil || weapon.Id == 0 {
@@ -45,16 +44,14 @@ func adjustWeaponImbueID(imbueID int32, weapon *proto.ItemSpec) int32 {
 		return 0
 	}
 	if isSharpWeaponType(item.WeaponType) {
-		return adamantiteSharpeningStoneID
+		return denseSharpeningStoneID
 	}
 	if isBluntWeaponType(item.WeaponType) {
-		return adamantiteWeightstoneID
+		return denseWeightstoneID
 	}
 	return 0
 }
 
-// adjustCandidateImbues keeps the MH/OH weapon stone imbues in sync with the candidate's equipped
-// weapon types, mirroring the frontend auto-switch so bulk sim combos use the correct stone.
 func adjustCandidateImbues(player *proto.Player) {
 	consumables := player.GetConsumables()
 	if consumables == nil {

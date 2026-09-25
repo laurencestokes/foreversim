@@ -99,24 +99,12 @@
 							]
 						},
 						"consumables": {
-							"potId": 22849,
-							"battleElixirId": 22831,
 							"guardianElixirId": 9088,
-							"foodId": 27667,
-							"conjuredId": 22105,
-							"explosiveId": 30217,
-							"superSapper": true,
 							"goblinSapper": true,
-							"ohImbueId": 29453,
-							"scrollAgi": true,
-							"scrollStr": true,
-							"scrollArm": true,
-							"nightmareSeed": true,
-							"potions": [13442, 22828, 22837, 22838, 22849],
-							"conjuredItems": [22105, 22797, 22788]
+							"potions": [13442]
 						},
 						"bonusStats": {
-							"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+							"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 							"pseudoStats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 						},
 						"itemSwap": {
@@ -140,15 +128,13 @@
 								{}
 							],
 							"prepullBonusStats": {
-								"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+								"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 								"pseudoStats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 							}
 						},
 						"buffs": {
-							"blessingOfKings": true,
-							"blessingOfSanctuary": true,
-							"blessingOfMight": 2,
-							"unleashedRage": true
+							"greaterBlessingOfKings": true,
+							"greaterBlessingOfMight": 2
 						},
 						"cooldowns": {},
 						"healingModel": {
@@ -174,8 +160,6 @@
 					}
 				],
 				"buffs": {
-					"sanctityAura": 2,
-					"braidedEterniumChain": true,
 					"graceOfAirTotem": 2,
 					"strengthOfEarthTotem": 2,
 					"windfuryTotem": 2,
@@ -271,40 +255,32 @@
 			}
 		],
 		"buffs": {
-			"powerWordFortitude": 2,
-			"shadowProtection": true,
+			"prayerOfFortitude": 2,
+			"prayerOfShadowProtection": true,
 			"giftOfTheWild": 2,
-			"thorns": 1,
-			"bloodlust": true
+			"thorns": 1
 		},
 		"debuffs": {
 			"improvedSealOfTheCrusader": 2,
-			"misery": true,
-			"bloodFrenzy": true,
-			"mangle": true,
 			"exposeArmor": 2,
 			"faerieFire": 2,
 			"sunderArmor": true,
 			"curseOfRecklessness": true,
 			"huntersMark": 2,
-			"exposeWeaknessUptime": 0.9,
-			"exposeWeaknessHunterAgility": 1150,
-			"insectSwarm": true,
-			"shadowEmbrace": true,
-			"screech": true
+			"insectSwarm": true
 		}
 	},
 	"preCapEpWeights": {
-		"stats": [0.61, 0.83, 1.15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0.35, 0.5, 0.41, 0.09, 2.01, 0.41, 0.01, 0.57, 0, 0.51, 0.02, 0.06, 0.06, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		"stats": [0.61, 0.83, 1.15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0.35, 0.5, 0.41, 0.09, 2.01, 0.41, 0.01, 0.57, 0, 0.51, 0.06, 0.06, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 		"pseudoStats": [3.15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 	},
 	"undershootCaps": {
-		"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 		"pseudoStats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 	},
 	"settings": {
 		"statCaps": {
-			"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 102.50000800000001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+			"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 102.50000800000001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 			"pseudoStats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5.6]
 		},
 		"maxGemPhase": 2,

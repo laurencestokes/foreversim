@@ -67,7 +67,7 @@ func (paladin *Paladin) applyRedoubt() {
 		Duration:  row.Duration,
 		MaxStacks: row.ProcCharges,
 	}).AttachStatBuff(
-		stats.BlockPercent, spellData.Redoubt.FractionAt(paladin.Talents.Redoubt),
+		stats.BlockPercent, spellData.Redoubt.ValueAt(paladin.Talents.Redoubt),
 	).AttachProcTrigger(core.ProcTrigger{
 		Callback:           core.CallbackOnSpellHitTaken,
 		Outcome:            core.OutcomeBlock,

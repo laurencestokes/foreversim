@@ -49,10 +49,10 @@ const reported = 10
 //	SpellData.PPM               the client states none (SpellProcsPerMinuteID is 0 on every row);
 //	                            the tables get theirs from WithSpellDataPPM at the call site, and
 //	                            the store from an override, so neither side reads the other
-//	SpellDataEffect.ValueMax    the spread: this client dropped EffectDieSides, so the generator
-//	                            derives no high end at all and every table effect leaves it zero.
-//	                            The store's spread is EffectVariance, which is a different number
-//	SpellDataValue.TickMax      the same, for a tick
+//
+// A spread is compared as the store's Min and Max: the generator rolls a table value over the same
+// Variance the store keeps, around the same floored average, so a table's low and high ends are the
+// store's Min and Max at level 60 to the bit.
 //
 // AP coefficients are hand-supplied on both sides - one client effect in 38357 states one - so they
 // are compared where the client does carry one and left alone where the call site adds it.
@@ -359,14 +359,17 @@ func (c *checker) effects() {
 		c.integer(where+".Aura", int64(te.Aura), int64(e.Aura))
 		c.integer(where+".Misc", int64(te.Misc), int64(e.Misc))
 
-		if !c.statesValue(i, te.Value) {
+		// A high end is the generator's spread out of Variance, so the two ends are the store's Min
+		// and Max rather than its Average. A rolled effect the table states flat is a derivation the
+		// store disagrees with, except on a rank the talent tree prices, which is flat by design.
+		switch {
+		case te.ValueMax != 0:
+			c.float(where+".Value", te.Value, e.Min(level))
+			c.float(where+".ValueMax", te.ValueMax, e.Max(level))
+		case !c.statesValue(i, te.Value):
 			c.add(where+".Value", te.Value, c.valuesAt(i))
-		}
-
-		// The spread left the client with EffectDieSides, so the generator derives none and no table
-		// effect carries one. A nonzero here would be a generator change the store has to answer.
-		if te.ValueMax != 0 {
-			c.add(where+".ValueMax", te.ValueMax, "the store's spread is Variance, not a high end")
+		case e.Variance != 0 && c.rank == c.spell:
+			c.add(where+".ValueMax", "none", fmt.Sprintf("the store rolls this effect over a Variance of %v", e.Variance))
 		}
 
 		// The client's default is 1 and the generator writes only what differs from it, rounding the
@@ -492,17 +495,6 @@ func (c *checker) role(field string, value shared.SpellDataValue) {
 	low, high := value.Range()
 	periodic, ticks := value.(shared.SpellDataPeriodic)
 
-	// The two ends of a role value always agree in this client: the generator derives the high end
-	// from EffectDieSides, which the client dropped, so it writes a flat value and leaves TickMax
-	// empty. One that did differ would be a spread the store answers out of Variance instead.
-	if high != low {
-		c.add(field+" spread", fmt.Sprintf("%v to %v", low, high),
-			"the store's spread is Variance, and no generated role value carries one")
-	}
-	if ticks && periodic.TickMax != 0 {
-		c.add(field+".TickMax", periodic.TickMax, "the generator derives no high end for a tick")
-	}
-
 	// A tick is looked for among the ticking effects first: Scorpid Poison's threat effect states the
 	// same number as its tick does, and reading the amount back off the threat one would then check
 	// the schedule against an effect that has none.
@@ -516,7 +508,7 @@ func (c *checker) role(field string, value shared.SpellDataValue) {
 				if ticking && e.PeriodMs == 0 {
 					continue
 				}
-				if !amountIs(&e, low) || e.SPCoef != value.BonusCoefficient() {
+				if !amountIs(&e, low, high) || e.SPCoef != value.BonusCoefficient() {
 					continue
 				}
 				if e.APCoef != 0 && e.APCoef != value.APBonusCoefficient() {
@@ -530,7 +522,11 @@ func (c *checker) role(field string, value shared.SpellDataValue) {
 		}
 	}
 
-	c.add(field, fmt.Sprintf("%v (coefficient %v)", low, value.BonusCoefficient()),
+	amount := fmt.Sprint(low)
+	if high != low {
+		amount = fmt.Sprintf("%v to %v", low, high)
+	}
+	c.add(field, fmt.Sprintf("%s (coefficient %v)", amount, value.BonusCoefficient()),
 		fmt.Sprintf("no effect of spell %d or of a spell it reads from states that amount with that coefficient",
 			c.row.SpellID))
 }
@@ -582,10 +578,14 @@ func (c *checker) timingPeriod() int32 {
 	return 0
 }
 
-// A role value is the effect's amount at level 60, or the curve's value where a talent tree priced
-// the rank.
-func amountIs(e *spelldata.Effect, value float64) bool {
-	return e.Average(level) == value || e.BaseValue() == value
+// A role value is the effect's amount at level 60, spread over Variance where the client rolls it,
+// or the curve's value where a talent tree priced the rank. A table value stated flat on an effect
+// the store rolls matches nothing: its low end is the average, and the store's is below it.
+func amountIs(e *spelldata.Effect, low, high float64) bool {
+	if low != high || e.Variance != 0 {
+		return e.Min(level) == low && e.Max(level) == high
+	}
+	return e.Average(level) == low || e.BaseValue() == low
 }
 
 func round6(f float64) float64 {

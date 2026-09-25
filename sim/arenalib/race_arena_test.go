@@ -122,9 +122,9 @@ func TestRelabelWeapons(t *testing.T) {
 // class can actually be.
 func TestRaceCandidatesMergeSkyborne(t *testing.T) {
 	for class, want := range map[proto.Class]proto.Race{
-		proto.Class_ClassWarrior: proto.Race_RaceSkyborneHighOrder,
-		proto.Class_ClassMage:    proto.Race_RaceSkyborneHighOrder,
-		proto.Class_ClassShaman:  proto.Race_RaceSkyborneWindshaper,
+		proto.Class_ClassWarrior: proto.Race_RaceHighOrderSkyborne,
+		proto.Class_ClassMage:    proto.Race_RaceHighOrderSkyborne,
+		proto.Class_ClassShaman:  proto.Race_RaceWindshaperSkyborne,
 	} {
 		skyborne := []proto.Race{}
 		for _, race := range raceCandidates(class) {

@@ -117,13 +117,12 @@ type reforgeOptimizer struct {
 	// each LP variable's cap-space coefficients (the FULL dependency graph), separately from the
 	// EP-calibrated objective coefficients produced by applyReforgeStat.
 	statDeps *stats.StatDependencyManager
+	sheet    core.SheetAvoidance
 
 	baseRaidProto     *proto.Raid
 	baseStrippedGear  *proto.EquipmentSpec
 	originalEquipment *core.Equipment
 	baseStats         core.UnitStats
-	// capBaseStats adds the raid's debuffs on top of baseStats; caps are evaluated against it.
-	capBaseStats core.UnitStats
 }
 
 // newReforgeOptimizer builds the optimizer context from the request: strips gems for the
@@ -148,7 +147,7 @@ func newReforgeOptimizer(request *proto.ReforgeOptimizeRequest, signals simsigna
 
 	// One environment build yields both FinalStats and the finalized StatDependencyManager,
 	// instead of building the character twice for the same base raid.
-	baseResult, baseSDM := computeReforgeStatsAndDeps(&proto.ComputeStatsRequest{Raid: baseRaid})
+	baseResult, baseSDM, sheet := computeReforgeStatsAndDeps(&proto.ComputeStatsRequest{Raid: baseRaid})
 	if baseResult.ErrorResult != "" {
 		return nil, errors.New(baseResult.ErrorResult)
 	}
@@ -172,12 +171,12 @@ func newReforgeOptimizer(request *proto.ReforgeOptimizeRequest, signals simsigna
 		gemOptions:     request.GetGemOptions(),
 
 		statDeps: baseSDM,
+		sheet:    sheet,
 
 		baseRaidProto:     baseRaid,
 		baseStrippedGear:  baseStrippedGear,
 		originalEquipment: &originalEquipment,
 		baseStats:         baseStats,
-		capBaseStats:      addUnitStats(baseStats, buildDebuffUnitStats(request.Raid)),
 	}, nil
 }
 
@@ -185,13 +184,13 @@ func newReforgeOptimizer(request *proto.ReforgeOptimizeRequest, signals simsigna
 // gap-to-cap form, build the LP model, solve it with cap refinement, then apply the winning gems
 // back onto the gear.
 func (o *reforgeOptimizer) optimizeReforges() (*proto.EquipmentSpec, float64, error) {
-	reforgeCaps := computeStatCapsDelta(o.capBaseStats, protoToCoreUnitStats(o.settings.GetStatCaps()))
+	reforgeCaps := computeStatCapsDelta(o.baseStats, protoToCoreUnitStats(o.settings.GetStatCaps()))
 
 	var softCapConfigs []*proto.StatCapConfig
 	if o.settings.GetUseSoftCapBreakpoints() {
 		softCapConfigs = o.request.GetSoftCaps()
 	}
-	reforgeSoftCaps := computeReforgeSoftCaps(o.capBaseStats, softCapConfigs)
+	reforgeSoftCaps := computeReforgeSoftCaps(o.baseStats, softCapConfigs)
 
 	weights := checkWeights(protoToCoreUnitStats(o.request.GetPreCapEpWeights()), reforgeCaps, reforgeSoftCaps)
 
@@ -218,7 +217,7 @@ func computeReforgeStats(request *proto.ComputeStatsRequest) *proto.ComputeStats
 	return core.ComputeStats(request)
 }
 
-func computeReforgeStatsAndDeps(request *proto.ComputeStatsRequest) (*proto.ComputeStatsResult, *stats.StatDependencyManager) {
+func computeReforgeStatsAndDeps(request *proto.ComputeStatsRequest) (*proto.ComputeStatsResult, *stats.StatDependencyManager, core.SheetAvoidance) {
 	request.SkipRotation = true
 	return core.ComputeStatsAndDeps(request)
 }

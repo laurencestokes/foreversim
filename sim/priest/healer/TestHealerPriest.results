@@ -1,12 +1,12 @@
 character_stats_results: {
  key: "TestHealerPriest-discipline-35-16-0"
  value: {
-  final_stats: 129
-  final_stats: 174
-  final_stats: 250
-  final_stats: 216
-  final_stats: 216
-  final_stats: 203
+  final_stats: 116
+  final_stats: 57
+  final_stats: 212
+  final_stats: 209
+  final_stats: 95
+  final_stats: 33
   final_stats: 0
   final_stats: 0
   final_stats: 0
@@ -14,15 +14,14 @@ character_stats_results: {
   final_stats: 0
   final_stats: 0
   final_stats: 0
-  final_stats: 48
   final_stats: 0
   final_stats: 0
-  final_stats: 203
-  final_stats: 321.2
+  final_stats: 0
+  final_stats: 198
+  final_stats: 262
   final_stats: 50
   final_stats: 0
   final_stats: 0
-  final_stats: 48
   final_stats: 0
   final_stats: 0
   final_stats: 0
@@ -32,21 +31,25 @@ character_stats_results: {
   final_stats: 0
   final_stats: 0
   final_stats: 0
-  final_stats: 1602
+  final_stats: 1234
   final_stats: 0
-  final_stats: 5067
-  final_stats: 4336
-  final_stats: 82.25
-  final_stats: 36
-  final_stats: 36
-  final_stats: 36
-  final_stats: 36
-  final_stats: 70
+  final_stats: 3337
+  final_stats: 4231
+  final_stats: 81
+  final_stats: 27
+  final_stats: 27
+  final_stats: 27
+  final_stats: 27
+  final_stats: 60
   final_stats: 0
-  final_stats: 1
-  final_stats: 4
-  final_stats: 18.12857
-  final_stats: 15.85737
+  final_stats: 0
+  final_stats: 0
+  final_stats: 8.85
+  final_stats: 9.3112
+  final_stats: 0
+  final_stats: 0
+  final_stats: 0
+  final_stats: 0
   final_stats: 0
   final_stats: 0
   final_stats: 0
@@ -55,12 +58,12 @@ character_stats_results: {
 character_stats_results: {
  key: "TestHealerPriest-holy-19-32-0"
  value: {
-  final_stats: 129
-  final_stats: 174
-  final_stats: 250
-  final_stats: 199
-  final_stats: 266.75
-  final_stats: 219.24
+  final_stats: 116
+  final_stats: 57
+  final_stats: 212
+  final_stats: 193
+  final_stats: 144.5
+  final_stats: 48.84
   final_stats: 0
   final_stats: 0
   final_stats: 0
@@ -68,15 +71,14 @@ character_stats_results: {
   final_stats: 0
   final_stats: 0
   final_stats: 0
-  final_stats: 48
   final_stats: 0
   final_stats: 0
-  final_stats: 203
-  final_stats: 321.2
+  final_stats: 0
+  final_stats: 198
+  final_stats: 262
   final_stats: 50
   final_stats: 0
   final_stats: 0
-  final_stats: 48
   final_stats: 0
   final_stats: 0
   final_stats: 0
@@ -86,21 +88,25 @@ character_stats_results: {
   final_stats: 0
   final_stats: 0
   final_stats: 0
-  final_stats: 1602
+  final_stats: 1234
   final_stats: 0
-  final_stats: 5067
-  final_stats: 4081
-  final_stats: 82.25
-  final_stats: 36
-  final_stats: 36
-  final_stats: 36
-  final_stats: 36
-  final_stats: 70
+  final_stats: 3337
+  final_stats: 3991
+  final_stats: 81
+  final_stats: 27
+  final_stats: 27
+  final_stats: 27
+  final_stats: 27
+  final_stats: 60
   final_stats: 0
-  final_stats: 1
-  final_stats: 4
-  final_stats: 18.12857
-  final_stats: 15.57177
+  final_stats: 0
+  final_stats: 0
+  final_stats: 8.85
+  final_stats: 9.0424
+  final_stats: 0
+  final_stats: 0
+  final_stats: 0
+  final_stats: 0
   final_stats: 0
   final_stats: 0
   final_stats: 0

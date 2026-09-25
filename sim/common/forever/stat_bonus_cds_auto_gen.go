@@ -10,95 +10,158 @@ import (
 func RegisterAllOnUseCds() {
 
 	//
-	// shared.NewSimpleStatActive(833) // Lifestone - https://www.wowhead.com/forever/spell=17712
+	// unsupported: 1300364 deals no damage and heals no one (A_MOD_DETECTED_RANGE)
 	// shared.NewSimpleStatActive(1490) // Guardian Talisman - https://www.wowhead.com/forever/spell=1300364
+	// unsupported: 14530 deals no damage and heals no one (A_MOD_INCREASE_SPEED)
 	// shared.NewSimpleStatActive(2820) // Nifty Stopwatch - https://www.wowhead.com/forever/spell=14530
+	// unsupported: 1317740 deals no damage and heals no one (E_DUMMY)
 	// shared.NewSimpleStatActive(4130) // Smotts' Compass - https://www.wowhead.com/forever/spell=1317740
+	// unsupported: 14537 deals no damage and heals no one (E_DUMMY)
 	// shared.NewSimpleStatActive(7734) // Six Demon Bag - https://www.wowhead.com/forever/spell=14537
-	// shared.NewSimpleStatActive(8348) // Helm of Fire - https://www.wowhead.com/forever/spell=10578
-	// shared.NewSimpleStatActive(8367) // Dragonscale Breastplate - https://www.wowhead.com/forever/spell=10618
+	// unsupported: 1300754 deals no damage and heals no one (A_MOD_CHARM)
 	// shared.NewSimpleStatActive(11625) // Enthralled Sphere - https://www.wowhead.com/forever/spell=1300754
+	// unsupported: 1300763 deals no damage and heals no one (E_DUMMY)
 	// shared.NewSimpleStatActive(11702) // Grizzle's Skinner - https://www.wowhead.com/forever/spell=1300763
-	// shared.NewSimpleStatActive(11808) // Circle of Flame - https://www.wowhead.com/forever/spell=17447
-	// shared.NewSimpleStatActive(11905) // Linken's Boomerang - https://www.wowhead.com/forever/spell=15712
-	// shared.NewSimpleStatActive(13143) // Mark of the Dragon Lord - https://www.wowhead.com/forever/spell=17252
-	// shared.NewSimpleStatActive(13171) // Smokey's Lighter - https://www.wowhead.com/forever/spell=17283
+	// on use: 17447 (A_PERIODIC_DAMAGE); not simulated: A_PERIODIC_ENERGIZE
+	// unsupported: the damage lands on implicit target 1, not an enemy
+	// shared.NewSpellDataDamageOnUse(11808) // Circle of Flame - https://www.wowhead.com/forever/spell=17447
+	// unsupported: 1308917 deals no damage and heals no one (E_DISPEL_MECHANIC)
 	// shared.NewSimpleStatActive(13213) // Smolderweb's Eye - https://www.wowhead.com/forever/spell=1308917
+	// unsupported: 18400 deals no damage and heals no one (A_PERIODIC_TRIGGER_SPELL)
 	// shared.NewSimpleStatActive(13379) // Piccolo of the Flaming Fire - https://www.wowhead.com/forever/spell=18400
+	// unsupported: 1299443 deals no damage and heals no one (A_MOD_STUN)
 	// shared.NewSimpleStatActive(13515) // Ramstein's Lightning Bolts - https://www.wowhead.com/forever/spell=1299443
+	// unsupported: 1298497 deals no damage and heals no one (E_DUMMY)
 	// shared.NewSimpleStatActive(13544) // Spectral Essence - https://www.wowhead.com/forever/spell=1298497
+	// unsupported: 1318944 deals no damage and heals no one (A_MOD_CRIT_CHANCE_FOR_CASTER)
 	// shared.NewSimpleStatActive(13965) // Blackhand's Breadth - https://www.wowhead.com/forever/spell=1318944
+	// unsupported: 1287840 deals no damage and heals no one (A_MOD_SPELL_HIT_CHANCE)
 	// shared.NewSimpleStatActive(13968) // Eye of the Beast - https://www.wowhead.com/forever/spell=1287840
+	// unsupported: 18364 deals no damage and heals no one (A_PERIODIC_TRIGGER_SPELL)
 	// shared.NewSimpleStatActive(14134) // Cloak of Fire - https://www.wowhead.com/forever/spell=18364
-	// shared.NewSimpleStatActive(14152) // Robe of the Archmage - https://www.wowhead.com/forever/spell=18385
-	// shared.NewSimpleStatActive(14153) // Robe of the Void - https://www.wowhead.com/forever/spell=18386
-	// shared.NewSimpleStatActive(16768) // Furbolg Medicine Pouch - https://www.wowhead.com/forever/spell=20631
+	// on use: 18386 (E_HEAL)
+	// unsupported: the heal lands on implicit target 5, not the wearer
+	// shared.NewSpellDataHealOnUse(14153) // Robe of the Void - https://www.wowhead.com/forever/spell=18386
+	// unsupported: 21954 deals no damage and heals no one (E_DISPEL)
 	// shared.NewSimpleStatActive(17744) // Heart of Noxxion - https://www.wowhead.com/forever/spell=21954
-	// shared.NewSimpleStatActive(17759) // Mark of Resolution - https://www.wowhead.com/forever/spell=21956
-	// shared.NewSimpleStatActive(18047) // Flame Walkers - https://www.wowhead.com/forever/spell=1301625
-	// shared.NewSimpleStatActive(18340) // Eidolon Talisman - https://www.wowhead.com/forever/spell=1302362
+	// unsupported: 1302264 deals no damage and heals no one (A_MOD_DODGE_PERCENT)
 	// shared.NewSimpleStatActive(18370) // Vigilance Charm - https://www.wowhead.com/forever/spell=1302264
-	// shared.NewSimpleStatActive(18371) // Mindtap Talisman - https://www.wowhead.com/forever/spell=1302205
-	// shared.NewSimpleStatActive(18406) // Onyxia Blood Talisman - https://www.wowhead.com/forever/spell=1287808
+	// on use: 1287808 (A_SCHOOL_ABSORB); not simulated: A_DUMMY
+	// unsupported: the absorb of 10000000000 beside an A_DUMMY absorbs only the spells a script names, which the client does not list
+	// shared.NewSpellDataAbsorbOnUse(18406) // Onyxia Blood Talisman - https://www.wowhead.com/forever/spell=1287808
+	// unsupported: 1302356 deals no damage and heals no one (A_PROC_TRIGGER_SPELL)
 	// shared.NewSimpleStatActive(18537) // Counterattack Lodestone - https://www.wowhead.com/forever/spell=1302356
+	// unsupported: 23131 deals no damage and heals no one (A_REFLECT_SPELLS_SCHOOL)
 	// shared.NewSimpleStatActive(18634) // Gyrofreeze Ice Reflector - https://www.wowhead.com/forever/spell=23131
-	// shared.NewSimpleStatActive(18637) // Major Recombobulator - https://www.wowhead.com/forever/spell=23064
+	// on use: 23064 (E_HEAL); not simulated: E_DISPEL_MECHANIC, E_ENERGIZE
+	// unsupported: the heal lands on implicit target 21, not the wearer
+	// shared.NewSpellDataHealOnUse(18637) // Major Recombobulator - https://www.wowhead.com/forever/spell=23064
+	// unsupported: 23097 deals no damage and heals no one (A_REFLECT_SPELLS_SCHOOL)
 	// shared.NewSimpleStatActive(18638) // Hyper-Radiant Flame Reflector - https://www.wowhead.com/forever/spell=23097
+	// unsupported: 23132 deals no damage and heals no one (A_REFLECT_SPELLS_SCHOOL)
 	// shared.NewSimpleStatActive(18639) // Ultra-Flash Shadow Reflector - https://www.wowhead.com/forever/spell=23132
+	// unsupported: 23453 deals no damage and heals no one (E_DUMMY)
 	// shared.NewSimpleStatActive(18986) // Ultrasafe Transporter: Gadgetzan - https://www.wowhead.com/forever/spell=23453
-	// shared.NewSimpleStatActive(19024) // Arena Grand Master - https://www.wowhead.com/forever/spell=23506
+	// unsupported: 23595 deals no damage and heals no one (E_DISPEL_MECHANIC)
 	// shared.NewSimpleStatActive(19141) // Luffa - https://www.wowhead.com/forever/spell=23595
+	// unsupported: 23721 deals no damage and heals no one (A_PROC_TRIGGER_SPELL)
 	// shared.NewSimpleStatActive(19336) // Arcane Infused Gem - https://www.wowhead.com/forever/spell=23721
-	// shared.NewSimpleStatActive(19339) // Mind Quickening Gem - https://www.wowhead.com/forever/spell=23723
+	// unsupported: 23724 deals no damage and heals no one (A_ADD_PCT_MODIFIER)
 	// shared.NewSimpleStatActive(19340) // Rune of Metamorphosis - https://www.wowhead.com/forever/spell=23724
+	// unsupported: 23725 deals no damage and heals no one (E_DUMMY)
 	// shared.NewSimpleStatActive(19341) // Lifegiving Gem - https://www.wowhead.com/forever/spell=23725
+	// unsupported: 23726 deals no damage and heals no one (A_ADD_FLAT_MODIFIER)
 	// shared.NewSimpleStatActive(19342) // Venomous Totem - https://www.wowhead.com/forever/spell=23726
-	// shared.NewSimpleStatActive(19343) // Scrolls of Blinding Light - https://www.wowhead.com/forever/spell=23733
-	// shared.NewSimpleStatActive(19344) // Natural Alignment Crystal - https://www.wowhead.com/forever/spell=23734
+	// unsupported: 24574 deals no damage and heals no one (A_PROC_TRIGGER_SPELL, E_TRIGGER_SPELL)
 	// shared.NewSimpleStatActive(19948) // Zandalarian Hero Badge - https://www.wowhead.com/forever/spell=24574
+	// unsupported: 24661 deals no damage and heals no one (A_DUMMY)
 	// shared.NewSimpleStatActive(19949) // Zandalarian Hero Medallion - https://www.wowhead.com/forever/spell=24661
+	// unsupported: 24658 deals no damage and heals no one (A_DUMMY, E_TRIGGER_SPELL)
 	// shared.NewSimpleStatActive(19950) // Zandalarian Hero Charm - https://www.wowhead.com/forever/spell=24658
+	// unsupported: 24542 deals no damage and heals no one (A_ADD_PCT_MODIFIER, A_ADD_PCT_MODIFIER)
 	// shared.NewSimpleStatActive(19955) // Wushoolay's Charm of Nature - https://www.wowhead.com/forever/spell=24542
+	// unsupported: 24546 deals no damage and heals no one (A_ADD_PCT_MODIFIER, A_ADD_PCT_MODIFIER)
 	// shared.NewSimpleStatActive(19958) // Hazza'rah's Charm of Healing - https://www.wowhead.com/forever/spell=24546
-	// shared.NewSimpleStatActive(19990) // Blessed Prayer Beads - https://www.wowhead.com/forever/spell=24354
+	// on use: 24354 (E_HEAL)
+	// unsupported: the heal lands on implicit target 21, not the wearer
+	// shared.NewSpellDataHealOnUse(19990) // Blessed Prayer Beads - https://www.wowhead.com/forever/spell=24354
+	// unsupported: 24352 deals no damage and heals no one (A_DUMMY)
 	// shared.NewSimpleStatActive(19991) // Devilsaur Eye - https://www.wowhead.com/forever/spell=24352
+	// unsupported: 24353 deals no damage and heals no one (A_ADD_PCT_MODIFIER)
 	// shared.NewSimpleStatActive(19992) // Devilsaur Tooth - https://www.wowhead.com/forever/spell=24353
+	// unsupported: 24389 deals no damage and heals no one (A_ADD_FLAT_MODIFIER, A_DUMMY)
 	// shared.NewSimpleStatActive(20036) // Fire Ruby - https://www.wowhead.com/forever/spell=24389
-	// shared.NewSimpleStatActive(20071) // Talisman of Arathor - https://www.wowhead.com/forever/spell=23991
-	// shared.NewSimpleStatActive(20072) // Defiler's Talisman - https://www.wowhead.com/forever/spell=23991
+	// unsupported: 8312 deals no damage and heals no one (A_MOD_ROOT)
 	// shared.NewSimpleStatActive(20084) // Hunting Net - https://www.wowhead.com/forever/spell=8312
-	// shared.NewSimpleStatActive(20525) // Earthen Sigil - https://www.wowhead.com/forever/spell=24884
+	// unsupported: 25112 deals no damage and heals no one (E_SUMMON_PET)
 	// shared.NewSimpleStatActive(20534) // Abyss Shard - https://www.wowhead.com/forever/spell=25112
-	// shared.NewSimpleStatActive(21115) // Defiler's Talisman - https://www.wowhead.com/forever/spell=25746
-	// shared.NewSimpleStatActive(21117) // Talisman of Arathor - https://www.wowhead.com/forever/spell=25746
+	// unsupported: 25892 deals no damage and heals no one (E_THREAT)
 	// shared.NewSimpleStatActive(21181) // Grace of Earth - https://www.wowhead.com/forever/spell=25892
+	// unsupported: 26168 deals no damage and heals no one (A_DAMAGE_SHIELD)
 	// shared.NewSimpleStatActive(21488) // Fetish of Chitinous Spikes - https://www.wowhead.com/forever/spell=26168
+	// unsupported: 26467 deals no damage and heals no one (A_PROC_TRIGGER_SPELL)
 	// shared.NewSimpleStatActive(21625) // Scarab Brooch - https://www.wowhead.com/forever/spell=26467
+	// unsupported: 26400 deals no damage and heals no one (A_MOD_THREAT)
 	// shared.NewSimpleStatActive(21647) // Fetish of the Sand Reaver - https://www.wowhead.com/forever/spell=26400
+	// unsupported: 26463 deals no damage and heals no one (A_PROC_TRIGGER_SPELL, E_TRIGGER_SPELL)
 	// shared.NewSimpleStatActive(21685) // Petrified Scarab - https://www.wowhead.com/forever/spell=26463
-	// shared.NewSimpleStatActive(21891) // Shard of the Fallen Star - https://www.wowhead.com/forever/spell=26789
-	// shared.NewSimpleStatActive(22954) // Kiss of the Spider - https://www.wowhead.com/forever/spell=28866
+	// unsupported: 28862 deals no damage and heals no one (A_MOD_THREAT)
 	// shared.NewSimpleStatActive(23001) // Eye of Diminution - https://www.wowhead.com/forever/spell=28862
-	// shared.NewSimpleStatActive(23027) // Warmth of Forgiveness - https://www.wowhead.com/forever/spell=28760
+	// unsupported: 28773 deals no damage and heals no one (A_MOD_BLOCK_VALUE_FLAT)
 	// shared.NewSimpleStatActive(23040) // Glyph of Deflection - https://www.wowhead.com/forever/spell=28773
-	// shared.NewSimpleStatActive(23558) // The Burrower's Shell - https://www.wowhead.com/forever/spell=29506
-	// shared.NewSimpleStatActive(219345) // Infernal Lasso - https://www.wowhead.com/forever/spell=443265
+	// unsupported: 1306267 deals no damage and heals no one (E_FORCE_CAST_2)
 	// shared.NewSimpleStatActive(221315) // Traveler's Symbols - https://www.wowhead.com/forever/spell=1306267
+	// unsupported: 23453 deals no damage and heals no one (E_DUMMY)
 	// shared.NewSimpleStatActive(260819) // EZ-Thro Field Transporter: Gadgetzan - https://www.wowhead.com/forever/spell=23453
+	// unsupported: 1269339 deals no damage and heals no one (E_DUMMY)
 	// shared.NewSimpleStatActive(260821) // EZ and SAF Field Transporter: Mt. Hyjal - https://www.wowhead.com/forever/spell=1269339
-	// shared.NewSimpleStatActive(260823) // Dimensional Transporter - Mt. Hyjal - https://www.wowhead.com/forever/spell=1269339
+	// unsupported: 1270941 deals no damage and heals no one (E_DUMMY)
 	// shared.NewSimpleStatActive(260824) // Gnomish Poultryizer - https://www.wowhead.com/forever/spell=1270941
-	// shared.NewSimpleStatActive(269741) // Scented Runewood Brooch -  -  - https://www.wowhead.com/forever/spell=1296664
-	// shared.NewSimpleStatActive(272437) // Adaptive Combat Assistant - https://www.wowhead.com/forever/spell=1291097
+	// unsupported: 1296664 deals no damage and heals no one (A_MOD_CHARM)
+	// shared.NewSimpleStatActive(269741) // Scented Runewood Brooch - https://www.wowhead.com/forever/spell=1296664
+	// on use: 1291097 (A_SCHOOL_ABSORB)
+	// unsupported: the damage of 1291099 (Sigmoid Revenge) the absorb's row names is not simulated
+	// shared.NewSpellDataAbsorbOnUse(272437) // Adaptive Combat Assistant - https://www.wowhead.com/forever/spell=1291097
+	// unsupported: 1291101 deals no damage and heals no one (A_MOD_CRIT_PCT)
 	// shared.NewSimpleStatActive(272438) // Weakness Analyzer - https://www.wowhead.com/forever/spell=1291101
+	// unsupported: 1291105 deals no damage and heals no one (A_MOD_BLOCK_PERCENT)
 	// shared.NewSimpleStatActive(272440) // Defender's Grip Stabilizer - https://www.wowhead.com/forever/spell=1291105
+	// unsupported: 1293820 deals no damage and heals no one (A_MOD_DODGE_PERCENT)
 	// shared.NewSimpleStatActive(274386) // Toy Soldier - https://www.wowhead.com/forever/spell=1293820
-	// shared.NewSimpleStatActive(274759) // Everlook Pathcarver - https://www.wowhead.com/forever/spell=1295270
+	// unsupported: 1295271 deals no damage and heals no one (E_DUMMY, E_DUMMY, A_DUMMY)
 	// shared.NewSimpleStatActive(274760) // Everlook Delivery Bot - https://www.wowhead.com/forever/spell=1295271
+	// unsupported: 1295272 deals no damage and heals no one (E_TRIGGER_MISSILE)
 	// shared.NewSimpleStatActive(274761) // Parachute-Priest Pager - https://www.wowhead.com/forever/spell=1295272
+	// unsupported: 1296564 deals no damage and heals no one (A_MOD_STUN)
 	// shared.NewSimpleStatActive(275347) // Lichbane - https://www.wowhead.com/forever/spell=1296564
+	// unsupported: 1297762 deals no damage and heals no one (A_FEATHER_FALL)
 	// shared.NewSimpleStatActive(275729) // Rusty Propeller Blade - https://www.wowhead.com/forever/spell=1297762
+	// unsupported: 1299440 deals no damage and heals no one (A_MOD_FEAR)
 	// shared.NewSimpleStatActive(276337) // Thaelemaches' Talisman - https://www.wowhead.com/forever/spell=1299440
+
+	// Absorbs
+	// on use: 10618 (A_SCHOOL_ABSORB)
+	shared.NewSpellDataAbsorbOnUse(8367) // Dragonscale Breastplate - https://www.wowhead.com/forever/spell=10618
+	// on use: 17252 (A_SCHOOL_ABSORB); not simulated: A_PERIODIC_ENERGIZE
+	shared.NewSpellDataAbsorbOnUse(13143) // Mark of the Dragon Lord - https://www.wowhead.com/forever/spell=17252
+	// on use: 21956 (A_SCHOOL_ABSORB)
+	shared.NewSpellDataAbsorbOnUse(17759) // Mark of Resolution - https://www.wowhead.com/forever/spell=21956
+	// on use: 1301625 (A_SCHOOL_ABSORB)
+	shared.NewSpellDataAbsorbOnUse(18047) // Flame Walkers - https://www.wowhead.com/forever/spell=1301625
+	// on use: 1302362 (A_SCHOOL_ABSORB)
+	shared.NewSpellDataAbsorbOnUse(18340) // Eidolon Talisman - https://www.wowhead.com/forever/spell=1302362
+	// on use: 23506 (A_SCHOOL_ABSORB)
+	shared.NewSpellDataAbsorbOnUse(19024) // Arena Grand Master - https://www.wowhead.com/forever/spell=23506
+	// on use: 23991 (A_SCHOOL_ABSORB)
+	shared.NewSpellDataAbsorbOnUse(20071) // Talisman of Arathor - https://www.wowhead.com/forever/spell=23991
+	// on use: 23991 (A_SCHOOL_ABSORB)
+	shared.NewSpellDataAbsorbOnUse(20072) // Defiler's Talisman - https://www.wowhead.com/forever/spell=23991
+	// on use: 25746 (A_SCHOOL_ABSORB)
+	shared.NewSpellDataAbsorbOnUse(21115) // Defiler's Talisman - https://www.wowhead.com/forever/spell=25746
+	// on use: 25746 (A_SCHOOL_ABSORB)
+	shared.NewSpellDataAbsorbOnUse(21117) // Talisman of Arathor - https://www.wowhead.com/forever/spell=25746
+	// on use: 29506 (A_SCHOOL_ABSORB)
+	shared.NewSpellDataAbsorbOnUse(23558) // The Burrower's Shell - https://www.wowhead.com/forever/spell=29506
 
 	// Agility / Intellect / Spirit / Stamina / Strength
 	shared.NewSimpleStatActive(270226) // Golden Banana - https://www.wowhead.com/forever/spell=1287571
@@ -113,6 +176,7 @@ func RegisterAllOnUseCds() {
 	// Armor
 	shared.NewSimpleStatActive(11811) // Smoking Heart of the Mountain - https://www.wowhead.com/forever/spell=1300752
 	shared.NewSimpleStatActive(12532) // Spire of the Stoneshaper - https://www.wowhead.com/forever/spell=16470
+	// not simulated: the proc the buff carries, 23781 (E_HEAL)
 	shared.NewSimpleStatActive(19345) // Aegis of Preservation - https://www.wowhead.com/forever/spell=23780
 
 	// ArmorPenetration
@@ -133,6 +197,24 @@ func RegisterAllOnUseCds() {
 	shared.NewSimpleStatActive(21180)  // Earthstrike - https://www.wowhead.com/forever/spell=25891
 	shared.NewSimpleStatActive(23041)  // Slayer's Crest - https://www.wowhead.com/forever/spell=28777
 	shared.NewSimpleStatActive(249470) // Molten Heart of the Mountain - https://www.wowhead.com/forever/spell=1249113
+
+	// Auras
+	// on use: 23734 (A_MOD_DAMAGE_PERCENT_DONE, A_MOD_HEALING_DONE_PERCENT, A_MOD_POWER_COST_SCHOOL_PCT)
+	shared.NewSpellDataAuraOnUse(19344) // Natural Alignment Crystal - https://www.wowhead.com/forever/spell=23734
+
+	// Damage
+	// on use: 10578 (E_SCHOOL_DAMAGE, A_PERIODIC_DAMAGE)
+	shared.NewSpellDataDamageOnUse(8348) // Helm of Fire - https://www.wowhead.com/forever/spell=10578
+	// on use: 15712 (E_SCHOOL_DAMAGE); not simulated: E_TRIGGER_SPELL, E_TRIGGER_SPELL
+	shared.NewSpellDataDamageOnUse(11905) // Linken's Boomerang - https://www.wowhead.com/forever/spell=15712
+	// on use: 17283 (E_SCHOOL_DAMAGE); not simulated: E_NONE
+	shared.NewSpellDataDamageOnUse(13171) // Smokey's Lighter - https://www.wowhead.com/forever/spell=17283
+	// on use: 26789 (E_SCHOOL_DAMAGE)
+	shared.NewSpellDataDamageOnUse(21891) // Shard of the Fallen Star - https://www.wowhead.com/forever/spell=26789
+	// on use: 443265 (A_PERIODIC_DAMAGE); not simulated: E_TRIGGER_SPELL
+	shared.NewSpellDataDamageOnUse(219345) // Infernal Lasso - https://www.wowhead.com/forever/spell=443265
+	// on use: 1295270 (E_SCHOOL_DAMAGE); not simulated: E_NONE, E_NONE
+	shared.NewSpellDataDamageOnUse(274759) // Everlook Pathcarver - https://www.wowhead.com/forever/spell=1295270
 
 	// FireResistance
 	shared.NewSimpleStatActive(13164) // Heart of the Scale - https://www.wowhead.com/forever/spell=17275
@@ -159,11 +241,27 @@ func RegisterAllOnUseCds() {
 	})
 	shared.NewSimpleStatActive(23046) // The Restrained Essence of Sapphiron - https://www.wowhead.com/forever/spell=28779
 
+	// Heals
+	// on use: 17712 (E_HEAL); not simulated: E_NONE
+	shared.NewSpellDataHealOnUse(833) // Lifestone - https://www.wowhead.com/forever/spell=17712
+	// on use: 20631 (A_PERIODIC_HEAL)
+	shared.NewSpellDataHealOnUse(16768) // Furbolg Medicine Pouch - https://www.wowhead.com/forever/spell=20631
+
 	// Health
 	shared.NewSimpleStatActive(13966) // Mark of Tyranny - https://www.wowhead.com/forever/spell=1287842
 
 	// MP5
 	shared.NewSimpleStatActive(4696) // Lapidis Tankard of Tidesippe - https://www.wowhead.com/forever/spell=1135
+
+	// Resources
+	// on use: 18385 (E_ENERGIZE)
+	shared.NewSpellDataEnergizeOnUse(14152) // Robe of the Archmage - https://www.wowhead.com/forever/spell=18385
+	// on use: 1302205 (A_PERIODIC_ENERGIZE); not simulated: E_TRIGGER_SPELL
+	shared.NewSpellDataEnergizeOnUse(18371) // Mindtap Talisman - https://www.wowhead.com/forever/spell=1302205
+	// on use: 24884 (A_PERIODIC_ENERGIZE)
+	shared.NewSpellDataEnergizeOnUse(20525) // Earthen Sigil - https://www.wowhead.com/forever/spell=24884
+	// on use: 28760 (E_ENERGIZE)
+	shared.NewSpellDataEnergizeOnUse(23027) // Warmth of Forgiveness - https://www.wowhead.com/forever/spell=28760
 
 	// Skipped
 	// Not simulated: Lei of Lilies: "Conjure Lily Root" (18831) - ignored effect type 24
@@ -174,8 +272,6 @@ func RegisterAllOnUseCds() {
 	// https://www.wowhead.com/forever/spell=16739
 	// Not simulated: Spider Belt: "Immune Root" (9774) - ignored aura type 77
 	// https://www.wowhead.com/forever/spell=9774
-	// Not simulated: Cold Basilisk Eye: "Cold Eye" (1139) - ignored aura type 33
-	// https://www.wowhead.com/forever/spell=1139
 	// Not simulated: Enchanted Moonstalker Cloak: "Form of the Moonstalker" (6298) - ignored aura type 56
 	// https://www.wowhead.com/forever/spell=6298
 	// Not simulated: Ornate Mithril Boots: "Immune Root" (9774) - ignored aura type 77
@@ -284,6 +380,14 @@ func RegisterAllOnUseCds() {
 	// https://www.wowhead.com/forever/spell=438273
 	// Not simulated: Field Agent Beverage: "Field Agent Beverage" (1297448) - ignored aura type 17
 	// https://www.wowhead.com/forever/spell=1297448
+
+	// Speed
+	// on use: 23723 (A_MOD_CASTING_SPEED_NOT_STACK)
+	shared.NewSpellDataSpeedOnUse(19339) // Mind Quickening Gem - https://www.wowhead.com/forever/spell=23723
+	// on use: 23733 (A_MOD_CASTING_SPEED_NOT_STACK, A_MOD_MELEE_HASTE_3)
+	shared.NewSpellDataSpeedOnUse(19343) // Scrolls of Blinding Light - https://www.wowhead.com/forever/spell=23733
+	// on use: 28866 (A_MOD_MELEE_HASTE_3, A_MOD_RANGED_HASTE)
+	shared.NewSpellDataSpeedOnUse(22954) // Kiss of the Spider - https://www.wowhead.com/forever/spell=28866
 
 	// SpellCritRating
 	shared.NewSimpleStatActive(19952) // Gri'lek's Charm of Valor - https://www.wowhead.com/forever/spell=24498

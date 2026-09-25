@@ -11,7 +11,7 @@ import (
 // The spells client 16870's cost modifier names, as the sim knows them. Wrath, Faerie Fire and the
 // forms are not among them.
 const clearcastingSpells = DruidSpellEntanglingRoots | DruidSpellDemoralizingRoar | DruidSpellHurricane |
-	DruidSpellFerociousBite | DruidSpellInsectSwarm | DruidSpellLacerate | DruidSpellMangleBear | DruidSpellMaul |
+	DruidSpellFerociousBite | DruidSpellInsectSwarm | DruidSpellLacerate | DruidSpellPrimalBite | DruidSpellMaul |
 	DruidSpellMoonfire | DruidSpellRake | DruidSpellRavage | DruidSpellRip | DruidSpellShred | DruidSpellStarfire |
 	DruidSpellSwipe | DruidSpellThorns | DruidSpellHealingTouch | DruidSpellRegrowth | DruidSpellLifebloom |
 	DruidSpellRejuvenation | DruidSpellTranquility | DruidSpellSwiftmend

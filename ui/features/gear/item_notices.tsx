@@ -1,6 +1,6 @@
 import { Spec } from '@generated/proto/common';
 import { translateAreaType, translateStat } from '@i18n/localization';
-import { MISSING_ITEM_EFFECTS } from '@sim/constants/missing_effects_auto_gen';
+import { MISSING_ENCHANT_EFFECTS, MISSING_ITEM_EFFECTS } from '@sim/constants/missing_effects_auto_gen';
 import type { Database } from '@sim/proto/database';
 import type { ReactNode } from 'react';
 
@@ -19,13 +19,26 @@ const WantToHelpMessage = () => <p className="mb-0">Want to help out by providin
 
 export const MISSING_RANDOM_SUFFIX_WARNING = <p className="mb-0">Please select a random suffix</p>;
 
-const MISSING_IMPLEMENTATION_WARNING = (
-	<>
-		<p className="font-bold">This item effect (on-use or proc) is not implemented!</p>
-		<p>We are working hard on gathering all the old resources to allow for an initial implementation.</p>
-		<WantToHelpMessage />
-	</>
-);
+const missingEffectNotice = (effectKind: 'item' | 'enchant', tooltips: string[]): ItemNoticeData => ({
+	[Spec.SpecUnknown]: !tooltips.length ? (
+		<>
+			<p className="font-bold">{`This ${effectKind} effect (on-use or proc) is not implemented!`}</p>
+			<p>We are working hard on gathering all the old resources to allow for an initial implementation.</p>
+			<WantToHelpMessage />
+		</>
+	) : (
+		<>
+			<p className="font-bold">{`The following ${effectKind} effect (on-use or proc) is not implemented!`}</p>
+			<ul>
+				{tooltips
+					.filter(tooltip => !!tooltip)
+					.map(tooltip => (
+						<li key={tooltip}>{tooltip}</li>
+					))}
+			</ul>
+		</>
+	),
+});
 
 const TENTATIVE_IMPLEMENTATION_WARNING = (
 	<>
@@ -55,26 +68,12 @@ export const ITEM_NOTICES = new Map<number, ItemNoticeData>([
 			[Spec.SpecUnknown]: TENTATIVE_IMPLEMENTATION_WARNING,
 		},
 	]),
-	...[...MISSING_ITEM_EFFECTS].map(([itemID, tooltips]): [number, ItemNoticeData] => [
-		itemID,
-		{
-			[Spec.SpecUnknown]: !tooltips.length ? (
-				MISSING_IMPLEMENTATION_WARNING
-			) : (
-				<>
-					<p className="font-bold">The following item effect (on-use or proc) is not implemented!</p>
-					<ul>
-						{tooltips
-							.filter(tooltip => !!tooltip)
-							.map(tooltip => (
-								<li key={tooltip}>{tooltip}</li>
-							))}
-					</ul>
-				</>
-			),
-		},
-	]),
+	...[...MISSING_ITEM_EFFECTS].map(([itemID, tooltips]): [number, ItemNoticeData] => [itemID, missingEffectNotice('item', tooltips)]),
 ]);
+
+export const ENCHANT_NOTICES = new Map<number, ItemNoticeData>(
+	[...MISSING_ENCHANT_EFFECTS].map(([effectID, tooltips]): [number, ItemNoticeData] => [effectID, missingEffectNotice('enchant', tooltips)]),
+);
 
 export const GENERIC_MISSING_SET_BONUS_NOTICE_DATA = new Map<number, string>([
 	[2, 'Not yet implemented'],

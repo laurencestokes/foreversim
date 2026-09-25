@@ -2,13 +2,14 @@ package warlock
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 )
 
 func (warlock *Warlock) registerCurseOfRecklessness() {
 	rank := spellData.CurseOfRecklessness.Highest()
 
 	warlock.CurseOfRecklessnessAuras = warlock.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
-		return core.CurseOfRecklessnessAura(target, warlock.Index)
+		return buffs.CurseOfRecklessnessAura(target, true, 0)
 	})
 
 	warlock.CurseOfRecklessness = warlock.RegisterSpell(core.SpellConfig{

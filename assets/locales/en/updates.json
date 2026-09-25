@@ -1,10 +1,7 @@
 {
 	"protoVersion": {
-		"7": {
-			"body": "Successfully updated your saved settings to the latest version. Drums under 'Consumables' are now considered personal as Leatherworker. We've moved the external drums to the 'Party Buffs' section."
-		},
-		"12": {
-			"body": "Successfully updated your saved settings to the latest version. You can now select a Consecration rank as well as an Aura in the rotation settings."
+		"17": {
+			"body": "This link or saved setup predates the rebuilt buffs and consumables, which could not be read from it. Buffs, debuffs and consumables have been reset to the defaults for this spec."
 		}
 	}
 }

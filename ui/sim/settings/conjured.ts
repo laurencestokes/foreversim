@@ -17,18 +17,10 @@ export interface ConsumableOption {
 export const CONJURED_CONFIG: Array<ConsumableOption> = [
 	// Thistle Tea
 	{ value: 7676, stats: [], showWhen: player => player.getClass() == Class.ClassRogue },
-	// Master Healthstone
-	{ value: 22105, stats: [Stat.StatStamina] },
-	// Nightmare Seed
-	{ value: 22797, stats: [Stat.StatStamina], showWhen: player => player.getPlayerSpec().isTankSpec },
+	// Major Healthstone
+	{ value: 9421, stats: [Stat.StatStamina] },
 	// Dark Rune
 	{ value: 12662, stats: [Stat.StatIntellect] },
-	// Flame Cap
-	{ value: 22788, stats: [] },
-	// Cracked Power Core
-	{ value: 23334, stats: [Stat.StatSpellDamage] },
-	// Chipped Power Core
-	{ value: 23381, stats: [Stat.StatSpellDamage] },
 ];
 
 // Keeps only the options whose stats matter to this spec — the same filter the settings pickers

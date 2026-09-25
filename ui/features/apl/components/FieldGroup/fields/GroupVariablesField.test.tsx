@@ -172,9 +172,8 @@ describe('GroupVariablesField', () => {
 });
 
 // The reference outlives what it points at: deleting a group, or renaming one, leaves a reference
-// naming nothing, and retribution's default APL ships a reference passing a variable to a group
-// that declares no placeholder (ui/specs/paladin/retribution/apls/default.apl.json, group
-// `ExoOrConsec`). None of those may cost the user the assignments they typed.
+// naming nothing, and a selected group can hold an existing variableRef assignment while declaring
+// no placeholder for it. None of those may cost the user the assignments they typed.
 describe('GroupVariablesField — nothing to derive from', () => {
 	const assigned = () => ({
 		name: 'TargetDemonOrUndead',

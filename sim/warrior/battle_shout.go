@@ -1,28 +1,49 @@
 package warrior
 
 import (
+	"time"
+
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 	"github.com/wowsims/forever/sim/core/dbcenums"
-	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/stats"
 )
+
+// How close to running out the warrior's own shout has to be before recasting it is worth a global.
+const ShoutExpirationThreshold = time.Second * 3
 
 func (warrior *Warrior) registerBattleShout() {
 	battleShoutRank := spellData.BattleShout.Highest()
-	baseAttackPower := battleShoutRank.Effect(dbcenums.A_MOD_ATTACK_POWER, 0).Average(core.CharacterLevel)
-	attackPower := func() float64 {
-		return baseAttackPower + core.TernaryFloat64(warrior.HasBsT2, core.BattleShoutWrathBonus, 0)
+
+	// A warrior that shouts builds a copy of its own; one that shouts nothing gets the
+	// isPlayer=false constructor, whose aura is the party's external copy.
+	castsOwnShout := warrior.UseBattleShout
+
+	// Three pieces of Battlegear of Wrath add a flat 30 to the shout this warrior makes, both to
+	// what its copy applies and to what it bids for the category.
+	battleShoutBase := buffs.BattleShoutValue(0)
+	battleShoutValue := battleShoutBase
+	shoutsWithTheSet := castsOwnShout && warrior.HasBsT2
+	if shoutsWithTheSet {
+		battleShoutValue += buffs.BattleShoutT2Bonus
 	}
 
 	auras := warrior.NewAllyAuraArray(func(unit *core.Unit) *core.Aura {
-		aura := core.BattleShoutAura(unit, true, baseAttackPower, battleShoutRank.Duration())
-		aura.BuildPhase = core.Ternary(warrior.DefaultShout == proto.WarriorShout_WarriorShoutBattle, core.CharacterBuildPhaseBuffs, core.CharacterBuildPhaseNone)
-		return aura.ApplyOnGain(func(aura *core.Aura, sim *core.Simulation) {
-			if ee := aura.ExclusiveEffects[0]; ee.Priority != attackPower() {
-				ee.SetPriority(sim, attackPower())
-			}
-		})
+		// The party's Battle Shout registers the external copy before this runs, and that copy
+		// keeps the build phase it was registered with.
+		partyShout := !castsOwnShout && unit.GetAuraByID(core.ActionID{SpellID: battleShoutRank.ID}.WithTag(-1)) != nil
+
+		// Booming Voice widens the radius only, so the aura takes no talent points.
+		aura := buffs.BattleShoutAura(unit, castsOwnShout, 0)
+		if shoutsWithTheSet {
+			core.AddGeneratedFlatBonus(aura, stats.AttackPower, battleShoutBase, buffs.BattleShoutT2Bonus)
+		}
+		if !partyShout {
+			aura.BuildPhase = core.Ternary(castsOwnShout, core.CharacterBuildPhaseBuffs, core.CharacterBuildPhaseNone)
+		}
+		return aura
 	})
-	selfAura := auras.Get(&warrior.Unit)
+	battleShoutCategory := warrior.GetExclusiveEffectCategory(buffs.BattleShoutCategory)
 
 	warrior.BattleShout = warrior.RegisterSpell(core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: battleShoutRank.ID},
@@ -46,21 +67,22 @@ func (warrior *Warrior) registerBattleShout() {
 		// measured in game.
 		FlatThreatBonus: battleShoutRank.FindEffect(dbcenums.E_THREAT, 0, 0).Average(core.CharacterLevel),
 
-		// Battle Shout is a single-aura exclusive category: a stronger one from another source (the
-		// party buff) blocks ours, so casting would only burn rage every GCD.
+		// Battle Shout is a single-aura exclusive category. Nothing there and the cast puts the buff
+		// up; this warrior's own copy there is only worth refreshing as it runs out; anything else
+		// (the party buff) has to be outbid first, or casting would only burn rage every GCD.
 		ExtraCastCondition: func(sim *core.Simulation, _ *core.Unit) bool {
-			active := selfAura.ExclusiveEffects[0].Category.GetActiveEffect()
-			return active == nil || active.Priority <= attackPower()
+			active := battleShoutCategory.GetActiveEffect()
+			if active == nil {
+				return true
+			}
+			if active.Aura == auras.Get(&warrior.Unit) {
+				return active.Aura.RemainingDuration(sim) <= ShoutExpirationThreshold
+			}
+			return battleShoutValue >= active.Priority
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			spell.CalcAndDealOutcome(sim, target, spell.OutcomeAlwaysHit)
-			// The exclusive check runs before OnGain sets the value, so give it the real one first.
-			for _, aura := range auras {
-				if aura != nil {
-					aura.ExclusiveEffects[0].SetPriority(sim, attackPower())
-				}
-			}
 			auras.ActivateAllPlayers(sim)
 		},
 

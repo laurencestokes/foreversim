@@ -2,11 +2,15 @@ package mage
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+// Every rank is registered: a rotation can drop to a cheaper rank when mana runs short.
 func (mage *Mage) registerFrostboltSpell() {
-	frostboltRank := spellData.Frostbolt.Highest()
+	spellData.Frostbolt.Each(func(_ int32, rank *spelldata.Spell) { mage.registerFrostboltRank(rank) })
+}
 
+func (mage *Mage) registerFrostboltRank(frostboltRank *spelldata.Spell) {
 	mage.RegisterSpell(core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: frostboltRank.ID},
 		SpellSchool:    frostboltRank.SpellSchool(),
@@ -14,6 +18,7 @@ func (mage *Mage) registerFrostboltSpell() {
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL | core.SpellFlagBinary,
 		ClassSpellMask: MageSpellFrostbolt,
+		Rank:           frostboltRank.RankNumber(),
 		MissileSpeed:   float64(frostboltRank.Speed),
 
 		ManaCost: core.ManaCostOptions{

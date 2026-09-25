@@ -7,7 +7,14 @@
 	"env": {
 		"builtin": true
 	},
-	"ignorePatterns": ["ui/generated/proto/**", "ui/sim/proto/legacy_classic/**", "dist/**", "binary_dist/**", "node_modules/**"],
+	"ignorePatterns": [
+		"ui/features/settings/model/buffs_debuffs_auto_gen.ts",
+		"ui/generated/proto/**",
+		"ui/sim/proto/legacy_classic/**",
+		"dist/**",
+		"binary_dist/**",
+		"node_modules/**"
+	],
 	"overrides": [
 		{
 			"files": ["**/*.{js,jsx,ts,tsx}"],

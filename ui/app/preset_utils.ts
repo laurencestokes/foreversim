@@ -276,7 +276,7 @@ export const makePresetBuildFromJSON = (
 	{ settings: customSimSettings, ...customBuildOptions }: PresetBuildOptions = {},
 	options?: PresetOptionsBase,
 ): PresetBuild => {
-	const simSettings = IndividualSimSettings.fromJson(json);
+	const simSettings = IndividualSimSettings.fromJson(json, { ignoreUnknownFields: true });
 	const buildConfig: PresetBuildOptions = {};
 
 	if (simSettings.player) {

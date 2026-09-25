@@ -41,10 +41,10 @@ type SpellConfig struct {
 	Charges      int // The maximum amount of charges this spell can have
 	RechargeTime time.Duration
 
-	BonusHitPercent      float64
-	BonusCritPercent     float64
-	BonusSpellDamage     float64
-	BonusExpertiseRating float64
+	BonusHitPercent       float64
+	BonusCritPercent      float64
+	BonusSpellDamage      float64
+	BonusExpertisePercent float64
 
 	DamageMultiplier         float64
 	DamageMultiplierAdditive float64
@@ -158,7 +158,7 @@ type Spell struct {
 	BonusHitPercent          float64
 	BonusCritPercent         float64
 	BonusSpellDamage         float64
-	BonusExpertiseRating     float64
+	BonusExpertisePercent    float64
 	CastTimeMultiplier       float64
 	CdMultiplier             float64
 	DamageMultiplier         float64
@@ -269,7 +269,7 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 		BonusHitPercent:          config.BonusHitPercent,
 		BonusCritPercent:         config.BonusCritPercent,
 		BonusSpellDamage:         config.BonusSpellDamage,
-		BonusExpertiseRating:     config.BonusExpertiseRating,
+		BonusExpertisePercent:    config.BonusExpertisePercent,
 		CastTimeMultiplier:       1,
 		CdMultiplier:             1,
 		DamageMultiplier:         config.DamageMultiplier,

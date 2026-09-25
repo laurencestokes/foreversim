@@ -154,9 +154,7 @@ func NewWarlock(character *core.Character, options *proto.Player, warlockOptions
 	if raid.Debuffs != nil {
 		switch warlock.Options.CurseOptions {
 		case proto.WarlockOptions_Elements:
-			if raid.Debuffs.CurseOfElements != proto.TristateEffect_TristateEffectMissing {
-				raid.Debuffs.CurseOfElements = proto.TristateEffect_TristateEffectMissing
-			}
+			raid.Debuffs.CurseOfElements = false
 		case proto.WarlockOptions_Recklessness:
 			raid.Debuffs.CurseOfRecklessness = false
 		}

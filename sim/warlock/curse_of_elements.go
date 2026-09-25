@@ -2,6 +2,7 @@ package warlock
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 )
 
 // Forever folded Curse of Shadow into Curse of the Elements: its top rank (1311680) drops every
@@ -11,12 +12,12 @@ import (
 func (warlock *Warlock) registerCurseOfElements() {
 	rank := spellData.CurseOfTheElements.Highest()
 
-	// Untagged (caster 0), not tagged with our raid index: the APLs ask for aura 27228 on the target,
-	// which only an untagged aura answers. Tagged, every warlock but the raid's first never saw its
-	// own curse and recast it every GCD (the rankings raid had all four builds at ~10 DPS). One Curse
-	// of the Elements per target is also the game's rule, so the warlocks of a raid share it.
+	// The player copy (untagged 1311680, one label per target): the APLs ask for aura 1311680 on the
+	// target, and every warlock of a raid shares it, one Curse of the Elements per target being the
+	// game's rule. Tagged per caster, every warlock but the raid's first never saw its own curse and
+	// recast it every GCD.
 	warlock.CurseOfElementsAuras = warlock.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
-		return core.CurseOfElementsAura(target, 0, 0)
+		return buffs.CurseOfElementsAura(target, true, 0)
 	})
 
 	warlock.CurseOfElements = warlock.RegisterSpell(core.SpellConfig{

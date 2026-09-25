@@ -38,6 +38,8 @@ func init() {
 	// it heals for 75 to 125 and increases Strength by 100 for 15 sec.
 	// Level 60 values from the client (20007: 100 Strength, heal 100 +-25%); the 60 Strength and
 	// 45 to 75 heal this carried were TBC's level 70 reduction.
+	// TODO: Manual review needed -- the client states no rate: 20007 has no proc chance and 458112's
+	// ProcChance 100 is the sentinel beside "often"; 1 PPM until measured in game.
 	core.NewEnchantEffect(1900, func(agent core.Agent) {
 		character := agent.GetCharacter()
 		duration := time.Second * 15

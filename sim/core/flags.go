@@ -111,7 +111,6 @@ const (
 
 	// These bits are set by the crit and damage rolls.
 	OutcomeCrit
-	OutcomeSuppressedCrit // A resilience-suppressed crit does not deal crit damage, but can trigger crit procs.
 	OutcomeCrush
 
 	OutcomePartial1_4 // 1/4 of the spell was resisted.
@@ -121,7 +120,7 @@ const (
 
 const (
 	OutcomePartial = OutcomePartial1_4 | OutcomePartial2_4 | OutcomePartial3_4
-	OutcomeLanded  = OutcomeHit | OutcomeCrit | OutcomeCrush | OutcomeSuppressedCrit | OutcomeGlance | OutcomeBlock
+	OutcomeLanded  = OutcomeHit | OutcomeCrit | OutcomeCrush | OutcomeGlance | OutcomeBlock
 )
 
 func (ho HitOutcome) String() string {
@@ -139,8 +138,6 @@ func (ho HitOutcome) String() string {
 		return "Glance" + ho.PartialResistString()
 	} else if ho.Matches(OutcomeCrit) {
 		return "Crit" + ho.PartialResistString()
-	} else if ho.Matches(OutcomeSuppressedCrit) {
-		return "SuppressedCrit" + ho.PartialResistString()
 	} else if ho.Matches(OutcomeHit) {
 		return "Hit" + ho.PartialResistString()
 	} else if ho.Matches(OutcomeCrush) {
@@ -206,6 +203,7 @@ const (
 	SpellFlagSupressDoTApply                                // If present this spell will not apply dots (Used for DTR dot supression)
 	SpellFlagSwapped                                        // Indicates that this spell is not useable because it is from a currently swapped item
 	SpellFlagCastWhileIncapacitated                         // Allows the cast while the unit is incapacitated, e.g. Berserker Rage breaking a Fear.
+	SpellFlagPushback                                       // Damage taken while hardcasting pushes the cast back: SpellInterrupts.InterruptFlags 0x2.
 
 	// Used to let agents categorize their spells.
 	SpellFlagAgentReserved1

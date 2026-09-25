@@ -42,7 +42,11 @@ vi.mock('@features/bulk/model/items', () => ({
 }));
 vi.mock('../../../../tracking/utils', () => ({ trackEvent: vi.fn() }));
 vi.mock('./ItemSource', () => ({ ItemSource: () => <div data-testid="item-source-marker" /> }));
-vi.mock('../GearPicker/ItemNoticeIcon', () => ({ ItemNoticeIcon: () => <div data-testid="item-notice-marker" /> }));
+vi.mock('../GearPicker/ItemNoticeIcon', () => ({
+	ItemNoticeIcon: ({ itemId, enchantId }: { itemId?: number; enchantId?: number }) => (
+		<div data-testid="item-notice-marker" data-item-id={itemId} data-enchant-id={enchantId} />
+	),
+}));
 
 const { ItemListRow } = await import('./ItemListRow');
 type ItemListRowProps = Parameters<typeof ItemListRow>[0];
@@ -136,6 +140,18 @@ describe('ItemListRow', () => {
 
 		const enchants = renderRow({ label: SelectorModalTabs.Enchants });
 		expect(enchants.container.querySelector('[data-testid="selector-modal-list-item-source-container"]')).toBeNull();
+	});
+
+	it('looks the notice up by enchant id on the enchants tab and by item id elsewhere', () => {
+		const enchants = renderRow({ label: SelectorModalTabs.Enchants, itemData: makeItemData({ id: 1894 }) });
+		const enchantNotice = enchants.container.querySelector('[data-testid="item-notice-marker"]')!;
+		expect(enchantNotice.getAttribute('data-enchant-id')).toBe('1894');
+		expect(enchantNotice.hasAttribute('data-item-id')).toBe(false);
+
+		const items = renderRow({ label: SelectorModalTabs.Items, itemData: makeItemData({ id: 17182 }) });
+		const itemNotice = items.container.querySelector('[data-testid="item-notice-marker"]')!;
+		expect(itemNotice.getAttribute('data-item-id')).toBe('17182');
+		expect(itemNotice.hasAttribute('data-enchant-id')).toBe(false);
 	});
 
 	it('hides the ep cell for trinket slots', () => {

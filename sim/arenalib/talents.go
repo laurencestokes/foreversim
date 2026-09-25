@@ -139,6 +139,17 @@ func (points allocation) String() string {
 	return strings.Join(parts, "-")
 }
 
+// The tree holding the most points; the earlier tree on a tie.
+func mainTree(points allocation) int {
+	at := 0
+	for i, tree := range points {
+		if sum(tree) > sum(points[at]) {
+			at = i
+		}
+	}
+	return at
+}
+
 func (points allocation) total() int {
 	sum := 0
 	for _, tree := range points {
@@ -318,22 +329,27 @@ var errUnreachable = errors.New("unreachable")
 // could be put in, then actually run the best-looking trade rather than trusting the two
 // halves to add up. Talents interact - a point in Flurry is worth more next to Enrage - and
 // the separable estimate is only a way of deciding what to measure properly.
-func optimise(spec Spec, start TalentBuild, gear string, rotation string, budget int) (TalentBuild, int, error) {
-	return optimiseAnchored(spec, start, gear, rotation, budget, nil)
+func optimise(spec Spec, start TalentBuild, gear string, rotations []string, budget int) (TalentBuild, string, int, error) {
+	return optimiseAnchored(spec, start, gear, rotations, budget, nil)
 }
 
-func optimiseAnchored(spec Spec, start TalentBuild, gear string, rotation string, budget int, shape *anchor) (TalentBuild, int, error) {
+// Climbs in whichever of the rotations suits the starting build best, and says which. One
+// rotation for every climb optimised a Marksmanship or Subtlety shape for the Beast Mastery or
+// Combat rotation, which is not how anyone plays that tree: outside builds beat those rows by
+// 5-7% in the same sim until each climb picked its own.
+func optimiseAnchored(spec Spec, start TalentBuild, gear string, rotations []string, budget int, shape *anchor) (TalentBuild, string, int, error) {
 	trees, err := loadTrees(spec.Class)
 	if err != nil {
-		return start, 0, err
+		return start, "", 0, err
 	}
 
 	current := parseTalents(trees, start.Talents)
 	if !current.valid(trees) {
-		return start, 0, fmt.Errorf("%s is not a legal build to start from", start.Name)
+		return start, "", 0, fmt.Errorf("%s is not a legal build to start from", start.Name)
 	}
 
 	runs := atomic.Int64{}
+	rotation := rotations[0]
 	measure := func(points allocation) float64 {
 		runs.Add(1)
 		return runAt(spec, TalentBuild{Talents: points.String()}, gear, rotation, searchIterations).Dps
@@ -343,11 +359,17 @@ func optimiseAnchored(spec Spec, start TalentBuild, gear string, rotation string
 	// moved into or out of the held trees first until every count is right.
 	if shape != nil {
 		if current, err = reshape(trees, current, *shape); err != nil {
-			return TalentBuild{}, 0, fmt.Errorf("%w: %s", errUnreachable, err)
+			return TalentBuild{}, "", 0, fmt.Errorf("%w: %s", errUnreachable, err)
 		}
 	}
 
 	best := candidate{points: current, dps: measure(current)}
+	for _, other := range rotations[1:] {
+		runs.Add(1)
+		if dps := runAt(spec, TalentBuild{Talents: current.String()}, gear, other, searchIterations).Dps; dps > best.dps {
+			rotation, best.dps = other, dps
+		}
+	}
 	relevant, _ := relevantTalents(trees, current, measure, best.dps)
 
 	// Spend anything the starting build left on the table before trading points around.
@@ -421,7 +443,7 @@ func optimiseAnchored(spec Spec, start TalentBuild, gear string, rotation string
 	if best.points.String() != start.Talents {
 		name = strings.TrimSuffix(start.Name, ", optimised") + ", optimised"
 	}
-	return TalentBuild{Name: name, Talents: best.points.String()}, int(runs.Load()), nil
+	return TalentBuild{Name: name, Talents: best.points.String()}, rotation, int(runs.Load()), nil
 }
 
 type scoredMove struct {

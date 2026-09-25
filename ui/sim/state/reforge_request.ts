@@ -2,7 +2,8 @@
 // component so the domain layer (sim.ts, bulk sim, reforge cache) does not
 // depend on the view layer.
 import { Player as PlayerProtoMessageType, ReforgeOptimizeMode, ReforgeOptimizeRequest } from '@generated/proto/api';
-import { Debuffs, GemColor, ItemQuality, PartyBuffs, Profession, RaidBuffs } from '@generated/proto/common';
+import { Debuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { GemColor, ItemQuality, Profession } from '@generated/proto/common';
 import { UIGem as Gem } from '@generated/proto/ui';
 
 import { ReforgeGearCache } from '../cache/reforge_cache';

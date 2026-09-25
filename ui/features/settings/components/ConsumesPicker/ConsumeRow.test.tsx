@@ -115,8 +115,8 @@ describe('ConsumeRow', () => {
 		expect(document.body.contains(element)).toBe(true);
 	});
 
-	// A gear planner has no encounter, so it hides the drums and pet rows outright; the pickers
-	// inside still have to stay mounted for the same zeroing reason as above.
+	// A gear planner has no encounter, so it hides the miscellaneous row outright; the pickers inside
+	// still have to stay mounted for the same zeroing reason as above.
 	it('hides a row the caller hides, whatever its pickers say, without unmounting it', () => {
 		const options = new Options();
 		const element = row(options, [configFor(() => true)], true);
@@ -129,9 +129,9 @@ describe('ConsumeRow', () => {
 	});
 
 	it('re-evaluates on any player change, not only a profession change', () => {
-		// TBC's rows gate on more than professions — imbues on gear, scrolls on ep weights, the
-		// misc row on race — so this subscribes to the whole player-change aggregate rather than
-		// naming individual fields the way the profession-only rows would suggest.
+		// TBC's rows gate on more than professions — imbues on gear, the misc row on ep weights —
+		// so this subscribes to the whole player-change aggregate rather than naming individual
+		// fields the way the profession-only rows would suggest.
 		const options = new Options();
 		row(options, [configFor(opts => opts.engineer)]);
 

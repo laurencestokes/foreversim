@@ -99,7 +99,7 @@ func runRogue(t *testing.T, race proto.Race, gear *proto.EquipmentSpec, talents 
 		Profession1:        proto.Profession_Engineering,
 		ReactionTimeMs:     200,
 		DistanceFromTarget: 5,
-		Buffs:              &proto.IndividualBuffs{BlessingOfKings: true, BlessingOfMight: true},
+		Buffs:              &proto.IndividualBuffs{GreaterBlessingOfKings: true, GreaterBlessingOfMight: true},
 		// The page's consumables (ui/specs/rogue/dps/presets.ts).
 		Consumables: &proto.ConsumesSpec{
 			FlaskId:           13512, // Flask of Supreme Power
@@ -119,13 +119,12 @@ func runRogue(t *testing.T, race proto.Race, gear *proto.EquipmentSpec, talents 
 	result := core.RunRaidSim(&proto.RaidSimRequest{
 		Raid: core.SinglePlayerRaidProto(player,
 			&proto.PartyBuffs{
-				BattleShout:        proto.TristateEffect_TristateEffectImproved,
-				TrueshotAura:       true,
-				LeaderOfThePack:    proto.TristateEffect_TristateEffectRegular,
-				FireResistanceAura: true,
+				BattleShout:     proto.TristateEffect_TristateEffectImproved,
+				TrueshotAura:    true,
+				LeaderOfThePack: true,
 			},
-			&proto.RaidBuffs{GiftOfTheWild: proto.TristateEffect_TristateEffectImproved},
-			&proto.Debuffs{FaerieFire: proto.TristateEffect_TristateEffectRegular, SunderArmor: true, CurseOfRecklessness: true}),
+			&proto.RaidBuffs{GiftOfTheWild: true, FireResistanceAura: true},
+			&proto.Debuffs{FaerieFire: true, SunderArmor: true, CurseOfRecklessness: true}),
 		Encounter:  core.MakeSingleTargetEncounter(0),
 		SimOptions: &proto.SimOptions{Iterations: iterations, RandomSeed: 101},
 	})

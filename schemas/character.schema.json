@@ -168,9 +168,6 @@
 				"blood_elf": {
 					"type": "string"
 				},
-				"draenei": {
-					"type": "string"
-				},
 				"dwarf": {
 					"type": "string"
 				},
@@ -187,12 +184,6 @@
 					"type": "string"
 				},
 				"orc": {
-					"type": "string"
-				},
-				"skyborne_high_order": {
-					"type": "string"
-				},
-				"skyborne_windshaper": {
 					"type": "string"
 				},
 				"alliance_pandaren": {
@@ -212,27 +203,32 @@
 				},
 				"worgen": {
 					"type": "string"
+				},
+				"high_order_skyborne": {
+					"type": "string"
+				},
+				"windshaper_skyborne": {
+					"type": "string"
 				}
 			},
 			"additionalProperties": false,
 			"required": [
 				"unknown",
 				"blood_elf",
-				"draenei",
 				"dwarf",
 				"gnome",
 				"goblin",
 				"human",
 				"night_elf",
 				"orc",
-				"skyborne_high_order",
-				"skyborne_windshaper",
 				"alliance_pandaren",
 				"horde_pandaren",
 				"tauren",
 				"troll",
 				"undead",
-				"worgen"
+				"worgen",
+				"high_order_skyborne",
+				"windshaper_skyborne"
 			]
 		},
 		"professions": {

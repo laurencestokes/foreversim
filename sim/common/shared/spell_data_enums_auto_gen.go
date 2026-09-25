@@ -57,7 +57,6 @@ const (
 	A_MOD_WEAPON_CRIT_PERCENT           SpellDataAura = 52
 	A_MOD_HIT_CHANCE                    SpellDataAura = 54
 	A_MOD_SPELL_HIT_CHANCE              SpellDataAura = 55
-	A_MOD_SPELL_CRIT_CHANCE             SpellDataAura = 57
 	A_SCHOOL_ABSORB                     SpellDataAura = 69
 	A_MECHANIC_IMMUNITY                 SpellDataAura = 77
 	A_MOD_DAMAGE_PERCENT_DONE           SpellDataAura = 79
@@ -73,7 +72,6 @@ const (
 	A_MOD_TOTAL_STAT_PERCENTAGE         SpellDataAura = 137
 	A_MOD_BASE_RESISTANCE_PCT           SpellDataAura = 142
 	A_REDUCE_PUSHBACK                   SpellDataAura = 149
-	A_MOD_DAMAGE_DONE_VERSUS            SpellDataAura = 168
 	A_MOD_MOUNTED_SPEED_NOT_STACK       SpellDataAura = 172
 	A_MOD_SPELL_DAMAGE_OF_STAT_PERCENT  SpellDataAura = 174
 	A_MOD_SPELL_HEALING_OF_STAT_PERCENT SpellDataAura = 175

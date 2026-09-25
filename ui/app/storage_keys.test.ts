@@ -1,4 +1,3 @@
-import { CURRENT_API_VERSION } from '@sim/constants/other';
 import { PlayerSpecs } from '@sim/player/specs';
 import { SETTINGS_STORAGE_SUFFIX, SHARED_SAVED_ENCOUNTER_STORAGE_KEY } from '@sim/state/persistence';
 import {
@@ -46,15 +45,5 @@ describe('the storage keys SimHostObject builds', () => {
 	// The one key that is deliberately not spec-prefixed, so saved encounters are shared by every sim.
 	it('keeps the saved encounter key out of the spec prefix', () => {
 		expect(SHARED_SAVED_ENCOUNTER_STORAGE_KEY.startsWith('__forever')).toBe(false);
-	});
-});
-
-describe('the settings envelope version', () => {
-	// `updateProtoVersion` migrates anything below this. The golden capture recorded 14; 15 only
-	// renamed the shadow priest oneof, handled before parsing. 16 is the Forever talent rebuild,
-	// which has no converter on purpose -- a TBC talent string means nothing against a Forever
-	// tree -- so a pre-16 capture loads with its talents dropped rather than migrated.
-	it('matches the version the settings envelope is stamped with', () => {
-		expect(CURRENT_API_VERSION).toBe(16);
 	});
 });

@@ -1,8 +1,9 @@
 // What the item procs the sim registered before it read them off the rows resolve to. The table is
 // the sixteen registrations sim/common/forever/stat_bonus_procs_auto_gen.go carried at 60266be6f7,
 // transcribed by hand, and every field is what that generated call stated. Two of them state a
-// number the client contradicts, one a mask that leaves out the heals the client's mask names, and
-// one is no longer registered at all; each says so here.
+// number the client contradicts, one a mask that leaves out the heals the client's mask names, three
+// are no longer registered at all, and one required damage where a weapon proc needs only a landed
+// hit; each says so here.
 //
 // A pin rather than a comparison: the generated file carries spell ids now, so there are no literals
 // left to compare against, and what this guards is that resolving those ids still produces the
@@ -77,10 +78,12 @@ func liveProcs() []liveProc {
 		shieldSpike(272591, 13959, "Premier High Warlord's Shield Wall"),
 		shieldSpike(272838, 13959, "Premier Grand Marshal's Aegis"),
 		{
+			// "Chance on hit" beside a column of 100 states no rate.
 			itemID: 260205, name: "Highborne Research Tablet", triggerSpellID: 1318159,
 			callback: core.CallbackOnSpellHitDealt,
 			procMask: shieldSpikeMask | core.ProcMaskSpellDamage,
 			outcome:  core.OutcomeLanded, chance: 1,
+			unsupported: "states no rate",
 		},
 		{
 			itemID: 285278, name: "Satchel of Dark Iron Bombs", triggerSpellID: 1318123,
@@ -88,9 +91,11 @@ func liveProcs() []liveProc {
 			outcome: core.OutcomeLanded, requireDamageDealt: true, chance: 1,
 		},
 		{
+			// The generated call required damage. A weapon proc fires off any hit that lands, so a
+			// special that deals none rolls it too.
 			itemID: 12798, name: "Annihilator", triggerSpellID: 16928, isWeaponProc: true,
 			callback: core.CallbackOnSpellHitDealt, procMask: core.ProcMaskUnknown,
-			outcome: core.OutcomeLanded, requireDamageDealt: true, ppm: 1,
+			outcome: core.OutcomeLanded, ppm: 1,
 		},
 		{
 			// The generated call stated ProcMaskSpellDamage alone. 23688's mask 0x14000 names helpful
@@ -111,9 +116,11 @@ func liveProcs() []liveProc {
 			unsupported: "named ability",
 		},
 		{
+			// "Chance on harmful spell cast" beside a column of 100 states no rate.
 			itemID: 275630, name: "Depleted Eye of Influence", triggerSpellID: 1297085,
 			callback: core.CallbackOnCastComplete, procMask: core.ProcMaskSpellDamage,
 			outcome: core.OutcomeEmpty, chance: 1,
+			unsupported: "states no rate",
 		},
 	}
 

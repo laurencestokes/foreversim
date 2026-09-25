@@ -1,5 +1,6 @@
 import * as PresetUtils from '@app/preset_utils';
-import { ConsumesSpec, Debuffs, IndividualBuffs, PartyBuffs, Profession, Race, RaidBuffs, TristateEffect, UnitReference } from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { ConsumesSpec, Profession, Race, UnitReference } from '@generated/proto/common';
 import { RestorationDruid_Options as RestorationDruidOptions } from '@generated/proto/druid';
 import { SavedTalents } from '@generated/proto/ui';
 
@@ -17,24 +18,24 @@ export const DefaultConsumables = ConsumesSpec.create({});
 
 export const DefaultRaidBuffs = RaidBuffs.create({
 	arcaneBrilliance: true,
-	divineSpirit: TristateEffect.TristateEffectRegular,
-	giftOfTheWild: TristateEffect.TristateEffectImproved,
-	powerWordFortitude: TristateEffect.TristateEffectImproved,
+	giftOfTheWild: true,
+	prayerOfFortitude: true,
+	prayerOfSpirit: true,
 });
 
 export const DefaultPartyBuffs = PartyBuffs.create({
-	moonkinAura: TristateEffect.TristateEffectRegular,
-	strengthOfEarthTotem: TristateEffect.TristateEffectRegular,
+	moonkinAura: true,
+	strengthOfEarthTotem: true,
 });
 
 export const DefaultIndividualBuffs = IndividualBuffs.create({
-	blessingOfKings: true,
-	blessingOfMight: true,
-	blessingOfWisdom: true,
+	greaterBlessingOfKings: true,
+	greaterBlessingOfMight: true,
+	greaterBlessingOfWisdom: true,
 });
 
 export const DefaultDebuffs = Debuffs.create({
-	faerieFire: TristateEffect.TristateEffectRegular,
+	faerieFire: true,
 	sunderArmor: true,
 });
 

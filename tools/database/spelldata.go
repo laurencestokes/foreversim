@@ -44,6 +44,11 @@ type RankEffect struct {
 	Aura         dbc.EffectAuraType
 	BasePoints   int32
 	PointsPerLvl float64
+
+	// SpellEffect.Variance: the spread the server rolls the amount over, as a fraction of it. The
+	// client has no die sides any more; a spell that used to read 93 + 1d8 now states 97 with a
+	// Variance of 8/97, and rolls average * (1 -/+ Variance/2). Zero on an effect that does not roll.
+	Variance     float64
 	Coefficient  float64
 	APCoef       float64
 	MiscValue    int32
@@ -150,9 +155,15 @@ func DeriveRankAmount(e RankEffect, spellLevel, maxLevel int32) (min float64, ma
 
 	base := float32(e.BasePoints) + float32(float32(delta)*float32(e.PointsPerLvl))
 	// EffectBasePointsF is the amount itself: Improved Battle Shout reads 5/10/15/20/25 and generates
-	// as 5/10/15/20/25. The client states no die sides, so the amount has no spread.
-	min = math.Floor(float64(base))
-	return min, min
+	// as 5/10/15/20/25.
+	average := math.Floor(float64(base))
+
+	// The spread rides on the floored average, the way sim/core/spelldata's Effect.Min and Max
+	// read it, so the two paths answer the same roll for the same effect.
+	if e.Variance == 0 {
+		return average, average
+	}
+	return average * (1 - e.Variance/2), average * (1 + e.Variance/2)
 }
 
 // Whether the spell carries the Passive attribute: never cast, only applied.
@@ -409,9 +420,8 @@ func RankEffectsOf(db *sql.DB, spellID int32) ([]RankEffect, error) {
 		-- here because the dummy-target heuristic below reads the base as a spell id.
 		--
 		-- TODO: ~1.8% of SpellEffect rows have a fractional EffectBasePointsF and lose it to
-		-- this cast. TODO: the client states no die sides, so DeriveRankAmount answers the same
-		-- min and max and the generated rank tables carry no damage range.
-		SELECT EffectIndex, Effect, EffectAura, CAST(EffectBasePointsF AS INTEGER),
+		-- this cast.
+		SELECT EffectIndex, Effect, EffectAura, CAST(EffectBasePointsF AS INTEGER), COALESCE(Variance, 0),
 		       EffectRealPointsPerLevel, EffectBonusCoefficient, BonusCoefficientFromAP, EffectAuraPeriod,
 		       COALESCE(EffectMiscValue_0, 0), COALESCE(EffectTriggerSpell, 0), COALESCE(EffectChainAmplitude, 0)
 		FROM SpellEffect WHERE SpellID = ? ORDER BY EffectIndex`, spellID)
@@ -428,7 +438,7 @@ func RankEffectsOf(db *sql.DB, spellID int32) ([]RankEffect, error) {
 	var out []RankEffect
 	for rows.Next() {
 		e := RankEffect{OwnerSpellID: spellID, SpellLevel: spellLevel, MaxLevel: maxLevel}
-		if err := rows.Scan(&e.Index, &e.Effect, &e.Aura, &e.BasePoints, &e.PointsPerLvl, &e.Coefficient, &e.APCoef, &e.AuraPeriod, &e.MiscValue, &e.TriggerSpell, &e.ChainAmplitude); err != nil {
+		if err := rows.Scan(&e.Index, &e.Effect, &e.Aura, &e.BasePoints, &e.Variance, &e.PointsPerLvl, &e.Coefficient, &e.APCoef, &e.AuraPeriod, &e.MiscValue, &e.TriggerSpell, &e.ChainAmplitude); err != nil {
 			return nil, err
 		}
 		// Stored as a float32, so 0.7 arrives as 0.699999988079071.

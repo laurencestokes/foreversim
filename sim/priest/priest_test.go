@@ -172,7 +172,7 @@ var arenaSmite = arenalib.Spec{
 	DistanceFromTarget: 30,
 	Talents:            "Smite",
 	GearSets:           []string{"smite_launch"},
-	Rotations:          []string{"smite"},
+	Rotations:          []string{"smite", "smite_lowrank"},
 	// The page's default gear is the Shadow set; Smite has its own.
 	RaceBuilds: map[string]arenalib.RaceBuild{
 		"Smite 31/17/3": {Gear: "smite_launch"},

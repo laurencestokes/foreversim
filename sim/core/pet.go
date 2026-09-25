@@ -58,8 +58,8 @@ type Pet struct {
 	pendingStatInheritance stats.Stats
 	statInheritanceAction  *PendingAction
 
-	// In MoP pets inherit their owners melee speed and cast speed
-	// rather than having auras such as Heroism being applied to them.
+	// A pet inherits its owner's melee speed and cast speed rather than
+	// having the haste aura applied to it.
 	dynamicMeleeSpeedInheritance  PetSpeedInheritance
 	inheritedMeleeSpeedMultiplier float64
 	dynamicCastSpeedInheritance   PetSpeedInheritance
@@ -238,6 +238,10 @@ func (pet *Pet) doneIteration(sim *Simulation) {
 
 func (pet *Pet) IsGuardian() bool {
 	return pet.isGuardian
+}
+
+func (pet *Pet) EnabledOnStart() bool {
+	return pet.enabledOnStart
 }
 
 // petAgent should be the PetAgent which embeds this Pet.

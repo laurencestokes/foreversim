@@ -172,9 +172,6 @@ func buildStatWeightRequests(swr *proto.StatWeightsRequest) *proto.StatWeightReq
 		statMod := defaultStatMod
 		if stat.EqualsStat(stats.Armor) || stat.EqualsStat(stats.BonusArmor) || stat.EqualsStat(stats.ArmorPenetration) {
 			statMod = defaultStatMod * 10
-		} else if stat.EqualsStat(stats.ExpertiseRating) {
-			// Increment Expertise by 0.50%
-			statMod = ExpertisePerQuarterPercentReduction * 2
 		}
 		statModsHigh[stat] = statMod
 		statModsLow[stat] = -statMod
@@ -200,6 +197,8 @@ func buildStatWeightRequests(swr *proto.StatWeightsRequest) *proto.StatWeightReq
 			statMod /= PhysicalHitRatingPerHitPercent
 		} else if stat.EqualsPseudoStat(proto.PseudoStat_PseudoStatSpellHitPercent) {
 			statMod /= SpellHitRatingPerHitPercent
+		} else if stat.EqualsPseudoStat(proto.PseudoStat_PseudoStatExpertisePercent) {
+			statMod /= ExpertiseRatingPerExpertisePercent
 		} else if strings.Contains(statName, "SchoolHit") {
 			statMod /= SpellHitRatingPerHitPercent
 		} else if strings.Contains(statName, "Crit") {
@@ -228,6 +227,9 @@ func buildStatWeightRequests(swr *proto.StatWeightsRequest) *proto.StatWeightReq
 		} else if strings.Contains(statName, "MeleeCrit") {
 			statModsLow[stats.MeleeCritRating] = 0
 			statModsHigh[stats.MeleeCritRating] = 0
+		} else if strings.Contains(statName, "Expertise") {
+			statModsLow[stats.ExpertiseRating] = 0
+			statModsHigh[stats.ExpertiseRating] = 0
 		} else if strings.Contains(statName, "Crit") {
 			statModsLow[stats.SpellCritRating] = 0
 			statModsHigh[stats.SpellCritRating] = 0

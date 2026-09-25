@@ -273,6 +273,13 @@ type SpellDataEffect struct {
 	// SpellEffect.EffectChainAmplitude where it is not the client's default of 1: Execute's 1.5,
 	// which its tooltip multiplies by 10 for the damage each extra rage adds. Zero on the rest.
 	ChainAmplitude float64
+
+	// EffectBonusCoefficient and BonusCoefficientFromAP on this effect. The role fields above carry
+	// the coefficient of the effect they file, but an effect no role takes keeps its own here: the
+	// Seal of Command proc states 0.29 on its weapon-percent effect, and that is the only place the
+	// client puts it.
+	Coef   float64
+	APCoef float64
 }
 
 // The share of the cost a miss gives back, for RageCostOptions.Refund: 80% where the client flags

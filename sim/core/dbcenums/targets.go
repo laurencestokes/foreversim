@@ -158,5 +158,5 @@ const (
 	TARGET_UNIT_OWN_CRITTER ImplicitTarget = 150
 	TARGET_UNK_151          ImplicitTarget = 151
 	// TARGET_UNK_152 ImplicitTarget = 152
-	// TARGET_153 ImplicitTarget = 153
+	TARGET_153 ImplicitTarget = 153
 )

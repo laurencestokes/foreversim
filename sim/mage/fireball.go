@@ -1,12 +1,18 @@
 package mage
 
 import (
+	"fmt"
+
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+// Every rank is registered: a rotation can drop to a cheaper rank when mana runs short.
 func (mage *Mage) registerFireballSpell() {
-	fireballRank := spellData.Fireball.Highest()
+	spellData.Fireball.Each(func(_ int32, rank *spelldata.Spell) { mage.registerFireballRank(rank) })
+}
+
+func (mage *Mage) registerFireballRank(fireballRank *spelldata.Spell) {
 	fireballTick := fireballRank.PeriodicEffect()
 	tickLength := fireballTick.Period()
 
@@ -17,6 +23,7 @@ func (mage *Mage) registerFireballSpell() {
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: MageSpellFireball,
+		Rank:           fireballRank.RankNumber(),
 		MissileSpeed:   float64(fireballRank.Speed),
 
 		ManaCost: core.ManaCostOptions{
@@ -31,7 +38,7 @@ func (mage *Mage) registerFireballSpell() {
 
 		Dot: core.DotConfig{
 			Aura: core.Aura{
-				Label: "FireballDoT",
+				Label: fmt.Sprintf("FireballDoT-%d", fireballRank.RankNumber()),
 			},
 			NumberOfTicks:    int32(fireballRank.Duration() / tickLength),
 			TickLength:       tickLength,

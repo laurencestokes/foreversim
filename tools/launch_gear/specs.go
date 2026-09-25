@@ -347,7 +347,7 @@ var specs = map[string]spec{
 			stats.FireDamage: 0.1, stats.ShadowDamage: 0.9, stats.SpellHitRating: 12.79 / core.SpellHitRatingPerHitPercent, stats.SpellCritRating: 7.92 / core.SpellCritRatingPerCritPercent, stats.SpellHasteRating: 7.83 / core.SpellHasteRatingPerHastePercent, stats.Stamina: 0.01}),
 	},
 	"shadow_priest": {
-		class: proto.Class_ClassPriest, dir: "priest/dps", set: "shadow_launch", twoHand: true,
+		class: proto.Class_ClassPriest, dir: "priest/dps", set: "launch", twoHand: true,
 		weights: w(map[stats.Stat]float64{stats.Intellect: 0.16, stats.Spirit: 0.01, stats.SpellDamage: 1, stats.ShadowDamage: 1,
 			stats.SpellHitRating: 5.51 / core.SpellHitRatingPerHitPercent, stats.SpellCritRating: 5.99 / core.SpellCritRatingPerCritPercent, stats.SpellHasteRating: 1.65 / core.SpellHasteRatingPerHastePercent}),
 	},
@@ -379,7 +379,7 @@ var specs = map[string]spec{
 	"feral_druid": {
 		class: proto.Class_ClassDruid, dir: "druid/feralcat", twoHand: true,
 		weights: w(map[stats.Stat]float64{stats.Strength: 2.4, stats.Agility: 2.43, stats.Intellect: 0.61, stats.Spirit: 0.38, stats.MP5: 0.79,
-			stats.AttackPower: 1, stats.FeralAttackPower: 1, stats.MeleeHitRating: 26.59 / core.PhysicalHitRatingPerHitPercent, stats.MeleeCritRating: 28.68 / core.PhysicalCritRatingPerCritPercent, stats.ExpertiseRating: 26.59 / core.ExpertisePerQuarterPercentReduction, stats.Mana: 0.03}),
+			stats.AttackPower: 1, stats.FeralAttackPower: 1, stats.MeleeHitRating: 26.59 / core.PhysicalHitRatingPerHitPercent, stats.MeleeCritRating: 28.68 / core.PhysicalCritRatingPerCritPercent, stats.ExpertiseRating: 26.59 / (core.ExpertiseRatingPerExpertisePercent / 4), stats.Mana: 0.03}),
 	},
 	// The same goes for a bear. Stamina and armor keep it up, Agility is crit, dodge and
 	// armor at once; the rest is threat.

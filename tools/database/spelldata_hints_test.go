@@ -8,29 +8,48 @@ package database
 // Skips when tools/database/wowsims.db is absent, which is why CI is unaffected.
 
 import (
+	"fmt"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/tools/database/overrides"
 )
 
-func TestProcShapeOfNamedSpells(t *testing.T) {
+var clientTables struct {
+	once   sync.Once
+	tables *spellTables
+	err    error
+}
+
+func clientSpellTables(t *testing.T) *spellTables {
+	t.Helper()
 	DatabasePath = "wowsims.db"
 	if _, err := os.Stat(DatabasePath); err != nil {
 		t.Skipf("no client database at %s - run `make db` from a local WoW install to enable this gate", DatabasePath)
 	}
 
-	helper, err := NewDBHelper()
-	if err != nil {
-		t.Fatalf("opening %s: %v", DatabasePath, err)
-	}
-	defer helper.Close()
+	clientTables.once.Do(func() {
+		helper, err := NewDBHelper()
+		if err != nil {
+			clientTables.err = fmt.Errorf("opening %s: %w", DatabasePath, err)
+			return
+		}
+		defer helper.Close()
 
-	tables, err := loadSpellTables(helper.db)
-	if err != nil {
-		t.Fatalf("loading the spell tables: %v", err)
+		if clientTables.tables, err = loadSpellTables(helper.db); err != nil {
+			clientTables.err = fmt.Errorf("loading the spell tables: %w", err)
+		}
+	})
+	if clientTables.err != nil {
+		t.Fatal(clientTables.err)
 	}
+	return clientTables.tables
+}
+
+func TestProcShapeOfNamedSpells(t *testing.T) {
+	tables := clientSpellTables(t)
 
 	for _, want := range []struct {
 		id      int32
@@ -72,6 +91,14 @@ func TestProcShapeOfNamedSpells(t *testing.T) {
 			0, "the wording modifies another spell's chance and states no trigger of its own"},
 		{440529, "Resourcefulness", procChancePPM, 0, `"your critical strikes have a $m3% chance" names effect 3, and the row carries two effects, so no chance resolves`,
 			core.ProcHintCrit | core.ProcHintNamedAbility, `"your critical strikes" names the trigger, "your Trap abilities" the ability`},
+		{23689, "Darkmoon Card: Heroism", procChancePPM, 0, `"Sometimes heals" beside the 100 is a rate the client keeps elsewhere`,
+			core.ProcHintHeals, `"heals bearer" is heal wording`},
+		{1248761, "Recovery, an enchant's equip aura", procChanceAlways, 0, `the row ships no tooltip, and its grant 1248760's "Cannot occur more often than" is a cooldown, not a rate`,
+			core.ProcHintAttackDodged | core.ProcHintAttackParried, `the grant reads "when you are Parried or Dodged"`},
+		{1248806, "Revelation, an enchant's equip aura", procChancePPM, 0, `its grant 1248805's "a chance to trigger Revelation" beside the 100 is a rate the client keeps elsewhere`,
+			0, "the grant's crit wording names which hits feed the proc, which is the row's own mask to say"},
+		{1248758, "Insight, an enchant's equip aura", procChanceColumn, 0, "the column's 35 is the roll",
+			0, `the grant's "when you cast a spell" names which hits feed the proc, which is the row's own mask to say`},
 	} {
 		t.Run(want.name, func(t *testing.T) {
 			rows := []storeSpell{tables.row(want.id)}
@@ -104,6 +131,60 @@ func TestProcShapeOfNamedSpells(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// A combat spell's roll is the one its enchantments state, whatever its own column says.
+func TestEnchantChanceOfNamedCombatSpells(t *testing.T) {
+	tables := clientSpellTables(t)
+
+	for _, want := range []struct {
+		id     int32
+		name   string
+		chance uint8
+	}{
+		{6297, "Fiery Blaze, 15 on enchantment 36 and no column of its own", 15},
+		{11398, "Mind-numbing Poison III, 20 on enchantments 643 and 8696 beside a column of 101", 20},
+		{8516, "Windfury Totem, 20 on enchantment 1783 beside a column of 100", 20},
+	} {
+		row := tables.row(want.id)
+		applyTooltipHints(tables, &row)
+		if err := applyEnchantChance(tables, &row); err != nil {
+			t.Fatalf("%s: %v", want.name, err)
+		}
+		if row.ProcChance != want.chance || row.ProcChanceSource != procChanceColumn || row.ProcChanceEffect != 0 {
+			t.Errorf("%s: ProcChance %d from %s effect %d, want %d from the column",
+				want.name, row.ProcChance, row.ProcChanceSource, row.ProcChanceEffect, want.chance)
+		}
+	}
+
+	row := tables.row(1248758)
+	applyTooltipHints(tables, &row)
+	if err := applyEnchantChance(tables, &row); err != nil || row.ProcChance != 35 || len(row.overrideNotes) != 0 {
+		t.Errorf("Insight's equip aura 1248758 reads %d%% (%v, notes %v), want its own 35 untouched",
+			row.ProcChance, err, row.overrideNotes)
+	}
+}
+
+func TestSplitDamageOfNamedSpells(t *testing.T) {
+	tables := clientSpellTables(t)
+
+	for _, want := range []struct {
+		id     int32
+		name   string
+		splits bool
+	}{
+		{1295270, "Prototype Pathcarver", true},
+		{26789, "Shard of the Fallen Star", true},
+		{24340, "Meteor", true},
+		{6297, "Fiery Blaze", false},
+		{21179, "Chain Lightning", false},
+	} {
+		row := tables.row(want.id)
+		applyTooltipHints(tables, &row)
+		if row.SplitsDamage != want.splits {
+			t.Errorf("%s %d reads SplitsDamage %v, want %v", want.name, want.id, row.SplitsDamage, want.splits)
+		}
 	}
 }
 

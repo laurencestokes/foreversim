@@ -1,4 +1,5 @@
-import { ConsumesSpec, Debuffs, Encounter, EquipmentSpec, HealingModel, IndividualBuffs, ItemSwap, PartyBuffs, RaidBuffs, Spec } from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { ConsumesSpec, Encounter, EquipmentSpec, HealingModel, ItemSwap, Spec } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import i18n from '@i18n/config';
 import { translatePresetConfigurationCategory } from '@i18n/localization';

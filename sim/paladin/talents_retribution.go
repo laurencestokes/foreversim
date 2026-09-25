@@ -2,12 +2,14 @@ package paladin
 
 import (
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -30,7 +32,6 @@ func (paladin *Paladin) registerRetributionTalents() {
 	// Tier 4
 	paladin.applyEyeForAnEye()
 	paladin.applySacredArbiter()
-	paladin.applyCrusade()
 
 	// Tier 5
 	paladin.applyTwoHandedWeaponSpecialization()
@@ -223,7 +224,7 @@ func (paladin *Paladin) applyPursuitOfJustice() {
 	)
 }
 
-// Sacred Arbiter - Increases the damage of your Holy Strike ability by 10% and causes it to refresh
+// Sacred Arbiter - Increases the damage of your Holy Strike ability by 20% and causes it to refresh
 // all Judgement effects on the target. The paladin's own melee strikes already refresh its own
 // judgements; Holy Strike with the talent refreshes every judgement on the target, whoever put it
 // there, the way Crusader Strike did in TBC.
@@ -245,7 +246,7 @@ func (paladin *Paladin) applySacredArbiter() {
 		Outcome:            core.OutcomeLanded,
 		TriggerImmediately: true,
 		Handler: func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
-			for _, aura := range result.Target.GetAurasWithTag(core.JudgementAuraTag) {
+			for _, aura := range result.Target.GetAurasWithTag(buffs.JudgementAuraTag) {
 				if aura.IsActive() {
 					aura.Refresh(sim)
 				}
@@ -254,28 +255,8 @@ func (paladin *Paladin) applySacredArbiter() {
 	})
 }
 
-// Crusade - Increases all damage dealt by 1/2%. Increased by an additional 1/2% against Demon and
-// Undead targets.
-func (paladin *Paladin) applyCrusade() {
-	if paladin.Talents.Crusade == 0 {
-		return
-	}
-
-	paladin.PseudoStats.DamageDealtMultiplier *= spellData.Crusade.Effect(shared.A_MOD_DAMAGE_PERCENT_DONE, 127).MultiplierAt(paladin.Talents.Crusade)
-
-	// Misc 36 is the creature-type mask the client states the bonus against: Demon and Undead.
-	versus := spellData.Crusade.Effect(shared.A_MOD_DAMAGE_DONE_VERSUS, 36).MultiplierAt(paladin.Talents.Crusade)
-	paladin.Env.RegisterPostFinalizeEffect(func() {
-		for _, at := range paladin.AttackTables {
-			if slices.Contains([]proto.MobType{proto.MobType_MobTypeDemon, proto.MobType_MobTypeUndead}, at.Defender.MobType) {
-				at.DamageDealtMultiplier *= versus
-			}
-		}
-	})
-}
-
 // Two-Handed Weapon Specialization - Increases the damage you deal with two-handed melee weapons
-// by 3/6/9%. The client puts it on the Physical school alone.
+// by 2/4/6%. The client puts it on the Physical school alone.
 func (paladin *Paladin) applyTwoHandedWeaponSpecialization() {
 	if paladin.Talents.TwoHandedWeaponSpecialization == 0 {
 		return
@@ -288,7 +269,10 @@ func (paladin *Paladin) applyTwoHandedWeaponSpecialization() {
 }
 
 // Vengeance - Increases your Physical and Holy damage dealt by 1/2/3% for 30 sec after landing a
-// critical strike. Stacks up to 5 times.
+// non-periodic critical strike. Stacks up to 3 times.
+//
+// 20049's proc flags (69972) carry no periodic flag, and the hit callback never sees a tick. The
+// stack cap is 20050's CumulativeAura.
 func (paladin *Paladin) applyVengeance() {
 	if paladin.Talents.Vengeance == 0 {
 		return
@@ -309,7 +293,7 @@ func (paladin *Paladin) applyVengeance() {
 		Label:     "Vengeance" + paladin.Label,
 		ActionID:  core.ActionID{SpellID: row.SpellID},
 		Duration:  row.Duration,
-		MaxStacks: 5,
+		MaxStacks: int32(spelldata.MustFind(row.SpellID).MaxStack),
 		OnGain: func(_ *core.Aura, _ *core.Simulation) {
 			damageMod.Activate()
 		},
@@ -380,9 +364,9 @@ func (paladin *Paladin) applyInstrumentOfLaw() {
 	})
 }
 
-// Twist of Light - When you replace your Seal of Command, Seal of Righteousness, Seal of Fury, or
-// Seal of Justice with a different Seal, gain an Echo. Your next melee attack applies the replaced
-// Seal's effects, consuming the Echo.
+// Twist of Light - Reduces the Mana cost of your Seal spells by 20%. When you replace your Seal of
+// Command, Seal of Righteousness, Seal of Fury, or Seal of Justice with a different Seal, gain an
+// Echo. Your next melee attack applies the replaced Seal's effects, consuming the Echo.
 //
 // Each seal leaves its own Echo (Echo of Command, of Fury, of Righteousness, of Justice): one
 // charge, no duration, consumed by the next auto attack that lands.
@@ -390,6 +374,13 @@ func (paladin *Paladin) applyTwistOfLight() {
 	if !paladin.Talents.TwistOfLight {
 		return
 	}
+
+	// 1310735's cost modifier names every seal, plus seal procs and a judgement that cost nothing.
+	paladin.AddStaticMod(core.SpellModConfig{
+		ClassMask:  SpellMaskAllSeals,
+		Kind:       core.SpellMod_PowerCost_Pct_Add,
+		FloatValue: spellData.TwistOfLight.Effect(shared.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(1),
+	})
 
 	paladin.echoes = map[int32]*sealEcho{}
 	var echoes []*sealEcho

@@ -72,8 +72,6 @@ func MapBonusStatIndexToStat(index int) (proto.Stat, bool) {
 		return proto.Stat_StatParryRating, true
 	case ITEM_MOD_BLOCK_RATING:
 		return proto.Stat_StatBlockRating, true
-	case ITEM_MOD_RESILIENCE_RATING:
-		return proto.Stat_StatResilienceRating, true
 
 	// Secondary ratings
 	case ITEM_MOD_HIT_MELEE_RATING, ITEM_MOD_HIT_RANGED_RATING, ITEM_MOD_HIT_RATING:
@@ -102,10 +100,6 @@ func MapBonusStatIndexToStat(index int) (proto.Stat, bool) {
 	case ITEM_MOD_SPELL_HEALING_DONE:
 		return proto.Stat_StatHealingPower, true
 	case ITEM_MOD_SPELL_DAMAGE_DONE:
-		return proto.Stat_StatSpellDamage, true
-	// Forever items state their spell damage as generic spell power (1,451 items, Robe of the
-	// Magi's +22 among them). Heals read SpellDamage too (Spell.HealingPower).
-	case ITEM_MOD_SPELL_POWER:
 		return proto.Stat_StatSpellDamage, true
 	case ITEM_MOD_EXTRA_ARMOR: // ExtraArmor maps to BonusArmor (green armor)
 		return proto.Stat_StatBonusArmor, true
@@ -164,12 +158,23 @@ var allResistanceStats = []proto.Stat{
 	proto.Stat_StatShadowResistance,
 }
 
+// spellPowerStats is what ItemModType 45 expands to: 7655 Enchant Bracer - Spell Power reads
+// "+12 Spell Power" for 45 = 12, damage and healing alike. Healing items state their extra
+// healing as a separate 41 on top of it (Atiesh 22631: 45 and 41).
+var spellPowerStats = []proto.Stat{
+	proto.Stat_StatSpellDamage,
+	proto.Stat_StatHealingPower,
+}
+
 // MapBonusStatIndexToStats is MapBonusStatIndexToStat for callers that have to cope with
-// one index granting several stats. Every index maps to exactly one stat except 124. An
-// enchant row whose argument is wrong is corrected before it gets here (enchantEffectArgFixes).
+// one index granting several stats. Every index maps to exactly one stat except 45 and 124.
+// An enchant row whose argument is wrong is corrected before it gets here (enchantEffectArgFixes).
 func MapBonusStatIndexToStats(index int) ([]proto.Stat, bool) {
-	if index == ITEM_MOD_ALL_RESISTANCES {
+	switch index {
+	case ITEM_MOD_ALL_RESISTANCES:
 		return allResistanceStats, true
+	case ITEM_MOD_SPELL_POWER:
+		return spellPowerStats, true
 	}
 	if stat, ok := MapBonusStatIndexToStat(index); ok {
 		return []proto.Stat{stat}, true
@@ -434,7 +439,7 @@ var RatingModToStat = map[RatingModType]proto.Stat{
 	RATING_MOD_MULTISTRIKE:  -1,
 	RATING_MOD_READINESS:    -1,
 	RATING_MOD_SPEED:        -1,
-	RATING_MOD_RESILIENCE:   proto.Stat_StatResilienceRating,
+	RATING_MOD_RESILIENCE:   -1,
 	RATING_MOD_LEECH:        -1,
 	RATING_MOD_HASTE_MELEE:  proto.Stat_StatMeleeHasteRating,
 	RATING_MOD_HASTE_RANGED: proto.Stat_StatMeleeHasteRating,

@@ -74,6 +74,14 @@ func (character *Character) NewDynamicLegacyProcForEnchant(effectID int32, ppm f
 	})
 }
 
+// Dynamic Proc Manager for a weapon enchant heard on its own ProcMask: the mask's weapon hits roll
+// on the hands carrying the enchant at their own speeds, and nothing else rolls.
+func (character *Character) NewDynamicLegacyProcForEnchantWithMask(effectID int32, ppm float64, procMask ProcMask) *DynamicProcManager {
+	return character.newDynamicProcManagerWithDynamicProcMask(ppm, 0, func() ProcMask {
+		return procMask & character.getCurrentProcMaskForWeaponEnchant(effectID)
+	})
+}
+
 // Dynamic Proc Manager for dynamic ProcMasks on weapon temp enchants
 func (character *Character) NewDynamicLegacyProcForTempEnchant(effectID int32, ppm float64, fixedProcChanceFn func(ProcMask) float64) *DynamicProcManager {
 	return character.newDynamicProcManagerWithDynamicProcMaskDynamicProcChance(ppm, fixedProcChanceFn, func() ProcMask {
@@ -138,7 +146,7 @@ func (character *Character) newDynamicWeaponProcManager(ppm float64, fixedProcCh
 	}
 
 	mergeOrAppend(aa.mh.SwingSpeed, procMask&^ProcMaskRanged&^ProcMaskMeleeOH) // "everything else", even if not explicitly flagged MH
-	mergeOrAppend(aa.oh.SwingSpeed, procMask&ProcMaskMeleeOH)
+	mergeOrAppend(aa.offHandProcSpeed(), procMask&ProcMaskMeleeOH)
 	mergeOrAppend(aa.ranged.SwingSpeed, procMask&ProcMaskRanged)
 
 	for i := range chances {

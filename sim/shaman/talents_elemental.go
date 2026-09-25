@@ -21,7 +21,7 @@ func (shaman *Shaman) registerElementalTalents() {
 
 	// Tier 3
 	shaman.applyElementalFocus()
-	shaman.applyElementalFury()
+	shaman.applyElementalAlacrity()
 
 	// Tier 4
 	shaman.applyImprovedFireNova()
@@ -34,7 +34,7 @@ func (shaman *Shaman) registerElementalTalents() {
 	shaman.applyEarthbound()
 
 	// Tier 6
-	shaman.applyElementalAlacrity()
+	shaman.applyElementalFury()
 
 	// Tier 7
 	shaman.applyLavaBurst()

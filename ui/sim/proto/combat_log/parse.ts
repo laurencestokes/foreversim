@@ -61,7 +61,6 @@ const OUTCOME_BY_TOKEN: Record<string, Outcome> = {
 	Block: 'block',
 	Glance: 'glance',
 	Crit: 'crit',
-	SuppressedCrit: 'suppressed-crit',
 	Crush: 'crush',
 	Hit: 'hit',
 };
@@ -113,9 +112,9 @@ function buildDamageLog(log: PendingLog, match: RegExpExecArray): DamageLog {
 	const out = log as Mutable<DamageLog>;
 	out.kind = 'damage';
 	out.outcome = OUTCOME_BY_TOKEN[match[3]] ?? 'hit';
-	out.effect = match[18] ? (match[18] === 'healing' ? 'healing' : match[18] === 'shielding' ? 'shielding' : 'damage') : null;
-	out.amount = match[17] ? parseFloat(match[17]) : 0;
-	out.resist = RESIST_BY_TOKEN[match[15]] ?? 0;
+	out.effect = match[17] ? (match[17] === 'healing' ? 'healing' : match[17] === 'shielding' ? 'shielding' : 'damage') : null;
+	out.amount = match[16] ? parseFloat(match[16]) : 0;
+	out.resist = RESIST_BY_TOKEN[match[14]] ?? 0;
 	out.tick = Boolean(match[2]) && match[2].includes('tick');
 	return out;
 }
@@ -273,9 +272,9 @@ const LOG_MATCHERS: Array<LogMatcher> = [
 		// BlockedCrit has to precede Block: the token is matched at one position, so `Block` would
 		// take the front of `BlockedCrit` and the optional tail groups would all skip, which reads
 		// back as a block with no amount. Crit is safe anywhere in the alternation because a space
-		// is required before the token. The resist group is match[15], amount match[17] and effect
-		// match[18].
-		regex: /] (.*?) (tick )?((Miss)|(Hit)|(BlockedCrit)|(Crit)|(SuppressedCrit)|(Crush)|(Glance)|(Dodge)|(Parry)|(Block))( \((\d+)% Resist\))?( for (\d+\.\d+) ((damage)|(healing)|(shielding)))?/,
+		// is required before the token. The resist group is match[14], amount match[16] and effect
+		// match[17].
+		regex: /] (.*?) (tick )?((Miss)|(Hit)|(BlockedCrit)|(Crit)|(Crush)|(Glance)|(Dodge)|(Parry)|(Block))( \((\d+)% Resist\))?( for (\d+\.\d+) ((damage)|(healing)|(shielding)))?/,
 		idString: match => match[1],
 		build: (log, match) => buildDamageLog(log, match),
 	},

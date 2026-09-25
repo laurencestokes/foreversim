@@ -3,6 +3,7 @@ package paladin
 import (
 	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 )
 
 var FlashOfLightRankMap = spellData.FlashOfLight
@@ -36,7 +37,7 @@ func (paladin *Paladin) registerFlashOfLight(row shared.SpellData) {
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			heal := row.Heal.Damage(sim) + paladin.flashOfLightBonusHealing
-			if target.HasActiveAura(core.BlessingOfLightAuraLabel) {
+			if target.HasActiveAuraWithTag(buffs.GreaterBlessingOfLightCategory) {
 				heal += blessingOfLightFlashOfLightBonus
 			}
 			spell.CalcAndDealHealing(sim, target, heal, spell.OutcomeHealingCrit)

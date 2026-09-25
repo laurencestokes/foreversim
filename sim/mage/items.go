@@ -146,9 +146,8 @@ func init() {
 		})
 
 		mage.AddMajorCooldown(core.MajorCooldown{
-			Spell:    spell,
-			Priority: core.CooldownPriorityBloodlust,
-			Type:     core.CooldownTypeDPS,
+			Spell: spell,
+			Type:  core.CooldownTypeDPS,
 		})
 	})
 }

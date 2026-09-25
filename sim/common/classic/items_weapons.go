@@ -24,7 +24,7 @@ func init() {
 					Duration: time.Second * 12,
 				})
 
-				core.AtkSpeedReductionEffect(aura, 1.2)
+				core.AtkSpeedReductionEffect(aura, core.SlowedTimeMultiplier(-20))
 
 				return aura
 			})

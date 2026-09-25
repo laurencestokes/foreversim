@@ -25,7 +25,7 @@ func TestRetribution(t *testing.T) {
 
 			Talents: RetTalents,
 			OtherTalentSets: []core.TalentsCombo{
-				{Label: "Retribution 10/0/41", Talents: RetDeepTalents},
+				{Label: "Retribution 9/0/42", Talents: RetDeepTalents},
 			},
 
 			SpecOptions: core.SpecOptionsCombo{Label: "Default", SpecOptions: DefaultOptions},
@@ -63,8 +63,8 @@ func TestRetribution(t *testing.T) {
 
 // Our Forever sim's builds: the P4/P5 Seal of Command twist build it tests with, and the deep
 // Retribution preset.
-var RetTalents = "0550030022001--052251310002330321"
-var RetDeepTalents = "250003--552250312012331321"
+var RetTalents = "550030022001--05225231001330321"
+var RetDeepTalents = "51003--55225331201331321"
 
 // Arcanite Reaper alone. The generated item database does not carry the Forever gear our sim tests
 // with and gives the rest TBC-shaped stats; this row is the same in both item databases (153-256,

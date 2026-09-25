@@ -1,7 +1,8 @@
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { StatCapType } from '@generated/proto/api';
 import { APLRotation } from '@generated/proto/apl';
-import { Debuffs, IndividualBuffs, ItemSlot, PartyBuffs, PseudoStat, RaidBuffs, Spec, Stat, TristateEffect, WeaponType } from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { ItemSlot, PseudoStat, Spec, Stat, TristateEffect, WeaponType } from '@generated/proto/common';
 import * as Mechanics from '@sim/constants/mechanics';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
@@ -9,6 +10,7 @@ import { masterEpWeights } from '@sim/proto/master_ep_weights';
 import { StatCap, Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
+import { PoisonsSection } from './inputs';
 import * as Presets from './presets';
 
 export default defineSpec<Spec.SpecRogue>({
@@ -47,14 +49,18 @@ export default defineSpec<Spec.SpecRogue>({
 			Stat.StatStrength,
 			Stat.StatAttackPower,
 			Stat.StatArmorPenetration,
-			Stat.StatExpertiseRating,
 			Stat.StatArcaneResistance,
 			Stat.StatFireResistance,
 			Stat.StatFrostResistance,
 			Stat.StatNatureResistance,
 			Stat.StatShadowResistance,
 		],
-		[PseudoStat.PseudoStatMeleeHitPercent, PseudoStat.PseudoStatMeleeCritPercent, PseudoStat.PseudoStatMeleeHastePercent],
+		[
+			PseudoStat.PseudoStatMeleeHitPercent,
+			PseudoStat.PseudoStatMeleeCritPercent,
+			PseudoStat.PseudoStatMeleeHastePercent,
+			PseudoStat.PseudoStatExpertisePercent,
+		],
 	),
 
 	defaults: {
@@ -76,7 +82,7 @@ export default defineSpec<Spec.SpecRogue>({
 			MeleeSpeedMultiplier: 18.56,
 		}),
 		statCaps: (() => {
-			const expCap = new Stats().withStat(Stat.StatExpertiseRating, 6.5 * 4 * Mechanics.EXPERTISE_PER_QUARTER_PERCENT_REDUCTION);
+			const expCap = new Stats().withPseudoStat(PseudoStat.PseudoStatExpertisePercent, 6.5);
 			return expCap;
 		})(),
 		softCapBreakpoints: (() => {
@@ -96,23 +102,24 @@ export default defineSpec<Spec.SpecRogue>({
 		// Default spec-specific settings.
 		specOptions: Presets.DefaultOptions,
 		// Default raid/party buffs settings.
-		// Master's page (currentSettings on a fresh profile); its raid-wide Battle Shout, Trueshot,
-		// Leader of the Pack and Fire Resistance Aura are party buffs here.
+		// Master's page (currentSettings on a fresh profile); its raid-wide Battle Shout, Trueshot and
+		// Leader of the Pack are party buffs here. Improved Battle Shout is no longer a raid option
+		// (Improved now means the T2 bonus), so it is the regular shout.
 		raidBuffs: RaidBuffs.create({
-			giftOfTheWild: TristateEffect.TristateEffectImproved,
-		}),
-		partyBuffs: PartyBuffs.create({
-			battleShout: TristateEffect.TristateEffectImproved,
-			trueshotAura: true,
-			leaderOfThePack: TristateEffect.TristateEffectRegular,
+			giftOfTheWild: true,
 			fireResistanceAura: true,
 		}),
+		partyBuffs: PartyBuffs.create({
+			battleShout: TristateEffect.TristateEffectRegular,
+			trueshotAura: true,
+			leaderOfThePack: true,
+		}),
 		individualBuffs: IndividualBuffs.create({
-			blessingOfKings: true,
-			blessingOfMight: true,
+			greaterBlessingOfKings: true,
+			greaterBlessingOfMight: true,
 		}),
 		debuffs: Debuffs.create({
-			faerieFire: TristateEffect.TristateEffectRegular,
+			faerieFire: true,
 			sunderArmor: true,
 			curseOfRecklessness: true,
 		}),
@@ -123,6 +130,8 @@ export default defineSpec<Spec.SpecRogue>({
 	},
 	// IconInputs to include in the 'Player' section on the settings tab.
 	playerIconInputs: [],
+	// The rogue's poisons, which the shared imbue pickers do not list.
+	sections: [PoisonsSection],
 	// Buff and Debuff inputs to include/exclude, overriding the EP-based defaults.
 	includeBuffDebuffInputs: [Stat.StatSpellHitRating],
 	excludeBuffDebuffInputs: [],

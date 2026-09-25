@@ -18,9 +18,8 @@ export interface ConsumesPickerProps {
 	explosiveOptions: ReadonlyArray<ConsumableStatOption<number>>;
 	imbueMHOptions: ReadonlyArray<ConsumableStatOption<number>>;
 	imbueOHOptions: ReadonlyArray<ConsumableStatOption<number>>;
-	drumsOptions: ReadonlyArray<ConsumableStatOption<number>>;
-	// Potions, explosives, drums, pet consumables and the combat-only miscellany matter inside an
-	// encounter; a gear planner never runs one and passes false.
+	// Potions, explosives and the combat-only miscellany matter inside an encounter; a gear
+	// planner never runs one and passes false.
 	encounterConsumes?: boolean;
 }
 
@@ -30,13 +29,12 @@ export const ConsumesPicker = ({
 	explosiveOptions,
 	imbueMHOptions,
 	imbueOHOptions,
-	drumsOptions,
 	encounterConsumes = true,
 }: ConsumesPickerProps) => {
 	const player = usePlayer() as Player<any>;
 	const configs = useMemo(
-		() => consumeConfigs(player, Database.getSync(), consumableStats, conjuredOptions, explosiveOptions, imbueMHOptions, imbueOHOptions, drumsOptions),
-		[player, consumableStats, conjuredOptions, explosiveOptions, imbueMHOptions, imbueOHOptions, drumsOptions],
+		() => consumeConfigs(player, Database.getSync(), consumableStats, conjuredOptions, explosiveOptions, imbueMHOptions, imbueOHOptions),
+		[player, consumableStats, conjuredOptions, explosiveOptions, imbueMHOptions, imbueOHOptions],
 	);
 
 	return (
@@ -71,11 +69,10 @@ export const ConsumesPicker = ({
 				</PickerGroup>
 			</ConsumeRow>
 			{encounterConsumes && (
-				<ConsumeRow name="engineering" configs={[configs.explosive, ConsumablesInputs.GoblinSapper, ConsumablesInputs.SuperSapper]}>
+				<ConsumeRow name="engineering" configs={[configs.explosive, ConsumablesInputs.GoblinSapper]}>
 					<PickerGroup variant="icons" className="justify-end" data-testid="consumes-engi">
 						<IconEnumPicker modObject={player} config={configs.explosive} />
 						<IconPicker modObject={player} config={ConsumablesInputs.GoblinSapper} />
-						<IconPicker modObject={player} config={ConsumablesInputs.SuperSapper} />
 					</PickerGroup>
 				</ConsumeRow>
 			)}
@@ -87,14 +84,6 @@ export const ConsumesPicker = ({
 					    and `weapon_speed` is a non-optional proto3 double, so it reads 0 rather than
 					    undefined for a shield or an off-hand frill and the gate never closes. */}
 					{player.getPlayerSpec().canDualWield && <IconEnumPicker modObject={player} config={configs.ohImbue} />}
-				</PickerGroup>
-			</ConsumeRow>
-			{/* Never unmounted, the way vanilla's drums row was: the picker has to stay mounted while
-			    it is hidden so that it zeroes a drums selection the player can no longer make, and restores
-			    it if Leatherworking comes back. A gear planner hides the row for good. */}
-			<ConsumeRow name="drums" hidden={!encounterConsumes}>
-				<PickerGroup variant="icons" className="justify-end" data-testid="consumes-drums">
-					<IconEnumPicker modObject={player} config={configs.drums} />
 				</PickerGroup>
 			</ConsumeRow>
 			<ConsumeRow
@@ -126,21 +115,12 @@ export const ConsumesPicker = ({
 				</PickerGroup>
 			</ConsumeRow>
 			{encounterConsumes && (
-				<ConsumeRow name="miscellaneous" configs={[ConsumablesInputs.NightmareSeed, ConsumablesInputs.Bloodthistle, ConsumablesInputs.BoglingRoot]}>
+				<ConsumeRow name="miscellaneous" configs={[ConsumablesInputs.BoglingRoot]}>
 					<PickerGroup variant="icons" className="justify-end" data-testid="consumes-misc">
-						<IconPicker modObject={player} config={ConsumablesInputs.NightmareSeed} />
-						<IconPicker modObject={player} config={ConsumablesInputs.Bloodthistle} />
 						<IconPicker modObject={player} config={ConsumablesInputs.BoglingRoot} />
 					</PickerGroup>
 				</ConsumeRow>
 			)}
-			<ConsumeRow name="pet" hidden={!encounterConsumes}>
-				<PickerGroup variant="icons" className="justify-end" data-testid="consumes-pet">
-					<IconEnumPicker modObject={player} config={configs.petFood} />
-					<IconPicker modObject={player} config={ConsumablesInputs.PetScrollAgi} />
-					<IconPicker modObject={player} config={ConsumablesInputs.PetScrollStr} />
-				</PickerGroup>
-			</ConsumeRow>
 		</div>
 	);
 };

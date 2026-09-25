@@ -4,10 +4,10 @@ import { OpenSelectorModalContext, useSelectorModalState } from '@features/gear/
 import { ConsumesPicker, CustomSection, OtherSettings, PlayerSettings, RaidBuffs, SavedSettings } from '@features/settings';
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as ConsumablesInputs from '@features/settings/model/consumables';
-import { relevantStatOptions } from '@features/settings/model/stat_options';
+import { applyOwnerClassLabels, relevantStatOptions } from '@features/settings/model/stat_options';
 import i18n from '@i18n/config';
 import { PresetConfigurationCategory } from '@sim/constants/preset_categories';
-import { useSimHost, useSpecConfig } from '@sim/context/SimHostContext';
+import { usePlayer, useSimHost, useSpecConfig } from '@sim/context/SimHostContext';
 import { useSimReady } from '@sim/hooks/useSimReady';
 import { CONJURED_CONFIG, relevantConsumableOptions } from '@sim/settings/conjured';
 import { ContentBlock } from '@ui-kit/ContentBlock';
@@ -22,21 +22,21 @@ const GEAR_PLANNER_PRESETS = [PresetConfigurationCategory.Settings];
 export const SettingsTabBody = () => {
 	const host = useSimHost();
 	const config = useSpecConfig();
+	const player = usePlayer();
 	const ready = useSimReady();
 
 	const options = useMemo(
 		() => ({
-			buffs: relevantStatOptions(BuffDebuffInputs.BUFFS_CONFIG, host),
-			partyBuffs: relevantStatOptions(BuffDebuffInputs.PARTY_BUFFS_CONFIG, host),
-			debuffs: relevantStatOptions(BuffDebuffInputs.DEBUFFS_CONFIG, host),
-			debuffsMisc: relevantStatOptions(BuffDebuffInputs.DEBUFFS_MISC_CONFIG, host),
+			buffs: applyOwnerClassLabels(relevantStatOptions(BuffDebuffInputs.BUFFS_CONFIG, host), player),
+			partyBuffs: applyOwnerClassLabels(relevantStatOptions(BuffDebuffInputs.PARTY_BUFFS_CONFIG, host), player),
+			debuffs: applyOwnerClassLabels(relevantStatOptions(BuffDebuffInputs.DEBUFFS_CONFIG, host), player),
+			debuffsMisc: applyOwnerClassLabels(relevantStatOptions(BuffDebuffInputs.DEBUFFS_MISC_CONFIG, host), player),
 			conjured: ConsumablesInputs.conjuredStatOptionsFrom(relevantConsumableOptions(CONJURED_CONFIG, config)),
 			explosive: relevantStatOptions(ConsumablesInputs.EXPLOSIVE_CONFIG, host),
 			imbueMH: relevantStatOptions(ConsumablesInputs.IMBUE_CONFIG_MH, host),
 			imbueOH: relevantStatOptions(ConsumablesInputs.IMBUE_CONFIG_OH, host),
-			drums: relevantStatOptions(ConsumablesInputs.DRUMS_CONFIG, host),
 		}),
-		[host, config],
+		[host, config, player],
 	);
 
 	const itemSwapSlots = config.itemSwapSlots || [];
@@ -82,7 +82,6 @@ export const SettingsTabBody = () => {
 									explosiveOptions={options.explosive}
 									imbueMHOptions={options.imbueMH}
 									imbueOHOptions={options.imbueOH}
-									drumsOptions={options.drums}
 									encounterConsumes={!gearPlanner}
 								/>
 							</ContentBlock>

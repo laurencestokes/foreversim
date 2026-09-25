@@ -2,6 +2,7 @@ package druid
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 )
 
 var demoralizingRoarRank = spellData.DemoralizingRoar.Highest()
@@ -46,9 +47,8 @@ func (druid *Druid) registerDemoralizingRoarSpell() {
 
 func (druid *Druid) registerDemoralizingRoarAura() {
 	druid.DemoralizingRoarAuras = druid.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
-		// TODO: Forever drops Feral Aggression and folds it into the base ability - the client's
-		// rank 5 states -205 attack power where core's shared aura is TBC's -411. Untalented (0
-		// points) until the core aura carries the Forever number.
-		return core.DemoralizingRoarAura(target, 0)
+		// Forever has no Feral Aggression node, so there are no talent points to pass; the
+		// generated aura carries the client's rank 5 -205 attack power.
+		return buffs.DemoralizingRoarAura(target, true, 0)
 	})
 }

@@ -52,7 +52,6 @@ export default defineSpec<Spec.SpecEnhancementShaman>({
 			Stat.StatIntellect,
 			Stat.StatMana,
 			Stat.StatAttackPower,
-			Stat.StatExpertiseRating,
 			Stat.StatArmorPenetration,
 			Stat.StatSpellDamage,
 			Stat.StatNatureDamage,
@@ -69,6 +68,7 @@ export default defineSpec<Spec.SpecEnhancementShaman>({
 			PseudoStat.PseudoStatSpellHitPercent,
 			PseudoStat.PseudoStatSpellCritPercent,
 			PseudoStat.PseudoStatSpellHastePercent,
+			PseudoStat.PseudoStatExpertisePercent,
 		],
 	),
 
@@ -96,7 +96,7 @@ export default defineSpec<Spec.SpecEnhancementShaman>({
 			MeleeSpeedMultiplier: 5.81,
 		}),
 		statCaps: (() => {
-			const expCap = new Stats().withStat(Stat.StatExpertiseRating, 6.5 * 4 * Mechanics.EXPERTISE_PER_QUARTER_PERCENT_REDUCTION);
+			const expCap = new Stats().withPseudoStat(PseudoStat.PseudoStatExpertisePercent, 6.5);
 			return expCap;
 		})(),
 		softCapBreakpoints: (() => {

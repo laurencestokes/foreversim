@@ -3,6 +3,7 @@ package paladin
 import (
 	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 )
 
 // Seal of Justice
@@ -24,7 +25,7 @@ func (paladin *Paladin) registerSealOfJustice(row shared.SpellData) {
 		return target.GetOrRegisterAura(core.Aura{
 			Label:    "Judgement of Justice",
 			ActionID: core.ActionID{SpellID: judgementRow.SpellID},
-			Tag:      core.JudgementAuraTag,
+			Tag:      buffs.JudgementAuraTag,
 			Duration: judgementRow.Duration,
 		})
 	})

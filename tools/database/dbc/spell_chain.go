@@ -7,6 +7,7 @@ import (
 
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/tools/database/overrides"
 )
 
@@ -193,6 +194,33 @@ func (w *chainWalker) findStackingContainer(spellID, statAuraID int) int {
 		}
 
 		if found := w.findStackingContainer(se.EffectTriggerSpell, statAuraID); found != 0 {
+			return found
+		}
+	}
+	return 0
+}
+
+// The first spell of the store on the trigger chain from spellID, spellID itself included, that
+// matches, or 0. A spell the store does not carry ends its branch.
+func ResolveTriggered(spellID int, matches func(*spelldata.Spell) bool) int32 {
+	return newChainWalker().resolveTriggered(spellID, matches)
+}
+
+func (w *chainWalker) resolveTriggered(spellID int, matches func(*spelldata.Spell) bool) int32 {
+	s := spelldata.Find(int32(spellID))
+	if s == spelldata.Nil || w.visited[spellID] {
+		return 0
+	}
+
+	effects := w.effects(spellID)
+	if matches(s) {
+		return s.ID
+	}
+	for _, se := range effects {
+		if se.EffectTriggerSpell == 0 {
+			continue
+		}
+		if found := w.resolveTriggered(se.EffectTriggerSpell, matches); found != 0 {
 			return found
 		}
 	}

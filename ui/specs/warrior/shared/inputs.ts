@@ -1,4 +1,4 @@
-import { WarriorShout, WarriorStance } from '@generated/proto/warrior';
+import { WarriorStance } from '@generated/proto/warrior';
 import i18n from '@i18n/config';
 import { ActionId } from '@sim/proto/action_id';
 import { WarriorSpecs } from '@sim/proto/spec_types';
@@ -7,11 +7,11 @@ import * as InputHelpers from '@ui-kit/input_helpers';
 // Configuration for class-specific UI elements on the settings tab.
 // These don't need to be in a separate file but it keeps things cleaner.
 export const ShoutPicker = <SpecType extends WarriorSpecs>() =>
-	InputHelpers.makeClassOptionsEnumIconInput<SpecType, WarriorShout>({
-		fieldName: 'defaultShout',
+	InputHelpers.makeClassOptionsBooleanIconInput<SpecType>({
+		fieldName: 'useBattleShout',
 		label: i18n.t('settings_tab.other.default_shout.label'),
 		labelTooltip: i18n.t('settings_tab.other.default_shout.tooltip'),
-		values: [{ actionId: ActionId.fromSpellId(25289), value: WarriorShout.WarriorShoutBattle }],
+		id: ActionId.fromSpellId(25289),
 	});
 export const StancePicker = <SpecType extends WarriorSpecs>() =>
 	InputHelpers.makeClassOptionsEnumIconInput<SpecType, WarriorStance>({

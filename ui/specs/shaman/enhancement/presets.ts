@@ -1,5 +1,6 @@
 import * as PresetUtils from '@app/preset_utils';
-import { ConsumesSpec, Debuffs, IndividualBuffs, PartyBuffs, Profession, Race, RaidBuffs, TristateEffect } from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { ConsumesSpec, Profession, Race, TristateEffect } from '@generated/proto/common';
 import { EnhancementShaman_Options as EnhancementShamanOptions, ShamanImbue, ShamanSyncType } from '@generated/proto/shaman';
 import { SavedTalents } from '@generated/proto/ui';
 
@@ -51,28 +52,28 @@ export const DefaultConsumables = ConsumesSpec.create({
 
 export const DefaultPartyBuffs = PartyBuffs.create({
 	battleShout: TristateEffect.TristateEffectImproved,
-	fireResistanceTotem: true,
-	leaderOfThePack: TristateEffect.TristateEffectRegular,
+	leaderOfThePack: true,
 	manaSpringTotem: TristateEffect.TristateEffectRegular,
 });
 
 export const DefaultRaidBuffs = RaidBuffs.create({
 	arcaneBrilliance: true,
-	divineSpirit: TristateEffect.TristateEffectRegular,
-	giftOfTheWild: TristateEffect.TristateEffectImproved,
-	powerWordFortitude: TristateEffect.TristateEffectImproved,
+	fireResistanceTotem: true,
+	giftOfTheWild: true,
+	prayerOfFortitude: true,
+	prayerOfSpirit: true,
 });
 
 export const DefaultDebuffs = Debuffs.create({
 	curseOfRecklessness: true,
-	exposeArmor: TristateEffect.TristateEffectImproved,
-	faerieFire: TristateEffect.TristateEffectRegular,
+	exposeArmor: true,
+	faerieFire: true,
 	sunderArmor: true,
 });
 
 // Talent presets, from master's ui/shaman spec.
 export const TalentsLevel60 = PresetUtils.makePresetTalents('Level 60', SavedTalents.create({ talentsString: '5505301-053030031005112251' }));
-export const TalentsEnhancement = PresetUtils.makePresetTalents('Enhancement 16/35/0', SavedTalents.create({ talentsString: '05023015-055030030205112251' }));
+export const TalentsEnhancement = PresetUtils.makePresetTalents('Enhancement 16/35/0', SavedTalents.create({ talentsString: '2502331-055030030205112251' }));
 export const TalentPresets = [TalentsLevel60, TalentsEnhancement];
 
 // Our Forever sim's gear presets (master ui/<spec>/gear_sets).

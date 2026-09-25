@@ -1,22 +1,23 @@
-import { ConsumesSpec, Debuffs, IndividualBuffs, PartyBuffs, TristateEffect } from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs } from '@generated/proto/buffs';
+import { ConsumesSpec, TristateEffect } from '@generated/proto/common';
 
 // Defaults follow master's ui/warrior and ui/tank_warrior.
 export const DefaultIndividualBuffs = IndividualBuffs.create({
-	blessingOfKings: true,
-	blessingOfMight: true,
+	greaterBlessingOfKings: true,
+	greaterBlessingOfMight: true,
 });
 
 // Master's page (currentSettings on a fresh profile) has Battle Shout and Leader of the Pack as
 // raid buffs; they are party buffs here. No totems.
 export const DefaultPartyBuffs = PartyBuffs.create({
 	battleShout: TristateEffect.TristateEffectImproved,
-	leaderOfThePack: TristateEffect.TristateEffectRegular,
+	leaderOfThePack: true,
 });
 
 export const DefaultDebuffs = Debuffs.create({
 	curseOfRecklessness: true,
-	exposeArmor: TristateEffect.TristateEffectImproved,
-	faerieFire: TristateEffect.TristateEffectRegular,
+	exposeArmor: true,
+	faerieFire: true,
 	giftOfArthas: true,
 	sunderArmor: true,
 });

@@ -75,8 +75,12 @@ func DotConfig(s *Spell, e *Effect, opts ...AuraOpt) core.DotConfig {
 		TickLength:       e.Period(),
 		NumberOfTicks:    int32(s.Duration() / e.Period()),
 		BonusCoefficient: e.Coeff(),
-		OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-			dot.Spell.CalcAndDealPeriodicDamage(sim, target, e.Average(dot.Spell.Unit.Level), s.TickOutcome(dot))
-		},
+		OnTick:           PeriodicDamageTick(e, s.TickOutcome),
+	}
+}
+
+func PeriodicDamageTick(e *Effect, outcome func(*core.Dot) core.OutcomeApplier) core.OnTick {
+	return func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
+		dot.Spell.CalcAndDealPeriodicDamage(sim, target, e.Average(dot.Spell.Unit.Level), outcome(dot))
 	}
 }

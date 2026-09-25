@@ -2,12 +2,13 @@ package druid
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-var wrathRank = spellData.Wrath.Highest()
-
-func (druid *Druid) registerWrathSpell() {
-	druid.Wrath = druid.RegisterSpell(Humanoid|Moonkin, core.SpellConfig{
+// Every rank is registered so a rotation can downrank when mana runs short; druid.Wrath stays
+// the highest.
+func (druid *Druid) registerWrathSpell(wrathRank *spelldata.Spell) {
+	spell := druid.RegisterSpell(Humanoid|Moonkin, core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: wrathRank.ID},
 		SpellSchool:    wrathRank.SpellSchool(),
 		DefenseType:    wrathRank.DefenseTypeCore(),
@@ -41,4 +42,7 @@ func (druid *Druid) registerWrathSpell() {
 			})
 		},
 	})
+	if wrathRank == spellData.Wrath.Highest() {
+		druid.Wrath = spell
+	}
 }

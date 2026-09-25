@@ -245,6 +245,10 @@ type ItemFilter struct {
 // If equipChecksOnly is true, will only check conditions related to whether
 // the item is equippable.
 func (filter *ItemFilter) Matches(item Item, equipChecksOnly bool) bool {
+	if filter.Class != proto.Class_ClassUnknown && !item.UsableBy(filter.Class) {
+		return false
+	}
+
 	if item.Type == proto.ItemType_ItemTypeWeapon {
 		if len(filter.WeaponTypes) > 0 && !slices.Contains(filter.WeaponTypes, item.WeaponType) {
 			return false

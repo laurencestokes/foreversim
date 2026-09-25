@@ -17,7 +17,7 @@ var HolyShieldRankMap = spellData.HolyShield
 func (paladin *Paladin) registerHolyShield(row shared.SpellData) {
 	actionID := core.ActionID{SpellID: row.SpellID}
 	damage := shared.SpellDataMin(row.Direct)
-	blockPercent := row.Effect(shared.A_MOD_BLOCK_PERCENT, 0).Value / 100
+	blockPercent := row.Effect(shared.A_MOD_BLOCK_PERCENT, 0).Value
 	charges := row.ProcCharges
 
 	procSpell := paladin.RegisterSpell(core.SpellConfig{

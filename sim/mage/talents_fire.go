@@ -40,9 +40,8 @@ func (mage *Mage) registerFireTalents() {
 	// Combustion: combustion.go
 }
 
-// The Fire Blast cooldown half only.
-// TODO: the second effect, a 25/50% chance of 1312934 (+50% crit for 20 sec, one charge), needs its
-// trigger and the spells it applies to from the tooltip.
+// The Fire Blast cooldown half only. The other half, 1312934 (+50% Fire Blast crit for 30 sec), is
+// granted by killing a non-trivial target, which the sim's targets never do.
 func (mage *Mage) registerWakeOfFire() {
 	if mage.Talents.WakeOfFire == 0 {
 		return
@@ -200,13 +199,16 @@ func (mage *Mage) registerImprovedFireWard() {
 }
 
 // Fireball, Fire Blast and Scorch crits each take 25% off Pyroblast's cast time, stacking 3 times,
-// so the stacks are worth holding rather than spending. The generated tables have no Hot Streak rows,
-// so 44445 and the numbers are carried over from our Forever sim. The tooltip names Frostfire Bolt
-// too, which is not modelled yet (frostfire_bolt.go).
+// so the stacks are worth holding rather than spending. The buff is 400625: its duration (20 sec since
+// build 70009), stack cap and per-stack cast time cut are read from the row. The tooltip names
+// Frostfire Bolt too, which is not modelled yet (frostfire_bolt.go).
 func (mage *Mage) registerHotStreak() {
 	if !mage.Talents.HotStreak {
 		return
 	}
+
+	buff := spellData.HotStreakTriggered.Highest()
+	perStack := buff.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_CASTING_TIME)).Percent()
 
 	castTimeMod := mage.AddDynamicMod(core.SpellModConfig{
 		ClassMask: MageSpellPyroblast,
@@ -215,9 +217,9 @@ func (mage *Mage) registerHotStreak() {
 
 	mage.HotStreakAura = mage.RegisterAura(core.Aura{
 		Label:     "Hot Streak",
-		ActionID:  core.ActionID{SpellID: 44445},
-		Duration:  time.Second * 15,
-		MaxStacks: 3,
+		ActionID:  core.ActionID{SpellID: buff.ID},
+		Duration:  buff.Duration(),
+		MaxStacks: int32(buff.MaxStack),
 		OnGain: func(_ *core.Aura, _ *core.Simulation) {
 			castTimeMod.Activate()
 		},
@@ -225,7 +227,7 @@ func (mage *Mage) registerHotStreak() {
 			castTimeMod.Deactivate()
 		},
 		OnStacksChange: func(_ *core.Aura, _ *core.Simulation, _ int32, newStacks int32) {
-			castTimeMod.UpdateFloatValue(-.25 * float64(newStacks))
+			castTimeMod.UpdateFloatValue(perStack * float64(newStacks))
 		},
 		OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
 			// 400625 carries one charge: the next Pyroblast spends every stack.

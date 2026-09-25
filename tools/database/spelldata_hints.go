@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -28,15 +29,58 @@ var tooltipOwnChance = regexp.MustCompile(`\$h`)
 // client's EffectIndex plus one.
 var tooltipEffectChance = regexp.MustCompile(`\$[ms]([123])%\s+chance`)
 
-// Reads the proc shape off the tooltip and the aura columns and writes it onto the row.
+// Damage divided among the targets hit, which the server knows per spell and no column states:
+// Everlook Pathcarver's "split between up to $s3 nearby enemies", the Meteors' "divided up evenly
+// among all affected targets" and Shard of the Fallen Star's "$s1 total Fire damage".
+var tooltipSplitsDamage = regexp.MustCompile(`split between|divided up evenly|\$s\d total \w+ damage`)
+
+// Reads the proc shape and the damage split off the tooltip and the aura columns and writes them
+// onto the row.
 func applyTooltipHints(t *spellTables, s *storeSpell) {
 	description := t.Descriptions[s.ID]
 
 	ownChance := tooltipOwnChance.MatchString(description)
 
+	s.SplitsDamage = tooltipSplitsDamage.MatchString(description)
 	s.ProcHint = procTooltipHints(description)
 	s.ProcChanceSource, s.ProcChanceEffect = procChanceSource(description, ownChance, s)
 	s.tooltipStatesChance = ownChance || s.ProcChanceSource == procChanceEffectN
+
+	if grant, ok := t.EnchantGrants[s.ID]; ok && description == "" {
+		applyEnchantGrantHints(t.Descriptions[grant], s)
+	}
+}
+
+// What an enchant's grant states about the equip spell it hangs on a hit. The grant describes the
+// enchant rather than the spell's mask, so only what no mask can state is read off it: a named
+// ability, an outcome the mask has no bit for, the wearer's attack dodged or parried, and whether a
+// column of 100 is a rate the rows do not carry. Which hits feed the proc stays the mask's to say.
+func applyEnchantGrantHints(grant string, s *storeSpell) {
+	s.ProcHint |= procTooltipHints(grant) & (core.ProcHintNamedAbility | core.ProcHintOutcomeTaken | core.ProcHintAttackAvoided)
+
+	if s.ProcChanceSource == procChanceAlways && tooltipStatesAnUnknownRate(grant) {
+		s.ProcChanceSource = procChancePPM
+	}
+}
+
+// A combat spell's roll as its enchantments state it, which is the one the game casts it at: the
+// spell's own column is no roll there, and on Fiery Blaze's 6297 there is none. A tooltip stating a
+// chance of its own that the enchantments contradict is an error.
+func applyEnchantChance(t *spellTables, s *storeSpell) error {
+	stated, ok := t.EnchantChances[s.ID]
+	if !ok {
+		return nil
+	}
+	if s.tooltipStatesChance && (s.ProcChanceSource != procChanceColumn || s.ProcChance != stated.Chance) {
+		return fmt.Errorf("spell %d states its own proc chance in the tooltip, and enchantments %v state %d%%",
+			s.ID, stated.Enchants, stated.Chance)
+	}
+
+	s.ProcChance = stated.Chance
+	s.ProcChanceSource, s.ProcChanceEffect = procChanceColumn, 0
+	s.overrideNotes = append(s.overrideNotes,
+		fmt.Sprintf("enchantment: ProcChance %d -- EffectPointsMin of SpellItemEnchantment %s", stated.Chance, joinIDs(stated.Enchants)))
+	return nil
 }
 
 func procChanceSource(description string, ownChance bool, s *storeSpell) (storeProcChanceSource, int8) {
@@ -147,6 +191,8 @@ func formatProcHint(hint core.ProcHint) string {
 		{core.ProcHintPureHeal, "core.ProcHintPureHeal"},
 		{core.ProcHintNamedAbility, "core.ProcHintNamedAbility"},
 		{core.ProcHintOutcomeTaken, "core.ProcHintOutcomeTaken"},
+		{core.ProcHintAttackDodged, "core.ProcHintAttackDodged"},
+		{core.ProcHintAttackParried, "core.ProcHintAttackParried"},
 	}
 
 	var set []string

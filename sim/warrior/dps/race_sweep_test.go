@@ -139,7 +139,7 @@ func runWarrior(t *testing.T, run warriorRun, iterations int32) (float64, float6
 		Equipment:      run.gear,
 		TalentsString:  run.talents,
 		Consumables:    pageConsumables,
-		Buffs:          &proto.IndividualBuffs{BlessingOfKings: true, BlessingOfMight: true},
+		Buffs:          &proto.IndividualBuffs{GreaterBlessingOfKings: true, GreaterBlessingOfMight: true},
 		Profession1:    proto.Profession_Alchemy,
 		Profession2:    proto.Profession_Engineering,
 		ReactionTimeMs: 200,
@@ -154,9 +154,9 @@ func runWarrior(t *testing.T, run warriorRun, iterations int32) (float64, float6
 
 	result := core.RunRaidSim(&proto.RaidSimRequest{
 		Raid: core.SinglePlayerRaidProto(player,
-			&proto.PartyBuffs{BattleShout: proto.TristateEffect_TristateEffectImproved, LeaderOfThePack: proto.TristateEffect_TristateEffectRegular},
-			&proto.RaidBuffs{GiftOfTheWild: proto.TristateEffect_TristateEffectImproved},
-			&proto.Debuffs{CurseOfRecklessness: true, ExposeArmor: proto.TristateEffect_TristateEffectImproved, FaerieFire: proto.TristateEffect_TristateEffectRegular, GiftOfArthas: true, SunderArmor: true}),
+			&proto.PartyBuffs{BattleShout: proto.TristateEffect_TristateEffectImproved, LeaderOfThePack: true},
+			&proto.RaidBuffs{GiftOfTheWild: true},
+			&proto.Debuffs{CurseOfRecklessness: true, ExposeArmor: true, FaerieFire: true, GiftOfArthas: true, SunderArmor: true}),
 		Encounter:  encounter,
 		SimOptions: &proto.SimOptions{Iterations: iterations, RandomSeed: 101},
 	})
@@ -171,10 +171,10 @@ var pageOptions = &proto.Player_DpsWarrior{
 	DpsWarrior: &proto.DpsWarrior{
 		Options: &proto.DpsWarrior_Options{
 			ClassOptions: &proto.WarriorOptions{
-				StartingRage:  0,
-				QueueDelay:    250,
-				DefaultShout:  proto.WarriorShout_WarriorShoutBattle,
-				DefaultStance: proto.WarriorStance_WarriorStanceBerserker,
+				StartingRage:   0,
+				QueueDelay:     250,
+				UseBattleShout: true,
+				DefaultStance:  proto.WarriorStance_WarriorStanceBerserker,
 			},
 		},
 	},

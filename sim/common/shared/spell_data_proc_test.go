@@ -1,6 +1,8 @@
 package shared
 
 import (
+	"math"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -374,5 +376,297 @@ func TestProcDamageTarget(t *testing.T) {
 		if got := procDamageTarget(character, tc.callback, tc.spell, tc.result); got != tc.want {
 			t.Errorf("target = %v, want %v: %s", got.Label, tc.want.Label, tc.why)
 		}
+	}
+}
+
+func testOneHander(id int32) *proto.SimItem {
+	return &proto.SimItem{
+		Id:             id,
+		Name:           "Test Sword",
+		Type:           proto.ItemType_ItemTypeWeapon,
+		WeaponType:     proto.WeaponType_WeaponTypeSword,
+		HandType:       proto.HandType_HandTypeOneHand,
+		WeaponSpeed:    2.6,
+		ScalingOptions: map[int32]*proto.ScalingItemProperties{0: {WeaponDamageMin: 50, WeaponDamageMax: 90}},
+	}
+}
+
+// Fiery Blaze 36's shape: a combat enchant on the main hand only, whose enchantment states 15%, the
+// ProcChance the store writes onto its spell's row.
+func TestStatedEnchantChanceRollsOnTheEnchantedWeaponOnly(t *testing.T) {
+	const mainHandID, offHandID, enchantID int32 = 990401, 990402, 990403
+	core.AddToDatabase(&proto.SimDatabase{
+		Items:    []*proto.SimItem{testOneHander(mainHandID), testOneHander(offHandID)},
+		Enchants: []*proto.SimEnchant{{EffectId: enchantID, Name: "Test Fiery Blaze"}},
+	})
+
+	items := make([]*proto.ItemSpec, proto.ItemSlot_ItemSlotOffHand+1)
+	for i := range items {
+		items[i] = &proto.ItemSpec{}
+	}
+	items[proto.ItemSlot_ItemSlotMainHand] = &proto.ItemSpec{Id: mainHandID, Enchant: enchantID}
+	items[proto.ItemSlot_ItemSlotOffHand] = &proto.ItemSpec{Id: offHandID}
+
+	agent := newTestAgent()
+	character := agent.character
+	character.Equipment = core.ProtoToEquipment(&proto.EquipmentSpec{Items: items})
+	character.EnableAutoAttacks(agent, core.AutoAttackOptions{
+		MainHand:       character.WeaponFromMainHand(),
+		OffHand:        character.WeaponFromOffHand(),
+		AutoSwingMelee: true,
+	})
+
+	trigger := &spelldata.Spell{ID: 990410, Name: "Test Fiery Blaze", ProcChance: 15}
+	cfg := SpellDataProc{Name: "Test Fiery Blaze", EnchantID: enchantID, TriggerSpellID: trigger.ID,
+		BuffSpellID: trigger.ID, IsWeaponProc: true}
+	config := spellDataProcListener(character, cfg, cfg.effectSource(), trigger, nil)
+
+	if config.ProcChance != 0 {
+		t.Errorf("flat chance = %v, want none: it would roll on the off hand's hits too", config.ProcChance)
+	}
+	if config.DPM == nil {
+		t.Fatal("no manager bound to the enchanted weapon")
+	}
+	if got := config.DPM.Chance(core.ProcMaskMeleeMHAuto, nil); got != 0.15 {
+		t.Errorf("main hand chance = %v, want 0.15", got)
+	}
+	if got := config.DPM.Chance(core.ProcMaskMeleeOHAuto, nil); got != 0 {
+		t.Errorf("off hand chance = %v, want 0", got)
+	}
+}
+
+// A PPM override on a rate-less enchant proc's row clears its refusal, and the registration measures
+// the rate on the enchanted weapon's hits. An equip aura that hears only spells never rolls, which is
+// the refusal its rate gets.
+func TestSpellDataProcTakesAPPMOverride(t *testing.T) {
+	const mainHandID, offHandID, enchantID int32 = 990501, 990502, 990503
+	const ppm = 2.0
+	core.AddToDatabase(&proto.SimDatabase{
+		Items: []*proto.SimItem{testOneHander(mainHandID), testOneHander(offHandID)},
+		Enchants: []*proto.SimEnchant{{EffectId: enchantID, Name: "Test Rate-less Enchant",
+			Type: proto.ItemType_ItemTypeWeapon}},
+	})
+
+	items := make([]*proto.ItemSpec, proto.ItemSlot_ItemSlotOffHand+1)
+	for i := range items {
+		items[i] = &proto.ItemSpec{}
+	}
+	items[proto.ItemSlot_ItemSlotMainHand] = &proto.ItemSpec{Id: mainHandID, Enchant: enchantID}
+	items[proto.ItemSlot_ItemSlotOffHand] = &proto.ItemSpec{Id: offHandID}
+
+	agent := newTestAgent()
+	character := agent.character
+	character.Equipment = core.ProtoToEquipment(&proto.EquipmentSpec{Items: items})
+	character.EnableAutoAttacks(agent, core.AutoAttackOptions{
+		MainHand:       character.WeaponFromMainHand(),
+		OffHand:        character.WeaponFromOffHand(),
+		AutoSwingMelee: true,
+	})
+	mainHandSpeed := testOneHander(mainHandID).WeaponSpeed
+	mainHandChance := mainHandSpeed * (ppm / 60)
+
+	for _, tc := range []struct {
+		name         string
+		spellID      int32
+		isWeaponProc bool
+		heard        core.ProcMask
+		want         float64
+		refusedFor   string
+	}{
+		{"Fiery Weapon's combat spell 13897", 13897, true, core.ProcMaskMeleeMHAuto, mainHandChance, ""},
+		{"Unholy Weapon's combat spell 20006", 20006, true, core.ProcMaskMeleeMHAuto, mainHandChance, ""},
+		{"Revelation's equip aura 1248806", 1248806, false, core.ProcMaskSpellDamage, 0,
+			spelldata.ReasonPPMHearsNoWeaponHits},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			row := *spelldata.MustFind(tc.spellID)
+			unsupported := func() []string {
+				if tc.isWeaponProc {
+					return spelldata.ItemProcUnsupported(&row, true)
+				}
+				return spelldata.EnchantAuraUnsupported(&row)
+			}
+
+			if !slices.Contains(unsupported(), spelldata.ReasonStatesNoRate) {
+				t.Fatalf("unsupported = %v before the override, want the missing rate named", unsupported())
+			}
+
+			row.RPPM = ppm
+			row.ProcChanceSource, row.ProcChanceEffect = spelldata.ProcChancePPM, 0
+			var want []string
+			if tc.refusedFor != "" {
+				want = []string{tc.refusedFor}
+			}
+			if got := unsupported(); !slices.Equal(got, want) {
+				t.Errorf("unsupported = %v with the override, want %v", got, want)
+			}
+
+			cfg := SpellDataProc{Name: "Test " + tc.name, EnchantID: enchantID, TriggerSpellID: row.ID,
+				BuffSpellID: row.ID, IsWeaponProc: tc.isWeaponProc}
+			config := spellDataProcListener(character, cfg, cfg.effectSource(), &row, nil)
+
+			if config.ProcChance != 0 {
+				t.Errorf("flat chance = %v, want none beside the rate", config.ProcChance)
+			}
+			if config.DPM == nil {
+				t.Fatal("no procs-per-minute manager")
+			}
+			if got := config.DPM.Chance(tc.heard, nil); math.Abs(got-tc.want) > 1e-12 {
+				t.Errorf("chance = %v, want %v (%v ppm, main hand %v s)", got, tc.want, ppm, mainHandSpeed)
+			}
+			if got := config.DPM.Chance(core.ProcMaskMeleeOHAuto, nil); got != 0 {
+				t.Errorf("off hand chance = %v, want 0", got)
+			}
+		})
+	}
+}
+
+// An enchant aura's procs-per-minute rate follows its weapon: a weapon enchant's melee hits roll only
+// on the hand carrying it, while an enchant on no weapon keeps the main hand's pricing, and no enchant's
+// spell or heal hits roll. Recovery's 1248761 hears melee hits and Revelation's 1248806 spells.
+func TestEnchantAuraPPMFollowsItsWeapon(t *testing.T) {
+	const slowID, fastID int32 = 990801, 990802
+	const weaponEnchantID, cloakEnchantID, shieldEnchantID int32 = 990803, 990804, 990805
+	const slow, fast, ppm = 2.6, 1.8, 2.0
+	fastOneHander := testOneHander(fastID)
+	fastOneHander.WeaponSpeed = fast
+	core.AddToDatabase(&proto.SimDatabase{
+		Items: []*proto.SimItem{testOneHander(slowID), fastOneHander},
+		Enchants: []*proto.SimEnchant{
+			{EffectId: weaponEnchantID, Name: "Test Weapon Enchant", Type: proto.ItemType_ItemTypeWeapon},
+			{EffectId: cloakEnchantID, Name: "Test Cloak Enchant", Type: proto.ItemType_ItemTypeBack},
+			{EffectId: shieldEnchantID, Name: "Test Shield Enchant", Type: proto.ItemType_ItemTypeWeapon,
+				EnchantType: proto.EnchantType_EnchantTypeShield},
+		},
+	})
+	chance := func(speed float64) float64 { return speed * (ppm / 60) }
+
+	for _, tc := range []struct {
+		name                            string
+		enchantID                       int32
+		mainHandEnchant, offHandEnchant int32
+		spellID                         int32
+		mainHand, offHand, spell        float64
+	}{
+		{"weapon enchant on the main hand, melee aura", weaponEnchantID, weaponEnchantID, 0, 1248761,
+			chance(slow), 0, 0},
+		{"weapon enchant on the off hand, melee aura", weaponEnchantID, 0, weaponEnchantID, 1248761,
+			0, chance(fast), 0},
+		{"weapon enchant on both hands, melee aura", weaponEnchantID, weaponEnchantID, weaponEnchantID, 1248761,
+			chance(slow), chance(fast), 0},
+		{"weapon enchant on the off hand, spell aura", weaponEnchantID, 0, weaponEnchantID, 1248806,
+			0, 0, 0},
+		{"cloak enchant, melee aura", cloakEnchantID, 0, 0, 1248761,
+			chance(slow), chance(fast), 0},
+		{"cloak enchant, spell aura", cloakEnchantID, 0, 0, 1248806,
+			0, 0, 0},
+		{"shield enchant, spell aura", shieldEnchantID, 0, 0, 1248806,
+			0, 0, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			items := make([]*proto.ItemSpec, proto.ItemSlot_ItemSlotOffHand+1)
+			for i := range items {
+				items[i] = &proto.ItemSpec{}
+			}
+			items[proto.ItemSlot_ItemSlotMainHand] = &proto.ItemSpec{Id: slowID, Enchant: tc.mainHandEnchant}
+			items[proto.ItemSlot_ItemSlotOffHand] = &proto.ItemSpec{Id: fastID, Enchant: tc.offHandEnchant}
+
+			agent := newTestAgent()
+			character := agent.character
+			character.Equipment = core.ProtoToEquipment(&proto.EquipmentSpec{Items: items})
+			character.EnableAutoAttacks(agent, core.AutoAttackOptions{
+				MainHand:       character.WeaponFromMainHand(),
+				OffHand:        character.WeaponFromOffHand(),
+				AutoSwingMelee: true,
+			})
+
+			row := *spelldata.MustFind(tc.spellID)
+			row.RPPM = ppm
+			row.ProcChanceSource, row.ProcChanceEffect = spelldata.ProcChancePPM, 0
+			cfg := SpellDataProc{Name: "Test " + tc.name, EnchantID: tc.enchantID, TriggerSpellID: row.ID,
+				BuffSpellID: row.ID}
+			config := spellDataProcListener(character, cfg, cfg.effectSource(), &row, nil)
+
+			if config.DPM == nil {
+				t.Fatal("no procs-per-minute manager")
+			}
+			for _, hit := range []struct {
+				name string
+				mask core.ProcMask
+				want float64
+			}{
+				{"main hand", core.ProcMaskMeleeMHAuto, tc.mainHand},
+				{"off hand", core.ProcMaskMeleeOHAuto, tc.offHand},
+				{"spell", core.ProcMaskSpellDamage, tc.spell},
+				{"heal", core.ProcMaskSpellHealing, tc.spell},
+			} {
+				if got := config.DPM.Chance(hit.mask, nil); got != hit.want {
+					t.Errorf("%s chance = %v, want %v", hit.name, got, hit.want)
+				}
+			}
+		})
+	}
+}
+
+// A stacking trigger's procs-per-minute rate is measured the way its opener's is: a weapon enchant's
+// on the hand carrying it and never on spells, an item's off the main hand for everything but the
+// off hand's and the ranged hits.
+func TestStackTriggerPPMFollowsTheEffect(t *testing.T) {
+	const slowID, fastID, itemID, weaponEnchantID int32 = 990901, 990902, 990903, 990904
+	const slow, fast, ppm = 2.6, 1.8, 2.0
+	fastOneHander := testOneHander(fastID)
+	fastOneHander.WeaponSpeed = fast
+	core.AddToDatabase(&proto.SimDatabase{
+		Items: []*proto.SimItem{testOneHander(slowID), fastOneHander},
+		Enchants: []*proto.SimEnchant{
+			{EffectId: weaponEnchantID, Name: "Test Weapon Enchant", Type: proto.ItemType_ItemTypeWeapon},
+		},
+	})
+	chance := func(speed float64) float64 { return speed * (ppm / 60) }
+
+	items := make([]*proto.ItemSpec, proto.ItemSlot_ItemSlotOffHand+1)
+	for i := range items {
+		items[i] = &proto.ItemSpec{}
+	}
+	items[proto.ItemSlot_ItemSlotMainHand] = &proto.ItemSpec{Id: slowID}
+	items[proto.ItemSlot_ItemSlotOffHand] = &proto.ItemSpec{Id: fastID, Enchant: weaponEnchantID}
+
+	agent := newTestAgent()
+	character := agent.character
+	character.Equipment = core.ProtoToEquipment(&proto.EquipmentSpec{Items: items})
+	character.EnableAutoAttacks(agent, core.AutoAttackOptions{
+		MainHand:       character.WeaponFromMainHand(),
+		OffHand:        character.WeaponFromOffHand(),
+		AutoSwingMelee: true,
+	})
+
+	stackProc := &proto.ProcEffect{ProcRate: &proto.ProcEffect_Ppm{Ppm: ppm}}
+	for _, tc := range []struct {
+		name                     string
+		source                   effectSource
+		mainHand, offHand, spell float64
+	}{
+		{"weapon enchant on the off hand", effectSource{id: weaponEnchantID, isEnchant: true}, 0, chance(fast), 0},
+		{"item", effectSource{id: itemID}, chance(slow), chance(fast), chance(slow)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dpm := dpmForMask(character, tc.source, stackProc.GetPpm(), core.ProcMaskMelee|core.ProcMaskSpellDamage)
+			if dpm == nil {
+				t.Fatal("no procs-per-minute manager")
+			}
+			for _, hit := range []struct {
+				name string
+				mask core.ProcMask
+				want float64
+			}{
+				{"main hand", core.ProcMaskMeleeMHAuto, tc.mainHand},
+				{"off hand", core.ProcMaskMeleeOHAuto, tc.offHand},
+				{"spell", core.ProcMaskSpellDamage, tc.spell},
+			} {
+				if got := dpm.Chance(hit.mask, nil); got != hit.want {
+					t.Errorf("%s chance = %v, want %v", hit.name, got, hit.want)
+				}
+			}
+		})
 	}
 }

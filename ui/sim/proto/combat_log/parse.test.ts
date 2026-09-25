@@ -43,7 +43,6 @@ describe('parseAll on TBC log lines', () => {
 
 	it.each([
 		['BlockedCrit', 'critical-block', 1234.5],
-		['SuppressedCrit', 'suppressed-crit', 987.65],
 		['Crush', 'crush', 2000],
 	])('reads %s as %s', async (token, outcome, amount) => {
 		const log = (await parseLine(
@@ -57,7 +56,7 @@ describe('parseAll on TBC log lines', () => {
 	});
 
 	it('reads a partial resist off a hit', async () => {
-		// flags.go:156 appends the resist to a glance, crit, suppressed crit or hit.
+		// flags.go:156 appends the resist to a glance, crit or hit.
 		const log = (await parseLine(
 			'[5.00] [Player (#1)] [Target 1] {SpellID: 25368} Hit (50% Resist) for 1234.500 damage (SpellSchool: 4). (Threat: 100.000)',
 		)) as DamageLog;

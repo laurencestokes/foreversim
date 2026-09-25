@@ -46,11 +46,29 @@ func RegisterAllOnUseCds() {
 		{{- end}}
 		TrinketLimitsDuration: true,
 	})
+	{{- else if .Proc}}
+	{{- $call := .Proc.OnUseConstructor }}
+	{{- if .Proc.Summary }}
+	// {{ .Proc.Summary }}
+	{{- end}}
+	{{- if .Supported}}
+  	{{- with index .Variants 0}}
+	shared.{{ $call }}({{ .ID }}) // {{ .Name }} - https://www.wowhead.com/forever/spell={{.SpellID}}
+	{{- end}}
+	{{- else}}
+	// unsupported: {{ .Proc.Reason }}
+  	{{- with index .Variants 0}}
+	// shared.{{ $call }}({{ .ID }}) // {{ .Name }} - https://www.wowhead.com/forever/spell={{.SpellID}}
+	{{- end}}
+	{{- end}}
 	{{- else if not .Supported}}
   	{{- with index .Variants 0}}
 	// shared.NewSimpleStatActive({{ .ID }}) // {{ .Name }} - https://www.wowhead.com/forever/spell={{.SpellID}}
 	{{- end}}
 	{{- else}}
+	{{- if .NotSimulated}}
+	// not simulated: {{ .NotSimulated }}
+	{{- end}}
   	{{- with index .Variants 0}}
 	shared.NewSimpleStatActive({{ .ID }}) // {{ .Name }} - https://www.wowhead.com/forever/spell={{.SpellID}}
 	{{- end}}
@@ -98,7 +116,7 @@ func RegisterAllProcs() {
 	{{- if .Supported}}
 		{{- if .Proc}}
 			// {{ .Proc.Summary }}
-			shared.{{ if .Proc.Damage }}NewSpellDataDamageProc{{ else }}NewSpellDataProc{{ end }}(shared.SpellDataProc{TriggerSpellID: {{ .Proc.TriggerSpellID }}{{ if .Proc.BuffSpellID }}, BuffSpellID: {{ .Proc.BuffSpellID }}{{ end }}{{ if .Proc.IsWeaponProc }}, IsWeaponProc: true{{ end }}},
+			shared.{{ .Proc.ProcConstructor }}(shared.SpellDataProc{TriggerSpellID: {{ .Proc.TriggerSpellID }}{{ if .Proc.BuffSpellID }}, BuffSpellID: {{ .Proc.BuffSpellID }}{{ end }}{{ if .Proc.IsWeaponProc }}, IsWeaponProc: true{{ end }}},
 				[]shared.ItemVariant{
 				{{- range .Variants }}
 				{ItemID: {{.ID}}, ItemName: "{{.Name}}"},
@@ -165,7 +183,7 @@ func RegisterAllProcs() {
 		{{- if .Proc}}
 			// unsupported: {{ .Proc.Reason }}
 			// {{ .Proc.Summary }}
-			// shared.{{ if .Proc.Damage }}NewSpellDataDamageProc{{ else }}NewSpellDataProc{{ end }}(shared.SpellDataProc{TriggerSpellID: {{ .Proc.TriggerSpellID }}{{ if .Proc.BuffSpellID }}, BuffSpellID: {{ .Proc.BuffSpellID }}{{ end }}{{ if .Proc.IsWeaponProc }}, IsWeaponProc: true{{ end }}},
+			// shared.{{ .Proc.ProcConstructor }}(shared.SpellDataProc{TriggerSpellID: {{ .Proc.TriggerSpellID }}{{ if .Proc.BuffSpellID }}, BuffSpellID: {{ .Proc.BuffSpellID }}{{ end }}{{ if .Proc.IsWeaponProc }}, IsWeaponProc: true{{ end }}},
 			//	[]shared.ItemVariant{
 			{{- range .Variants }}
 			//	{ItemID: {{.ID}}, ItemName: "{{.Name}}"},
@@ -245,7 +263,7 @@ func RegisterAllEnchants() {
 	{{- if .Proc}}
 		{{- if .Supported}}
 		// {{ .Proc.Summary }}
-		shared.{{ if .Proc.Damage }}NewSpellDataDamageProc{{ else }}NewSpellDataProc{{ end }}(shared.SpellDataProc{
+		shared.{{ .Proc.ProcConstructor }}(shared.SpellDataProc{
 			{{- with index .Variants 0 }}
 			Name:           "{{ .Name }}",
 			EnchantID:      {{ .ID }},
@@ -261,7 +279,7 @@ func RegisterAllEnchants() {
 		{{- else}}
 		// unsupported: {{ .Proc.Reason }}
 		// {{ .Proc.Summary }}
-		// shared.{{ if .Proc.Damage }}NewSpellDataDamageProc{{ else }}NewSpellDataProc{{ end }}(shared.SpellDataProc{
+		// shared.{{ .Proc.ProcConstructor }}(shared.SpellDataProc{
 		{{- with index .Variants 0 }}
 		//	Name:           "{{ .Name }}",
 		//	EnchantID:      {{ .ID }},

@@ -6,6 +6,12 @@
 #   python tools/arena/background.py --detach --optimise
 #   python tools/arena/background.py --specs druid/balance,mage
 #   ARENA_REF=arena/port python tools/arena/background.py --detach --optimise   # a local branch
+#   python tools/arena/background.py --detach --optimise --all   # rerun even unchanged specs
+#
+# Incremental by default: a spec whose class (sim/<class>/, ui/specs/<class>/) and the shared
+# sim code, protos and data are unchanged since its last run keeps its file in arena-out, and
+# the run skips it. When something did change, each shape's climb resumes from the build it
+# reached last time (sim/arenalib), so a spec already at its peak costs one step, not a climb.
 #
 # --specs matches package paths (sim/druid/balance; sim/priest holds both priests), not the
 # page's spec keys.
@@ -22,7 +28,6 @@
 import argparse
 import json
 import os
-import shutil
 import subprocess
 import sys
 import time
@@ -99,15 +104,17 @@ def prepare_worktree():
     else:
         run_git('checkout', '-q', '--detach', REF)
         run_git('reset', '-q', '--hard', REF)
-    # The generated protos are gitignored, so a worktree has none and every package fails setup -
-    # which is exactly how the first run from here ended, 30 seconds in. There is no protoc on this
-    # machine to generate them, so they come from the main checkout, which is built from the same
-    # .proto files at the same commit.
-    # ponytail: copies rather than generates; stale if someone edits a .proto without rebuilding.
-    generated = os.path.join('sim', 'core', 'proto')
-    for name in os.listdir(os.path.join(REPO, generated)):
-        if name.endswith('.pb.go'):
-            shutil.copy2(os.path.join(REPO, generated, name), os.path.join(WORK, generated, name))
+    # The generated protos are gitignored, so a worktree has none and every package fails setup.
+    # They are generated here from the worktree's own .proto files. Copying the main checkout's
+    # used to be the shortcut, and it went stale the first time a .proto changed without that
+    # checkout being rebuilt: the post-#441 search died on a missing PseudoStat before simming
+    # anything. protoc comes from the main checkout's node_modules (@protobuf-ts/protoc), and
+    # protoc-gen-go from PATH (go install google.golang.org/protobuf/cmd/protoc-gen-go@latest).
+    protoc = os.path.join(REPO, 'node_modules', '@protobuf-ts', 'protoc', 'protoc.js')
+    protos = sorted(os.path.join('proto', n) for n in os.listdir(os.path.join(WORK, 'proto')) if n.endswith('.proto'))
+    subprocess.run(['node', protoc, '-I=./proto',
+                    '--go_opt=Mgoogle/protobuf/descriptor.proto=google.golang.org/protobuf/types/descriptorpb',
+                    '--go_out=./sim/core', *protos], cwd=WORK, check=True)
 
 
 def packages(specs):
@@ -137,6 +144,52 @@ def arena_entries(pkgs):
     return count
 
 
+# Which commit each package's spec files in arena-out were last produced at, by mode. Not .json,
+# so neither the progress count nor the merge mistakes it for a spec file.
+STAMPS = os.path.join(ARENA_OUT, '.stamps')
+
+
+def load_stamps():
+    try:
+        return json.load(open(STAMPS))
+    except Exception:
+        return {}
+
+
+def class_of(pkg):
+    return pkg.split('/sim/')[1].split('/')[0]
+
+
+def current(pkgs, optimise):
+    """The packages whose files in arena-out are still what a run today would produce: nothing
+    they read has changed since. Only a package's own class (sim/<class>/, ui/specs/<class>/) or
+    shared sim code, protos and data count; the site, docs and workflows do not move a number.
+    A search stamp also covers a plain rebuild, never the other way round."""
+    stamps = load_stamps()
+    head = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=WORK, capture_output=True, text=True).stdout.strip()
+    classes = {class_of(p) for p in pkgs}
+    fresh = []
+    for pkg in pkgs:
+        stamp = stamps.get('search', {}).get(pkg) or (None if optimise else stamps.get('rebuild', {}).get(pkg))
+        if not stamp:
+            continue
+        diff = subprocess.run(['git', 'diff', '--name-only', stamp, head], cwd=WORK, capture_output=True, text=True)
+        if diff.returncode != 0:
+            continue
+        own = (f'sim/{class_of(pkg)}/', f'ui/specs/{class_of(pkg)}/')
+        shared = lambda f: f.startswith(('sim/', 'proto/', 'assets/')) and not any(f.startswith(f'sim/{c}/') for c in classes)
+        if not any(f.startswith(own) or shared(f) for f in diff.stdout.split()):
+            fresh.append(pkg)
+    return fresh
+
+
+def stamp(pkgs, optimise):
+    stamps = load_stamps()
+    head = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=WORK, capture_output=True, text=True).stdout.strip()
+    stamps.setdefault('search' if optimise else 'rebuild', {}).update({pkg: head for pkg in pkgs})
+    json.dump(stamps, open(STAMPS, 'w'), indent=1)
+
+
 def written_since(start):
     if not os.path.isdir(ARENA_OUT):
         return []
@@ -164,6 +217,7 @@ def main():
     parser.add_argument('--push', action='store_true', help='commit and push the leaderboard when done')
     parser.add_argument('--specs', default='', help='comma separated, substring matched')
     parser.add_argument('--detach', action='store_true', help='run in a process that outlives this one')
+    parser.add_argument('--all', action='store_true', help='rerun specs even if nothing they read has changed')
     args = parser.parse_args()
     if args.push and REF != f'origin/{BRANCH}':
         # The push is HEAD:BRANCH, and HEAD would carry REF's unmerged commits along with it.
@@ -193,10 +247,20 @@ def main():
 
     prepare_worktree()
     specs = [s for s in args.specs.split(',') if s]
-    pkgs = packages(specs)
-    total = arena_entries(pkgs)
+    # Only packages that register an arena spec; the rest of ./sim/... is core with nothing to run.
+    pkgs = [p for p in packages(specs) if arena_entries([p])]
     what = 'talent search' if args.optimise else 'arena rebuild'
     url = webhook()
+    # A spec whose class and the shared sim have not changed since it last ran keeps its file:
+    # rerunning it would reproduce the same numbers, hours later.
+    skipped = [] if args.all else current(pkgs, args.optimise)
+    pkgs = [p for p in pkgs if p not in skipped]
+    if skipped:
+        print('unchanged since their last run, kept: ' + ', '.join(class_of(p) + p.split(class_of(p))[1] for p in skipped))
+    if not pkgs:
+        discord(url, f'**{what}** skipped - nothing the arena reads has changed since the last run')
+        return
+    total = arena_entries(pkgs)
     start = time.time()
 
     message = discord(url, f'**{what}** starting - {total} specs')
@@ -224,6 +288,7 @@ def main():
         discord(url, f'**{what} failed** after {elapsed(time.time() - start)} - exit {run.returncode}', message)
         sys.exit(run.returncode)
 
+    stamp(pkgs, args.optimise)
     merge = subprocess.run(['go', 'run', './tools/arena', ARENA_OUT, RESULTS], cwd=WORK, env=environment)
     if merge.returncode != 0:
         discord(url, f'**{what}** ran but the merge failed after {elapsed(time.time() - start)}', message)

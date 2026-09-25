@@ -1,5 +1,6 @@
 import { Player } from '@generated/proto/api';
-import { Class, Faction, IndividualBuffs, PartyBuffs, Race, RaidBuffs, Spec, TristateEffect, UnitReference, UnitReference_Type } from '@generated/proto/common';
+import { IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { Class, Faction, Race, Spec, TristateEffect, UnitReference, UnitReference_Type } from '@generated/proto/common';
 import { ResourceType } from '@generated/proto/spell';
 
 import { PlayerClasses } from '../player/classes';
@@ -51,19 +52,18 @@ export function textClassNameForSpec<SpecType extends Spec>(playerSpec: PlayerSp
 export const raceToFaction: Record<Race, Faction> = {
 	[Race.RaceUnknown]: Faction.Unknown,
 
-	[Race.RaceDraenei]: Faction.Alliance,
 	[Race.RaceDwarf]: Faction.Alliance,
 	[Race.RaceGnome]: Faction.Alliance,
 	[Race.RaceHuman]: Faction.Alliance,
 	[Race.RaceNightElf]: Faction.Alliance,
-	[Race.RaceSkyborneHighOrder]: Faction.Alliance,
+	[Race.RaceHighOrderSkyborne]: Faction.Alliance,
 
 	[Race.RaceBloodElf]: Faction.Horde,
 	[Race.RaceOrc]: Faction.Horde,
 	[Race.RaceTauren]: Faction.Horde,
 	[Race.RaceTroll]: Faction.Horde,
 	[Race.RaceUndead]: Faction.Horde,
-	[Race.RaceSkyborneWindshaper]: Faction.Horde,
+	[Race.RaceWindshaperSkyborne]: Faction.Horde,
 };
 
 // Returns a copy of playerOptions, with the class field set.
@@ -83,15 +83,14 @@ export function getPlayerSpecFromPlayer<SpecType extends Spec>(player: Player): 
 	throw new Error('Unable to parse spec from player proto: ' + JSON.stringify(Player.toJson(player), null, 2));
 }
 
-export const ADAMANTITE_SHARPENING_STONE_ID = 29453;
-export const ADAMANTITE_WEIGHTSTONE_ID = 34340;
+export const DENSE_SHARPENING_STONE_ID = 16138;
+export const DENSE_WEIGHTSTONE_ID = 16622;
 
-// Returns the corrected imbue id for a slot given the equipped weapon's sharp/blunt eligibility.
-// Only rewrites the Adamantite sharpening/weightstone pair; all other imbue ids pass through unchanged.
+// Swaps the Dense sharpening stone and weightstone to match the weapon; any other imbue passes through.
 export function adjustWeaponImbueId(imbueId: number, hasSharp: boolean, hasBlunt: boolean): number {
-	if (imbueId !== ADAMANTITE_SHARPENING_STONE_ID && imbueId !== ADAMANTITE_WEIGHTSTONE_ID) return imbueId;
-	if (hasSharp) return ADAMANTITE_SHARPENING_STONE_ID;
-	if (hasBlunt) return ADAMANTITE_WEIGHTSTONE_ID;
+	if (imbueId !== DENSE_SHARPENING_STONE_ID && imbueId !== DENSE_WEIGHTSTONE_ID) return imbueId;
+	if (hasSharp) return DENSE_SHARPENING_STONE_ID;
+	if (hasBlunt) return DENSE_WEIGHTSTONE_ID;
 	return 0;
 }
 
@@ -119,32 +118,24 @@ export const orderedResourceTypes: Array<ResourceType> = [
 export const AL_CATEGORY_HARD_MODE = 'Hard Mode';
 export const AL_CATEGORY_TITAN_RUNE = 'Titan Rune';
 
-export const defaultRaidBuffMajorDamageCooldowns = (_?: Class): Partial<RaidBuffs> => {
-	return RaidBuffs.create({
-		bloodlust: true,
-	});
-};
-
 // The buffs every healer gear planner starts with: the caster stat buffs, the two caster totems
-// and the blessings. No cooldowns: nothing is simulated, so Bloodlust and the like only mislead.
-// Nothing here depends on the class.
+// and the blessings. Nothing here depends on the class.
 export const defaultHealerRaidBuffs = (): RaidBuffs =>
 	RaidBuffs.create({
 		arcaneBrilliance: true,
-		giftOfTheWild: TristateEffect.TristateEffectImproved,
-		powerWordFortitude: TristateEffect.TristateEffectImproved,
-		divineSpirit: TristateEffect.TristateEffectImproved,
+		giftOfTheWild: true,
+		prayerOfFortitude: true,
+		prayerOfSpirit: true,
 	});
 
 export const defaultHealerPartyBuffs = (): PartyBuffs =>
 	PartyBuffs.create({
 		manaSpringTotem: TristateEffect.TristateEffectRegular,
-		wrathOfAirTotem: TristateEffect.TristateEffectRegular,
 	});
 
 export const defaultHealerIndividualBuffs = (): IndividualBuffs =>
 	IndividualBuffs.create({
-		blessingOfKings: true,
-		blessingOfWisdom: true,
-		blessingOfLight: true,
+		greaterBlessingOfKings: true,
+		greaterBlessingOfWisdom: true,
+		greaterBlessingOfLight: true,
 	});

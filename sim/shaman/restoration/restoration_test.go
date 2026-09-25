@@ -46,8 +46,8 @@ func TestRestorationShaman(t *testing.T) {
 	core.RunTestSuite(t, t.Name(), generators)
 }
 
-// Forever's Restoration tree, from our sim's level 60 preset.
-var StandardTalents = "-5-5503505135531051"
+// Forever's Restoration tree: the UI's Tank Healing preset.
+var StandardTalents = "--5533523315513151"
 
 var FullConsumes = &proto.ConsumesSpec{
 	FlaskId: 22853, // Flask of Mighty Restoration

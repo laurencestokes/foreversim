@@ -3,6 +3,7 @@ package paladin
 import (
 	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 )
 
 var HolyLightRankMap = spellData.HolyLight
@@ -41,7 +42,7 @@ func (paladin *Paladin) registerHolyLight(row shared.SpellData) {
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			heal := row.Heal.Damage(sim)
-			if target.HasActiveAura(core.BlessingOfLightAuraLabel) {
+			if target.HasActiveAuraWithTag(buffs.GreaterBlessingOfLightCategory) {
 				heal += blessingOfLightHolyLightBonus
 			}
 			spell.CalcAndDealHealing(sim, target, heal, spell.OutcomeHealingCrit)

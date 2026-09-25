@@ -38,8 +38,6 @@ const makeBulkSimRequestForCandidate = (
 	simRequest.simOptions!.saveAllValues = true;
 	const player = simRequest.raid!.parties[0].players[0];
 	player.equipment = candidate.gear;
-	// Keep weapon stone imbues in sync with this candidate's weapon types, mirroring the
-	// frontend auto-switch so bulk combos use the correct stone (or none).
 	if (player.consumables && candidate.gear) {
 		player.consumables = Database.getSync().lookupEquipmentSpec(candidate.gear).adjustImbues(player.consumables);
 	}

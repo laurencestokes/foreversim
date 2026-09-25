@@ -14,18 +14,6 @@ import (
 	"github.com/wowsims/forever/sim/core/proto"
 )
 
-// What the committed spells_auto_gen.go holds today. The bounds are wide enough that adding a class
-// or a patch's spells does not fail the gate, and the exact numbers are here so drift is visible.
-const (
-	generatedSpellCount  = 7427
-	generatedEffectCount = 10185
-)
-
-// The client's EffectIndex has gaps: 46 of the store's rows state an index that is not the
-// position it sits at, which is why EffectN counts by position and the store keeps the client's
-// own number alongside.
-const gappedIndexRows = 46
-
 // Installs the generated data for one test and puts the fixture back afterwards, since TestMain
 // swaps the fixture in for the whole package.
 func withGeneratedStore(t *testing.T) {
@@ -36,11 +24,10 @@ func withGeneratedStore(t *testing.T) {
 func TestGeneratedStoreShape(t *testing.T) {
 	withGeneratedStore(t)
 
+	// The bounds are wide enough that a regeneration adding a class or a patch's spells does not fail
+	// the gate. Whether the committed store is the one the committed inputs produce is
+	// TestStoreRegeneratesFromTheCommittedInputs' job.
 	rows := All()
-	if len(rows) != generatedSpellCount {
-		t.Errorf("the store holds %d spells, the snapshot pins %d - update the constant if the "+
-			"regeneration is the intended one", len(rows), generatedSpellCount)
-	}
 	if len(rows) < 5000 || len(rows) > 12000 {
 		t.Fatalf("the store holds %d spells, which is outside the [5000, 12000] a whole store has",
 			len(rows))
@@ -73,17 +60,15 @@ func TestGeneratedStoreShape(t *testing.T) {
 		}
 	}
 
-	if effects != generatedEffectCount {
-		t.Errorf("the store holds %d effects, the snapshot pins %d - update the constant if the "+
-			"regeneration is the intended one", effects, generatedEffectCount)
-	}
 	if effects < 6000 || effects > 16000 {
 		t.Errorf("the store holds %d effects, which is outside the [6000, 16000] a whole store has",
 			effects)
 	}
-	if gapped != gappedIndexRows {
-		t.Errorf("%d rows state an EffectIndex that is not its position, the snapshot pins %d - "+
-			"update the constant if the regeneration is the intended one", gapped, gappedIndexRows)
+	// The client's EffectIndex has gaps, which is why EffectN counts by position and the store keeps
+	// the client's own number alongside.
+	if gapped == 0 {
+		t.Errorf("no row states an EffectIndex that is not its position - EffectN's by-position count " +
+			"no longer has a gap to step over")
 	}
 }
 
@@ -238,6 +223,19 @@ func TestGeneratedOverrideRow(t *testing.T) {
 	}
 	if s.ProcChanceSource != ProcChancePPM {
 		t.Errorf("Armor Shatter's proc chance source is %d, want ProcChancePPM", s.ProcChanceSource)
+	}
+}
+
+// Frostbolt and Slam state 15, whose 0x2 pushes the cast back; EZ-Thro Bronze Mortar states 5.
+func TestGeneratedInterruptFlags(t *testing.T) {
+	withGeneratedStore(t)
+
+	for id, want := range map[int32]uint32{116: 15, 11605: 15, 1269268: 5} {
+		s := MustFind(id)
+		if s.InterruptFlags != want || s.PushedBack() != (want == 15) {
+			t.Errorf("%s (%d) states interrupt flags %d, pushed back %v; want %d", s.Name, id,
+				s.InterruptFlags, s.PushedBack(), want)
+		}
 	}
 }
 

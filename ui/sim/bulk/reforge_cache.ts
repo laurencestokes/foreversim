@@ -1,7 +1,8 @@
 // The reforge cache the bulk sim fills and reads back: which candidates already
 // have optimized gear, and the yield budget that keeps the pass responsive.
 import { BulkGearCandidate, ReforgeOptimizeRequest } from '@generated/proto/api';
-import { Debuffs, EquipmentSpec, PartyBuffs, RaidBuffs } from '@generated/proto/common';
+import { Debuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { EquipmentSpec } from '@generated/proto/common';
 
 import { ReforgeGearCache } from '../cache/reforge_cache';
 import type { Player } from '../player/player';

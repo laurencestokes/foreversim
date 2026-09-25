@@ -1,4 +1,4 @@
-import { Faction, Stat } from '@generated/proto/common';
+import { Class, Faction, Stat } from '@generated/proto/common';
 import { Player } from '@sim/player/player';
 import { ActionId } from '@sim/proto/action_id';
 import type { IndividualSimHost } from '@sim/sim_host';
@@ -15,6 +15,8 @@ export interface ActionInputConfig<T> {
 
 export interface StatOption {
 	stats: Array<Stat>;
+	// The class that casts this buff, where one class owns it. Set by the generated buff rows.
+	ownerClass?: Class;
 }
 
 export interface ItemStatOption<T> extends StatOption {
@@ -33,8 +35,6 @@ export interface IconEnumPickerStatOption extends PickerStatOption<IconEnumPicke
 
 export type ItemStatOptions<T> = ItemStatOption<T>;
 export type PickerStatOptions = IconPickerStatOption | MultiIconPickerStatOption | IconEnumPickerStatOption;
-// TBC's `DrumsBuff` (a party-buff swatch pick) is an icon-enum row mixed into the same config
-// arrays as the boolean/tristate icon rows, so a row renderer needs all three kinds.
 export type RenderableStatOptions = IconPickerStatOption | MultiIconPickerStatOption | IconEnumPickerStatOption;
 export type StatOptions<T, Options extends ItemStatOptions<T> | PickerStatOptions> = Array<Options>;
 
@@ -58,4 +58,43 @@ export function relevantStatOptions<T, OptionsType extends ItemStatOptions<T> | 
 				listed(individualConfig.includeBuffDebuffInputs, option),
 		)
 		.filter(option => !listed(individualConfig.excludeBuffDebuffInputs, option));
+}
+
+// A class never buffs itself with its own buff, so on that class's settings tab the row reads
+// "(External)": an outside caster is the only source. Every other option comes back as the same
+// object, so include / exclude lists that name a config keep matching it by reference.
+export function applyOwnerClassLabels<OptionsType extends RenderableStatOptions>(options: ReadonlyArray<OptionsType>, player: Player<any>): OptionsType[] {
+	const playerClass = player.getClass();
+	return options.map(option => {
+		const label = option.config.label;
+		if (option.ownerClass !== playerClass || typeof label !== 'string') return option;
+		return { ...option, config: { ...option.config, label: `${label} (External)` } };
+	});
+}
+
+const describeInput = (config: RenderableStatOptions['config']): string =>
+	config.label ?? ('actionId' in config ? `the input for spell ${config.actionId.spellId}` : 'an unlabelled input');
+
+// A registry lists its rows in display order: a prebuilt option's config stands for that option,
+// keeping the stat tags and owner class it was built with, and a literal row is written out in
+// place. Both directions throw: a config with no prebuilt option, and a prebuilt option no row
+// names. A regenerated registry therefore fails loudly instead of losing a row off the tab.
+export function inDisplayOrder(
+	prebuilt: ReadonlyArray<RenderableStatOptions>,
+	rows: ReadonlyArray<RenderableStatOptions | RenderableStatOptions['config']>,
+): RenderableStatOptions[] {
+	const composed = rows.map(row => {
+		if ('config' in row) return row;
+		const option = prebuilt.find(candidate => candidate.config === row);
+		if (!option) throw new Error(`the display order names ${describeInput(row)}, which no prebuilt row carries`);
+		return option;
+	});
+
+	const placed = new Set(composed.map(option => option.config));
+	const dropped = prebuilt.filter(option => !placed.has(option.config));
+	if (dropped.length > 0) {
+		throw new Error(`the display order leaves out ${dropped.map(option => describeInput(option.config)).join(', ')}`);
+	}
+
+	return composed;
 }

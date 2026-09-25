@@ -26,7 +26,7 @@ export const statI18nKeys: Record<Stat, string> = {
 	[Stat.StatStamina]: 'stamina',
 	[Stat.StatIntellect]: 'intellect',
 	[Stat.StatSpirit]: 'spirit',
-	[Stat.StatExpertiseRating]: 'expertise',
+	[Stat.StatExpertiseRating]: 'expertise_rating',
 	[Stat.StatDodgeRating]: 'dodge',
 	[Stat.StatParryRating]: 'parry',
 	[Stat.StatAttackPower]: 'attack_power',
@@ -57,7 +57,6 @@ export const statI18nKeys: Record<Stat, string> = {
 	[Stat.StatDefenseRating]: 'defense_rating',
 	[Stat.StatBlockRating]: 'block_rating',
 	[Stat.StatBlockValue]: 'block_value',
-	[Stat.StatResilienceRating]: 'resilience',
 	[Stat.StatArcaneResistance]: 'arcane_resistance',
 	[Stat.StatFireResistance]: 'fire_resistance',
 	[Stat.StatFrostResistance]: 'frost_resistance',
@@ -97,7 +96,6 @@ export const protoStatNameI18nKeys: Record<string, string> = {
 	['HolyDamage']: 'holy_damage',
 	['NatureDamage']: 'nature_damage',
 	['ShadowDamage']: 'shadow_damage',
-	['ResilienceRating']: 'resilience',
 	['Armor']: 'armor',
 	['BonusArmor']: 'bonus_armor',
 	['Health']: 'health',
@@ -146,6 +144,7 @@ export const pseudoStatI18nKeys: Record<PseudoStat, string> = {
 	[PseudoStat.PseudoStatBlockValuePerStrength]: 'block_per_strength',
 	[PseudoStat.PseudoStatRangedHitPercent]: 'ranged_hit',
 	[PseudoStat.PseudoStatRangedCritPercent]: 'ranged_crit',
+	[PseudoStat.PseudoStatExpertisePercent]: 'expertise',
 };
 
 export const spellSchoolI18nKeys: Record<SpellSchool, string> = {
@@ -278,7 +277,6 @@ export const areaTypeI18nKeys: Record<AreaType, string> = {
 export const raceI18nKeys: Record<Race, string> = {
 	[Race.RaceUnknown]: 'unknown',
 	[Race.RaceBloodElf]: 'blood_elf',
-	[Race.RaceDraenei]: 'draenei',
 	[Race.RaceDwarf]: 'dwarf',
 	[Race.RaceGnome]: 'gnome',
 	[Race.RaceHuman]: 'human',
@@ -287,8 +285,8 @@ export const raceI18nKeys: Record<Race, string> = {
 	[Race.RaceTauren]: 'tauren',
 	[Race.RaceTroll]: 'troll',
 	[Race.RaceUndead]: 'undead',
-	[Race.RaceSkyborneHighOrder]: 'skyborne_high_order',
-	[Race.RaceSkyborneWindshaper]: 'skyborne_windshaper',
+	[Race.RaceHighOrderSkyborne]: 'high_order_skyborne',
+	[Race.RaceWindshaperSkyborne]: 'windshaper_skyborne',
 };
 
 export const professionI18nKeys: Record<Profession, string> = {

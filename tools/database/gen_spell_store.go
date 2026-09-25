@@ -124,6 +124,8 @@ func storeValue(v reflect.Value, store reflect.Type, namer *rankEnumNamer) strin
 	switch x := v.Interface().(type) {
 	case string:
 		return strconv.Quote(x)
+	case bool:
+		return strconv.FormatBool(x)
 	case dbcenums.SpellEffectType:
 		return namer.storeEffect(x)
 	case dbcenums.EffectAuraType:
@@ -232,8 +234,14 @@ func loadStoreInputs(db *sql.DB, ladderIDs []int32, trees map[int]int) (*storeIn
 		return nil, err
 	}
 
+	forms, err := loadShapeshiftForms(db)
+	if err != nil {
+		return nil, err
+	}
+
 	in := captureStoreInputs(tables, roots, ids, nodes, points)
 	in.ItemRoots = gearRoots
+	in.Forms = forms
 	return in, nil
 }
 
@@ -269,6 +277,9 @@ func renderStore(in *storeInputs, namer *rankEnumNamer) ([]byte, error) {
 	for i, id := range ids {
 		rows[i] = tables.row(id)
 		applyTooltipHints(tables, &rows[i])
+		if err := applyEnchantChance(tables, &rows[i]); err != nil {
+			return nil, err
+		}
 	}
 	if err := applyOverrides(rows, overrides.Spells); err != nil {
 		return nil, err

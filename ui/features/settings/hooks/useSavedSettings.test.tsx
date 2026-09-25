@@ -34,29 +34,9 @@ describe('useSavedSettings', () => {
 		expect(entries[0].data.race).toBe(Race.RaceOrc);
 	});
 
-	// Saves from before Forever hold the TBC talent field, which `SavedSettings.fromJson` throws on;
-	// `useSavedData` swallows that and the entry would be gone from the panel without a word.
-	it('keeps an entry whose debuffs carry the legacy improvedSealOfTheCrusader bool', () => {
-		store({ Legacy: { race: 'RaceOrc', debuffs: { improvedSealOfTheCrusader: true, misery: true } } });
+	it('reads every entry of the slot', () => {
+		store({ Raid: { debuffs: { improvedSealOfTheCrusader: true } }, Current: { race: 'RaceOrc' } });
 
-		const { entries } = load();
-		expect(entries.map(entry => entry.name)).toEqual(['Legacy']);
-		expect(entries[0].data.debuffs?.judgementOfTheCrusader).toBe(true);
-		expect(entries[0].data.debuffs?.misery).toBe(true);
-	});
-
-	// The later TBC shape was an enum name; any rank of the debuff maps to the one Forever has.
-	it('maps a legacy enum name onto the bool', () => {
-		store({ Current: { debuffs: { improvedSealOfTheCrusader: 'TristateEffectRegular', jocRetribution2Pt4: true } } });
-
-		const debuffs = load().entries[0].data.debuffs;
-		expect(debuffs?.judgementOfTheCrusader).toBe(true);
-		expect(debuffs).not.toHaveProperty('improvedSealOfTheCrusader');
-	});
-
-	it('does not drop the other entries of the slot', () => {
-		store({ Legacy: { debuffs: { improvedSealOfTheCrusader: true } }, Current: { race: 'RaceOrc' } });
-
-		expect(load().entries.map(entry => entry.name)).toEqual(['Legacy', 'Current']);
+		expect(load().entries.map(entry => entry.name)).toEqual(['Raid', 'Current']);
 	});
 });

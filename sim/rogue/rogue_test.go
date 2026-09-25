@@ -92,9 +92,6 @@ var DefaultOptions = &proto.Player_Rogue{
 }
 
 var DefaultConsumables = &proto.ConsumesSpec{
-	FlaskId:    22854,
-	FoodId:     33872,
-	PotId:      22838,
 	ConjuredId: 7676,
 	MhImbueId:  26891, // Instant Poison
 	OhImbueId:  27186, // Deadly Poison

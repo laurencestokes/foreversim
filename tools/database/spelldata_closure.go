@@ -3,14 +3,16 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"os"
 	"maps"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/tools/database/buffmanifest"
+	"github.com/wowsims/forever/tools/database/dbc"
 	"github.com/wowsims/forever/tools/database/overrides"
 )
 
@@ -101,7 +103,24 @@ func withExtraIDs(t *spellTables, roots []int32) ([]int32, error) {
 		extras = append(extras, extra.SpellID)
 	}
 
-	return namedIDs(t, roots, extras), nil
+	return namedIDs(t, roots, extras, buffManifestIDs()), nil
+}
+
+// Every spell the buff manifest names. The generated buffs read their numbers off these rows, so they
+// are roots the way the extra spells are, and added at the same point for the same reason: a
+// manifest row added without a regeneration fails the check.
+func buffManifestIDs() []int32 {
+	var ids []int32
+	for _, spec := range buffmanifest.Manifest {
+		ids = append(ids, spec.SpellID, spec.CastID)
+		if spec.Talent != nil {
+			ids = append(ids, spec.Talent.SpellID)
+		}
+		if spec.ImpAction != nil {
+			ids = append(ids, spec.ImpAction.SpellID)
+		}
+	}
+	return ids
 }
 
 // The ids of every list that this build names as a spell, deduped and in search order. An id no
@@ -179,12 +198,9 @@ const foreverSimDBPath = "assets/db_inputs/forever_sim_db.json"
 // An enchant states the spell it applies in the EffectArg of the effect that applies it, which is
 // what LoadAndWriteRawEnchants reads as its spell id: effect 1 and effect 3 are the two that name a
 // spell.
-const enchantSpellQuery = `
-	SELECT DISTINCT EffectArg_0 FROM SpellItemEnchantment WHERE Effect_0 IN (1, 3) AND EffectArg_0 > 0
-	UNION
-	SELECT DISTINCT EffectArg_1 FROM SpellItemEnchantment WHERE Effect_1 IN (1, 3) AND EffectArg_1 > 0
-	UNION
-	SELECT DISTINCT EffectArg_2 FROM SpellItemEnchantment WHERE Effect_2 IN (1, 3) AND EffectArg_2 > 0`
+var enchantSpellQuery = enchantSlotsCTE + fmt.Sprintf(`
+	SELECT DISTINCT SpellID FROM slots WHERE Effect IN (%d, %d) AND SpellID > 0`,
+	dbc.ITEM_ENCHANTMENT_COMBAT_SPELL, dbc.ITEM_ENCHANTMENT_EQUIP_SPELL)
 
 // Every spell the roots reach: what an effect triggers, what an actionbar override swaps in, what a
 // hand link names, and what a tooltip's $<id> token points at. A spell the sim registers reads its

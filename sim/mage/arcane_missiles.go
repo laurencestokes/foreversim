@@ -1,13 +1,19 @@
 package mage
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+// Every rank is registered: a rotation can drop to a cheaper rank when mana runs short.
 func (mage *Mage) registerArcaneMissilesSpell() {
-	arcaneMissilesRank := spellData.ArcaneMissiles.Highest()
+	spellData.ArcaneMissiles.Each(func(_ int32, rank *spelldata.Spell) { mage.registerArcaneMissilesRank(rank) })
+}
+
+func (mage *Mage) registerArcaneMissilesRank(arcaneMissilesRank *spelldata.Spell) {
 	missileRank := spellData.ArcaneMissilesTriggered.Rank(arcaneMissilesRank.RankNumber())
 
 	// One missile a second for the channel; the row states the channel's length, not its period.
@@ -42,6 +48,7 @@ func (mage *Mage) registerArcaneMissilesSpell() {
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagChanneled | core.SpellFlagAPL,
 		ClassSpellMask: MageSpellArcaneMissilesCast,
+		Rank:           arcaneMissilesRank.RankNumber(),
 
 		ManaCost: core.ManaCostOptions{
 			FlatCost: int32(arcaneMissilesRank.Cost()),
@@ -54,7 +61,7 @@ func (mage *Mage) registerArcaneMissilesSpell() {
 
 		Dot: core.DotConfig{
 			Aura: core.Aura{
-				Label: "ArcaneMissiles",
+				Label: fmt.Sprintf("ArcaneMissiles-%d", arcaneMissilesRank.RankNumber()),
 				OnExpire: func(aura *core.Aura, sim *core.Simulation) {
 					// The channel holds the Arcane Blast stacks until the last missile is out.
 					if mage.ArcaneBlastAura != nil {

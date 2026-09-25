@@ -1,5 +1,6 @@
 import * as PresetUtils from '@app/preset_utils';
-import { ConsumesSpec, Debuffs, IndividualBuffs, PartyBuffs, Profession, Race, RaidBuffs, TristateEffect } from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { ConsumesSpec, Profession, Race, TristateEffect } from '@generated/proto/common';
 import { ElementalShaman_Options as ElementalShamanOptions } from '@generated/proto/shaman';
 import { SavedTalents } from '@generated/proto/ui';
 
@@ -27,21 +28,21 @@ export const OtherDefaults = {
 
 export const DefaultRaidBuffs = RaidBuffs.create({
 	arcaneBrilliance: true,
-	divineSpirit: TristateEffect.TristateEffectRegular,
-	giftOfTheWild: TristateEffect.TristateEffectImproved,
-	powerWordFortitude: TristateEffect.TristateEffectImproved,
+	giftOfTheWild: true,
+	prayerOfFortitude: true,
+	prayerOfSpirit: true,
 });
 
 export const DefaultPartyBuffs = PartyBuffs.create({
 	manaSpringTotem: TristateEffect.TristateEffectRegular,
-	moonkinAura: TristateEffect.TristateEffectRegular,
+	moonkinAura: true,
 });
 
 export const DefaultIndividualBuffs = IndividualBuffs.create({});
 
 // Master also sets Stormstrike (+20% Nature damage taken), which this engine has no debuff for.
 export const DefaultDebuffs = Debuffs.create({
-	curseOfElements: TristateEffect.TristateEffectRegular,
+	curseOfElements: true,
 });
 
 // Master's consumables, as the Forever client's items; one school elixir (Fire Power).
@@ -58,14 +59,14 @@ export const DefaultConsumables = ConsumesSpec.create({
 	conjuredId: 12662, // Demonic Rune
 });
 
-export const TalentsLevel60 = PresetUtils.makePresetTalents('Level 60', SavedTalents.create({ talentsString: '5505301500103031--503352001' }));
+export const TalentsLevel60 = PresetUtils.makePresetTalents('Level 60', SavedTalents.create({ talentsString: '5505301300103051--503352001' }));
 export const TalentsElemental = PresetUtils.makePresetTalents(
 	'Elemental 31/6/14',
-	SavedTalents.create({ talentsString: '2505301500123031-0500001-053050001' }),
+	SavedTalents.create({ talentsString: '2505301300123051-0500001-053050001' }),
 );
 export const TalentsStormcaller = PresetUtils.makePresetTalents(
 	'Stormcaller 28/23/0',
-	SavedTalents.create({ talentsString: '050433150010303-055030030004102' }),
+	SavedTalents.create({ talentsString: '150533130010303-055030030004102' }),
 );
 export const TalentPresets = [TalentsLevel60, TalentsElemental, TalentsStormcaller];
 

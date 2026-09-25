@@ -25,7 +25,9 @@ message ProtoVersion {
 	// protos need to define an api_version field so that the UI code knows
 	// to up-convert these protos to the new format whenever api_version is
 	// missing (0) or lower than current_version_number.
-	option (current_version_number) = 16;
+	// 17: upstream #39 renumbered RaidBuffs/PartyBuffs/IndividualBuffs/Debuffs (now buffs.proto)
+	// and ConsumesSpec; links older than 17 get the spec default buffs and consumables.
+	option (current_version_number) = 17;
 
 	// The actual field value is only used within unit tests.
 	int32 saved_version_number = 1;
@@ -81,21 +83,16 @@ enum Spec {
 enum Race {
 	RaceUnknown = 0;
 	RaceBloodElf = 1;
-	RaceDraenei = 2;
-	RaceDwarf = 3;
-	RaceGnome = 4;
-	RaceHuman = 5;
-	RaceNightElf = 6;
-	RaceOrc = 7;
-	RaceTauren = 8;
-	RaceTroll = 9;
-	RaceUndead = 10;
-
-	// The Skyborne pick a faction at character creation (client ChrRaces 95 and 96). Faction is
-	// derived from race everywhere in the sim, so each half gets its own entry. Blood Elf and
-	// Draenei stay in the enum for old links but no class can pick them.
-	RaceSkyborneHighOrder = 11;
-	RaceSkyborneWindshaper = 12;
+	RaceDwarf = 2;
+	RaceGnome = 3;
+	RaceHuman = 4;
+	RaceNightElf = 5;
+	RaceOrc = 6;
+	RaceTauren = 7;
+	RaceTroll = 8;
+	RaceUndead = 9;
+	RaceHighOrderSkyborne = 10;
+	RaceWindshaperSkyborne = 11;
 }
 
 enum Faction {
@@ -179,7 +176,7 @@ enum Profession {
 // the Go Stats array to be larger than the size of the Stat enum proto, but the
 // shared indices between the two must exactly match.
 //
-// NextIndex: 42;
+// NextIndex: 41;
 enum Stat {
 	// Primary attributes ("main stat")
 	StatStrength = 0;
@@ -222,25 +219,24 @@ enum Stat {
 	StatBlockValue = 27;
 	StatDodgeRating = 28;
 	StatParryRating = 29;
-	StatResilienceRating = 30;
-	StatArmor = 31;
-	StatBonusArmor = 32;
+	StatArmor = 30;
+	StatBonusArmor = 31;
 
 	// Composite stats that are built up from the above gear stats + buffs.
 	// These still belong in the Stat enum because they can be present on
 	// some enchants and because the base values need to be stored for NPCs.
-	StatHealth = 33;
-	StatMana = 34;
-	StatMP5 = 35;
+	StatHealth = 32;
+	StatMana = 33;
+	StatMP5 = 34;
 
 	// Resistances
-	StatArcaneResistance = 36;
-	StatFireResistance = 37;
-	StatFrostResistance = 38;
-	StatNatureResistance = 39;
-	StatShadowResistance = 40;
+	StatArcaneResistance = 35;
+	StatFireResistance = 36;
+	StatFrostResistance = 37;
+	StatNatureResistance = 38;
+	StatShadowResistance = 39;
 
-	StatPhysicalDamage = 41;
+	StatPhysicalDamage = 40;
 
 	// DO NOT add new stats here without discussing it first; new stats come
 	// with a performance penalty.
@@ -260,12 +256,6 @@ enum Stat {
 	//     old sim links will be broken on the UI side.
 	// (6) Increment the current_version_number option in the ProtoVersion
 	//     message at the top of this file.
-	// (7) Add a new entry to the ProtoConversionMap within the
-	//     migrateStatsArray() method of ui/core/proto_utils/stats.ts . If
-	//     the migration function for the new version works properly, then
-	//     you should see that stats arrays embedded in local storage data
-	//     and old links are automatically converted to new arrays that are
-	//     compatible with the new stats interpretation.
 }
 
 // Not all pseudostats are included here; just the ones we want to pass
@@ -307,6 +297,11 @@ enum PseudoStat {
 	PseudoStatRangedCritPercent = 25;
 
 	PseudoStatReducedCritTakenPercent = 26;
+
+	// Dodge/parry reduction in percent. Forever's sources are mostly flat percentages
+	// (talents, the Hyjal flask); ExpertiseRating covers the few rating-denominated ones
+	// (the tier 1 4P bonuses) and converts into this at 10 rating per percent.
+	PseudoStatExpertisePercent = 27;
 }
 
 message UnitStats {
@@ -314,8 +309,7 @@ message UnitStats {
 	// breaking changes to the size, ordering, or interpretation of the
 	// stats or pseudoStats arrays, then make sure to increment the
 	// current_version_number option in the ProtoVersion message at the top
-	// of this file, and also add a new entry to the data conversion map
-	// within the migrateStatsArray() method of ui/core/proto_utils/stats.ts
+	// of this file.
 	// A "breaking change" here is defined as anything that will break saved
 	// browser data or old sim links; the version need not be incremented if
 	// you simply append a new rarely-used PseudoStat to the end of the
@@ -446,151 +440,6 @@ enum TristateEffect {
 	TristateEffectImproved = 2;
 }
 
-enum Drums {
-	DrumsUnknown = 0;
-	GreaterDrumsOfBattle = 1;
-	GreaterDrumsOfRestoration = 2;
-	GreaterDrumsOfWar = 3;
-	LesserDrumsOfBattle = 4;
-	LesserDrumsOfRestoration = 5;
-	LesserDrumsOfWar = 6;
-}
-
-enum StrengthOfEarthType {
-	None = 0;
-	Basic = 1;
-	CycloneBonus = 2;
-	EnhancingTotems = 3;
-	EnhancingAndCyclone = 4;
-}
-
-// Buffs that affect the entire raid.
-// Reindexed to The Burning Crusade raid buffs.
-// Next index: 8
-message RaidBuffs {
-	bool arcane_brilliance = 1;
-	TristateEffect power_word_fortitude = 2;
-	bool shadow_protection = 3;
-	TristateEffect divine_spirit = 4;
-	TristateEffect gift_of_the_wild = 5;
-	TristateEffect thorns = 6;
-	bool bloodlust = 7; // TBC ANNI - Lust is now raid wide
-  }
-
-// Buffs that affect a single party.
-message PartyBuffs {
-	int32 ferocious_inspiration = 1; // Number of BM hunters in party.
-
-	TristateEffect blood_pact = 2;
-	TristateEffect moonkin_aura = 3;
-	TristateEffect leader_of_the_pack = 4;
-	bool devotion_aura = 6;
-	bool retribution_aura = 7;
-	// Holy spell power of the paladin providing Retribution Aura; its damage scales with it in Forever.
-	double retribution_aura_spell_power = 46;
-	bool concentration_aura = 45;
-	bool trueshot_aura = 8;
-	bool draenei_racial_melee = 9;
-	bool draenei_racial_caster = 10;
-
-	// Drums
-	Drums drums = 11;
-
-	// Item Buffs
-	int32 atiesh_druid = 35;
-	int32 atiesh_mage = 12;
-	int32 atiesh_priest = 36;
-	int32 atiesh_warlock = 13;
-	bool braided_eternium_chain = 14;
-	bool eye_of_the_night = 15;
-	bool chain_of_the_twilight_owl = 16;
-	bool jade_pendant_of_blasting = 17;
-
-	// Totems
-	TristateEffect mana_spring_totem = 18;
-	int32 mana_tide_totems = 19;
-	int32 totem_of_wrath = 20;
-	TristateEffect wrath_of_air_totem = 21;
-	bool snapshot_improved_wrath_of_air_totem = 22;
-	TristateEffect grace_of_air_totem = 23;
-	TristateEffect strength_of_earth_totem = 24;
-	bool soe_enhancement_2pt4 = 37;
-	bool snapshot_improved_strength_of_earth_totem = 25;
-
-	bool tranquil_air_totem = 26;
-
-	TristateEffect windfury_totem = 27;
-	bool totem_twisting = 34;
-
-	TristateEffect battle_shout = 28;
-
-	// Mitigation buffs
-	TristateEffect commanding_shout = 33;
-
-	// Resistance aura/totems/aspect
-	bool frost_resistance_aura = 38;
-	bool frost_resistance_totem = 39;
-	bool nature_resistance_totem = 40;
-	bool fire_resistance_totem = 41;
-	bool fire_resistance_aura = 42;
-	bool shadow_resistance_aura = 43;
-	bool aspect_of_the_wild = 44;
-}
-
-// These are usually individual actions taken by other Characters.
-message IndividualBuffs {
-	// Only used in individual sims
-	// as the class that provides these would cast them in raid sim
-
-	bool blessing_of_kings = 1;
-	bool blessing_of_salvation = 2;
-	bool blessing_of_wisdom = 4;
-	bool blessing_of_might = 5;
-	bool blessing_of_light = 10;
-
-	int32 shadow_priest_dps = 6;
-
-	bool unleashed_rage = 7;
-
-	// How many of each of these buffs the player will be receiving.
-	int32 innervates = 8;
-	int32 power_infusions = 9;
-}
-
-message Debuffs {
-	bool judgement_of_wisdom = 1;
-	bool judgement_of_light = 2;
-	bool judgement_of_the_crusader = 3;
-	bool misery = 4;
-	TristateEffect curse_of_elements = 5;
-	double isb_uptime = 6;
-	bool shadow_weaving = 7;
-
-	bool improved_scorch = 8;
-	bool winters_chill = 9;
-
-	bool blood_frenzy = 10;
-	bool gift_of_arthas = 11;
-	bool mangle = 12;
-	TristateEffect expose_armor = 13;
-	TristateEffect faerie_fire = 14;
-	bool sunder_armor = 15;
-	bool curse_of_recklessness = 16;
-
-	TristateEffect hunters_mark = 17;
-	double expose_weakness_uptime = 18;
-	double expose_weakness_hunter_agility = 19;
-
-	TristateEffect demoralizing_roar = 20;
-	TristateEffect demoralizing_shout = 21;
-	TristateEffect thunder_clap = 22;
-	bool insect_swarm = 23;
-	bool scorpid_sting = 24;
-	bool shadow_embrace = 25;
-	bool screech = 26;
-	double hemorrhage_uptime = 27;
-}
-
 message ConsumesSpec {
 	int32 pot_id = 1;
 	int32 flask_id = 2;
@@ -599,35 +448,28 @@ message ConsumesSpec {
 	int32 food_id = 5;
 	int32 conjured_id = 6;
 	int32 explosive_id = 7;
-	bool superSapper = 8;
-	bool goblinSapper = 9;
-	bool bloodthistle = 24;
-	bool bogling_root = 25;
+	bool goblinSapper = 8;
+	bool bogling_root = 9;
 	int32 mhImbue_id = 10;
 	int32 ohImbue_id = 11;
-	Drums drums_id = 12;
-	bool scroll_agi = 13;
-	bool scroll_str = 14;
-	bool scroll_int = 15;
-	bool scroll_spi = 16;
-	bool scroll_arm = 17;
-	bool pet_scroll_agi = 18;
-	bool pet_scroll_str = 19;
-	bool nightmare_seed = 20;
-	int32 pet_food_id = 21;
+	bool scroll_agi = 12;
+	bool scroll_str = 13;
+	bool scroll_int = 14;
+	bool scroll_spi = 15;
+	bool scroll_arm = 16;
 	// Contains all available potions
-	repeated int32 potions = 22;
+	repeated int32 potions = 17;
 	// Contains all available conjured items
-	repeated int32 conjured_items = 23;
+	repeated int32 conjured_items = 18;
 	// Classic buffs that stack beside the battle and guardian elixirs (master's Consumes categories).
-	int32 strength_buff_id = 26;
-	int32 attack_power_buff_id = 27;
-	int32 zanza_id = 28;
-	int32 alcohol_id = 29;
-	int32 school_elixir_id = 30;
-	int32 defense_elixir_id = 31;
-	bool dragonbreath_chili = 32;
-	int32 spell_power_elixir_id = 33;
+	int32 strength_buff_id = 19;
+	int32 attack_power_buff_id = 20;
+	int32 zanza_id = 21;
+	int32 alcohol_id = 22;
+	int32 school_elixir_id = 23;
+	int32 defense_elixir_id = 24;
+	bool dragonbreath_chili = 25;
+	int32 spell_power_elixir_id = 26;
 }
 
 enum MobType {
@@ -714,8 +556,7 @@ message Encounter {
 	// Proto version at the time these encounter settings were saved. If you
 	// make any changes to this proto that will break saved browser data or
 	// old sim links, then make sure to increment the current_version_number
-	// option within the ProtoVersion message at the top of this file, and
-	// also modify the updateProtoVersion() method of ui/core/encounter.ts .
+	// option within the ProtoVersion message at the top of this file.
 	int32 api_version = 9;
 
 	double duration = 1;
@@ -797,16 +638,15 @@ enum ConsumableType {
 	ConsumableTypeBattleElixir = 6;
 	ConsumableTypeGuardianElixir = 7;
 	ConsumableTypeImbue = 8;
-	ConsumableTypePetFood = 9;
-	ConsumableTypeOther = 10;
-	ConsumableTypeHerb = 11;
-	ConsumableTypeStrengthBuff = 12;
-	ConsumableTypeAttackPowerBuff = 13;
-	ConsumableTypeZanza = 14;
-	ConsumableTypeAlcohol = 15;
-	ConsumableTypeSchoolElixir = 16;
-	ConsumableTypeDefenseElixir = 17;
-	ConsumableTypeSpellPowerElixir = 18;
+	ConsumableTypeOther = 9;
+	ConsumableTypeHerb = 10;
+	ConsumableTypeStrengthBuff = 11;
+	ConsumableTypeAttackPowerBuff = 12;
+	ConsumableTypeZanza = 13;
+	ConsumableTypeAlcohol = 14;
+	ConsumableTypeSchoolElixir = 15;
+	ConsumableTypeDefenseElixir = 16;
+	ConsumableTypeSpellPowerElixir = 17;
 }
 
 

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 	"github.com/wowsims/forever/sim/core/proto"
 )
 
@@ -145,7 +146,7 @@ func (shaman *Shaman) RegisterWindfuryImbue(procMask core.ProcMask) {
 	aura := shaman.makeWFProcTriggerAura(dpm, &mask, mhSpell, ohSpell)
 
 	if mask.Matches(core.ProcMaskMeleeMH) {
-		aura.NewExclusiveEffect(core.WindfuryTotemCategory, false, core.ExclusiveEffect{
+		aura.NewExclusiveEffect(buffs.WindfuryTotemCategory, false, core.ExclusiveEffect{
 			Priority: shaman.WindfuryAPBonus * 2, // Need to be higher than Windfury Totem priority
 		})
 	}
@@ -259,7 +260,7 @@ func (shaman *Shaman) RegisterFlametongueImbue(procMask core.ProcMask) {
 		flameTongueSpell := shaman.newFlametongueImbueSpell(weapon)
 		aura := shaman.makeFTProcTriggerAura(itemSlot, triggerProcMask, flameTongueSpell)
 		if itemSlot == proto.ItemSlot_ItemSlotMainHand {
-			aura.NewExclusiveEffect(core.WindfuryTotemCategory, false, core.ExclusiveEffect{
+			aura.NewExclusiveEffect(buffs.WindfuryTotemCategory, false, core.ExclusiveEffect{
 				Priority: shaman.WindfuryAPBonus * 2, // Need to be higher than Windfury Totem priority
 			})
 		}

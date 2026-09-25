@@ -229,6 +229,7 @@
 			"melee_hit_rating": "Melee Hit Rating",
 			"melee_crit_rating": "Melee Crit Rating",
 			"melee_haste_rating": "Melee Haste Rating",
+			"expertise_rating": "Expertise Rating",
 			"armor_penetration": "Armor Penetration",
 			"all_hit_rating": "Hit Rating",
 			"all_crit_rating": "Crit Rating",
@@ -236,7 +237,6 @@
 			"defense_rating": "Defense Rating",
 			"block_rating": "Block Rating",
 			"block_value": "Block Value",
-			"resilience": "Resilience",
 			"arcane_resistance": "Arcane Resistance",
 			"frost_resistance": "Frost Resistance",
 			"fire_resistance": "Fire Resistance",
@@ -443,7 +443,6 @@
 		"external_damage_cooldowns": {
 			"title": "External Damage Cooldowns",
 			"tooltip": "Major damage cooldowns provided by <strong>other</strong> party/raid members.",
-			"bloodlust": "Bloodlust",
 			"skull_banner": "Skull Banner",
 			"stormlash_totem": "Stormlash Totem",
 			"tricks_of_the_trade": "Tricks of the Trade",
@@ -521,26 +520,6 @@
 				"label": "HP % for Defensive CDs",
 				"tooltip": "% of Maximum Health, below which defensive cooldowns are allowed to be used. If set to 0, this restriction is disabled."
 			},
-			"isb_uptime": {
-				"label": "ISB Uptime",
-				"tooltip": "Amount of uptime for ISB"
-			},
-			"hemo_uptime": {
-				"label": "Hemorrhage Uptime",
-				"tooltip": "Amount of time hemorrhage is on the boss from a subtely rogue"
-			},
-			"shadow_priest_dps": {
-				"label": "Shadow Priest DPS",
-				"tooltip": "Shadow Priest DPS for Mana Battery purposes. 1000 DPS = 50 mana/sec(250 MP5)."
-			},
-			"expose_weakness_uptime": {
-				"label": "Expose Weakness Uptime",
-				"tooltip": "Uptime of Expose Weakness in %."
-			},
-			"expose_weakness_hunter_agility": {
-				"label": "Expose Weakness Hunter Agility",
-				"tooltip": "The amount of Agility provided by your Hunter. Used for calculating the value of Expose Weakness."
-			},
 			"retribution_aura_spell_power": {
 				"label": "Retribution Aura Spell Power",
 				"tooltip": "The Holy spell power of the paladin providing Retribution Aura. Each hit you take deals the aura's base damage plus about 13.6% of this."
@@ -612,8 +591,8 @@
 				"tooltip": "Simulates raid doing damage to targets such that seed detonates immediately on cast."
 			},
 			"default_shout": {
-				"label": "Default Shout",
-				"tooltip": "Which shout to use by default (can be overridden in the APL."
+				"label": "Battle Shout",
+				"tooltip": "Whether the warrior keeps its own Battle Shout up (can be overridden in the APL)."
 			},
 			"default_stance": {
 				"label": "Default Stance",
@@ -720,16 +699,10 @@
 				"title": "Engineering",
 				"explosives": "Explosives"
 			},
-			"pet": {
-				"title": "Pet"
-			},
 			"imbue": {
 				"title": "Imbues",
 				"mhImbue": "Main Hand",
 				"ohImbue": "Off Hand"
-			},
-			"drums": {
-				"title": "Drums"
 			},
 			"buffs": {
 				"title": "Buffs"
@@ -2023,10 +1996,6 @@
 					"help": "Help stack",
 					"maintain": "Maintain debuff"
 				},
-				"bloodlust_timing": {
-					"label": "Bloodlust timing (Seconds)",
-					"tooltip": "When, in seconds, to use Bloodlust/Heroism."
-				},
 				"dps": {
 					"spec": {
 						"label": "Rotation",
@@ -2603,7 +2572,6 @@
 				"parry": "Parry:",
 				"block": "Block:",
 				"defense": "Defense:",
-				"resilience": "Resilience:",
 				"crush": "Crush (102.4%):",
 				"shear": "Shear (101.8%):",
 				"with_holy_shield": " (with HS)"

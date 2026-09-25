@@ -7,7 +7,6 @@ import (
 	"os"
 	"slices"
 
-	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/tools/database/dbc"
 )
 
@@ -22,6 +21,11 @@ import (
 //     does not name. The other tables are cut to the store's ids, which loses nothing: the closure
 //     only ever reads the rows of a spell it has already reached.
 //   - the talent tree's nodes, and the points each definition states.
+//   - the spell granting the enchant of each enchant equip spell in the store, with that spell's
+//     description: the equip spell ships none of its own.
+//   - the chance the enchantments state for each enchant combat spell in the store.
+//   - every SpellShapeshiftForm row, whole, since renderFormsFile reads it on its own rather than
+//     through the store's ids.
 //
 // Derived, and captured all the same because re-deriving it needs tables the store does not otherwise
 // read: the root ids. They come from the item, enchant and set-bonus tables, from the ladder and tree
@@ -56,6 +60,10 @@ type storeInputs struct {
 	// client's EffectIndex and rank.
 	TraitNodes  []traitNode
 	TraitPoints map[int32]map[int32]map[int32]float64
+
+	// Every SpellShapeshiftForm row, whole: renderFormsFile reads it directly rather than through the
+	// store's own ids, since a form names no spell for the closure to reach it by.
+	Forms []formRow
 }
 
 // The tables the generator reads, from the captured rows.
@@ -77,30 +85,12 @@ func (in *storeInputs) tables() *spellTables {
 func captureStoreInputs(t *spellTables, roots []int32, ids []int32,
 	nodes []traitNode, points map[int32]map[int32]map[int32]float64) *storeInputs {
 	in := &storeInputs{
-		spellTables: spellTables{
-			Names:            t.Names,
-			Subtexts:         map[int32]string{},
-			Descriptions:     map[int32]string{},
-			Misc:             map[int32]miscRow{},
-			Levels:           map[int32]levelsRow{},
-			Cooldowns:        map[int32]cooldownRow{},
-			Categories:       map[int32]categoryRow{},
-			AuraOptions:      map[int32]auraOptionRow{},
-			ClassOptions:     map[int32]core.ClassFlags{},
-			Interrupts:       map[int32]interruptRow{},
-			Shapeshift:       map[int32]shapeshiftRow{},
-			AuraRestrictions: map[int32]auraRestrictionRow{},
-			Targets:          map[int32]int16{},
-			Requirements:     map[int32]int32{},
-			Equipped:         map[int32]equippedRow{},
-			Labels:           map[int32][]int16{},
-			Powers:           map[int32][]storePower{},
-			Effects:          map[int32][]storeEffect{},
-		},
+		spellTables: *newSpellTables(),
 		Roots:       roots,
 		TraitNodes:  nodes,
 		TraitPoints: points,
 	}
+	in.Names = t.Names
 
 	for _, id := range ids {
 		keepString(in.Subtexts, id, t.Subtexts[id])
@@ -116,19 +106,26 @@ func captureStoreInputs(t *spellTables, roots []int32, ids []int32,
 		keepValue(in.Shapeshift, id, t.Shapeshift)
 		keepValue(in.AuraRestrictions, id, t.AuraRestrictions)
 		keepValue(in.Targets, id, t.Targets)
+		keepValue(in.CreatureType, id, t.CreatureType)
 		keepValue(in.Requirements, id, t.Requirements)
 		keepValue(in.Equipped, id, t.Equipped)
 
 		keepSlice(in.Labels, id, t.Labels)
 		keepSlice(in.Powers, id, t.Powers)
 		keepSlice(in.Effects, id, t.Effects)
+
+		keepValue(in.EnchantGrants, id, t.EnchantGrants)
+		keepValue(in.EnchantChances, id, t.EnchantChances)
+		if grant, ok := in.EnchantGrants[id]; ok {
+			keepString(in.Descriptions, grant, t.Descriptions[grant])
+		}
 	}
 	return in
 }
 
 // A row is kept only where the client states one: the absence of a SpellLevels row is itself a
 // reading - no level scaling - so writing a zero row in its place would change what the store says.
-func keepValue[V comparable](into map[int32]V, id int32, from map[int32]V) {
+func keepValue[V any](into map[int32]V, id int32, from map[int32]V) {
 	if v, ok := from[id]; ok {
 		into[id] = v
 	}

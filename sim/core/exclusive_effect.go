@@ -130,7 +130,7 @@ func (ee *ExclusiveEffect) Activate(sim *Simulation) bool {
 		return true
 	}
 
-	if ee.Category.SingleAura && ee.Category.activeEffect != nil && ee.Category.activeEffect != ee && (ee.Category.activeEffect.Priority > ee.Priority || (ee.Priority == ee.Category.activeEffect.Priority && ee.Category.activeEffect.Aura.RemainingDuration(sim) > ee.Aura.Duration)) {
+	if ee.Category.SingleAura && ee.Category.activeEffect != nil && ee.Category.activeEffect != ee && (ee.Category.activeEffect.Priority > ee.Priority || (ee.Priority == ee.Category.activeEffect.Priority && ee.Category.activeEffect.outlasts(sim, ee))) {
 		return false
 	}
 
@@ -138,7 +138,7 @@ func (ee *ExclusiveEffect) Activate(sim *Simulation) bool {
 
 	if ee.Category.activeEffect == nil {
 		ee.Category.SetActive(sim, ee)
-	} else if ee.Priority >= ee.Category.activeEffect.Priority {
+	} else if ee.Priority > ee.Category.activeEffect.Priority || (ee.Priority == ee.Category.activeEffect.Priority && !ee.Category.activeEffect.keepsTie(sim, ee)) {
 		if ee.Category.SingleAura && ee.Category.activeEffect != ee {
 			ee.Category.activeEffect.Aura.Deactivate(sim)
 		}
@@ -147,6 +147,17 @@ func (ee *ExclusiveEffect) Activate(sim *Simulation) bool {
 
 	return true
 }
+
+func (ee *ExclusiveEffect) outlasts(sim *Simulation, newcomer *ExclusiveEffect) bool {
+	return ee.Aura.RemainingDuration(sim) > newcomer.Aura.Duration
+}
+
+// On an equal bid a newcomer takes the category, as a fresh copy of the same spell does, unless it
+// is another spell and the active effect outlasts the newcomer's full duration.
+func (ee *ExclusiveEffect) keepsTie(sim *Simulation, newcomer *ExclusiveEffect) bool {
+	return ee.Aura.ActionID.SpellID != newcomer.Aura.ActionID.SpellID && ee.outlasts(sim, newcomer)
+}
+
 func (ee *ExclusiveEffect) Deactivate(sim *Simulation) {
 	if !ee.isEnabled {
 		return

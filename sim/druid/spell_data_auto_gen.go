@@ -26,6 +26,8 @@ type generatedSpellData struct {
 	Bash                      spelldata.Ladder
 	BearForm                  spelldata.Ladder
 	BearFormTriggered         spelldata.Ladder
+	BloodFrenzy               spelldata.Ladder
+	BloodFrenzyTriggered      spelldata.Ladder
 	BrutalImpact              spelldata.Ladder
 	CatForm                   spelldata.Ladder
 	CatFormTriggered          spelldata.Ladder
@@ -83,7 +85,6 @@ type generatedSpellData struct {
 	LeaderOfThePack           spelldata.Ladder
 	LeaderOfThePackTriggered  spelldata.Ladder
 	LivingSpirit              spelldata.Ladder
-	Mangle                    spelldata.Ladder
 	MarkOfTheWild             spelldata.Ladder
 	Maul                      spelldata.Ladder
 	Moonfire                  spelldata.Ladder
@@ -113,8 +114,7 @@ type generatedSpellData struct {
 	PounceBleed               spelldata.Ladder
 	PredatoryInstincts        spelldata.Ladder
 	PredatoryStrikes          spelldata.Ladder
-	PrimalFury                spelldata.Ladder
-	PrimalFuryTriggered       spelldata.Ladder
+	PrimalBite                spelldata.Ladder
 	Prowl                     spelldata.Ladder
 	Rake                      spelldata.Ladder
 	Ravage                    spelldata.Ladder
@@ -160,6 +160,8 @@ var spellData = generatedSpellData{
 	Bash:                      spelldata.Ranked(5211, 6798, 8983),
 	BearForm:                  spelldata.Ranked(5487),
 	BearFormTriggered:         spelldata.Ranked(1178),
+	BloodFrenzy:               spelldata.Talent(16958, 2),
+	BloodFrenzyTriggered:      spelldata.Ranked(16959),
 	BrutalImpact:              spelldata.Talent(16940, 2),
 	CatForm:                   spelldata.Ranked(768),
 	CatFormTriggered:          spelldata.Ranked(3025),
@@ -217,7 +219,6 @@ var spellData = generatedSpellData{
 	LeaderOfThePack:           spelldata.Ranked(17007),
 	LeaderOfThePackTriggered:  spelldata.Ranked(24932),
 	LivingSpirit:              spelldata.Talent(1309631, 3),
-	Mangle:                    spelldata.Ranked(407995, 1238069, 1238070, 1238073),
 	MarkOfTheWild:             spelldata.Ranked(1126, 5232, 6756, 5234, 8907, 9884, 9885),
 	Maul:                      spelldata.Ranked(6807, 6808, 6809, 8972, 9745, 9880, 9881),
 	Moonfire:                  spelldata.Ranked(8921, 8924, 8925, 8926, 8927, 8928, 8929, 9833, 9834, 9835),
@@ -247,8 +248,7 @@ var spellData = generatedSpellData{
 	PounceBleed:               spelldata.Ranked(9007, 9824, 9826),
 	PredatoryInstincts:        spelldata.Talent(1223242, 2),
 	PredatoryStrikes:          spelldata.Talent(16972, 3),
-	PrimalFury:                spelldata.Talent(16958, 2),
-	PrimalFuryTriggered:       spelldata.Ranked(16959),
+	PrimalBite:                spelldata.Ranked(407995, 1238069, 1238070, 1238073),
 	Prowl:                     spelldata.Ranked(5215, 6783, 9913),
 	Rake:                      spelldata.Ranked(1822, 1823, 1824, 9904),
 	Ravage:                    spelldata.Ranked(6785, 6787, 9866, 9867),

@@ -1,6 +1,8 @@
 import { Player } from '@generated/proto/api';
-import { ConsumesSpec, Drums, PartyBuffs } from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { ConsumesSpec } from '@generated/proto/common';
 import { IndividualSimSettings } from '@generated/proto/ui';
+import { DpsWarrior_Options, WarriorOptions } from '@generated/proto/warrior';
 import { CURRENT_API_VERSION } from '@sim/constants/other';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,61 +12,70 @@ vi.mock('@i18n/config', () => ({ default: { t: (key: string) => key } }));
 
 const { updateIndividualProtoVersion } = await import('./proto_version');
 
-const GREATER_DRUMS_OF_BATTLE = 351355;
+const defaults = {
+	raidBuffs: RaidBuffs.create({ arcaneBrilliance: true }),
+	partyBuffs: PartyBuffs.create({ trueshotAura: true }),
+	individualBuffs: IndividualBuffs.create({ greaterBlessingOfKings: true }),
+	debuffs: Debuffs.create({ sunderArmor: true }),
+	consumables: ConsumesSpec.create({ flaskId: 13510 }),
+	specOptions: DpsWarrior_Options.create({ classOptions: WarriorOptions.create({ useBattleShout: true, queueDelay: 250 }) }),
+};
 
-const settings = (apiVersion: number, drumsId: number) =>
+// What an old link decodes to: noise in every renumbered field.
+const settings = (apiVersion: number) =>
 	IndividualSimSettings.create({
 		apiVersion,
-		player: Player.create({ consumables: ConsumesSpec.create({ drumsId }) }),
-		partyBuffs: PartyBuffs.create(),
+		raidBuffs: RaidBuffs.create({ thorns: true }),
+		partyBuffs: PartyBuffs.create({ bloodPact: true }),
+		debuffs: Debuffs.create({ giftOfArthas: true }),
+		player: Player.create({
+			buffs: IndividualBuffs.create({ innervates: 3 }),
+			consumables: ConsumesSpec.create({ potId: 99 }),
+			spec: {
+				oneofKind: 'dpsWarrior',
+				dpsWarrior: {
+					options: DpsWarrior_Options.create({ classOptions: WarriorOptions.create({ useBattleShout: false, queueDelay: 1, startingRage: 20 }) }),
+				},
+			},
+		}),
 	});
 
 describe('updateIndividualProtoVersion', () => {
 	beforeEach(() => added.mockClear());
 
-	it('moves a pre-7 payload’s party drums onto the party buffs and clears the consumable', () => {
-		const proto = settings(6, GREATER_DRUMS_OF_BATTLE);
+	it('resets a pre-17 payload’s buffs, debuffs, consumables and warrior shout options to the spec defaults, with one toast', () => {
+		const proto = settings(16);
 
-		updateIndividualProtoVersion(proto);
+		updateIndividualProtoVersion(proto, defaults);
 
-		expect(proto.partyBuffs?.drums).toBe(Drums.LesserDrumsOfBattle);
-		expect(proto.player?.consumables?.drumsId).toBe(0);
+		expect(proto.raidBuffs).toEqual(defaults.raidBuffs);
+		expect(proto.partyBuffs).toEqual(defaults.partyBuffs);
+		expect(proto.debuffs).toEqual(defaults.debuffs);
+		expect(proto.player?.buffs).toEqual(defaults.individualBuffs);
+		expect(proto.player?.consumables).toEqual(defaults.consumables);
+		const spec = proto.player?.spec;
+		const classOptions = spec?.oneofKind === 'dpsWarrior' ? spec.dpsWarrior.options?.classOptions : undefined;
+		expect(classOptions).toMatchObject({ useBattleShout: true, queueDelay: 250, startingRage: 20 });
 		expect(added).toHaveBeenCalledTimes(1);
-	});
-
-	it('leaves a payload that is already past 7 alone', () => {
-		const proto = settings(7, GREATER_DRUMS_OF_BATTLE);
-
-		updateIndividualProtoVersion(proto);
-
-		expect(proto.partyBuffs?.drums).toBe(Drums.DrumsUnknown);
-		expect(proto.player?.consumables?.drumsId).toBe(GREATER_DRUMS_OF_BATTLE);
-		expect(added).not.toHaveBeenCalled();
-	});
-
-	it('stamps every migrated payload as current, so it is not migrated twice', () => {
-		const proto = settings(6, GREATER_DRUMS_OF_BATTLE);
-
-		updateIndividualProtoVersion(proto);
-
 		expect(proto.apiVersion).toBe(CURRENT_API_VERSION);
 	});
 
-	it('stamps a version-14 payload as current without touching it: the priest oneof rename happens before parsing', () => {
-		const proto = settings(14, GREATER_DRUMS_OF_BATTLE);
+	it('copies the defaults rather than sharing them', () => {
+		const proto = settings(1);
 
-		updateIndividualProtoVersion(proto);
+		updateIndividualProtoVersion(proto, defaults);
+		proto.raidBuffs!.arcaneBrilliance = false;
 
-		expect(proto.apiVersion).toBe(CURRENT_API_VERSION);
-		expect(proto.player?.consumables?.drumsId).toBe(GREATER_DRUMS_OF_BATTLE);
-		expect(added).not.toHaveBeenCalled();
+		expect(defaults.raidBuffs.arcaneBrilliance).toBe(true);
 	});
 
-	it('says nothing when the old payload carried no drums', () => {
-		const proto = settings(6, 0);
+	it('leaves a version-17 payload alone', () => {
+		const proto = settings(17);
+		const before = IndividualSimSettings.clone(proto);
 
-		updateIndividualProtoVersion(proto);
+		updateIndividualProtoVersion(proto, defaults);
 
+		expect(proto).toEqual(before);
 		expect(added).not.toHaveBeenCalled();
 	});
 });

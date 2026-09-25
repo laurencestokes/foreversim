@@ -8,7 +8,6 @@ export const OUTCOME_LABEL: Record<Outcome, string> = {
 	block: 'Block',
 	glance: 'Glance',
 	crit: 'Crit',
-	'suppressed-crit': 'Suppressed Crit',
 	crush: 'Crush',
 	hit: 'Hit',
 };

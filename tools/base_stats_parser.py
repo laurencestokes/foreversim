@@ -136,10 +136,9 @@ import (
     output = header
     ratings = cs.CombatRatings[str(BASE_LEVEL)]
 
-    # The gametable gives expertise rating per whole percent; the sim counts
-    # expertise in quarter percents (see spell_result.go's
-    # math.Floor(rating/ExpertisePerQuarterPercentReduction)/400).
-    output += f"const ExpertisePerQuarterPercentReduction = {float(ratings['Expertise']) / 4}\n"
+    # Rating per whole percent, like the hit and crit constants below. ExpertiseRating feeds
+    # ExpertisePercent through a stat dependency; there is no quarter-point rounding in Forever.
+    output += f"const ExpertiseRatingPerExpertisePercent = {float(ratings['Expertise']):f}\n"
     output += f"const DefenseRatingPerDefenseLevel = {float(ratings['Defense Skill']):f}\n"
     output += f"const DodgeRatingPerDodgePercent = {float(ratings['Dodge']):f}\n"
     output += f"const ParryRatingPerParryPercent = {float(ratings['Parry']):f}\n"
@@ -195,7 +194,7 @@ def GenMechanicsTsFile(cs: ClassStats):
         f"export const CHARACTER_LEVEL = {BASE_LEVEL};",
         f"export const BOSS_LEVEL = CHARACTER_LEVEL + {BOSS_LEVEL_OFFSET};",
         "",
-        f"export const EXPERTISE_PER_QUARTER_PERCENT_REDUCTION = {num(float(ratings['Expertise']) / 4)};",
+        f"export const EXPERTISE_RATING_PER_EXPERTISE_PERCENT = {num(ratings['Expertise'])};",
         f"export const PHYSICAL_HASTE_RATING_PER_HASTE_PERCENT = {num(ratings['Haste - Melee'])};",
         f"export const SPELL_HASTE_RATING_PER_HASTE_PERCENT = {num(ratings['Haste - Spell'])};",
         f"export const SPELL_CRIT_RATING_PER_CRIT_PERCENT = {num(ratings['Crit - Spell'])};",
@@ -208,7 +207,6 @@ def GenMechanicsTsFile(cs: ClassStats):
         f"export const BLOCK_RATING_PER_BLOCK_PERCENT = {num(ratings['Block'])};",
         "",
         f"export const MISS_DODGE_PARRY_BLOCK_CRIT_CHANCE_PER_DEFENSE = {num(GoConstant('MissDodgeParryBlockCritChancePerDefense'))};",
-        f"export const RESILIENCE_RATING_PER_CRIT_REDUCTION_CHANCE = {num(GoConstant('ResilienceRatingPerCritReductionChance'))};",
         "",
     ]
     return "\n".join(lines)

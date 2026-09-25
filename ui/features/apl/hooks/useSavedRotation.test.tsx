@@ -1,5 +1,6 @@
-import { APLRotation } from '@generated/proto/apl';
+import { APLRotation, APLRotation_Type } from '@generated/proto/apl';
 import { SavedRotation } from '@generated/proto/ui';
+import { DpsWarrior_Rotation, DpsWarriorSpec, WarriorSunder } from '@generated/proto/warrior';
 import { SimHostProvider } from '@sim/context/SimHostContext';
 import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -23,9 +24,21 @@ const withUuids = SavedRotation.create({
 	}),
 });
 
+const simpleArms = SavedRotation.create({
+	rotation: APLRotation.create({
+		type: APLRotation_Type.TypeSimple,
+		simple: { specRotationJson: '{"spec":"DpsWarriorSpecArms","sunderArmor":"WarriorSunderMaintain"}' },
+	}),
+});
+
 const Probe = () => {
 	const { entries } = useSavedRotation();
-	return <span data-testid="json">{entries[0]?.json ?? ''}</span>;
+	return (
+		<>
+			<span data-testid="json">{entries[0]?.json ?? ''}</span>
+			<span data-testid="spec-rotation-json">{entries[0]?.data.rotation?.simple?.specRotationJson ?? ''}</span>
+		</>
+	);
 };
 
 const mount = () => {
@@ -47,5 +60,15 @@ describe('useSavedRotation', () => {
 
 		expect(getByTestId('json').textContent).not.toContain('uuid');
 		expect(getByTestId('json').textContent).not.toContain('minted-by-an-older-build');
+	});
+
+	it('hands the simple rotation json to the spec parser as it was stored', () => {
+		window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ Arms: SavedRotation.toJson(simpleArms) }));
+
+		const { getByTestId } = mount();
+		const rotation = DpsWarrior_Rotation.fromJson(JSON.parse(getByTestId('spec-rotation-json').textContent!));
+
+		expect(rotation.spec).toBe(DpsWarriorSpec.DpsWarriorSpecArms);
+		expect(rotation.sunderArmor).toBe(WarriorSunder.WarriorSunderMaintain);
 	});
 });

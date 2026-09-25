@@ -26,10 +26,10 @@ var BaseStats = map[BaseStatsKey]stats.Stats{}
 // but no attributes.
 //
 // ClassBaseStats + RaceOffsets hold TRUE pre-racial base attributes: the
-// multiplier racials (The Human Spirit ×1.1 spirit, gnome Expansive Mind
-// ×1.05 int, applied via MultiplyStat in racials.go) are NOT included here.
+// multiplier racials (The Human Spirit ×1.05 spirit, applied via MultiplyStat
+// in racials.go) are NOT included here.
 // A naked character sheet shows floor(base × racial), e.g. human paladin
-// spirit 89 shows as 97; multipliers (racial, Kings, %-stat talents) stack
+// spirit 89 shows as 93; multipliers (racial, Kings, %-stat talents) stack
 // multiplicatively on the unfloored value with a single floor at the end.
 //
 // The game keeps one attribute row per race and class, but that table is a
@@ -103,24 +103,23 @@ var RaceOffsets = map[proto.Race]stats.Stats{
 		stats.Spirit:    1,
 		stats.Stamina:   1,
 	},
-	proto.Race_RaceBloodElf: {
-		stats.Agility:   2,
-		stats.Strength:  -3,
-		stats.Intellect: 4,
-		stats.Spirit:    -1,
-		stats.Stamina:   -2,
-	},
-	proto.Race_RaceDraenei: {
-		stats.Agility:   -3,
-		stats.Strength:  1,
+	// Read from level 1 naked character sheets (2026-09-22): four Human/High
+	// Order pairs (warrior, hunter, mage, rogue) give the same delta, and a
+	// Windshaper warrior matches the High Order one, so both variants share it.
+	proto.Race_RaceHighOrderSkyborne: {
+		stats.Agility:   1,
+		stats.Strength:  -1,
 		stats.Intellect: 1,
-		stats.Spirit:    2,
+		stats.Spirit:    0,
 		stats.Stamina:   -1,
 	},
-	// The Skyborne sit at the class baseline: races 95 and 96 in the gear planner's
-	// baseStats.raceOffsets are zero for all five attributes, as the human's are.
-	proto.Race_RaceSkyborneHighOrder:  {},
-	proto.Race_RaceSkyborneWindshaper: {},
+	proto.Race_RaceWindshaperSkyborne: {
+		stats.Agility:   1,
+		stats.Strength:  -1,
+		stats.Intellect: 1,
+		stats.Spirit:    0,
+		stats.Stamina:   -1,
+	},
 }
 
 var ClassBaseStats = map[proto.Class]stats.Stats{
@@ -257,74 +256,6 @@ func AddBaseStatsCombo(r proto.Race, c proto.Class) {
 }
 
 func init() {
-	AddBaseStatsCombo(proto.Race_RaceTauren, proto.Class_ClassDruid)
-	AddBaseStatsCombo(proto.Race_RaceNightElf, proto.Class_ClassDruid)
-
-	AddBaseStatsCombo(proto.Race_RaceBloodElf, proto.Class_ClassHunter)
-	AddBaseStatsCombo(proto.Race_RaceDraenei, proto.Class_ClassHunter)
-	AddBaseStatsCombo(proto.Race_RaceDwarf, proto.Class_ClassHunter)
-	AddBaseStatsCombo(proto.Race_RaceNightElf, proto.Class_ClassHunter)
-	AddBaseStatsCombo(proto.Race_RaceOrc, proto.Class_ClassHunter)
-	AddBaseStatsCombo(proto.Race_RaceTauren, proto.Class_ClassHunter)
-	AddBaseStatsCombo(proto.Race_RaceTroll, proto.Class_ClassHunter)
-
-	AddBaseStatsCombo(proto.Race_RaceDraenei, proto.Class_ClassMage)
-	AddBaseStatsCombo(proto.Race_RaceGnome, proto.Class_ClassMage)
-	AddBaseStatsCombo(proto.Race_RaceHuman, proto.Class_ClassMage)
-	AddBaseStatsCombo(proto.Race_RaceDwarf, proto.Class_ClassMage)
-	AddBaseStatsCombo(proto.Race_RaceBloodElf, proto.Class_ClassMage)
-	AddBaseStatsCombo(proto.Race_RaceTroll, proto.Class_ClassMage)
-	AddBaseStatsCombo(proto.Race_RaceUndead, proto.Class_ClassMage)
-	AddBaseStatsCombo(proto.Race_RaceOrc, proto.Class_ClassMage)
-
-	AddBaseStatsCombo(proto.Race_RaceBloodElf, proto.Class_ClassPaladin)
-	AddBaseStatsCombo(proto.Race_RaceDraenei, proto.Class_ClassPaladin)
-	AddBaseStatsCombo(proto.Race_RaceHuman, proto.Class_ClassPaladin)
-	AddBaseStatsCombo(proto.Race_RaceDwarf, proto.Class_ClassPaladin)
-
-	AddBaseStatsCombo(proto.Race_RaceHuman, proto.Class_ClassPriest)
-	AddBaseStatsCombo(proto.Race_RaceDwarf, proto.Class_ClassPriest)
-	AddBaseStatsCombo(proto.Race_RaceGnome, proto.Class_ClassPriest)
-	AddBaseStatsCombo(proto.Race_RaceNightElf, proto.Class_ClassPriest)
-	AddBaseStatsCombo(proto.Race_RaceDraenei, proto.Class_ClassPriest)
-	AddBaseStatsCombo(proto.Race_RaceUndead, proto.Class_ClassPriest)
-	AddBaseStatsCombo(proto.Race_RaceTroll, proto.Class_ClassPriest)
-	AddBaseStatsCombo(proto.Race_RaceBloodElf, proto.Class_ClassPriest)
-
-	AddBaseStatsCombo(proto.Race_RaceBloodElf, proto.Class_ClassRogue)
-	AddBaseStatsCombo(proto.Race_RaceDwarf, proto.Class_ClassRogue)
-	AddBaseStatsCombo(proto.Race_RaceGnome, proto.Class_ClassRogue)
-	AddBaseStatsCombo(proto.Race_RaceHuman, proto.Class_ClassRogue)
-	AddBaseStatsCombo(proto.Race_RaceNightElf, proto.Class_ClassRogue)
-	AddBaseStatsCombo(proto.Race_RaceOrc, proto.Class_ClassRogue)
-	AddBaseStatsCombo(proto.Race_RaceTroll, proto.Class_ClassRogue)
-	AddBaseStatsCombo(proto.Race_RaceUndead, proto.Class_ClassRogue)
-
-	AddBaseStatsCombo(proto.Race_RaceDraenei, proto.Class_ClassShaman)
-	AddBaseStatsCombo(proto.Race_RaceOrc, proto.Class_ClassShaman)
-	AddBaseStatsCombo(proto.Race_RaceTauren, proto.Class_ClassShaman)
-	AddBaseStatsCombo(proto.Race_RaceTroll, proto.Class_ClassShaman)
-
-	AddBaseStatsCombo(proto.Race_RaceBloodElf, proto.Class_ClassWarlock)
-	AddBaseStatsCombo(proto.Race_RaceOrc, proto.Class_ClassWarlock)
-	AddBaseStatsCombo(proto.Race_RaceUndead, proto.Class_ClassWarlock)
-	AddBaseStatsCombo(proto.Race_RaceHuman, proto.Class_ClassWarlock)
-	AddBaseStatsCombo(proto.Race_RaceGnome, proto.Class_ClassWarlock)
-	AddBaseStatsCombo(proto.Race_RaceDwarf, proto.Class_ClassWarlock)
-	AddBaseStatsCombo(proto.Race_RaceTroll, proto.Class_ClassWarlock)
-
-	AddBaseStatsCombo(proto.Race_RaceDraenei, proto.Class_ClassWarrior)
-	AddBaseStatsCombo(proto.Race_RaceDwarf, proto.Class_ClassWarrior)
-	AddBaseStatsCombo(proto.Race_RaceGnome, proto.Class_ClassWarrior)
-	AddBaseStatsCombo(proto.Race_RaceHuman, proto.Class_ClassWarrior)
-	AddBaseStatsCombo(proto.Race_RaceNightElf, proto.Class_ClassWarrior)
-	AddBaseStatsCombo(proto.Race_RaceOrc, proto.Class_ClassWarrior)
-	AddBaseStatsCombo(proto.Race_RaceTauren, proto.Class_ClassWarrior)
-	AddBaseStatsCombo(proto.Race_RaceTroll, proto.Class_ClassWarrior)
-	AddBaseStatsCombo(proto.Race_RaceUndead, proto.Class_ClassWarrior)
-
-	// Every Forever pairing, including the new ones (dwarf shaman, undead paladin, orc mage and
-	// the rest) and the Skyborne, which the list above predates.
 	for class, races := range ClassRaceCapabilities {
 		for _, race := range races {
 			AddBaseStatsCombo(race, class)

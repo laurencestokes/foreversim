@@ -81,15 +81,15 @@
         "maxPoints": 1
       },
       {
-        "fieldName": "elementalFury",
-        "fancyName": "Elemental Fury",
+        "fieldName": "elementalAlacrity",
+        "fancyName": "Elemental Alacrity",
         "location": {
           "rowIdx": 2,
           "colIdx": 2
         },
-        "spellId": 16089,
-        "definitionId": 134227,
-        "maxPoints": 5
+        "spellId": 16578,
+        "definitionId": 134226,
+        "maxPoints": 3
       },
       {
         "fieldName": "improvedFireNova",
@@ -162,15 +162,15 @@
         "maxPoints": 1
       },
       {
-        "fieldName": "elementalAlacrity",
-        "fancyName": "Elemental Alacrity",
+        "fieldName": "elementalFury",
+        "fancyName": "Elemental Fury",
         "location": {
           "rowIdx": 5,
           "colIdx": 2
         },
-        "spellId": 16578,
-        "definitionId": 134226,
-        "maxPoints": 3,
+        "spellId": 16089,
+        "definitionId": 134227,
+        "maxPoints": 5,
         "prereqLocation": {
           "rowIdx": 3,
           "colIdx": 2

@@ -125,7 +125,7 @@ func (item *Item) GetStats(itemLevel int) *stats.Stats {
 		}
 		value := item.GetScaledStat(i, itemLevel)
 		for _, stat := range mapped {
-			stats[stat] = value
+			stats[stat] += value
 			if stat == proto.Stat_StatArmorPenetration {
 				stats[stat] = math.Abs(stats[stat])
 			}
@@ -246,7 +246,7 @@ func (item *Item) GetGemBonus() stats.Stats {
 			for _, effectAura := range effectAuras {
 				stat := ConvertEffectAuraToStatIndex(effectAura.EffectAura, effectAura.EffectMiscValues[0])
 				if stat > 0 {
-					stats[stat] = float64(effectAura.EffectBasePoints + 1)
+					stats[stat] = float64(effectAura.EffectBasePoints)
 				}
 			}
 		}

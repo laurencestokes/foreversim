@@ -42,7 +42,7 @@ export type ReforgeOptimizerOptions = {
 	// For example for Fury where you have SMF and TG EPs
 	getEPDefaults?: (player: Player<any>, ctx: ReforgeOptimizerContext) => Stats;
 	// Allows you to modify default softCaps
-	// For example you wish to add breakpoints for Berserking / Bloodlust if enabled
+	// For example you wish to add breakpoints for Berserking if enabled
 	updateSoftCaps?: (softCaps: StatCap[], player: Player<any>, ctx: ReforgeOptimizerContext) => StatCap[];
 	// Allows you to specifiy additional information for the soft cap tooltips
 	additionalSoftCapTooltipInformation?: StatTooltipContent;

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
@@ -11,7 +12,9 @@ import (
 
 // A totem's buff is a spell of its own; the value it gives lives on that spell, not on the totem.
 var windfuryTotemRank = spellData.WindfuryTotem.Highest()
-var windfuryTotemBuff = spellData.WindfuryTotemTriggered.Highest()
+// Build 70009 renamed the totem's party aura (10612, which triggers 10610) to "Windfury Totem", so the
+// Triggered ladder now carries both; the attack power buff is the one the aura triggers.
+var windfuryTotemBuff = spellData.WindfuryTotemTriggered.ByID(10610)
 var strengthOfEarthTotemRank = spellData.StrengthOfEarthTotem.Highest()
 var strengthOfEarthTotemBuff = spellData.StrengthOfEarthTotemTriggered.Highest()
 var graceOfAirTotemRank = spellData.GraceOfAirTotem.Highest()
@@ -103,6 +106,11 @@ func (shaman *Shaman) registerWindfuryTotemSpell() {
 		mhConfig := *shaman.AutoAttacks.MHConfig()
 		mhConfig.ActionID = mhConfig.ActionID.WithTag(windfuryTotemBuff.ID)
 		windfurySpell = shaman.GetOrRegisterSpell(mhConfig)
+	}).ApplyOnExpire(func(_ *core.Aura, sim *core.Simulation) {
+		// Since build 70009 the totem's effect is a party aura that no other air totem stacks with, so it
+		// ends with the totem instead of lingering on the weapon for a twist.
+		wfIntermediateAuraForExclusitivity.Deactivate(sim)
+		wfPartyWeaponBuffTrackingAura.Deactivate(sim)
 	}).AttachPeriodicAction(core.PeriodicActionOptions{
 		Period:          time.Second * 5,
 		TickImmediately: true,
@@ -113,7 +121,7 @@ func (shaman *Shaman) registerWindfuryTotemSpell() {
 		},
 	})
 
-	wfIntermediateAuraForExclusitivity.NewExclusiveEffect(core.WindfuryTotemCategory, false, core.ExclusiveEffect{
+	wfIntermediateAuraForExclusitivity.NewExclusiveEffect(buffs.WindfuryTotemCategory, false, core.ExclusiveEffect{
 		Priority: value,
 		OnGain: func(_ *core.ExclusiveEffect, sim *core.Simulation) {
 			wfProcTrigger.Activate(sim)
@@ -150,7 +158,7 @@ func (shaman *Shaman) registerStrengthOfEarthTotemSpell() {
 		ActionID: config.ActionID,
 		Duration: duration,
 	})
-	buffAura.NewExclusiveEffect(core.StrengthOfEarthTotemCategory+stats.Strength.StatName()+"Add", false, core.ExclusiveEffect{
+	buffAura.NewExclusiveEffect(buffs.StrengthOfEarthTotemCategory+stats.Strength.StatName()+"Add", false, core.ExclusiveEffect{
 		Priority: value,
 		OnGain: func(ee *core.ExclusiveEffect, sim *core.Simulation) {
 			ee.Aura.Unit.AddStatDynamic(sim, stats.Strength, value)
@@ -179,7 +187,7 @@ func (shaman *Shaman) registerGraceOfAirTotemSpell() {
 		ActionID: config.ActionID,
 		Duration: duration,
 	})
-	buffAura.NewExclusiveEffect(core.GraceOfAirTotemCategory+stats.Agility.StatName()+"Add", false, core.ExclusiveEffect{
+	buffAura.NewExclusiveEffect(buffs.GraceOfAirTotemCategory+stats.Agility.StatName()+"Add", false, core.ExclusiveEffect{
 		Priority: value,
 		OnGain: func(ee *core.ExclusiveEffect, sim *core.Simulation) {
 			ee.Aura.Unit.AddStatDynamic(sim, stats.Agility, value)
@@ -212,7 +220,7 @@ func (shaman *Shaman) registerManaSpringTotemSpell() {
 		ActionID: config.ActionID,
 		Duration: duration,
 	})
-	buffAura.NewExclusiveEffect(core.ManaSpringTotemCategory+stats.MP5.StatName()+"Add", false, core.ExclusiveEffect{
+	buffAura.NewExclusiveEffect(buffs.ManaSpringTotemCategory+stats.MP5.StatName()+"Add", false, core.ExclusiveEffect{
 		Priority: value,
 		OnGain: func(ee *core.ExclusiveEffect, sim *core.Simulation) {
 			ee.Aura.Unit.AddStatDynamic(sim, stats.MP5, value)

@@ -123,80 +123,8 @@ func TestNewExclusiveEffectDedupsPerAura(t *testing.T) {
 		t.Fatalf("expected 1 exclusive effect, got %d", len(aura.ExclusiveEffects))
 	}
 	// The dedup keeps the first registrant's priority; callers that need a
-	// higher value must bump it manually (see FaerieFireAura).
+	// higher value must bump it manually.
 	if first.Priority != 5 {
 		t.Fatalf("expected priority 5, got %f", first.Priority)
-	}
-}
-
-// Regression for PR #425: the raid debuff config registers Faerie Fire before
-// player Initialize(), so a talented druid's improved value must survive the
-// (category, aura) dedup regardless of registration order.
-func TestFaerieFireImprovedSurvivesDedup(t *testing.T) {
-	target := newExclusiveTestTarget()
-	configAura := FaerieFireAura(target, 0)
-	druidAura := FaerieFireAura(target, 3)
-
-	if configAura != druidAura {
-		t.Fatalf("expected both Faerie Fire registrations to share one aura")
-	}
-	if prio := configAura.ExclusiveEffects[0].Priority; prio != 3 {
-		t.Fatalf("expected improved Faerie Fire priority 3, got %f", prio)
-	}
-
-	reversed := newExclusiveTestTarget()
-	FaerieFireAura(reversed, 3)
-	aura := FaerieFireAura(reversed, 0)
-	if prio := aura.ExclusiveEffects[0].Priority; prio != 3 {
-		t.Fatalf("unimproved registration lowered priority to %f", prio)
-	}
-}
-
-// Regression: the config and druid Demoralizing Roar auras used to have
-// different labels and no exclusive category, double-dipping the AP reduction.
-func TestDemoralizingRoarSharedAura(t *testing.T) {
-	target := newExclusiveTestTarget()
-	configAura := DemoralizingRoarAura(target, 0)
-	druidAura := DemoralizingRoarAura(target, 5)
-
-	if configAura != druidAura {
-		t.Fatalf("expected both Demoralizing Roar registrations to share one aura")
-	}
-	points := int32(5)
-	expected := 204.0 * (1 + 0.08*float64(points))
-	if prio := configAura.ExclusiveEffects[0].Priority; prio != expected {
-		t.Fatalf("expected Demoralizing Roar priority %f, got %f", expected, prio)
-	}
-}
-
-// Demoralizing Roar and Demoralizing Shout are mutually exclusive — the
-// stronger of the two wins via shared category priority.
-func TestDemoralizingRoarAndShoutShareCategory(t *testing.T) {
-	target := newExclusiveTestTarget()
-	roar := DemoralizingRoarAura(target, 5)
-	shout := DemoralizingShoutAura(target, 0, 5)
-
-	if roar.ExclusiveEffects[0].Category != shout.ExclusiveEffects[0].Category {
-		t.Fatalf("expected Demoralizing Roar and Shout to share an exclusive category")
-	}
-}
-
-// Regression: the config's Demoralizing Shout registered first and clobbered a
-// talented warrior's stronger values via the shared-label dedup.
-func TestDemoralizingShoutTalentsSurviveDedup(t *testing.T) {
-	target := newExclusiveTestTarget()
-	configAura := DemoralizingShoutAura(target, 0, 0)
-	warriorAura := DemoralizingShoutAura(target, 5, 5)
-
-	if configAura != warriorAura {
-		t.Fatalf("expected both Demoralizing Shout registrations to share one aura")
-	}
-	expectedPrio := 300.0 * (1 + 0.1*5)
-	if prio := configAura.ExclusiveEffects[0].Priority; prio != expectedPrio {
-		t.Fatalf("expected Demoralizing Shout priority %f, got %f", expectedPrio, prio)
-	}
-	expectedDuration := time.Duration(float64(time.Second*30) * (1 + 0.1*5))
-	if configAura.Duration != expectedDuration {
-		t.Fatalf("expected Demoralizing Shout duration %v, got %v", expectedDuration, configAura.Duration)
 	}
 }

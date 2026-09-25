@@ -51,6 +51,7 @@ export const ItemListRow = ({
 	const showIlvl = label === SelectorModalTabs.Items;
 	const showEp = ![ItemSlot.ItemSlotTrinket1, ItemSlot.ItemSlotTrinket2].includes(slot);
 	const isItemsTab = label === SelectorModalTabs.Items;
+	const isEnchantsTab = label === SelectorModalTabs.Enchants;
 
 	const batchPlayer = isIndividualSimHost(host) ? host.player : null;
 	const batchSpec = useMemo(() => ItemSpec.create({ id: itemData.id }), [itemData.id]);
@@ -82,7 +83,7 @@ export const ItemListRow = ({
 						{!!itemData.nameDescription && <NameDescriptionLabel nameDescription={itemData.nameDescription} />}
 					</span>
 				</ItemCellAnchor>
-				<ItemNoticeIcon itemId={itemData.id} />
+				<ItemNoticeIcon itemId={isEnchantsTab ? undefined : itemData.id} enchantId={isEnchantsTab ? itemData.id : undefined} />
 			</div>
 			{isItemsTab && (
 				<div className="w-64" data-testid="selector-modal-list-item-source-container">

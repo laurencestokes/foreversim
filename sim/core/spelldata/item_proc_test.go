@@ -63,3 +63,22 @@ func TestItemProcUnsupportedCoversTheRegistrationsOwnRefusal(t *testing.T) {
 		t.Error("a row the sim would not register was called supported")
 	}
 }
+
+// An enchant aura's procs-per-minute rate rolls on weapon hits only, so a mask of spells alone refuses
+// it. An item's rate on the same mask is measured off the main hand and stands.
+func TestEnchantAuraUnsupported(t *testing.T) {
+	withRows(t, procRows())
+
+	if got := EnchantAuraUnsupported(Find(2400)); got != nil {
+		t.Errorf("unsupported = %v, want none for a rate on melee hits", got)
+	}
+
+	spellsOnly := *Find(2400)
+	spellsOnly.ProcFlags = [2]uint32{0: dbcenums.PROC_FLAG_DEAL_HARMFUL_SPELL}
+	if got := EnchantAuraUnsupported(&spellsOnly); !slices.Equal(got, []string{ReasonPPMHearsNoWeaponHits}) {
+		t.Errorf("unsupported = %v, want the rate refused on a mask of spells", got)
+	}
+	if got := ItemProcUnsupported(&spellsOnly, false); got != nil {
+		t.Errorf("unsupported = %v, want an item's rate on spells to stand", got)
+	}
+}

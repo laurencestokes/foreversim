@@ -315,7 +315,9 @@ func (warrior *Warrior) registerBloodthrill() {
 		return
 	}
 
-	bloodthrillProc := spellData.BloodthrillTriggered.Highest()
+	// The tooltip's "Lasts $1289681d": the Bloodthrill aura's 6s, not the 5s Overpower window
+	// (1282733) the talent's effect now triggers.
+	bloodthrillProc := spellData.BloodthrillTriggered.ByID(1289681)
 
 	// The proc makes Overpower usable for the buff's duration; the cast consumes it like a dodge
 	// would.
@@ -323,8 +325,9 @@ func (warrior *Warrior) registerBloodthrill() {
 		Name:     "Bloodthrill - Trigger",
 		ActionID: core.ActionID{SpellID: 1289682},
 		Callback: core.CallbackOnSpellHitDealt,
-		// 1289682's proc flags are 0x4, melee auto attacks: white swings only.
-		ProcMask:   core.ProcMaskMeleeWhiteHit,
+		// 1289682's proc flags are 0x14 (melee auto attacks and melee abilities) with attr3 0x400,
+		// main hand only: white MH swings plus MH abilities, Heroic Strike and Cleave included.
+		ProcMask:   core.ProcMaskMeleeMH,
 		Outcome:    core.OutcomeLanded,
 		ProcChance: spellData.Bloodthrill.FractionAt(warrior.Talents.Bloodthrill),
 		ExtraCondition: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) bool {
@@ -466,6 +469,12 @@ func (warrior *Warrior) registerImprovedSlam() {
 		ClassMask: SpellMaskSlam,
 		Kind:      core.SpellMod_GlobalCooldown_Flat,
 		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedSlam.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_GLOBAL_COOLDOWN)).ValueAt(warrior.Talents.ImprovedSlam)),
+	})
+
+	warrior.AddStaticMod(core.SpellModConfig{
+		ClassMask: SpellMaskSlam,
+		Kind:      core.SpellMod_Cooldown_Flat,
+		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedSlam.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COOLDOWN)).ValueAt(warrior.Talents.ImprovedSlam)),
 	})
 }
 

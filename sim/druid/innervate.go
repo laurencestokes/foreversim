@@ -2,6 +2,7 @@ package druid
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 )
 
 var innervateRank = spellData.Innervate.Highest()
@@ -22,7 +23,7 @@ func (druid *Druid) registerInnervateCD() {
 		amount = 0.2
 	}
 
-	innervateAura := core.InnervateAura(innervateTargetChar, amount, actionID.Tag)
+	innervateAura := druid.innervateAura(innervateTargetChar, amount)
 
 	innervateSpell := druid.RegisterSpell(Humanoid|Moonkin|Tree, core.SpellConfig{
 		ActionID:       actionID,
@@ -43,7 +44,7 @@ func (druid *Druid) registerInnervateCD() {
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
 			// If the target already has another Innervate, don't cast.
-			return !innervateTarget.HasActiveAuraWithTag(core.InnervateAuraTag)
+			return !innervateTarget.HasActiveAuraWithTag(buffs.InnervatesCategory)
 		},
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
 			innervateAura.Activate(sim)
@@ -57,5 +58,35 @@ func (druid *Druid) registerInnervateCD() {
 			// Require manual APL usage.
 			return false
 		},
+	})
+}
+
+// The generated Innervate aura states no regen (auras 134 and 110 are left out), so the druid's own
+// cast attaches it: full spirit regen while casting at 5x rate, as core's raid-config driver does.
+// A second druid innervating the same target reuses the first one's aura and its hooks.
+func (druid *Druid) innervateAura(char *core.Character, expectedBonusMana float64) *core.Aura {
+	if aura := char.GetAura("Innervates (Player)"); aura != nil {
+		return aura
+	}
+
+	aura := buffs.InnervatesAura(&char.Unit, true, 0)
+	manaMetrics := char.NewManaMetrics(aura.ActionID)
+	const ticks = 10
+	return aura.ApplyOnGain(func(aura *core.Aura, sim *core.Simulation) {
+		char.PseudoStats.ForceFullSpiritRegen = true
+		char.PseudoStats.SpiritRegenMultiplier *= 5
+		char.UpdateManaRegenRates()
+
+		core.StartPeriodicAction(sim, core.PeriodicActionOptions{
+			Period:   aura.Duration / ticks,
+			NumTicks: ticks,
+			OnAction: func(sim *core.Simulation) {
+				manaMetrics.AddEvent(expectedBonusMana/ticks, expectedBonusMana/ticks)
+			},
+		})
+	}).ApplyOnExpire(func(aura *core.Aura, sim *core.Simulation) {
+		char.PseudoStats.ForceFullSpiritRegen = false
+		char.PseudoStats.SpiritRegenMultiplier /= 5
+		char.UpdateManaRegenRates()
 	})
 }

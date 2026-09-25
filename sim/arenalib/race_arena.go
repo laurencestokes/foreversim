@@ -107,7 +107,7 @@ type RaceList struct {
 }
 
 type RaceRow struct {
-	// "Skyborne" for both halves, which share every racial.
+	// "Skyborne" for both halves, which share every racial a rotation uses.
 	Race string  `json:"race"`
 	Dps  float64 `json:"dps"`
 	// The standard error of that mean.
@@ -361,14 +361,15 @@ func pageDefaultGear(t *testing.T, uiDir string) string {
 	return string(file[1])
 }
 
-// The races a class can be, with the two Skyborne halves as one: they share every racial and
-// the class's base attributes, so the second would only repeat the first. The half that runs is
+// The races a class can be, with the two Skyborne halves as one: they share every passive racial
+// and their base attributes, and their on-use racials (Read Ley Line, Skysight) are in no
+// rotation, so the second would only repeat the first. The half that runs is
 // the one the class can be (a mage only High Order, a shaman only Windshaper).
 func raceCandidates(class proto.Class) []proto.Race {
 	races := []proto.Race{}
 	skyborne := false
 	for _, race := range core.ClassRaceCapabilities[class] {
-		if race == proto.Race_RaceSkyborneHighOrder || race == proto.Race_RaceSkyborneWindshaper {
+		if race == proto.Race_RaceHighOrderSkyborne || race == proto.Race_RaceWindshaperSkyborne {
 			if skyborne {
 				continue
 			}
@@ -383,7 +384,7 @@ func raceName(race proto.Race) string {
 	switch race {
 	case proto.Race_RaceNightElf:
 		return "Night Elf"
-	case proto.Race_RaceSkyborneHighOrder, proto.Race_RaceSkyborneWindshaper:
+	case proto.Race_RaceHighOrderSkyborne, proto.Race_RaceWindshaperSkyborne:
 		return "Skyborne"
 	}
 	return strings.TrimPrefix(race.String(), "Race")

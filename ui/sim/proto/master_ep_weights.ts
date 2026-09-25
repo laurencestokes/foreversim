@@ -83,7 +83,7 @@ export function masterEpWeights(w: MasterEpWeights): Stats {
 			[Stat.StatAttackPower]: v('AttackPower'),
 			[Stat.StatRangedAttackPower]: v('RangedAttackPower'),
 			[Stat.StatFeralAttackPower]: v('FeralAttackPower'),
-			[Stat.StatExpertiseRating]: v('Expertise') / (4 * Mechanics.EXPERTISE_PER_QUARTER_PERCENT_REDUCTION),
+			[Stat.StatExpertiseRating]: v('Expertise') / Mechanics.EXPERTISE_RATING_PER_EXPERTISE_PERCENT,
 			[Stat.StatArmor]: v('Armor'),
 			[Stat.StatBonusArmor]: v('BonusArmor'),
 			[Stat.StatDefenseRating]: v('Defense') / Mechanics.DEFENSE_RATING_PER_DEFENSE_LEVEL,

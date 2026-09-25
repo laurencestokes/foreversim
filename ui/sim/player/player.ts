@@ -7,6 +7,7 @@ import {
 	UnitMetadata as UnitMetadataProto,
 } from '@generated/proto/api';
 import { APLRotation, APLRotation_Type as APLRotationType, SimpleRotation } from '@generated/proto/apl';
+import { IndividualBuffs } from '@generated/proto/buffs';
 import {
 	Class,
 	ConsumableType,
@@ -16,7 +17,6 @@ import {
 	GemColor,
 	HandType,
 	HealingModel,
-	IndividualBuffs,
 	ItemRandomSuffix,
 	ItemSlot,
 	Profession,
@@ -24,7 +24,6 @@ import {
 	Race,
 	Spec,
 	Stat,
-	TristateEffect,
 	UnitReference,
 	UnitStats,
 } from '@generated/proto/common';
@@ -45,7 +44,7 @@ import { SimSettingCategories } from '../constants/sim_settings';
 import type { PresetEpWeights } from '../presets/types';
 import { ActionId } from '../proto/action_id';
 import { Database } from '../proto/database';
-import { EquippedItem } from '../proto/equipped_item';
+import { EquippedItem, getWeaponDpsStatsBySlot } from '../proto/equipped_item';
 import { Gear, ItemSwapGear } from '../proto/gear';
 import { gemMatchesSocket, isUnrestrictedGem } from '../proto/gems';
 import { canEquipEnchant, canEquipItem, enchantAppliesToItem, getMetaGemEffectEP, isPVPItem } from '../proto/items';
@@ -53,15 +52,7 @@ import { migrateOldProto, ProtoConversionMap } from '../proto/proto_migration';
 import { specTypeFunctions, withSpec } from '../proto/spec_functions';
 import type { ClassOptions, ClassSpecs, SpecClasses, SpecOptions, SpecRotation, SpecTalents, SpecTypeFunctions } from '../proto/spec_types';
 import { Stats, UnitStat } from '../proto/stats';
-import {
-	ADAMANTITE_SHARPENING_STONE_ID,
-	ADAMANTITE_WEIGHTSTONE_ID,
-	AL_CATEGORY_HARD_MODE,
-	emptyUnitReference,
-	getTalentTreePoints,
-	newUnitReference,
-	raceToFaction,
-} from '../proto/utils';
+import { AL_CATEGORY_HARD_MODE, emptyUnitReference, getTalentTreePoints, newUnitReference, raceToFaction } from '../proto/utils';
 import { MAX_PARTY_SIZE, Party } from '../raid/party';
 import { Raid } from '../raid/raid';
 import { CONJURED_CONFIG, relevantConsumableOptions } from '../settings/conjured';
@@ -697,25 +688,6 @@ export class Player<SpecType extends Spec> {
 		return ConsumesSpec.clone(this.slice().consumables);
 	}
 
-	// Weapon stones grant their crit rating to a melee weapon only, but the back-end tracks a
-	// single physical crit rating stat shared by melee and ranged, so ranged stat displays have to
-	// offset them back out.
-	getRangedImbueStatOffsets(): Stats {
-		const isWeaponStone = (imbueId: number) => imbueId === ADAMANTITE_SHARPENING_STONE_ID || imbueId === ADAMANTITE_WEIGHTSTONE_ID;
-		const consumables = this.slice().consumables;
-		const party = this.getParty();
-		const mhImbueApplied = !party || party.getBuffs().windfuryTotem === TristateEffect.TristateEffectMissing;
-
-		let offsets = new Stats();
-		if (mhImbueApplied && isWeaponStone(consumables.mhImbueId)) {
-			offsets = offsets.addStat(Stat.StatMeleeCritRating, -14);
-		}
-		if (isWeaponStone(consumables.ohImbueId)) {
-			offsets = offsets.addStat(Stat.StatMeleeCritRating, -14);
-		}
-		return offsets;
-	}
-
 	setConsumes(newConsumes: ConsumesSpec) {
 		if (ConsumesSpec.equals(this.slice().consumables, newConsumes)) return;
 
@@ -784,25 +756,12 @@ export class Player<SpecType extends Spec> {
 		let debuffStats = new Stats();
 		const debuffs = this.sim.raid.getDebuffs();
 
-		if (debuffs.faerieFire == TristateEffect.TristateEffectImproved) {
-			debuffStats = debuffStats.addPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, 3);
-			debuffStats = debuffStats.addPseudoStat(PseudoStat.PseudoStatRangedHitPercent, 3);
-		}
-
-		if (debuffs.exposeWeaknessUptime && debuffs.exposeWeaknessHunterAgility) {
-			let agi = debuffs.exposeWeaknessHunterAgility;
-
-			// TODO: Forever drops the Expose Weakness talent, so a hunter can no longer
-			// self-provide this debuff and the agility always comes from the raid setting.
-			// Restore the spec branch if Forever reintroduces an equivalent talent.
-
-			debuffStats = debuffStats.addStat(Stat.StatAttackPower, agi * 0.25);
-			debuffStats = debuffStats.addStat(Stat.StatRangedAttackPower, agi * 0.25);
-		}
-
-		// Forever's Hunter's Mark: a flat 71 ranged attack power, +15% improved (sim/core/debuffs.go).
-		if (debuffs.huntersMark != TristateEffect.TristateEffectMissing) {
-			debuffStats = debuffStats.addStat(Stat.StatRangedAttackPower, debuffs.huntersMark == TristateEffect.TristateEffectImproved ? 71 * 1.15 : 71);
+		// Spell 14325, the top rank the buff generator resolves, which HuntersMarkValue
+		// in sim/core/debuffs_auto_gen.go states. Nothing exports it to TypeScript, so
+		// the sheet repeats the number and this is the second place to change;
+		// TestHuntersMarkOnTheCharacterSheetMatchesTheSim holds the two together.
+		if (debuffs.huntersMark) {
+			debuffStats = debuffStats.addStat(Stat.StatRangedAttackPower, 71);
 		}
 
 		return debuffStats;
@@ -812,19 +771,16 @@ export class Player<SpecType extends Spec> {
 		const critImmuneCap = 5.6;
 		const currentStats = this.slice().currentStats;
 		const defense = currentStats.finalStats?.stats[Stat.StatDefenseRating] || 0;
-		const resilience = currentStats.finalStats?.stats[Stat.StatResilienceRating] || 0;
 
 		const defenseContribution = Math.floor(defense / Mechanics.DEFENSE_RATING_PER_DEFENSE_LEVEL) * Mechanics.MISS_DODGE_PARRY_BLOCK_CRIT_CHANCE_PER_DEFENSE;
-		const resilienceContribution = resilience / Mechanics.RESILIENCE_RATING_PER_CRIT_REDUCTION_CHANCE;
-		// PseudoStatReducedCritTakenPercent includes all sources: defense, resilience, and talents.
+		// PseudoStatReducedCritTakenPercent includes all sources: defense and talents.
 		const total = currentStats.finalStats?.pseudoStats[PseudoStat.PseudoStatReducedCritTakenPercent] || 0;
-		const talentContribution = total - defenseContribution - resilienceContribution;
+		const talentContribution = total - defenseContribution;
 
 		return {
 			total: total,
 			delta: critImmuneCap - total,
 			defense: defenseContribution,
-			resilience: resilienceContribution,
 			talents: talentContribution,
 		};
 	}
@@ -884,7 +840,7 @@ export class Player<SpecType extends Spec> {
 
 		const meleeCrit = (currentStats.finalStats?.pseudoStats[PseudoStat.PseudoStatMeleeCritPercent] || 0) + debuffCrit;
 		const meleeHit = (currentStats.finalStats?.pseudoStats[PseudoStat.PseudoStatMeleeHitPercent] || 0) + debuffHit;
-		const expertise = (currentStats.finalStats?.stats[Stat.StatExpertiseRating] || 0) / Mechanics.EXPERTISE_PER_QUARTER_PERCENT_REDUCTION / 4;
+		const expertise = currentStats.finalStats?.pseudoStats[PseudoStat.PseudoStatExpertisePercent] || 0;
 		const targetLevel = this.sim.encounter.primaryTarget.level;
 		const critSuppression = { 68: 0, 70: 0, 71: 1, 72: 2, 73: 4.8 }[targetLevel] ?? 0;
 		const hitSuppression = { 68: 0, 70: 0, 71: 0, 72: 0, 73: 1 }[targetLevel] ?? 0;
@@ -1185,14 +1141,22 @@ export class Player<SpecType extends Spec> {
 		return ep;
 	}
 
-	computeEnchantEP(enchant: Enchant): number {
-		if (this.enchantEPCache.has(enchant.effectId)) {
-			return this.enchantEPCache.get(enchant.effectId)!;
+	computeEnchantEP(enchant: Enchant, weaponSpeed = 0, epPerWeaponDps = 0): number {
+		let ep = this.enchantEPCache.get(enchant.effectId);
+		if (ep === undefined) {
+			ep = this.computeStatsEP(new Stats(enchant.stats, enchant.pseudoStats));
+			this.enchantEPCache.set(enchant.effectId, ep);
 		}
 
-		const ep = this.computeStatsEP(new Stats(enchant.stats));
-		this.enchantEPCache.set(enchant.effectId, ep);
+		// Flat weapon damage is worth the DPS it adds at the enchanted weapon's speed, as a weapon's own damage is.
+		if (enchant.weaponDamage && weaponSpeed) {
+			ep += (enchant.weaponDamage / weaponSpeed) * epPerWeaponDps;
+		}
 		return ep;
+	}
+
+	computeWeaponDpsEP(slot: ItemSlot): number {
+		return this.computeStatsEP(getWeaponDpsStatsBySlot(1, slot));
 	}
 
 	computeRandomSuffixEP(randomSuffix: ItemRandomSuffix): number {
@@ -1661,11 +1625,5 @@ export class Player<SpecType extends Spec> {
 
 	getSpecConfig(): SpecConfigData<SpecType> {
 		return this.specConfig;
-	}
-
-	// Returns true/false for main-hand / off-hand. Forever's weapon racials pay crit, not
-	// expertise (sim/core/racials.go), so no race has a racial expertise bonus to show.
-	getActiveRacialExpertiseBonuses(): [boolean, boolean] {
-		return [false, false];
 	}
 }

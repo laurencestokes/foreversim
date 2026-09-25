@@ -52,9 +52,9 @@ func (priest *Priest) AddPartyBuffs(_ *proto.PartyBuffs) {
 // buffs the rest of the raid is built around, so they are assumed to have become baseline.
 // TODO: beta will confirm whether they were made baseline or removed outright.
 func (priest *Priest) AddRaidBuffs(raidBuffs *proto.RaidBuffs) {
-	raidBuffs.ShadowProtection = true
-	raidBuffs.DivineSpirit = proto.TristateEffect_TristateEffectRegular
-	raidBuffs.PowerWordFortitude = proto.TristateEffect_TristateEffectImproved
+	raidBuffs.PrayerOfShadowProtection = true
+	raidBuffs.PrayerOfSpirit = true
+	raidBuffs.PrayerOfFortitude = true
 }
 
 func (priest *Priest) Initialize() {

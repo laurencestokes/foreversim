@@ -3,15 +3,12 @@ package paladin
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
 func (paladin *Paladin) registerHolyTalents() {
 	// Tier 1
-	paladin.applyImprovedHolyStrike()
 	paladin.applyDivineStrength()
 	paladin.applyDivineIntellect()
 
@@ -41,19 +38,6 @@ func (paladin *Paladin) registerHolyTalents() {
 
 	// Tier 7
 	// Light's Vigil registered in registerTalentSpells
-}
-
-// Improved Holy Strike - Reduces the cooldown of your Holy Strike ability by 1/2 sec.
-func (paladin *Paladin) applyImprovedHolyStrike() {
-	if paladin.Talents.ImprovedHolyStrike == 0 {
-		return
-	}
-
-	paladin.AddStaticMod(core.SpellModConfig{
-		ClassMask: SpellMaskHolyStrike,
-		Kind:      core.SpellMod_Cooldown_Flat,
-		TimeValue: time.Duration(spellData.ImprovedHolyStrike.ValueAt(paladin.Talents.ImprovedHolyStrike)) * time.Millisecond,
-	})
 }
 
 // Divine Strength - Increases your Strength by 2/4/6/8/10%.
@@ -112,13 +96,17 @@ func (paladin *Paladin) applySpiritualFocus() {
 // Improved Seals - Increases the damage done by your Seals and Judgements by 5/10/15%. 20224's mask
 // names the Righteousness, Command and Fury procs and judgements only; the Seal of Light heal is
 // not in it.
+//
+// The Seal of Command proc takes the talent through its weapon percent instead, see
+// registerSealOfCommand: the target's extra Holy damage taken sits outside the percent and the
+// talent must not reach it.
 func (paladin *Paladin) applyImprovedSeals() {
 	if paladin.Talents.ImprovedSeals == 0 {
 		return
 	}
 
 	paladin.AddStaticMod(core.SpellModConfig{
-		ClassMask: SpellMaskSealOfRighteousnessProc | SpellMaskSealOfCommandProc | SpellMaskSealOfFuryProc |
+		ClassMask: SpellMaskSealOfRighteousnessProc | SpellMaskSealOfFuryProc |
 			SpellMaskJudgementOfRighteousness | SpellMaskJudgementOfCommand | SpellMaskJudgementOfFury,
 		Kind:       core.SpellMod_DamageDone_Flat,
 		FloatValue: spellData.ImprovedSeals.FractionAt(paladin.Talents.ImprovedSeals),
@@ -250,17 +238,29 @@ func (paladin *Paladin) applyConsecratedGround() {
 	})
 }
 
-// Holy Power - Increases the critical strike chance of your Holy Shock spell by 3/6/9/12/15%, and
-// all other spells by 1/2/3/4/5%.
+// Holy Power - Increases the critical strike chance of your Holy Shock and Holy Strike by
+// 3/6/9/12/15%, and all other spells by 1/2/3/4/5%.
+//
+// Build 70009 states both as crit chance modifiers (5923, misc 7) on class masks. Effect 0's
+// "all other spells" is the mask below, not general spell crit: the Holy Shield proc and the Seal
+// of Light heal are outside it, the seal and judgement damage spells inside. Effect 1 names Holy
+// Shock (both halves) and Holy Strike.
 func (paladin *Paladin) applyHolyPower() {
 	if paladin.Talents.HolyPower == 0 {
 		return
 	}
 
-	paladin.AddStat(stats.SpellCritPercent, spellData.HolyPower.Effect(shared.A_MOD_SPELL_CRIT_CHANCE, 0).ValueAt(paladin.Talents.HolyPower))
 	paladin.AddStaticMod(core.SpellModConfig{
-		ClassMask:  SpellMaskHolyShock | SpellMaskHolyShockHeal,
+		ClassMask: SpellMaskConsecration | SpellMaskExorcism | SpellMaskFlashOfLight | SpellMaskHammerOfWrath |
+			SpellMaskHolyLight | SpellMaskHolyWrath | SpellMaskLayOnHands | SpellMaskLightsVigil | SpellMaskLightsVigilStrike |
+			SpellMaskJudgementOfRighteousness | SpellMaskJudgementOfCommand | SpellMaskJudgementOfFury |
+			SpellMaskSealOfRighteousnessProc | SpellMaskSealOfCommandProc | SpellMaskSealOfFuryProc,
 		Kind:       core.SpellMod_BonusCrit_Percent,
-		FloatValue: spellData.HolyPower.Effect(shared.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_CRITICAL_CHANCE)).ValueAt(paladin.Talents.HolyPower),
+		FloatValue: spellData.HolyPower.EffectAt(0).ValueAt(paladin.Talents.HolyPower),
+	})
+	paladin.AddStaticMod(core.SpellModConfig{
+		ClassMask:  SpellMaskHolyShock | SpellMaskHolyShockHeal | SpellMaskHolyStrike,
+		Kind:       core.SpellMod_BonusCrit_Percent,
+		FloatValue: spellData.HolyPower.EffectAt(1).ValueAt(paladin.Talents.HolyPower),
 	})
 }

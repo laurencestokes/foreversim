@@ -3,9 +3,12 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/tools/database/dbc"
 )
 
 // The store's rows as the generator builds them: the fields sim/core/spelldata.Spell, .Effect and
@@ -59,6 +62,7 @@ type storeSpell struct {
 
 	ClassFlags core.ClassFlags
 
+	InterruptFlags                  uint32
 	AuraInterrupt, ChannelInterrupt [2]uint32
 
 	StanceMask    uint64
@@ -66,7 +70,8 @@ type storeSpell struct {
 
 	CasterAura, ExcludeCasterAura int32
 
-	MaxTargets int16
+	MaxTargets         int16
+	TargetCreatureType int32
 
 	RequiredAreas int32
 
@@ -77,10 +82,12 @@ type storeSpell struct {
 	RefIDs []int32
 
 	// Read off Spell.Description_lang by spelldata_hints.go rather than out of a column: the
-	// tooltip's wording is what says whether ProcChance is a roll at all, and which effect holds it.
+	// tooltip's wording is what says whether ProcChance is a roll at all, which effect holds it, and
+	// whether the damage is split among the targets.
 	ProcChanceSource storeProcChanceSource
 	ProcChanceEffect int8
 	ProcHint         core.ProcHint
+	SplitsDamage     bool
 
 	Effects []storeEffect
 	Powers  []storePower
@@ -161,12 +168,19 @@ type spellTables struct {
 	Shapeshift       map[int32]shapeshiftRow
 	AuraRestrictions map[int32]auraRestrictionRow
 	Targets          map[int32]int16
+	CreatureType     map[int32]int32
 	Requirements     map[int32]int32
 	Equipped         map[int32]equippedRow
 
 	Labels  map[int32][]int16
 	Powers  map[int32][]storePower
 	Effects map[int32][]storeEffect
+
+	// The spell granting the enchant, by each enchant equip spell that answers a hit.
+	EnchantGrants map[int32]int32
+
+	// The chance the enchantments casting a combat spell state for it, by the combat spell.
+	EnchantChances map[int32]enchantChance
 
 	// The tooltip references by spell id, filled as referencedIDs reads them: the closure asks for
 	// the same spell on every pass over the store.
@@ -204,6 +218,7 @@ type auraOptionRow struct {
 }
 
 type interruptRow struct {
+	InterruptFlags                  uint32
 	AuraInterrupt, ChannelInterrupt [2]uint32
 }
 
@@ -220,10 +235,13 @@ type equippedRow struct {
 	Subclass, InvTypes int32
 }
 
-// A spell's rows exist once per difficulty on a few hundred spells - 29213 caps 20 targets at
-// difficulty 0 and 10 at 186 - and difficulty 0 is the one the sim plays.
-func loadSpellTables(db *sql.DB) (*spellTables, error) {
-	t := &spellTables{
+type enchantChance struct {
+	Chance   uint8
+	Enchants []int32
+}
+
+func newSpellTables() *spellTables {
+	return &spellTables{
 		Names:            map[int32]string{},
 		Subtexts:         map[int32]string{},
 		Descriptions:     map[int32]string{},
@@ -237,17 +255,26 @@ func loadSpellTables(db *sql.DB) (*spellTables, error) {
 		Shapeshift:       map[int32]shapeshiftRow{},
 		AuraRestrictions: map[int32]auraRestrictionRow{},
 		Targets:          map[int32]int16{},
+		CreatureType:     map[int32]int32{},
 		Requirements:     map[int32]int32{},
 		Equipped:         map[int32]equippedRow{},
 		Labels:           map[int32][]int16{},
 		Powers:           map[int32][]storePower{},
 		Effects:          map[int32][]storeEffect{},
+		EnchantGrants:    map[int32]int32{},
+		EnchantChances:   map[int32]enchantChance{},
 	}
+}
 
+// A spell's rows exist once per difficulty on a few hundred spells - 29213 caps 20 targets at
+// difficulty 0 and 10 at 186 - and difficulty 0 is the one the sim plays.
+func loadSpellTables(db *sql.DB) (*spellTables, error) {
+	t := newSpellTables()
 	for _, load := range []func(*sql.DB) error{
 		t.loadNames, t.loadMisc, t.loadLevels, t.loadCooldowns, t.loadCategories, t.loadAuraOptions,
 		t.loadClassOptions, t.loadInterrupts, t.loadShapeshift, t.loadAuraRestrictions, t.loadTargetRestrictions,
 		t.loadCastingRequirements, t.loadEquippedItems, t.loadLabels, t.loadPowers, t.loadEffects,
+		t.loadEnchantGrants, t.loadEnchantChances,
 	} {
 		if err := load(db); err != nil {
 			return nil, err
@@ -291,7 +318,7 @@ func (t *spellTables) row(id int32) storeSpell {
 	s.ClassFlags = t.ClassOptions[id]
 
 	i := t.Interrupts[id]
-	s.AuraInterrupt, s.ChannelInterrupt = i.AuraInterrupt, i.ChannelInterrupt
+	s.InterruptFlags, s.AuraInterrupt, s.ChannelInterrupt = i.InterruptFlags, i.AuraInterrupt, i.ChannelInterrupt
 
 	ss := t.Shapeshift[id]
 	s.StanceMask, s.StanceExclude = ss.Mask, ss.Exclude
@@ -300,6 +327,7 @@ func (t *spellTables) row(id int32) storeSpell {
 	s.CasterAura, s.ExcludeCasterAura = ar.CasterAura, ar.ExcludeCasterAura
 
 	s.MaxTargets = t.Targets[id]
+	s.TargetCreatureType = t.CreatureType[id]
 	s.RequiredAreas = t.Requirements[id]
 
 	e := t.Equipped[id]
@@ -488,15 +516,16 @@ func (t *spellTables) loadClassOptions(db *sql.DB) error {
 
 func (t *spellTables) loadInterrupts(db *sql.DB) error {
 	return eachRow(db, `
-		SELECT SpellID, COALESCE(AuraInterruptFlags_0, 0), COALESCE(AuraInterruptFlags_1, 0),
+		SELECT SpellID, COALESCE(InterruptFlags, 0), COALESCE(AuraInterruptFlags_0, 0), COALESCE(AuraInterruptFlags_1, 0),
 		       COALESCE(ChannelInterruptFlags_0, 0), COALESCE(ChannelInterruptFlags_1, 0)
 		FROM SpellInterrupts WHERE DifficultyID = 0 ORDER BY SpellID`, func(rows *sql.Rows) error {
 		var id int32
-		var aura0, aura1, channel0, channel1 int64
-		if err := rows.Scan(&id, &aura0, &aura1, &channel0, &channel1); err != nil {
+		var flags, aura0, aura1, channel0, channel1 int64
+		if err := rows.Scan(&id, &flags, &aura0, &aura1, &channel0, &channel1); err != nil {
 			return err
 		}
 		return putOnce(t.Interrupts, id, interruptRow{
+			InterruptFlags:   uint32(flags),
 			AuraInterrupt:    [2]uint32{uint32(aura0), uint32(aura1)},
 			ChannelInterrupt: [2]uint32{uint32(channel0), uint32(channel1)},
 		}, "SpellInterrupts rows at difficulty 0")
@@ -539,14 +568,21 @@ func (t *spellTables) loadAuraRestrictions(db *sql.DB) error {
 
 func (t *spellTables) loadTargetRestrictions(db *sql.DB) error {
 	return eachRow(db, `
-		SELECT SpellID, COALESCE(MaxTargets, 0)
+		SELECT SpellID, COALESCE(MaxTargets, 0), COALESCE(TargetCreatureType, 0)
 		FROM SpellTargetRestrictions WHERE DifficultyID = 0 ORDER BY SpellID`, func(rows *sql.Rows) error {
 		var id int32
 		var maxTargets int16
-		if err := rows.Scan(&id, &maxTargets); err != nil {
+		var creatureType int32
+		if err := rows.Scan(&id, &maxTargets, &creatureType); err != nil {
 			return err
 		}
-		return putOnce(t.Targets, id, maxTargets, "SpellTargetRestrictions rows at difficulty 0")
+		if err := putOnce(t.Targets, id, maxTargets, "SpellTargetRestrictions rows at difficulty 0"); err != nil {
+			return err
+		}
+		if creatureType != 0 {
+			t.CreatureType[id] = creatureType
+		}
+		return nil
 	})
 }
 
@@ -664,6 +700,66 @@ func (t *spellTables) loadEffects(db *sql.DB) error {
 		}
 
 		t.Effects[e.SpellID] = append(t.Effects[e.SpellID], e)
+		return nil
+	})
+}
+
+// The three effect slots of every SpellItemEnchantment row, one row per slot.
+const enchantSlotsCTE = `
+	WITH slots AS (
+		SELECT ID, Effect_0 AS Effect, EffectPointsMin_0 AS Points, EffectArg_0 AS SpellID FROM SpellItemEnchantment
+		UNION ALL SELECT ID, Effect_1, EffectPointsMin_1, EffectArg_1 FROM SpellItemEnchantment
+		UNION ALL SELECT ID, Effect_2, EffectPointsMin_2, EffectArg_2 FROM SpellItemEnchantment)`
+
+// The equip spells (Effect 3) of each SpellItemEnchantment row that answer a hit, with the
+// E_ENCHANT_ITEM spell granting the enchant. Several spells can grant one enchant - a recipe
+// re-taught by a later expansion - and several enchants can share an equip spell; the lowest grant
+// is the one kept, as enchantGrantEffects keeps it.
+func (t *spellTables) loadEnchantGrants(db *sql.DB) error {
+	auras := make([]string, len(dbc.EnchantProcAuras))
+	for i, aura := range dbc.EnchantProcAuras {
+		auras[i] = strconv.Itoa(int(aura))
+	}
+
+	return eachRow(db, enchantSlotsCTE+fmt.Sprintf(`
+		SELECT s.SpellID, min(g.SpellID)
+		FROM slots s
+		JOIN SpellEffect g ON g.Effect = %d AND g.EffectMiscValue_0 = s.ID
+		WHERE s.Effect = %d AND s.SpellID > 0 AND EXISTS (
+			SELECT 1 FROM SpellEffect a
+			WHERE a.SpellID = s.SpellID AND a.DifficultyID = 0 AND a.EffectAura IN (%s))
+		GROUP BY s.SpellID ORDER BY s.SpellID`,
+		dbcenums.E_ENCHANT_ITEM, dbc.ITEM_ENCHANTMENT_EQUIP_SPELL, strings.Join(auras, ", ")),
+		func(rows *sql.Rows) error {
+			var id, grant int32
+			if err := rows.Scan(&id, &grant); err != nil {
+				return err
+			}
+			t.EnchantGrants[id] = grant
+			return nil
+		})
+}
+
+// The chance each combat spell (Effect 1) of a SpellItemEnchantment row is cast at, which the
+// enchantment states in EffectPointsMin rather than the spell in its own column: Fiery Blaze 36
+// casts 6297 at 15. Enchantments that cast one spell at two chances are an error: the store has one
+// row to state it on.
+func (t *spellTables) loadEnchantChances(db *sql.DB) error {
+	return eachRow(db, enchantSlotsCTE+fmt.Sprintf(`
+		SELECT SpellID, Points, ID FROM slots
+		WHERE Effect = %d AND SpellID > 0 AND Points > 0
+		ORDER BY SpellID, ID`, dbc.ITEM_ENCHANTMENT_COMBAT_SPELL), func(rows *sql.Rows) error {
+		var id, enchant int32
+		var chance uint8
+		if err := rows.Scan(&id, &chance, &enchant); err != nil {
+			return err
+		}
+		stated, ok := t.EnchantChances[id]
+		if ok && stated.Chance != chance {
+			return fmt.Errorf("enchantments %v cast spell %d at %d%% and enchantment %d at %d%%",
+				stated.Enchants, id, stated.Chance, enchant, chance)
+		}
+		t.EnchantChances[id] = enchantChance{Chance: chance, Enchants: append(stated.Enchants, enchant)}
 		return nil
 	})
 }

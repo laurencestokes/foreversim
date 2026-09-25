@@ -24,7 +24,7 @@ import (
 // The client build the racials were read from (sim/core/racials.go, docs/forever_rules.md). A
 // constant rather than something the sim reports, because the sim does not know it either: it is
 // where a person read the numbers.
-const clientBuild = "1.60.1.69977"
+const clientBuild = "1.60.1.70009"
 
 // The fight every list is run in: the leaderboard's one target (core.MakeSingleTargetEncounter).
 const (

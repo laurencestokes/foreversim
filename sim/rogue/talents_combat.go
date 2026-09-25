@@ -274,7 +274,7 @@ func (rogue *Rogue) registerWeaponExpertise() {
 		return
 	}
 
-	rogue.AddStat(stats.ExpertiseRating, core.ExpertisePerQuarterPercentReduction*4*spellData.WeaponExpertise.ValueAt(rogue.Talents.WeaponExpertise))
+	rogue.AddStat(stats.ExpertisePercent, spellData.WeaponExpertise.ValueAt(rogue.Talents.WeaponExpertise))
 }
 
 func (rogue *Rogue) registerAggression() {

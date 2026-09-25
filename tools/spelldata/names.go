@@ -344,6 +344,8 @@ func procHintNames(hint core.ProcHint) []string {
 		{core.ProcHintPureHeal, "heals only"},
 		{core.ProcHintNamedAbility, "one named ability"},
 		{core.ProcHintOutcomeTaken, "an outcome the mask has no bit for"},
+		{core.ProcHintAttackDodged, "own attack dodged"},
+		{core.ProcHintAttackParried, "own attack parried"},
 	} {
 		if hint.Matches(h.bit) {
 			out = append(out, h.name)

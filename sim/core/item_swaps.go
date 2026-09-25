@@ -193,8 +193,12 @@ func (swap *ItemSwap) registerProcInternal(config ItemSwapProcConfig) {
 
 // Helper for handling weapon enchant buffs that fall off when the weapon is swapped out.
 func (swap *ItemSwap) RegisterWeaponEnchantBuff(buffAura *Aura, enchantID int32) {
+	swap.RegisterEnchantBuffWithSlots(buffAura, enchantID, AllWeaponSlots())
+}
+
+// Helper for handling enchant buffs that fall off when none of the slots carries the enchant.
+func (swap *ItemSwap) RegisterEnchantBuffWithSlots(buffAura *Aura, enchantID int32, slots []proto.ItemSlot) {
 	character := swap.character
-	slots := AllWeaponSlots()
 	character.RegisterItemSwapCallback(slots, func(sim *Simulation, _ proto.ItemSlot) {
 		if !character.hasEnchantEquipped(enchantID, slots) {
 			buffAura.Deactivate(sim)

@@ -6,6 +6,12 @@ import (
 	"github.com/wowsims/forever/sim/core"
 )
 
+// The reason given for a proc whose rows state no rate, which the generator also gives where the
+// rows' rate is a sentinel its tooltip contradicts.
+const ReasonStatesNoRate = "states no rate"
+
+const ReasonPPMHearsNoWeaponHits = "a procs-per-minute rate hears no weapon hits in this mask"
+
 // What a proc the client hangs on an item, an enchant or a set bonus does not model, as one reason
 // per shape. An empty answer means the rows state enough to build the listener the client describes.
 //
@@ -18,6 +24,16 @@ import (
 // class, so a class mask on its trigger is the filter of the one class it was written for and names
 // nothing the sim can reproduce. An item proc therefore has no character to weigh the mask against.
 func ItemProcUnsupported(trigger *Spell, isWeaponProc bool) []string {
+	return itemProcUnsupported(trigger, isWeaponProc, false)
+}
+
+// The same for an enchant's equip aura, whose procs-per-minute rate rolls on weapon hits only: the
+// sim never procs one from a spell or a heal.
+func EnchantAuraUnsupported(trigger *Spell) []string {
+	return itemProcUnsupported(trigger, false, true)
+}
+
+func itemProcUnsupported(trigger *Spell, isWeaponProc bool, isEnchant bool) []string {
 	var unsupported []string
 
 	if trigger == Nil || trigger.ID == 0 {
@@ -46,7 +62,7 @@ func ItemProcUnsupported(trigger *Spell, isWeaponProc bool) []string {
 	// listener for: the game casts a chance-on-hit effect and a combat enchant off the hit itself.
 	if isWeaponProc {
 		if !weaponProcRateStated(trigger) {
-			unsupported = append(unsupported, "states no rate")
+			unsupported = append(unsupported, ReasonStatesNoRate)
 		}
 		return unsupported
 	}
@@ -57,11 +73,13 @@ func ItemProcUnsupported(trigger *Spell, isWeaponProc bool) []string {
 
 	switch {
 	case !procRateStated(trigger):
-		unsupported = append(unsupported, "states no rate")
+		unsupported = append(unsupported, ReasonStatesNoRate)
 	case trigger.RPPM > 0 && decoded.ProcMask == core.ProcMaskUnknown:
 		// Procs per minute are measured against the hits the listener hears, and an empty mask
 		// counts none of them. On a weapon proc the weapon answers that; nothing else can.
 		unsupported = append(unsupported, "no proc mask to measure its rate on")
+	case isEnchant && trigger.RPPM > 0 && !decoded.ProcMask.Matches(core.ProcMaskMeleeOrRanged):
+		unsupported = append(unsupported, ReasonPPMHearsNoWeaponHits)
 	}
 
 	return unsupported

@@ -24,6 +24,11 @@ export enum LaunchStatus {
 
 export const CURRENT_API_VERSION: number = readMessageOption(ProtoVersion, 'proto.current_version_number')! as number;
 
+// The upstream buff rewrite: RaidBuffs, PartyBuffs, IndividualBuffs and Debuffs moved to buffs.proto
+// (renumbered, mostly bools), ConsumesSpec was renumbered and WarriorOptions field 6 changed meaning.
+// Settings saved before it carry none of those in a usable form.
+export const BUFFS_REWRITE_API_VERSION = 17;
+
 // Github pages serves our site under the /forever directory
 export const REPO_NAME = 'forever';
 export const REPO_URL = 'https://github.com/laurencestokes/foreversim';

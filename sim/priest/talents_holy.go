@@ -42,14 +42,25 @@ func (priest *Priest) registerHolyTalents() {
 	priest.applyPrayerOfMending()
 }
 
-// applyTwilightFocus implements Twilight Focus, new in Forever.
-//
-// TODO: To be implemented. It is pushback protection (14913, SPELLMOD_NOT_LOSE_CASTING_TIME) and
-// nothing in the sim interrupts a cast.
+// Twilight Focus is new in Forever: pushback protection (14913, SPELLMOD_NOT_LOSE_CASTING_TIME).
+// Of the spells its mask names the sim models Smite, Holy Fire, Mind Blast, Mind Flay, Penance and,
+// since build 70009, Starshards.
 func (priest *Priest) applyTwilightFocus() {
 	if priest.Talents.TwilightFocus == 0 {
 		return
 	}
+
+	resist := spellData.TwilightFocus.FractionAt(priest.Talents.TwilightFocus)
+	priest.AddStaticMod(core.SpellModConfig{
+		ClassMask: PriestSpellSmite | PriestSpellHolyFire | PriestSpellMindBlast | PriestSpellMindFlay | PriestSpellPenance | PriestSpellStarshards,
+		Kind:      core.SpellMod_Custom,
+		ApplyCustom: func(_ *core.SpellMod, spell *core.Spell) {
+			spell.PushbackResist += resist
+		},
+		RemoveCustom: func(_ *core.SpellMod, spell *core.Spell) {
+			spell.PushbackResist -= resist
+		},
+	})
 }
 
 // applyImprovedRenew implements Improved Renew, new in Forever.

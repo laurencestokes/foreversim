@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+	ENCHANT_NOTICES,
 	ITEM_INFO_NOTICES,
 	ITEM_NOTICES,
 	MISSING_RANDOM_SUFFIX_WARNING,
@@ -18,7 +19,10 @@ vi.mock('@i18n/localization', () => ({
 	translateStat: (value: number) => `stat-${value}`,
 }));
 
-vi.mock('@sim/constants/missing_effects_auto_gen', () => ({ MISSING_ITEM_EFFECTS: new Map([[1, ['Does a thing.']]]) }));
+vi.mock('@sim/constants/missing_effects_auto_gen', () => ({
+	MISSING_ITEM_EFFECTS: new Map([[1, ['Does a thing.']]]),
+	MISSING_ENCHANT_EFFECTS: new Map([[2, ['Enchants a thing.']]]),
+}));
 
 const markup = (itemId: number, spec: Spec = Spec.SpecUnknown) => renderToStaticMarkup(ITEM_NOTICES.get(itemId)?.[spec]);
 const noticeContainer = (itemId: number, spec: Spec = Spec.SpecUnknown) => render(<>{ITEM_NOTICES.get(itemId)?.[spec]}</>).container;
@@ -33,6 +37,21 @@ describe('the item notice table', () => {
 		const items = container.querySelectorAll('ul > li');
 		expect(items).toHaveLength(1);
 		expect(items[0].textContent).toBe('Does a thing.');
+	});
+
+	it('lists the tooltips a missing enchant effect carries', () => {
+		const container = render(<>{ENCHANT_NOTICES.get(2)?.[Spec.SpecUnknown]}</>).container;
+		expect([...container.children].map(child => child.tagName.toLowerCase())).toEqual(['p', 'ul']);
+		const heading = container.querySelector('p')!;
+		expect(heading.className).toBe('font-bold');
+		expect(heading.textContent).toBe('The following enchant effect (on-use or proc) is not implemented!');
+		const items = container.querySelectorAll('ul > li');
+		expect(items).toHaveLength(1);
+		expect(items[0].textContent).toBe('Enchants a thing.');
+	});
+
+	it('has no notice for an enchant whose effect is modelled', () => {
+		expect(ENCHANT_NOTICES.has(34)).toBe(false);
 	});
 
 	it('renders the random suffix warning', () => {

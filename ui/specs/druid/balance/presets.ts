@@ -1,5 +1,6 @@
 import * as PresetUtils from '@app/preset_utils';
-import { ConsumesSpec, Debuffs, IndividualBuffs, PartyBuffs, Profession, Race, RaidBuffs, TristateEffect, UnitReference } from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { ConsumesSpec, Profession, Race, TristateEffect, UnitReference } from '@generated/proto/common';
 import { BalanceDruid_Options as BalanceDruidOptions } from '@generated/proto/druid';
 import { SavedTalents } from '@generated/proto/ui';
 
@@ -28,20 +29,20 @@ export const DefaultOptions = BalanceDruidOptions.create({
 // its presets name.
 export const DefaultRaidBuffs = RaidBuffs.create({
 	arcaneBrilliance: true,
-	divineSpirit: TristateEffect.TristateEffectRegular,
-	giftOfTheWild: TristateEffect.TristateEffectImproved,
+	fireResistanceTotem: true,
+	giftOfTheWild: true,
+	prayerOfSpirit: true,
 });
 
 export const DefaultPartyBuffs = PartyBuffs.create({
-	fireResistanceTotem: true,
 	manaSpringTotem: TristateEffect.TristateEffectRegular,
-	moonkinAura: TristateEffect.TristateEffectRegular,
+	moonkinAura: true,
 });
 
 export const DefaultIndividualBuffs = IndividualBuffs.create({});
 
 export const DefaultDebuffs = Debuffs.create({
-	faerieFire: TristateEffect.TristateEffectRegular,
+	faerieFire: true,
 });
 
 export const DefaultConsumables = ConsumesSpec.create({
@@ -51,7 +52,7 @@ export const DefaultConsumables = ConsumesSpec.create({
 	zanzaId: 8423, // Cerebral Cortex Compound
 	foodId: 18254, // Runn Tum Tuber Surprise
 	potId: 13444, // Major Mana Potion
-	mhImbueId: 20749, // Brilliant Wizard Oil
+	mhImbueId: 25122, // Brilliant Wizard Oil
 });
 
 export const OtherDefaults = {

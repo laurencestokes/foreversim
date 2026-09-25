@@ -110,10 +110,10 @@ func specOptions(name string) (proto.Class, interface{}, *proto.ConsumesSpec) {
 			Armor: proto.WarlockOptions_DemonArmor, Summon: proto.WarlockOptions_Succubus}}}}, none
 	case "warrior":
 		return proto.Class_ClassWarrior, &proto.Player_DpsWarrior{DpsWarrior: &proto.DpsWarrior{Options: &proto.DpsWarrior_Options{ClassOptions: &proto.WarriorOptions{
-			DefaultShout: proto.WarriorShout_WarriorShoutBattle, DefaultStance: proto.WarriorStance_WarriorStanceBerserker}}}}, none
+			UseBattleShout: true, DefaultStance: proto.WarriorStance_WarriorStanceBerserker}}}}, none
 	case "tank_warrior":
 		return proto.Class_ClassWarrior, &proto.Player_ProtectionWarrior{ProtectionWarrior: &proto.ProtectionWarrior{Options: &proto.ProtectionWarrior_Options{ClassOptions: &proto.WarriorOptions{
-			DefaultShout: proto.WarriorShout_WarriorShoutBattle, DefaultStance: proto.WarriorStance_WarriorStanceDefensive}}}}, none
+			UseBattleShout: true, DefaultStance: proto.WarriorStance_WarriorStanceDefensive}}}}, none
 	}
 	return proto.Class_ClassUnknown, nil, none
 }
@@ -334,7 +334,7 @@ func runSpecWithGear(spec paritySpec, profile map[string]float64, iterations int
 		Casts:        casts,
 		Auras:        auraUptimes(result.RaidMetrics.Parties[0].Players[0]),
 		Oom:          result.RaidMetrics.Parties[0].Players[0].SecondsOomAvg,
-		Boss:    bossOutcomes(result.EncounterMetrics, iterations),
+		Boss:         bossOutcomes(result.EncounterMetrics, iterations),
 		Dtps:         result.RaidMetrics.Parties[0].Players[0].Dtps.Avg,
 		Stats: map[string]float64{
 			"ap": s[stats.AttackPower], "rap": s[stats.RangedAttackPower], "sd": s[stats.SpellDamage],

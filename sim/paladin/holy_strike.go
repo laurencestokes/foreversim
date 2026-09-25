@@ -10,13 +10,13 @@ var HolyStrikeRankMap = spellData.HolyStrike
 // Holy Strike
 // https://www.wowhead.com/forever/spell=10333
 //
-// An instant strike that causes 40% weapon damage plus an additional 93 as Holy damage.
+// An instant strike that causes 50% weapon damage plus an additional 93 as Holy damage. 10 sec
+// cooldown.
 //
 // The row states the flat part as its normalized-weapon-damage effect (121) and the percentage as a
 // weapon-percent-damage effect (31). The client adds the flat amount to the normalized swing and
-// then takes the percentage of the sum, the way it does for Backstab, so rank 8 is 40% of
-// (weapon + 81 to 105): about 32 to 42 on top of the weapon share, close to the 36 to 46 the
-// BlizzCon tooltip showed (beta client 1.60.1.69893).
+// then takes the percentage of the sum, the way it does for Backstab. Build 70009's ranks are
+// 25/29/32/36/39/43/46/50%, so rank 8 is 50% of (weapon + 81 to 105).
 func (paladin *Paladin) registerHolyStrike(row shared.SpellData) {
 	weaponPercent := effectAt(row, 1).Value / 100
 	flat := holyStrikeDamage[row.Rank]

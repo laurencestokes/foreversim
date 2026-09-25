@@ -1,8 +1,9 @@
+import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { APLAction, APLListItem, APLRotation, APLRotation_Type as APLRotationType } from '@generated/proto/apl';
-import { Cooldowns, Debuffs, IndividualBuffs, ItemSlot, PartyBuffs, PseudoStat, RaidBuffs, Spec, Stat, TristateEffect } from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { Cooldowns, ItemSlot, PseudoStat, Spec, Stat, TristateEffect } from '@generated/proto/common';
 import { FeralCatDruid_Rotation as DruidRotation } from '@generated/proto/druid';
-import * as Mechanics from '@sim/constants/mechanics';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
 import { masterEpWeights } from '@sim/proto/master_ep_weights';
@@ -52,7 +53,6 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 			Stat.StatSpirit,
 			Stat.StatAttackPower,
 			Stat.StatMana,
-			Stat.StatExpertiseRating,
 			Stat.StatArmorPenetration,
 			Stat.StatArcaneResistance,
 			Stat.StatFireResistance,
@@ -60,7 +60,12 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 			Stat.StatNatureResistance,
 			Stat.StatShadowResistance,
 		],
-		[PseudoStat.PseudoStatMeleeHitPercent, PseudoStat.PseudoStatMeleeCritPercent, PseudoStat.PseudoStatMeleeHastePercent],
+		[
+			PseudoStat.PseudoStatMeleeHitPercent,
+			PseudoStat.PseudoStatMeleeCritPercent,
+			PseudoStat.PseudoStatMeleeHastePercent,
+			PseudoStat.PseudoStatExpertisePercent,
+		],
 	),
 
 	defaults: {
@@ -84,9 +89,7 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 			MeleeSpeedMultiplier: 16.5,
 		}),
 		statCaps: (() => {
-			return new Stats()
-				.withPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, 9)
-				.withStat(Stat.StatExpertiseRating, 6.5 * 4 * Mechanics.EXPERTISE_PER_QUARTER_PERCENT_REDUCTION);
+			return new Stats().withPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, 9).withPseudoStat(PseudoStat.PseudoStatExpertisePercent, 6.5);
 		})(),
 		other: Presets.OtherDefaults,
 		// Default consumes settings.
@@ -102,19 +105,19 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 		// Battle Shout, Leader of the Pack and Mana Spring are party buffs here.
 		raidBuffs: RaidBuffs.create({
 			arcaneBrilliance: true,
-			divineSpirit: TristateEffect.TristateEffectRegular,
-			giftOfTheWild: TristateEffect.TristateEffectImproved,
-			powerWordFortitude: TristateEffect.TristateEffectImproved,
+			giftOfTheWild: true,
+			prayerOfFortitude: true,
+			prayerOfSpirit: true,
 		}),
 		partyBuffs: PartyBuffs.create({
-			battleShout: TristateEffect.TristateEffectImproved,
-			leaderOfThePack: TristateEffect.TristateEffectRegular,
+			battleShout: TristateEffect.TristateEffectRegular,
+			leaderOfThePack: true,
 			manaSpringTotem: TristateEffect.TristateEffectRegular,
-			strengthOfEarthTotem: TristateEffect.TristateEffectImproved,
+			strengthOfEarthTotem: true,
 		}),
 		individualBuffs: IndividualBuffs.create({}),
 		debuffs: Debuffs.create({
-			exposeArmor: TristateEffect.TristateEffectImproved,
+			exposeArmor: true,
 			curseOfRecklessness: true,
 			sunderArmor: true,
 		}),
@@ -126,7 +129,7 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 	rotationInputs: FeralInputs.FeralDruidRotationConfig,
 	// Buff and Debuff inputs to include/exclude, overriding the EP-based defaults.
 	includeBuffDebuffInputs: [Stat.StatMP5, Stat.StatIntellect, Stat.StatStamina],
-	excludeBuffDebuffInputs: [Stat.StatParryRating],
+	excludeBuffDebuffInputs: [BuffDebuffInputs.WindfuryTotem],
 	// Inputs to include in the 'Other' section on the settings tab.
 	otherInputs: {
 		inputs: [

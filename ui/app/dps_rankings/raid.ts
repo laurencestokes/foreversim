@@ -1,5 +1,6 @@
 import { applyDefaultRotation } from '@features/settings/model/apply_defaults';
-import { Debuffs, EquipmentSpec, PartyBuffs, Profession, RaidBuffs } from '@generated/proto/common';
+import { Debuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { EquipmentSpec, Profession } from '@generated/proto/common';
 import { Player } from '@sim/player/player';
 import { PlayerSpecs } from '@sim/player/specs';
 import { getTalentTreePoints } from '@sim/proto/utils';

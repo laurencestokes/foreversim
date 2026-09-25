@@ -215,7 +215,7 @@ var ItemSetVindicatorsBattlegear = core.NewItemSet(core.ItemSet{
 	Bonuses: map[int32]core.ApplySetBonus{
 		// Increases your chance to block attacks with a shield by 2%.
 		2: func(_ core.Agent, setBonusAura *core.Aura) {
-			setBonusAura.AttachStatBuff(stats.BlockPercent, 0.02) // stored as a fraction
+			setBonusAura.AttachStatBuff(stats.BlockPercent, 2)
 		},
 		// Decreases the cooldown of Intimidating Shout by 15 sec.
 		3: func(_ core.Agent, setBonusAura *core.Aura) {

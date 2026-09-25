@@ -93,17 +93,13 @@
 							]
 						},
 						"consumables": {
-							"potId": 22839,
-							"flaskId": 22861,
-							"foodId": 27657,
 							"conjuredId": 12662,
 							"mhImbueId": 25122,
-							"drumsId": 4,
-							"potions": [18253, 22832, 22839, 22850, 28101, 31677, 32948, 33935, 34440],
-							"conjuredItems": [22105, 12662, 22788, 23334, 23381]
+							"potions": [18253],
+							"conjuredItems": [12662]
 						},
 						"bonusStats": {
-							"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+							"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 							"pseudoStats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 						},
 						"itemSwap": {
@@ -127,14 +123,13 @@
 								{}
 							],
 							"prepullBonusStats": {
-								"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+								"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 								"pseudoStats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 							}
 						},
 						"buffs": {
-							"blessingOfKings": true,
-							"blessingOfWisdom": 2,
-							"shadowPriestDps": 800
+							"greaterBlessingOfKings": true,
+							"greaterBlessingOfWisdom": 2
 						},
 						"cooldowns": {},
 						"healingModel": {}
@@ -153,9 +148,7 @@
 					}
 				],
 				"buffs": {
-					"moonkinAura": 2,
-					"eyeOfTheNight": true,
-					"chainOfTheTwilightOwl": true
+					"moonkinAura": 2
 				}
 			},
 			{
@@ -242,19 +235,15 @@
 		"numActiveParties": 5,
 		"buffs": {
 			"arcaneBrilliance": true,
-			"powerWordFortitude": 2,
-			"divineSpirit": 2,
-			"giftOfTheWild": 2,
-			"bloodlust": true
+			"prayerOfFortitude": 2,
+			"prayerOfSpirit": 2,
+			"giftOfTheWild": 2
 		},
 		"debuffs": {
 			"judgementOfWisdom": true,
 			"improvedSealOfTheCrusader": 2,
-			"misery": true,
 			"curseOfElements": 2,
-			"bloodFrenzy": true,
 			"giftOfArthas": true,
-			"mangle": true,
 			"exposeArmor": 2,
 			"faerieFire": 2,
 			"sunderArmor": true,
@@ -263,16 +252,16 @@
 		}
 	},
 	"preCapEpWeights": {
-		"stats": [0, 0, 0, 0.25, 0, 1, 0, 0, 0, 0, 1, 0, 2.12, 0.85, 1.18, 0, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		"stats": [0, 0, 0, 0.25, 0, 1, 0, 0, 0, 0, 1, 0, 2.12, 0.85, 1.18, 0, 0.01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 		"pseudoStats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2.12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 	},
 	"undershootCaps": {
-		"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 		"pseudoStats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 	},
 	"settings": {
 		"statCaps": {
-			"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+			"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 			"pseudoStats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 		},
 		"maxGemPhase": 2,

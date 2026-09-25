@@ -203,9 +203,6 @@ export class Encounter {
 	}
 
 	fromProto(proto: EncounterProto) {
-		// Fix out-of-date protos before importing
-		Encounter.updateProtoVersion(proto);
-
 		batch(() => {
 			this.setDuration(proto.duration);
 			this.setDurationVariation(proto.durationVariation);
@@ -260,11 +257,5 @@ export class Encounter {
 			spellSchool: SpellSchool.SpellSchoolPhysical,
 			targetInputs: new Array<TargetInput>(0),
 		});
-	}
-
-	static updateProtoVersion(proto: EncounterProto) {
-		if (!(proto.apiVersion < CURRENT_API_VERSION)) {
-			return;
-		}
 	}
 }

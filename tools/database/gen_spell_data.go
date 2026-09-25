@@ -55,6 +55,8 @@ type generatedEffect struct {
 	Value          float64
 	ValueMax       float64
 	ChainAmplitude float64
+	Coef           float64
+	APCoef         float64
 }
 
 type generatedAmount struct {
@@ -75,11 +77,6 @@ const (
 	acquireOnLevel = 2
 	acquireGranted = 3
 )
-
-// The Defense skill line carries the one-class passives that open a counterattack window - Offensive
-// State (DND) fires the 5 s Overpower aura 1282733 on a melee hit, Defensive State (DND) the Revenge
-// one - beside Parry and Block, which have several classes' bits.
-const skillLineDefense = 95
 
 type rankCandidate struct {
 	SpellID       int32
@@ -158,6 +155,9 @@ func discoverLadders(db *sql.DB, class dbc.DbcClass, treeID int) ([]rankLadder, 
 		return nil, nil, nil, err
 	}
 
+	// The Defense skill line carries the one-class passives that open a counterattack window - Offensive
+	// State (DND) fires the 5 s Overpower aura 1282733 on a melee hit, Defensive State (DND) the Revenge
+	// one - beside Parry and Block, which have several classes' bits.
 	rows, err := db.Query(`
 		SELECT n.Name_lang, sla.Spell, s.NameSubtext_lang, sla.ClassMask, sla.SkillLine, sla.AcquireMethod,
 		       COALESCE(lv.BaseLevel, 0), (COALESCE(json_extract(sm.Attributes, '$[0]'), 0) & ?) != 0
@@ -175,7 +175,7 @@ func discoverLadders(db *sql.DB, class dbc.DbcClass, treeID int) ([]rankLadder, 
 		AND (s.NameSubtext_lang LIKE 'Rank %' OR s.NameSubtext_lang IN ('', 'Shapeshift'))
 		AND sla.SkillLine NOT IN (2851, 2853)
 		AND NOT EXISTS (SELECT 1 FROM SpellEffect se WHERE se.SpellID = sla.Spell AND se.EffectAura = ?)
-		ORDER BY n.Name_lang, sla.Spell`, dbcenums.ATTR_PASSIVE, mask, skillLineDefense, mask, acquireOnLevel, dbcenums.A_MOUNTED)
+		ORDER BY n.Name_lang, sla.Spell`, dbcenums.ATTR_PASSIVE, mask, dbc.SkillLineDefense, mask, acquireOnLevel, dbcenums.A_MOUNTED)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -1040,7 +1040,7 @@ func buildRow(db *sql.DB, rank int32, spellID int32, mask int, points map[int32]
 		}
 		row.Effects = append(row.Effects, generatedEffect{
 			Index: e.Index, Effect: e.Effect, Aura: e.Aura, Misc: e.MiscValue, Value: min, ValueMax: max,
-			ChainAmplitude: e.ChainAmplitude,
+			ChainAmplitude: e.ChainAmplitude, Coef: e.Coefficient, APCoef: e.APCoef,
 		})
 	}
 
@@ -1208,20 +1208,20 @@ func renderSpellDataFiles(helper *DBHelper) (map[string][]byte, *storeInputs, er
 		return nil, nil, err
 	}
 
-	forms, err := loadShapeshiftForms(helper.db)
-	if err != nil {
-		return nil, nil, err
-	}
-	formsFile, err := renderFormsFile(forms)
+	formsFile, err := renderFormsFile(inputs.Forms)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	files := map[string][]byte{
-		"sim/common/shared/spell_data_enums_auto_gen.go": enums,
-		"sim/core/spelldata/spells_auto_gen.go":          store,
-		"sim/core/dbcenums/forms_auto_gen.go":            formsFile,
+	// The buffs read the store's rows, so they are rendered from the same inputs, and checked and
+	// type-checked with the rest.
+	files, err := renderBuffOutputs(inputs)
+	if err != nil {
+		return nil, nil, fmt.Errorf("buffs: %w", err)
 	}
+	files["sim/core/dbcenums/forms_auto_gen.go"] = formsFile
+	files["sim/common/shared/spell_data_enums_auto_gen.go"] = enums
+	files["sim/core/spelldata/spells_auto_gen.go"] = store
 	for pkg, out := range rendered {
 		files[fmt.Sprintf("sim/%s/spell_data_auto_gen.go", pkg)] = out
 	}
@@ -1530,6 +1530,12 @@ func formatRow(row generatedRow, namer *rankEnumNamer) string {
 			}
 			if e.ChainAmplitude != 0 && e.ChainAmplitude != 1 {
 				f += ", ChainAmplitude: " + num(e.ChainAmplitude)
+			}
+			if e.Coef != 0 {
+				f += ", Coef: " + num(e.Coef)
+			}
+			if e.APCoef != 0 {
+				f += ", APCoef: " + num(e.APCoef)
 			}
 			es = append(es, f+"}")
 		}

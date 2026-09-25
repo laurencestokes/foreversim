@@ -7,6 +7,7 @@ import (
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -234,6 +235,14 @@ var statAuraTypes = map[EffectAuraType]bool{
 	dbcenums.A_MOD_INCREASE_ENERGY:     true,
 	dbcenums.A_MOD_INCREASE_HEALTH_2:   true,
 	dbcenums.A_PERIODIC_TRIGGER_SPELL:  true,
+}
+
+// Whether either implicit target is an enemy. What such an aura changes is the enemy's, never a stat
+// of the wearer.
+func (effect *SpellEffect) HitsAnEnemy() bool {
+	return slices.ContainsFunc(effect.ImplicitTargets, func(target int) bool {
+		return spelldata.TargetsAnEnemy(dbcenums.ImplicitTarget(target))
+	})
 }
 
 // Reports whether the effect's aura is one of the types that can carry stats.

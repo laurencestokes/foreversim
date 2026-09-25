@@ -115,8 +115,9 @@ func NewEnchantEffect(id int32, enchantEffect ApplyEffect) {
 }
 
 func (equipment *Equipment) applyItemEffects(agent Agent, registeredItemEffects map[int32]bool, registeredItemEnchantEffects map[int32]bool, includeGemEffects bool) {
+	class := agent.GetCharacter().Class
 	for _, eq := range equipment {
-		if applyItemEffect, ok := itemEffects[eq.ID]; ok && !registeredItemEffects[eq.ID] {
+		if applyItemEffect, ok := itemEffects[eq.ID]; ok && !registeredItemEffects[eq.ID] && eq.UsableBy(class) {
 			applyItemEffect(agent)
 			registeredItemEffects[eq.ID] = true
 		}

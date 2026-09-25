@@ -3,6 +3,7 @@ package paladin
 import (
 	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 )
 
 func (paladin *Paladin) registerAuras() {
@@ -14,14 +15,14 @@ func (paladin *Paladin) registerAuras() {
 	paladin.registerShadowResistanceAura()
 }
 
-// The rank of a paladin aura as core wants it: the spell the paladin cast, its rank, and the number
-// its row states.
-func auraRank(row shared.SpellData) core.PaladinAuraRank {
-	return core.PaladinAuraRank{SpellID: row.SpellID, Rank: row.Rank, Value: shared.SpellDataMin(row.Direct)}
+// The rank of a paladin aura as sim/core/buffs wants it: the spell the paladin cast and its rank.
+func auraRank(row shared.SpellData) buffs.PaladinAuraRank {
+	return buffs.PaladinAuraRank{SpellID: row.SpellID, Rank: row.Rank}
 }
 
-// The castable aura spell: instant, on the GCD, free. The aura it turns on is one of core's
-// self-cast paladin auras, which already sit in PaladinAuraCategory so one cast replaces the last.
+// The castable aura spell: instant, on the GCD, free. The aura it turns on is one of the self-cast
+// paladin auras in sim/core/buffs, which already sit in PaladinAuraCategory so one cast replaces the
+// last.
 func (paladin *Paladin) registerAuraSpell(row shared.SpellData, aura *core.Aura, classMask int64) {
 	paladin.RegisterSpell(core.SpellConfig{
 		ActionID:       aura.ActionID,

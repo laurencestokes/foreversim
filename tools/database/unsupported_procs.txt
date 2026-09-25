@@ -6,17 +6,25 @@
 # A row is judged in the kinder of the two shapes an item can put it in: an aura that hears
 # hits through its own proc mask, and a weapon proc whose hits the weapon counts.
 
+9782 an outcome the proc mask has no bit for
+9784 an outcome the proc mask has no bit for
 15594 states no rate
+16624 an outcome the proc mask has no bit for
 17495 an outcome the proc mask has no bit for
 21185 ProcTypeMask KILL; no callback in the proc mask
+21747 states no rate
 21969 ProcTypeMask TAKE_HELPFUL_SPELL
+21978 states no rate
 23548 an outcome the proc mask has no bit for
 23551 the trigger carries a class mask
 23572 the trigger carries a class mask
 23578 states no rate
 23581 states no rate
+23689 states no rate
 26128 an outcome the proc mask has no bit for
+27419 states no rate
 27656 states no rate
+27787 states no rate
 28752 the trigger carries a class mask
 28761 the trigger carries a class mask
 28802 the trigger carries a class mask
@@ -44,22 +52,31 @@
 432042 named ability; the trigger carries a class mask; no callback in the proc mask
 432259 states no rate
 435097 ProcTypeMask KILL; no callback in the proc mask
+435467 states no rate
 435962 no callback in the proc mask
 440529 named ability; states no rate
 449924 ProcTypeMask bit 34; no callback in the proc mask
 449935 named ability
 449980 ProcTypeMask bit 34; no callback in the proc mask
 450083 ProcTypeMask bit 34; no callback in the proc mask
+450587 states no rate
+450625 states no rate
+450626 states no rate
 456538 an outcome the proc mask has no bit for
 457553 named ability
 457646 ProcTypeMask TAKE_HELPFUL_SPELL; ProcTypeMask bit 31
+458112 states no rate
 461640 ProcTypeMask KILL; no callback in the proc mask
 467983 named ability
 468065 an outcome the proc mask has no bit for
 1213188 an outcome the proc mask has no bit for
 1226407 named ability
 1226956 an outcome the proc mask has no bit for
+1231126 states no rate
+1232170 states no rate
+1248806 states no rate
 1249118 named ability
+1291686 states no rate
 1291796 ProcTypeMask TAKE_HELPFUL_SPELL; ProcTypeMask bit 31
 1291807 states no rate
 1291906 ProcTypeMask ENTER_COMBAT; no callback in the proc mask
@@ -68,6 +85,10 @@
 1292749 ProcTypeMask DEATH; no callback in the proc mask
 1293539 an outcome the proc mask has no bit for
 1293670 ProcTypeMask TAKE_HELPFUL_SPELL; ProcTypeMask bit 31
+1293980 states no rate
+1294255 states no rate
+1294530 states no rate
+1297085 states no rate
 1298230 ProcTypeMask ENTER_COMBAT; no callback in the proc mask
 1298413 ProcTypeMask bit 37
 1298500 ProcTypeMask bit 37
@@ -77,8 +98,15 @@
 1300781 states no rate
 1300890 ProcTypeMask DEATH; no callback in the proc mask
 1301046 ProcTypeMask bit 37
+1301123 states no rate
 1302108 ProcTypeMask KILL
+1302190 states no rate
+1302341 states no rate
+1302348 states no rate
 1302380 ProcTypeMask TAKE_HELPFUL_SPELL; ProcTypeMask bit 31
 1305424 ProcTypeMask KILL; no callback in the proc mask
 1307644 states no rate
+1317039 states no rate
+1318159 states no rate
 1318323 states no rate
+1321560 ProcTypeMask TAKE_HELPFUL_SPELL; ProcTypeMask bit 31

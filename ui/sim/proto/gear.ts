@@ -385,8 +385,6 @@ export class Gear extends BaseGear {
 		const weapon = this.getEquippedItem(ItemSlot.ItemSlotOffHand);
 		return weapon != null && isSharpWeaponType(weapon.effectiveWeaponType);
 	}
-	// Rewrites the MH/OH weapon stone imbues to match the equipped weapon types, returning the
-	// original ConsumesSpec unchanged if nothing needs adjusting.
 	adjustImbues(consumes: ConsumesSpec): ConsumesSpec {
 		const mhImbueId = adjustWeaponImbueId(consumes.mhImbueId, this.hasSharpMHWeapon(), this.hasBluntMHWeapon());
 		const ohImbueId = adjustWeaponImbueId(consumes.ohImbueId, this.hasSharpOHWeapon(), this.hasBluntOHWeapon());

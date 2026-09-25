@@ -11,11 +11,11 @@ import { ItemNoticeIcon } from './ItemNoticeIcon';
 const SPEC_SPECIFIC_ITEM = 90101;
 const NOTICED_ITEM = 90102;
 
-const mount = (itemId: number, additionalNotice?: ReactNode, spec: Spec = Spec.SpecUnknown) => {
+const mount = (itemId: number, additionalNotice?: ReactNode, spec: Spec = Spec.SpecUnknown, enchantId?: number) => {
 	const host = fakeHost({ player: { getSpec: () => spec } });
 	return render(
 		<SimHostProvider host={host}>
-			<ItemNoticeIcon itemId={itemId} additionalNotice={additionalNotice} />
+			<ItemNoticeIcon itemId={itemId} enchantId={enchantId} additionalNotice={additionalNotice} />
 		</SimHostProvider>,
 	);
 };
@@ -76,6 +76,20 @@ describe('ItemNoticeIcon', () => {
 		expect(screen.getByRole('button').className).toContain('fa-exclamation-triangle');
 		unmount();
 		ITEM_INFO_NOTICES.delete(SPEC_SPECIFIC_ITEM);
+	});
+
+	it('shows the notice of an enchant whose effect is missing, on an item that has none of its own', async () => {
+		mount(1, undefined, Spec.SpecUnknown, 1894);
+
+		expect(screen.getByRole('button').className).toContain('fa-exclamation-triangle');
+		open();
+		expect(await screen.findByText('The following enchant effect (on-use or proc) is not implemented!')).toBeTruthy();
+		expect(await screen.findByText(/often chill the target/)).toBeTruthy();
+	});
+
+	it('renders nothing for an enchant whose effect is modelled', () => {
+		const { container } = mount(1, undefined, Spec.SpecUnknown, 34);
+		expect(container.firstChild).toBeNull();
 	});
 
 	it('prefers the player’s spec notice over the generic one', async () => {

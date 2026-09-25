@@ -17,7 +17,7 @@ func (warrior *Warrior) registerShieldBlock() {
 		ActionID:  actionId,
 		Duration:  shieldBlockRank.Duration(),
 		MaxStacks: int32(shieldBlockRank.ProcCharges),
-	}).AttachStatBuff(stats.BlockPercent, shieldBlockRank.Effect(dbcenums.A_MOD_BLOCK_PERCENT, 0).Percent())
+	}).AttachStatBuff(stats.BlockPercent, shieldBlockRank.Effect(dbcenums.A_MOD_BLOCK_PERCENT, 0).BaseValue())
 	aura.AttachProcTrigger(core.ProcTrigger{
 		Name:               "Shield Block - Consume",
 		TriggerImmediately: true,

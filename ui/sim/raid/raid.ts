@@ -1,5 +1,6 @@
 import { Raid as RaidProto } from '@generated/proto/api';
-import { Class, Debuffs, RaidBuffs, UnitReference, UnitReference_Type as UnitType } from '@generated/proto/common';
+import { Debuffs, RaidBuffs } from '@generated/proto/buffs';
+import { Class, UnitReference, UnitReference_Type as UnitType } from '@generated/proto/common';
 
 import { Player } from '../player/player';
 import { Sim } from '../sim';

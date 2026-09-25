@@ -24,10 +24,7 @@ const unsupportedProcsPath = "tools/database/unsupported_procs.txt"
 func TestEveryReachableProcIsSupportedOrListed(t *testing.T) {
 	inRepositoryRoot(t)
 
-	inputs, err := readStoreInputs(spellStoreInputsPath)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
+	inputs := committedInputs(t)
 
 	var out strings.Builder
 	out.WriteString("# Every proc reachable from an item, an enchant or a set bonus that the sim does not\n")

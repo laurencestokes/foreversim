@@ -2,13 +2,16 @@ package druid
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 )
 
 var insectSwarmRank = spellData.InsectSwarm.Highest()
 var insectSwarmTick = insectSwarmRank.PeriodicEffect()
 
 func (druid *Druid) registerInsectSwarmSpell() {
-	auras := druid.NewEnemyAuraArray(core.InsectSwarmAura)
+	auras := druid.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
+		return buffs.InsectSwarmAura(target, true, 0)
+	})
 
 	druid.InsectSwarm = druid.RegisterSpell(Humanoid|Moonkin, core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: insectSwarmRank.ID},

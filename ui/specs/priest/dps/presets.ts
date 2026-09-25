@@ -1,5 +1,6 @@
 import * as PresetUtils from '@app/preset_utils';
-import { ConsumesSpec, Debuffs, IndividualBuffs, PartyBuffs, Profession, Race, RaidBuffs, TristateEffect } from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { ConsumesSpec, Profession, Race, TristateEffect } from '@generated/proto/common';
 import { DpsPriest_Options as Options } from '@generated/proto/priest';
 import { SavedTalents } from '@generated/proto/ui';
 
@@ -45,14 +46,14 @@ export const SmiteConsumables = ShadowConsumables;
 // Aura, Blessing of Wisdom and Judgement of Wisdom its presets name).
 export const DefaultRaidBuffs = RaidBuffs.create({
 	arcaneBrilliance: true,
-	divineSpirit: TristateEffect.TristateEffectRegular,
-	giftOfTheWild: TristateEffect.TristateEffectImproved,
+	giftOfTheWild: true,
+	prayerOfSpirit: true,
+	fireResistanceTotem: true, // a raid buff in the new buffs proto
 });
 
 export const DefaultPartyBuffs = PartyBuffs.create({
-	fireResistanceTotem: true,
 	manaSpringTotem: TristateEffect.TristateEffectImproved,
-	moonkinAura: TristateEffect.TristateEffectRegular,
+	moonkinAura: true,
 });
 
 export const DefaultIndividualBuffs = IndividualBuffs.create({});

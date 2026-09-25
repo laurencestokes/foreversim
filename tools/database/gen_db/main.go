@@ -161,6 +161,9 @@ func main() {
 		if parsed.Icon == "" {
 			parsed.Icon = strings.ToLower(database.GetIconName(iconsMap, enchant.FDID))
 		}
+		if !enchant.IsLive {
+			nonLiveEnchants[database.EnchantToDBKey(parsed)] = struct{}{}
+		}
 		db.MergeEnchant(parsed)
 	}
 
@@ -607,11 +610,17 @@ func simmableGemFilter(_ int32, gem *proto.UIGem) bool {
 
 	return gem.Quality >= proto.ItemQuality_ItemQualityUncommon
 }
+
+var nonLiveEnchants = map[database.EnchantDBKey]struct{}{}
+
 func simmableEnchantFilter(key database.EnchantDBKey, enchant *proto.UIEnchant) bool {
 	if slices.Contains(database.EnchantAllowList, enchant.EffectId) {
 		return true
 	}
 	if _, ok := database.EnchantDenyList[enchant.EffectId]; ok {
+		return false
+	}
+	if _, ok := nonLiveEnchants[key]; ok {
 		return false
 	}
 	// TODO: Refine this filter to better capture simmable enchants based on effect ID and item ID ranges.
@@ -754,7 +763,7 @@ func GetAllRotationSpellIds() map[string][]int32 {
 		}, &proto.Player_ProtectionPaladin{ProtectionPaladin: &proto.ProtectionPaladin{Options: &proto.ProtectionPaladin_Options{ClassOptions: &proto.PaladinOptions{}}}}), nil, nil, nil)},
 		{Name: "retPaladin", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
 			Class:         proto.Class_ClassPaladin,
-			Race:          proto.Race_RaceBloodElf,
+			Race:          proto.Race_RaceUndead,
 			Equipment:     &proto.EquipmentSpec{},
 			TalentsString: rotationTalentsString("paladin"),
 		}, &proto.Player_RetributionPaladin{RetributionPaladin: &proto.RetributionPaladin{Options: &proto.RetributionPaladin_Options{ClassOptions: &proto.PaladinOptions{}}}}), nil, nil, nil)},

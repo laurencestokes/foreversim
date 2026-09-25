@@ -1,7 +1,8 @@
 import * as PresetUtils from '@app/preset_utils';
-import { HandType, ItemSlot, Profession, Race, RaidBuffs, Spec, TristateEffect } from '@generated/proto/common';
+import { RaidBuffs } from '@generated/proto/buffs';
+import { HandType, ItemSlot, Profession, Race, Spec } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
-import { DpsWarrior_Options as WarriorOptions, WarriorShout, WarriorStance } from '@generated/proto/warrior';
+import { DpsWarrior_Options as WarriorOptions, WarriorStance } from '@generated/proto/warrior';
 import { Player } from '@sim/player/player';
 
 import * as WarriorPresets from '../shared/presets';
@@ -40,7 +41,7 @@ export const DefaultOptions = WarriorOptions.create({
 	classOptions: {
 		queueDelay: 250,
 		startingRage: 0,
-		defaultShout: WarriorShout.WarriorShoutBattle,
+		useBattleShout: true,
 		defaultStance: WarriorStance.WarriorStanceBerserker,
 	},
 });
@@ -48,7 +49,7 @@ export const DefaultOptions = WarriorOptions.create({
 export const DefaultConsumables = WarriorPresets.DefaultConsumables;
 
 export const DefaultRaidBuffs = RaidBuffs.create({
-	giftOfTheWild: TristateEffect.TristateEffectImproved,
+	giftOfTheWild: true,
 });
 
 export const OtherDefaults = {

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/proto"
 )
 
 // Two ways this goes wrong and neither would show up as a failure anywhere downstream - the
@@ -12,12 +11,12 @@ import (
 // that inherited somebody else's weapon buff.
 func TestClassImbuesOverrideTheRoleListWithoutLeaking(t *testing.T) {
 	plain := consumesFor(Melee, ClassImbues{})
-	if plain.Party.WindfuryTotem == proto.TristateEffect_TristateEffectMissing {
+	if !plain.Party.WindfuryTotem {
 		t.Fatal("melee should start from the role list, which has Windfury")
 	}
 
 	shaman := consumesFor(Melee, ClassImbues{Windfury: true})
-	if shaman.Party.WindfuryTotem != proto.TristateEffect_TristateEffectMissing {
+	if shaman.Party.WindfuryTotem {
 		t.Error("a shaman's own Windfury Weapon did not take the totem away")
 	}
 	// Everything else must survive the override.
@@ -27,7 +26,7 @@ func TestClassImbuesOverrideTheRoleListWithoutLeaking(t *testing.T) {
 
 	// A half override leaves the other hand alone.
 	rogue := consumesFor(Melee, ClassImbues{OffHand: 26891})
-	if rogue.Consumables.OhImbueId != 26891 || rogue.Party.WindfuryTotem == proto.TristateEffect_TristateEffectMissing {
+	if rogue.Consumables.OhImbueId != 26891 || !rogue.Party.WindfuryTotem {
 		t.Error("overriding the off-hand should keep the main hand's Windfury")
 	}
 	if rogue.Label != "Arena-Melee+class" {
@@ -35,7 +34,7 @@ func TestClassImbuesOverrideTheRoleListWithoutLeaking(t *testing.T) {
 	}
 
 	// And none of it may have written through to the shared list.
-	if again := consumesFor(Melee, ClassImbues{}); again.Party.WindfuryTotem == proto.TristateEffect_TristateEffectMissing ||
+	if again := consumesFor(Melee, ClassImbues{}); !again.Party.WindfuryTotem ||
 		again.Consumables.OhImbueId != 18262 {
 		t.Error("a class imbue leaked into the shared role list")
 	}
@@ -45,7 +44,7 @@ func TestClassImbuesOverrideTheRoleListWithoutLeaking(t *testing.T) {
 		t.Error("the hunter list must not carry the off-hand sharpening stone")
 	}
 	// Casters oil their weapon; a totem would switch the oil off (see applyConsumeEffects).
-	if consumesFor(Caster, ClassImbues{}).Party.WindfuryTotem != proto.TristateEffect_TristateEffectMissing {
+	if consumesFor(Caster, ClassImbues{}).Party.WindfuryTotem {
 		t.Error("the caster list must not carry Windfury")
 	}
 }

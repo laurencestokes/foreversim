@@ -45,7 +45,15 @@ const (
 	// The trigger clause states an attack outcome the mask has no bit for: a resist, a block, a
 	// dodge or a parry.
 	ProcHintOutcomeTaken
+	// The trigger clause names the wearer's own attack being dodged: "when you are Parried or
+	// Dodged".
+	ProcHintAttackDodged
+	// The same for the wearer's own attack being parried.
+	ProcHintAttackParried
 )
+
+// The wearer's own attack landing on nothing, which the decoder turns into the outcome it names.
+const ProcHintAttackAvoided = ProcHintAttackDodged | ProcHintAttackParried
 
 // Returns whether there is any overlap between the given hints.
 func (h ProcHint) Matches(other ProcHint) bool {
@@ -133,9 +141,7 @@ func DecodeProcTypeMask(mask [2]uint32, hint ProcHint) ProcTypeInfo {
 
 	// A mask made of nothing but the spell-cast bits. The harmful one has to be present: a
 	// helpful-only mask carries no evidence that casting is the trigger at all, and the helpful
-	// branch below already demands tooltip evidence before it believes one - the PvP Librams
-	// that buff a heal target read "Causes your Flash of Light to increase the target's
-	// Resilience" and are neither a self buff nor unrestricted.
+	// branch below already demands tooltip evidence before it believes one.
 	spellCastMask := castWord&dbcenums.PROC_FLAG_DEAL_HARMFUL_SPELL != 0 &&
 		castWord&^(dbcenums.PROC_FLAG_DEAL_HARMFUL_SPELL|dbcenums.PROC_FLAG_DEAL_HELPFUL_SPELL) == 0
 
@@ -209,16 +215,24 @@ func DecodeProcTypeMask(mask [2]uint32, hint ProcHint) ProcTypeInfo {
 	// An avoidance outcome - a dodge, a parry, a miss, a full block or a resist - is a hit that
 	// landed on nothing, so a listener whose trigger is one hears a hit that dealt no damage.
 	// Which of them it is stays the caller's: no ProcTypeMask has a bit for any of them.
-	if hint.Matches(ProcHintOutcomeTaken) {
+	if hint.Matches(ProcHintOutcomeTaken | ProcHintAttackAvoided) {
 		info.RequireDamageDealt = false
 	}
 
-	// An outcome the listener can be given. Only the crit hint names one: the mask itself states
-	// which hits arrive, never how they resolved, so everything else listens to a landed hit. A
-	// cast has not resolved into a hit at all and takes no outcome.
+	// An outcome the listener can be given. The crit hint names one, and so do the two naming the
+	// wearer's own attack dodged or parried: the mask itself states which hits arrive, never how
+	// they resolved, so everything else listens to a landed hit. A cast has not resolved into a
+	// hit at all and takes no outcome.
 	switch {
 	case info.Callback.Matches(CallbackOnCastComplete):
 		info.Outcome = OutcomeEmpty
+	case hint.Matches(ProcHintAttackAvoided):
+		if hint.Matches(ProcHintAttackDodged) {
+			info.Outcome |= OutcomeDodge
+		}
+		if hint.Matches(ProcHintAttackParried) {
+			info.Outcome |= OutcomeParry
+		}
 	case hint.Matches(ProcHintCrit):
 		info.Outcome = OutcomeCrit
 	default:

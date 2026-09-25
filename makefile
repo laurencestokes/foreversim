@@ -134,6 +134,13 @@ binary_dist: $(OUT_DIR)/.dirstamp
 .PHONY: proto
 proto: sim/core/proto/api.pb.go ui/generated/proto/api.ts
 
+# The buff messages come from the checked-in manifest, not from hand-edited proto. The manifest
+# imports the compiled protos, so this is run by hand after a manifest edit rather than as a
+# prerequisite of them; TestBuffFilesRegenerateFromTheCommittedInputs fails while buffs.proto is stale.
+.PHONY: buffs-proto
+buffs-proto:
+	go run ./tools/gen_buffs_proto
+
 # Builds the web server with the compiled client.
 .PHONY: wowsimforever
 wowsimforever: binary_dist devserver
@@ -253,6 +260,12 @@ db:
 	go run ./tools/database/gen_spelldata
 	@echo "Running DBC generation tool"
 	go run tools/database/gen_db/*.go -outDir=./assets -gen=db
+
+# Regenerates sim/<class>/spell_data_auto_gen.go from tools/database/wowsims.db, so it
+# runs after `make db` and from the repo root.
+.PHONY: spelldata
+spelldata:
+	go run ./tools/database/gen_spelldata
 
 # Regenerates sim/core/base_stats_auto_gen.go and ui/sim/constants/mechanics.ts from
 # the same numbers, so the sim and the UI cannot disagree about a rating conversion.

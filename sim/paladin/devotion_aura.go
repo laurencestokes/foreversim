@@ -2,7 +2,7 @@ package paladin
 
 import (
 	"github.com/wowsims/forever/sim/common/shared"
-	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 )
 
 var DevotionAuraRankMap = spellData.DevotionAura
@@ -14,7 +14,7 @@ var DevotionAuraRankMap = spellData.DevotionAura
 // them per Paladin at any one time.
 func (paladin *Paladin) registerDevotionAura() {
 	DevotionAuraRankMap.RegisterAll(func(row shared.SpellData) {
-		aura := core.DevotionAuraBuff(&paladin.Character, true, auraRank(row))
+		aura := buffs.DevotionAuraBuff(&paladin.Character, true, auraRank(row))
 		paladin.registerAuraSpell(row, aura, SpellMaskDevotionAura)
 	})
 }

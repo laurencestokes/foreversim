@@ -3,6 +3,7 @@ package proto;
 
 option go_package = "./proto";
 
+import "buffs.proto";
 import "common.proto";
 import "apl.proto";
 import "db.proto";
@@ -741,15 +742,14 @@ message ProgressMetrics {
 message BulkSettings {
 	repeated ItemSpec items = 1;
 	int32 iterations_per_combo = 2;
-	reserved 3 to 7;
 
-	bool use_legacy_bulk_sim = 13;
+	bool use_legacy_bulk_sim = 3;
 
-	int32 freeze_ring_slot = 8;
-	int32 freeze_trinket_slot = 9;
-	int32 freeze_weapon_slot = 10;
-	repeated WeaponType freeze_mainhand_weapon_slots = 11;
-	repeated WeaponType freeze_offhand_weapon_slots = 12;
+	int32 freeze_ring_slot = 4;
+	int32 freeze_trinket_slot = 5;
+	int32 freeze_weapon_slot = 6;
+	repeated WeaponType freeze_mainhand_weapon_slots = 7;
+	repeated WeaponType freeze_offhand_weapon_slots = 8;
 }
 
 message BulkGearCandidate {

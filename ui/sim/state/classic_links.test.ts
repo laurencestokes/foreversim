@@ -78,9 +78,9 @@ describe('classic-engine share links', () => {
 		});
 		// A master RaidBuffs field that lives in our PartyBuffs.
 		expect(settings.partyBuffs!.battleShout).toBeGreaterThan(0);
-		expect(settings.raidBuffs!.giftOfTheWild).toBeGreaterThan(0);
-		// Master bool debuff onto our TristateEffect.
-		expect(settings.debuffs!.faerieFire).toBeGreaterThan(0);
+		// Master TristateEffect buffs onto our bools.
+		expect(settings.raidBuffs!.giftOfTheWild).toBe(true);
+		expect(settings.debuffs!.faerieFire).toBe(true);
 
 		const withHit = ClassicSettings.toJson(classicOf((LINKS as Record<string, string>).hunter)) as any;
 		withHit.player.bonusStats.stats[ClassicStat.StatMeleeHit] = 2;

@@ -5,9 +5,9 @@ import (
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Forever's Starfire tops out at rank 7, so the max-rank entry moves down from TBC's 8 rather than
-// naming a rank the table does not hold. Rank 6 stays registered for downranking.
-var StarfireRankMap = spelldata.Ranked(spellData.Starfire.Rank(6).ID, spellData.Starfire.Rank(7).ID)
+// Every rank is registered: a rotation can downrank when mana runs short, and the sim applies no
+// downranking penalty (the beta client has none at 20; nothing says otherwise for 60).
+var StarfireRankMap = spellData.Starfire
 
 func (druid *Druid) registerStarfireSpell(rankConfig *spelldata.Spell) {
 	spell := druid.RegisterSpell(Humanoid|Moonkin, core.SpellConfig{

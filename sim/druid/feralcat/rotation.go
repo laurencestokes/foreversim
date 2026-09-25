@@ -75,13 +75,6 @@ func (cat *FeralDruid) shift(sim *core.Simulation) bool {
 		if !mcd.IsReady(sim) {
 			continue
 		}
-		// Drums and Bloodlust are fired at fixed times (0s and 5s) via scheduled
-		// pending actions — skip them here so they don't fire opportunistically
-		// during powershifts.
-		spellID := mcd.Spell.ActionID.SpellID
-		if spellID == core.BloodlustActionID.SpellID || spellID == 35476 {
-			continue
-		}
 		mcd.TryActivate(sim, &cat.Character)
 	}
 
@@ -126,7 +119,7 @@ func (cat *FeralDruid) doRotation(sim *core.Simulation) bool {
 
 	// Maintain Faerie Fire (Feral) before other decisions.
 	if rotation.MaintainFaerieFire && cat.FaerieFire != nil &&
-		!cat.FaerieFireAuras.Get(cat.CurrentTarget).IsActive() &&
+		cat.FaerieFireAuras.Get(cat.CurrentTarget).ShouldRefreshExclusiveEffects(sim, 0) &&
 		cat.FaerieFire.CanCast(sim, cat.CurrentTarget) {
 		return cat.FaerieFire.Cast(sim, cat.CurrentTarget)
 	}

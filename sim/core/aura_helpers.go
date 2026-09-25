@@ -155,13 +155,7 @@ func (procAura *Aura) AttachProcTriggerCallback(unit *Unit, config ProcTrigger) 
 			return
 		}
 		if config.Outcome != OutcomeEmpty {
-			matchesOutcome := result.Outcome.Matches(config.Outcome)
-			// Crit procs also respond to resilience-suppressed crits. DidCrit remains
-			// strict so damage and metric code can distinguish the two outcomes.
-			if result.DidSuppressedCrit() && config.Outcome.Matches(OutcomeCrit) {
-				matchesOutcome = config.Outcome&^OutcomeCrit == 0 || result.Outcome.Matches(config.Outcome&^OutcomeCrit)
-			}
-			if !matchesOutcome {
+			if !result.Outcome.Matches(config.Outcome) {
 				return
 			}
 		}
@@ -308,7 +302,7 @@ func (aura *StatBuffAura) CanProc(sim *Simulation) bool {
 func (aura *StatBuffAura) InferCDType() CooldownType {
 	cdType := CooldownTypeUnknown
 
-	if aura.BuffsMatchingStat([]stats.Stat{stats.Armor, stats.BlockPercent, stats.DodgeRating, stats.ParryRating, stats.Health}) {
+	if aura.BuffsMatchingStat([]stats.Stat{stats.Armor, stats.BlockPercent, stats.DodgeRating, stats.ParryRating, stats.DodgePercent, stats.ParryPercent, stats.Health}) {
 		cdType |= CooldownTypeSurvival
 	} else {
 		cdType |= CooldownTypeDPS
@@ -488,6 +482,51 @@ func (character *Character) NewTemporaryStatsAuraWrapped(auraLabel string, actio
 	}
 }
 
+// A stat an aura multiplies and the factor it multiplies it by.
+type StatMultiplier struct {
+	Stat       stats.Stat
+	Multiplier float64
+}
+
+// A buff that multiplies stats through dynamic stat dependencies, turned on and off with the aura. The
+// temporary stats listeners hear the stats the dependencies add on gain and remove on expire, measured
+// at that moment.
+func (character *Character) NewTemporaryStatMultiplierAura(config Aura, multipliers []StatMultiplier) *StatBuffAura {
+	deps := make([]*stats.StatDependency, len(multipliers))
+	buffed := make([]stats.Stat, len(multipliers))
+	for i, m := range multipliers {
+		deps[i] = character.NewDynamicMultiplyStat(m.Stat, m.Multiplier)
+		buffed[i] = m.Stat
+	}
+
+	toggle := func(aura *Aura, sim *Simulation, set func(*Simulation, *stats.StatDependency)) {
+		if len(character.OnTemporaryStatsChanges) == 0 {
+			for _, dep := range deps {
+				set(sim, dep)
+			}
+			return
+		}
+
+		before := character.GetStats()
+		for _, dep := range deps {
+			set(sim, dep)
+		}
+
+		change := character.GetStats().Subtract(before)
+		for _, onChange := range character.OnTemporaryStatsChanges {
+			onChange(sim, aura, change)
+		}
+	}
+	config.OnGain = func(aura *Aura, sim *Simulation) {
+		toggle(aura, sim, character.EnableBuildPhaseStatDep)
+	}
+	config.OnExpire = func(aura *Aura, sim *Simulation) {
+		toggle(aura, sim, character.DisableBuildPhaseStatDep)
+	}
+
+	return &StatBuffAura{Aura: character.GetOrRegisterAura(config), BuffedStatTypes: buffed}
+}
+
 // Creates a new ProcTriggerAura that is dependent on a parent Aura being active
 // This should only be used if the dependent Aura is:
 // 1. On the a different Unit than parent Aura is registered to (usually the Character)
@@ -660,6 +699,18 @@ func (parentAura *Aura) AttachMultiplyAttackSpeed(multiplier float64) *Aura {
 
 	parentAura.ApplyOnExpire(func(_ *Aura, sim *Simulation) {
 		parentAura.Unit.MultiplyAttackSpeed(sim, 1/multiplier)
+	})
+
+	return parentAura
+}
+
+func (parentAura *Aura) AttachMultiplyRangedSpeed(multiplier float64) *Aura {
+	parentAura.ApplyOnGain(func(_ *Aura, sim *Simulation) {
+		parentAura.Unit.MultiplyRangedSpeed(sim, multiplier)
+	})
+
+	parentAura.ApplyOnExpire(func(_ *Aura, sim *Simulation) {
+		parentAura.Unit.MultiplyRangedSpeed(sim, 1/multiplier)
 	})
 
 	return parentAura

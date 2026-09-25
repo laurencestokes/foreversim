@@ -84,8 +84,8 @@ func newWeaponFromItem(item *Item, bonusDps float64) Weapon {
 	}
 
 	return Weapon{
-		BaseDamageMin:        item.WeaponDamageMin + bonusDps*item.SwingSpeed,
-		BaseDamageMax:        item.WeaponDamageMax + bonusDps*item.SwingSpeed,
+		BaseDamageMin:        item.WeaponDamageMin + item.Enchant.WeaponDamage + bonusDps*item.SwingSpeed,
+		BaseDamageMax:        item.WeaponDamageMax + item.Enchant.WeaponDamage + bonusDps*item.SwingSpeed,
 		SwingSpeed:           item.SwingSpeed,
 		NormalizedSwingSpeed: normalizedWeaponSpeed,
 		AttackPowerPerDPS:    DefaultAttackPowerPerDPS,
@@ -588,7 +588,7 @@ func (aa *AutoAttacks) anyEnabled() bool {
 	return aa.mh.enabled || aa.oh.enabled || aa.ranged.enabled
 }
 
-func (aa *AutoAttacks) reset(_ *Simulation) {
+func (aa *AutoAttacks) reset(sim *Simulation) {
 	if !aa.AutoSwingMelee && !aa.AutoSwingRanged {
 		return
 	}
@@ -617,6 +617,17 @@ func (aa *AutoAttacks) reset(_ *Simulation) {
 			aa.oh.swingAt = DurationFromSeconds(aa.oh.SwingSpeed / 2)
 		}
 
+		// Each enemy opens at its own point in its swing timer, so a pack does not swing in volleys.
+		if aa.mh.unit.Type == EnemyUnit {
+			offset := time.Duration(sim.RandomFloat("Enemy Swing Offset") * float64(aa.MainhandSwingSpeed()))
+			aa.mh.previousSwing += offset
+			aa.mh.swingAt += offset
+			aa.mh.naturalReadyAt += offset
+			if aa.IsDualWielding {
+				aa.oh.previousSwing += offset
+				aa.oh.swingAt += offset
+			}
+		}
 	}
 
 	aa.ranged.previousSwing = -NeverExpires
@@ -1051,11 +1062,20 @@ func (aa *AutoAttacks) PPMProc(sim *Simulation, ppm float64, procMask ProcMask, 
 	case spell.ProcMask.Matches(procMask &^ ProcMaskMeleeOH &^ ProcMaskRanged):
 		return sim.RandomFloat(label) < ppm*aa.mh.SwingSpeed/60.0
 	case spell.ProcMask.Matches(procMask & ProcMaskMeleeOH):
-		return sim.RandomFloat(label) < ppm*aa.oh.SwingSpeed/60.0
+		return sim.RandomFloat(label) < ppm*aa.offHandProcSpeed()/60.0
 	case spell.ProcMask.Matches(procMask & ProcMaskRanged):
 		return sim.RandomFloat(label) < ppm*aa.ranged.SwingSpeed/60.0
 	}
 	return false
+}
+
+// The swing speed a procs-per-minute rate is measured against for an off-hand hit. A hit with no
+// off-hand weapon behind it, such as a shield's, is measured against the main hand.
+func (aa *AutoAttacks) offHandProcSpeed() float64 {
+	if aa.oh.SwingSpeed == 0 {
+		return aa.mh.SwingSpeed
+	}
+	return aa.oh.SwingSpeed
 }
 
 func (unit *Unit) applyParryHaste() {

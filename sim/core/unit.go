@@ -403,7 +403,7 @@ func (unit *Unit) processDynamicBonus(sim *Simulation, bonus stats.Stats) {
 	if bonus[stats.SpellHasteRating] != 0 {
 		unit.updateCastSpeed()
 	}
-	if bonus[stats.DefenseRating] != 0 || bonus[stats.ResilienceRating] != 0 {
+	if bonus[stats.ReducedCritTakenPercent] != 0 {
 		unit.updateReducedCritTakenPercent()
 	}
 
@@ -647,7 +647,7 @@ func (unit *Unit) updateMeleeAndRangedHaste() {
 	}
 }
 
-// Helper for when true haste effects are multiplied for i.E. Bloodlust
+// Helper for when true haste effects are multiplied.
 // Seems to also always impact the regen rate
 func (unit *Unit) MultiplyAttackSpeed(sim *Simulation, amount float64) {
 	unit.PseudoStats.AttackSpeedMultiplier *= amount
@@ -681,13 +681,45 @@ func (unit *Unit) GetCurrentPowerBar() PowerBarType {
 	return unit.currentPowerBar
 }
 
+// A rating that converts into a percent stat at RatingPerPercent rating per percent point. Where Step
+// is non-zero the rating counts in whole steps of that size only.
+type RatingConversion struct {
+	Rating           stats.Stat
+	Percent          stats.Stat
+	RatingPerPercent float64
+	Step             float64
+}
+
+// The rating conversions every unit has, in the order the reforge optimizer tries a rating's percents.
+var RatingConversions = []RatingConversion{
+	{stats.MeleeHitRating, stats.PhysicalHitPercent, PhysicalHitRatingPerHitPercent, 0},
+	{stats.SpellHitRating, stats.SpellHitPercent, SpellHitRatingPerHitPercent, 0},
+	{stats.MeleeCritRating, stats.PhysicalCritPercent, PhysicalCritRatingPerCritPercent, 0},
+	{stats.SpellCritRating, stats.SpellCritPercent, SpellCritRatingPerCritPercent, 0},
+	{stats.ExpertiseRating, stats.ExpertisePercent, ExpertiseRatingPerExpertisePercent, 0},
+	{stats.DodgeRating, stats.DodgePercent, DodgeRatingPerDodgePercent, 0},
+	{stats.ParryRating, stats.ParryPercent, ParryRatingPerParryPercent, 0},
+	{stats.BlockRating, stats.BlockPercent, BlockRatingPerBlockPercent, 0},
+	{stats.DefenseRating, stats.ReducedCritTakenPercent, DefenseRatingPerAvoidancePercent, DefenseRatingPerDefenseLevel},
+	{stats.DefenseRating, stats.DodgePercent, DefenseRatingPerAvoidancePercent, 0},
+	{stats.DefenseRating, stats.ParryPercent, DefenseRatingPerAvoidancePercent, 0},
+	{stats.DefenseRating, stats.BlockPercent, DefenseRatingPerAvoidancePercent, 0},
+}
+
+func AddRatingConversions(sdm *stats.StatDependencyManager) {
+	for _, conversion := range RatingConversions {
+		if conversion.Step != 0 {
+			sdm.AddFlooredStatDependency(conversion.Rating, conversion.Percent, conversion.Step, 1/conversion.RatingPerPercent)
+		} else {
+			sdm.AddStatDependency(conversion.Rating, conversion.Percent, 1/conversion.RatingPerPercent)
+		}
+	}
+}
+
 // Stat dependencies that apply both to players/pets (represented as Character
 // structs) and to NPCs (represented as Target structs).
 func (unit *Unit) addUniversalStatDependencies() {
-	unit.AddStatDependency(stats.MeleeHitRating, stats.PhysicalHitPercent, 1/PhysicalHitRatingPerHitPercent)
-	unit.AddStatDependency(stats.SpellHitRating, stats.SpellHitPercent, 1/SpellHitRatingPerHitPercent)
-	unit.AddStatDependency(stats.MeleeCritRating, stats.PhysicalCritPercent, 1/PhysicalCritRatingPerCritPercent)
-	unit.AddStatDependency(stats.SpellCritRating, stats.SpellCritPercent, 1/SpellCritRatingPerCritPercent)
+	AddRatingConversions(&unit.StatDependencyManager)
 }
 
 func (unit *Unit) finalize() {
@@ -709,12 +741,10 @@ func (unit *Unit) finalize() {
 	unit.updateCastSpeed()
 	unit.updateAttackSpeed()
 	unit.updateMeleeAndRangedHaste()
-	unit.updateReducedCritTakenPercent()
 	unit.initMovement()
 
 	// All stats added up to this point are part of the 'initial' stats.
 	unit.initialStatsWithoutDeps = unit.stats
-	unit.initialPseudoStats = unit.PseudoStats
 	unit.initialCastSpeed = unit.CastSpeed
 	unit.initialMeleeSwingSpeed = unit.TotalMeleeHasteMultiplier()
 	unit.initialRangedSwingSpeed = unit.TotalRangedHasteMultiplier()
@@ -723,6 +753,9 @@ func (unit *Unit) finalize() {
 	unit.initialStats = unit.ApplyStatDependencies(unit.initialStatsWithoutDeps).FloorGameStats()
 	unit.statsWithoutDeps = unit.initialStatsWithoutDeps
 	unit.stats = unit.initialStats
+
+	unit.updateReducedCritTakenPercent()
+	unit.initialPseudoStats = unit.PseudoStats
 
 	unit.AutoAttacks.finalize()
 
@@ -885,13 +918,13 @@ func (unit *Unit) ExecuteCustomRotation(sim *Simulation) {
 }
 
 func (unit *Unit) GetDodgeFromRating() float64 {
-	return unit.stats[stats.DodgeRating] / DodgeRatingPerDodgePercent / 100
+	return unit.stats[stats.DodgePercent] / 100
 }
 func (unit *Unit) GetParryFromRating() float64 {
-	return unit.stats[stats.ParryRating] / ParryRatingPerParryPercent / 100
+	return unit.stats[stats.ParryPercent] / 100
 }
 func (unit *Unit) GetBlockFromRating() float64 {
-	return unit.stats[stats.BlockPercent] + unit.stats[stats.BlockRating]/BlockRatingPerBlockPercent/100
+	return unit.stats[stats.BlockPercent] / 100
 }
 
 func (unit *Unit) GetTotalDodgeChanceAsDefender(spell *Spell, atkTable *AttackTable) float64 {
@@ -899,8 +932,7 @@ func (unit *Unit) GetTotalDodgeChanceAsDefender(spell *Spell, atkTable *AttackTa
 		atkTable.BaseDodgeChance +
 		unit.GetDodgeFromRating() -
 		spell.DodgeParrySuppression() -
-		spell.Unit.PseudoStats.DodgeReduction +
-		unit.GetDefenseReduction()
+		spell.Unit.PseudoStats.DodgeReduction
 	return math.Max(chance, 0.0)
 }
 
@@ -908,8 +940,7 @@ func (unit *Unit) GetTotalParryChanceAsDefender(spell *Spell, atkTable *AttackTa
 	chance := unit.PseudoStats.BaseParryChance +
 		atkTable.BaseParryChance +
 		unit.GetParryFromRating() -
-		spell.DodgeParrySuppression() +
-		unit.GetDefenseReduction()
+		spell.DodgeParrySuppression()
 	return math.Max(chance, 0.0)
 }
 
@@ -919,29 +950,20 @@ func (unit *Unit) GetTotalChanceToBeMissedAsDefender(atkTable *AttackTable) floa
 	// block (Classic: 5% + (defense - attack skill) * 0.04%).
 	chance := atkTable.BaseMissChance +
 		unit.PseudoStats.ReducedPhysicalHitTakenChance/100 +
-		unit.GetDefenseReduction()
+		math.Floor(unit.stats[stats.DefenseRating]/DefenseRatingPerDefenseLevel)*MissDodgeParryBlockCritChancePerDefense/100
 	return math.Max(chance, 0.0)
 }
 
 func (unit *Unit) GetTotalBlockChanceAsDefender(atkTable *AttackTable) float64 {
 	chance := unit.PseudoStats.BaseBlockChance +
 		atkTable.BaseBlockChance +
-		unit.GetBlockFromRating() +
-		unit.GetDefenseReduction()
+		unit.GetBlockFromRating()
 	return math.Max(chance, 0.0)
-}
-
-func (unit *Unit) GetDefenseReduction() float64 {
-	return math.Floor(unit.stats[stats.DefenseRating]/DefenseRatingPerDefenseLevel) * MissDodgeParryBlockCritChancePerDefense / 100
-}
-func (unit *Unit) GetResilienceReduction() float64 {
-	return unit.GetStat(stats.ResilienceRating) / ResilienceRatingPerCritReductionChance / 100
 }
 
 func (unit *Unit) updateReducedCritTakenPercent() {
 	unit.PseudoStats.ReducedCritTakenPercent = unit.PseudoStats.BaseReducedCritTakenPercent +
-		unit.GetDefenseReduction() +
-		unit.GetResilienceReduction()
+		unit.stats[stats.ReducedCritTakenPercent]/100
 }
 
 func (unit *Unit) GetTotalAvoidanceChance(spell *Spell, atkTable *AttackTable) float64 {

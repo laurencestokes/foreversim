@@ -1,177 +1,36 @@
-import { Drums, Race, Stat } from '@generated/proto/common';
-import { Player } from '@sim/player/player';
+import { Class, Stat } from '@generated/proto/common';
 import { ActionId } from '@sim/proto/action_id';
 import { Party } from '@sim/raid/party';
-import {
-	makeBooleanDebuffInput,
-	makeBooleanIndividualBuffInput,
-	makeBooleanPartyBuffInput,
-	makeBooleanRaidBuffInput,
-	makeMultistateIndividualBuffInput,
-	makeMultistatePartyBuffInput,
-	makeQuadstatePartyBuffInput,
-	makeTristateDebuffInput,
-	makeTristatePartyBuffInput,
-	makeTristateRaidBuffInput,
-} from '@ui-kit/icon_inputs';
-import * as InputHelpers from '@ui-kit/input_helpers';
+import { makeBooleanIndividualBuffInput, makeBooleanPartyBuffInput } from '@ui-kit/icon_inputs';
 
-import { DrumsBattle, DrumsRestoration, DrumsWar } from './consumables';
-import { IconPickerStatOption, RenderableStatOptions } from './stat_options';
+import * as Generated from './buffs_debuffs_auto_gen';
+import { IconPickerStatOption, inDisplayOrder } from './stat_options';
 
-///////////////////////////////////////////////////////////////////////////
-//                                 RAID BUFFS
-///////////////////////////////////////////////////////////////////////////
+// Every buff the client database resolves to a spell has its input generated from the manifest;
+// the rows below are the ones it cannot produce, and the registries at the end of this file
+// interleave the two.
+export * from './buffs_debuffs_auto_gen';
 
-// Raid Buffs
-export const ArcaneBrilliance = makeBooleanRaidBuffInput({
-	actionId: ActionId.fromSpellId(23028),
-	fieldName: 'arcaneBrilliance',
-	label: 'Arcane Brilliance',
+// The generated const takes its name from the proto field; the specs name the buff.
+export const Innervate = Generated.Innervates;
+export const PowerInfusion = Generated.PowerInfusions;
+export const ManaTideTotem = Generated.ManaTideTotems;
+
+// Individual Buffs
+export const GreaterBlessingOfSalvation = makeBooleanIndividualBuffInput({
+	actionId: ActionId.fromSpellId(25895),
+	fieldName: 'greaterBlessingOfSalvation',
+	label: 'Greater Blessing of Salvation',
+	showWhen: player => !player.getPlayerSpec().isTankSpec && !player.getPlayerSpec().isHealingSpec,
 });
-export const Bloodlust = makeBooleanRaidBuffInput({ actionId: ActionId.fromSpellId(2825), fieldName: 'bloodlust', label: 'Bloodlust' });
-export const DivineSpirit = makeTristateRaidBuffInput({
-	actionId: ActionId.fromSpellId(27841),
-	impId: ActionId.fromSpellId(33182),
-	fieldName: 'divineSpirit',
-	label: 'Divine Spirit',
-});
-export const GiftOfTheWild = makeTristateRaidBuffInput({
-	actionId: ActionId.fromSpellId(21850),
-	impId: ActionId.fromSpellId(17055),
-	fieldName: 'giftOfTheWild',
-	label: 'Gift of the Wild',
-});
-export const Thorns = makeTristateRaidBuffInput({
-	actionId: ActionId.fromSpellId(26992),
-	impId: ActionId.fromSpellId(16840),
-	fieldName: 'thorns',
-	label: 'Thorns',
-});
-export const PowerWordFortitude = makeTristateRaidBuffInput({
-	actionId: ActionId.fromSpellId(10938),
-	impId: ActionId.fromSpellId(14767),
-	fieldName: 'powerWordFortitude',
-	label: 'Power Word: Fortitude',
-});
-export const ShadowProtection = makeBooleanRaidBuffInput({
-	actionId: ActionId.fromSpellId(39374),
-	fieldName: 'shadowProtection',
-	label: 'Shadow Protection',
+export const GreaterBlessingOfLight = makeBooleanIndividualBuffInput({
+	actionId: ActionId.fromSpellId(25890),
+	fieldName: 'greaterBlessingOfLight',
+	label: 'Greater Blessing of Light',
+	showWhen: player => player.getPlayerSpec().isHealingSpec || player.getPlayerSpec().isTankSpec,
 });
 
-///////////////////////////////////////////////////////////////////////////
-//                                 PARTY BUFFS
-///////////////////////////////////////////////////////////////////////////
-
-export const AtieshMage = makeMultistatePartyBuffInput({
-	actionId: ActionId.fromSpellId(28142),
-	numStates: 5,
-	fieldName: 'atieshMage',
-	label: 'Atiesh - Mage',
-});
-export const AtieshWarlock = makeMultistatePartyBuffInput({
-	actionId: ActionId.fromSpellId(28143),
-	numStates: 5,
-	fieldName: 'atieshWarlock',
-	label: 'Atiesh - Warlock',
-});
-export const BraidedEterniumChain = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(31025),
-	fieldName: 'braidedEterniumChain',
-	label: 'Braided Eternium Chain',
-});
-export const ChainOfTheTwilightOwl = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(31035),
-	fieldName: 'chainOfTheTwilightOwl',
-	label: 'Chain of the Twilight Owl',
-});
-export const CommandingShout = makeTristatePartyBuffInput({
-	actionId: ActionId.fromSpellId(469),
-	impId: ActionId.fromSpellId(12861),
-	fieldName: 'commandingShout',
-	label: 'Commanding Shout',
-});
-export const BattleShout = makeTristatePartyBuffInput({
-	actionId: ActionId.fromSpellId(25289),
-	impId: ActionId.fromSpellId(23563),
-	fieldName: 'battleShout',
-	label: 'Battle Shout',
-});
-export const DevotionAura = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(10293),
-	fieldName: 'devotionAura',
-	label: 'Devotion Aura',
-});
-export const FrostResistanceAura = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(19898),
-	fieldName: 'frostResistanceAura',
-	label: 'Frost Resistance Aura',
-});
-export const FireResistanceAura = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(19900),
-	fieldName: 'fireResistanceAura',
-	label: 'Fire Resistance Aura',
-});
-export const ShadowResistanceAura = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(19896),
-	fieldName: 'shadowResistanceAura',
-	label: 'Shadow Resistance Aura',
-});
-export const DraeneiRacialCaster = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(28878),
-	fieldName: 'draeneiRacialCaster',
-	label: 'Inspiring Presense - Caster',
-	showWhen: (party: Party) => [Race.RaceDraenei, Race.RaceDwarf, Race.RaceGnome, Race.RaceHuman, Race.RaceNightElf].includes(party.getPlayer(0)!.getRace()),
-});
-export const DraeneiRacialMelee = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(6562),
-	fieldName: 'draeneiRacialMelee',
-	label: 'Inspiring Presense - Melee',
-	showWhen: (party: Party) => [Race.RaceDraenei, Race.RaceDwarf, Race.RaceGnome, Race.RaceHuman, Race.RaceNightElf].includes(party.getPlayer(0)!.getRace()),
-});
-export const EyeOfTheNight = makeBooleanPartyBuffInput({ actionId: ActionId.fromSpellId(31033), fieldName: 'eyeOfTheNight', label: 'Eye of the Night' });
-export const FerociousInspiration = makeMultistatePartyBuffInput({
-	actionId: ActionId.fromSpellId(34460),
-	numStates: 5,
-	fieldName: 'ferociousInspiration',
-	label: 'Ferocious Inspiratation',
-});
-export const GraceOfAirTotem = makeTristatePartyBuffInput({
-	actionId: ActionId.fromSpellId(25359),
-	impId: ActionId.fromSpellId(16295),
-	fieldName: 'graceOfAirTotem',
-	label: 'Grace of Air Totem',
-});
-export const JadePendantOfBlasting = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(25607),
-	fieldName: 'jadePendantOfBlasting',
-	label: 'Jade Pendant of Blasting',
-});
-export const LeaderOfThePack = makeTristatePartyBuffInput({
-	actionId: ActionId.fromSpellId(17007),
-	impId: ActionId.fromItemId(32387),
-	fieldName: 'leaderOfThePack',
-	label: 'Leader of the Pack',
-});
-export const ManaSpringTotem = makeTristatePartyBuffInput({
-	actionId: ActionId.fromSpellId(10497),
-	impId: ActionId.fromSpellId(16208),
-	fieldName: 'manaSpringTotem',
-	label: 'Mana Spring Totem',
-});
-export const ManaTideTotem = makeMultistatePartyBuffInput({
-	actionId: ActionId.fromSpellId(16190),
-	numStates: 5,
-	fieldName: 'manaTideTotems',
-	label: 'Mana Tide Totem',
-});
-export const MoonkinAura = makeTristatePartyBuffInput({
-	actionId: ActionId.fromSpellId(24907),
-	impId: ActionId.fromItemId(32387),
-	fieldName: 'moonkinAura',
-	label: 'Moonkin Aura',
-});
+// Party Buffs
 export const RetributionAura = makeBooleanPartyBuffInput({
 	actionId: ActionId.fromSpellId(10301),
 	fieldName: 'retributionAura',
@@ -180,298 +39,71 @@ export const RetributionAura = makeBooleanPartyBuffInput({
 	// power it scales with is the RetributionAuraSpellPower other-input, shown under the same rule.
 	showWhen: (party: Party) => !!party.getPlayer(0)?.getPlayerSpec().isTankSpec,
 });
-export const ConcentrationAura = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(19746),
-	fieldName: 'concentrationAura',
-	label: 'Concentration Aura',
-});
-export const StrengthOfEarthTotem = makeQuadstatePartyBuffInput({
-	actionId: ActionId.fromSpellId(25361),
-	impId: ActionId.fromSpellId(16295),
-	impId2: ActionId.fromSpellId(37223),
-	fieldName: 'strengthOfEarthTotem',
-	fieldNameImp2: 'soeEnhancement2Pt4',
-	label: 'Strength of Earth Totem',
-});
-export const TotemOfWrath = makeMultistatePartyBuffInput({
-	actionId: ActionId.fromSpellId(30706),
-	numStates: 5,
-	fieldName: 'totemOfWrath',
-	label: 'Totem of Wrath',
-});
-export const TrueshotAura = makeBooleanPartyBuffInput({ actionId: ActionId.fromSpellId(19506), fieldName: 'trueshotAura', label: 'Trueshot Aura' });
-export const AspectOfTheWild = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(27045),
-	fieldName: 'aspectOfTheWild',
-	label: 'Aspect of the Wild',
-});
-export const FrostResistanceTotem = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(25560),
-	fieldName: 'frostResistanceTotem',
-	label: 'Frost Resistance Totem',
-});
-export const NatureResistanceTotem = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(25574),
-	fieldName: 'natureResistanceTotem',
-	label: 'Nature Resistance Totem',
-});
-export const FireResistanceTotem = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(10538),
-	fieldName: 'fireResistanceTotem',
-	label: 'Fire Resistance Totem',
-});
-export const WrathOfAirTotem = makeTristatePartyBuffInput({
-	actionId: ActionId.fromSpellId(3738),
-	impId: ActionId.fromSpellId(37212),
-	fieldName: 'wrathOfAirTotem',
-	label: 'Wrath of Air Totem',
-});
-export const BloodPact = makeTristatePartyBuffInput({
-	actionId: ActionId.fromSpellId(11767),
-	impId: ActionId.fromSpellId(18696),
-	fieldName: 'bloodPact',
-	label: 'Bloodpact',
-});
-export const WindfuryTotem = makeTristatePartyBuffInput({
-	actionId: ActionId.fromSpellId(25587),
-	impId: ActionId.fromSpellId(29193),
-	fieldName: 'windfuryTotem',
-	label: 'Windfury Totem',
-});
 
-// The drums party buff is a mutually-exclusive swatch pick (none / battle / war /
-// restoration) over the shared `PartyBuffs.drums` field, not a boolean toggle, so it
-// is composed directly rather than through `makeEnumValuePartyBuffInput` (which only
-// wraps a single on/off value).
-export const DrumsBuff: InputHelpers.TypedIconEnumPickerConfig<Player<any>, Drums> = {
-	type: 'iconEnum',
-	label: 'Drums',
-	values: [{ color: 'gray', value: Drums.DrumsUnknown }, DrumsBattle, DrumsWar, DrumsRestoration],
-	zeroValue: Drums.DrumsUnknown,
-	equals: (a: Drums, b: Drums) => a === b,
-	storeField: 'raid:partyBuffs',
-	getValue: (player: Player<any>) => player.getParty()!.getBuffs().drums,
-	setValue: (player: Player<any>, newValue: Drums) => {
-		const party = player.getParty()!;
-		const newBuffs = party.getBuffs();
-		newBuffs.drums = newValue;
-		party.setBuffs(newBuffs);
-	},
-};
-
-// Individual Buffs
-export const BlessingOfKings = makeBooleanIndividualBuffInput({
-	actionId: ActionId.fromSpellId(25898),
-	fieldName: 'blessingOfKings',
-	label: 'Blessing of Kings',
-});
-export const BlessingOfMight = makeBooleanIndividualBuffInput({
-	actionId: ActionId.fromSpellId(25916),
-	fieldName: 'blessingOfMight',
-	label: 'Blessing of Might',
-});
-export const BlessingOfSalvation = makeBooleanIndividualBuffInput({
-	actionId: ActionId.fromSpellId(25895),
-	fieldName: 'blessingOfSalvation',
-	label: 'Blessing of Salvation',
-	showWhen: player => !player.getPlayerSpec().isTankSpec && !player.getPlayerSpec().isHealingSpec,
-});
-export const BlessingOfWisdom = makeBooleanIndividualBuffInput({
-	actionId: ActionId.fromSpellId(25918),
-	fieldName: 'blessingOfWisdom',
-	label: 'Blessing of Wisdom',
-});
-export const BlessingOfLight = makeBooleanIndividualBuffInput({
-	actionId: ActionId.fromSpellId(25890),
-	fieldName: 'blessingOfLight',
-	label: 'Blessing of Light',
-	showWhen: player => player.getPlayerSpec().isHealingSpec || player.getPlayerSpec().isTankSpec,
-});
-export const Innervate = makeMultistateIndividualBuffInput({
-	actionId: ActionId.fromSpellId(29166),
-	numStates: 11,
-	fieldName: 'innervates',
-	label: 'Innervates',
-});
-export const PowerInfusion = makeMultistateIndividualBuffInput({
-	actionId: ActionId.fromSpellId(10060),
-	numStates: 11,
-	fieldName: 'powerInfusions',
-	label: 'Power Infusions',
-});
-export const UnleashedRage = makeBooleanIndividualBuffInput({
-	actionId: ActionId.fromSpellId(30811),
-	fieldName: 'unleashedRage',
-	label: 'Unleashed Rage',
-});
-export const ShadowPriestDPS = makeMultistateIndividualBuffInput({
-	actionId: ActionId.fromSpellId(34917),
-	numStates: 1500,
-	fieldName: 'shadowPriestDps',
-	label: 'Vampiric Touch',
-});
-
-export const PARTY_BUFFS_CONFIG = [
-	{ config: BloodPact, stats: [Stat.StatStamina] },
-	{ config: CommandingShout, stats: [Stat.StatHealth] },
-	{ config: BattleShout, stats: [Stat.StatAttackPower, Stat.StatRangedAttackPower] },
-	{ config: DevotionAura, stats: [Stat.StatArmor] },
-	{ config: FerociousInspiration, stats: [] },
-	{ config: LeaderOfThePack, stats: [Stat.StatAttackPower, Stat.StatMeleeCritRating] },
-	{ config: ManaSpringTotem, stats: [Stat.StatMP5] },
-	{ config: ManaTideTotem, stats: [Stat.StatMP5] },
-	{ config: ShadowPriestDPS, stats: [Stat.StatMP5] },
-	{ config: MoonkinAura, stats: [Stat.StatSpellCritRating] },
-	{ config: RetributionAura, stats: [Stat.StatArmor, Stat.StatDefenseRating] },
-	{ config: ConcentrationAura, stats: [] },
-	{ config: TotemOfWrath, stats: [Stat.StatSpellCritRating, Stat.StatSpellHitRating] },
-	{ config: TrueshotAura, stats: [Stat.StatAttackPower, Stat.StatRangedAttackPower] },
-	{ config: WrathOfAirTotem, stats: [Stat.StatSpellDamage] },
-	{ config: UnleashedRage, stats: [Stat.StatAttackPower] },
-	{ config: AtieshMage, stats: [Stat.StatSpellDamage, Stat.StatHealingPower] },
-	{ config: AtieshWarlock, stats: [Stat.StatSpellDamage, Stat.StatHealingPower] },
-	{ config: BraidedEterniumChain, stats: [Stat.StatMeleeCritRating] },
-	{ config: ChainOfTheTwilightOwl, stats: [Stat.StatSpellCritRating] },
-	{ config: DraeneiRacialCaster, stats: [Stat.StatSpellHitRating] },
-	{ config: DraeneiRacialMelee, stats: [Stat.StatMeleeHitRating] },
-	{ config: EyeOfTheNight, stats: [Stat.StatSpellDamage] },
-	{ config: JadePendantOfBlasting, stats: [Stat.StatSpellDamage] },
-	{ config: StrengthOfEarthTotem, stats: [Stat.StatStrength] },
-	{ config: GraceOfAirTotem, stats: [Stat.StatAgility] },
+export const PARTY_BUFFS_CONFIG = inDisplayOrder(Generated.GENERATED_PARTY_BUFFS_CONFIG, [
+	Generated.BloodPact,
+	Generated.BattleShout,
+	Generated.DevotionAura,
+	Generated.LeaderOfThePack,
+	Generated.ManaSpringTotem,
+	Generated.ManaTideTotems,
+	Generated.MoonkinAura,
 	{
-		config: WindfuryTotem,
-		// Stat.StatParryRating is used as an exclusion sentinel: specs that add
-		// StatParryRating to excludeBuffDebuffInputs will not see Windfury Totem.
-		// Feral cats cannot proc Windfury, so they exclude it this way.
-		stats: [Stat.StatAttackPower, Stat.StatParryRating],
+		config: RetributionAura,
+		stats: [Stat.StatArmor, Stat.StatDefenseRating],
+		ownerClass: Class.ClassPaladin,
 	},
-	{ config: DrumsBuff, stats: [] },
-	{ config: FrostResistanceTotem, stats: [Stat.StatFrostResistance] },
-	{ config: NatureResistanceTotem, stats: [Stat.StatNatureResistance] },
-	{ config: FireResistanceTotem, stats: [Stat.StatFireResistance] },
-	{ config: FrostResistanceAura, stats: [Stat.StatFrostResistance] },
-	{ config: FireResistanceAura, stats: [Stat.StatFireResistance] },
-	{ config: ShadowResistanceAura, stats: [Stat.StatShadowResistance] },
-	{ config: AspectOfTheWild, stats: [Stat.StatNatureResistance] },
-] as RenderableStatOptions[];
+	Generated.ConcentrationAura,
+	Generated.TrueshotAura,
+	Generated.AtieshMage,
+	Generated.AtieshWarlock,
+	Generated.StrengthOfEarthTotem,
+	Generated.GraceOfAirTotem,
+	Generated.WindfuryTotem,
+]);
 
-export const BUFFS_CONFIG = [
-	{ config: ArcaneBrilliance, stats: [Stat.StatIntellect] },
-	{ config: BlessingOfKings, stats: [Stat.StatAgility, Stat.StatIntellect, Stat.StatSpirit, Stat.StatStamina, Stat.StatStrength] },
-	{ config: Bloodlust, stats: [] },
-	{ config: DivineSpirit, stats: [Stat.StatSpirit, Stat.StatSpellDamage] },
-	{ config: GiftOfTheWild, stats: [Stat.StatArmor, Stat.StatStrength, Stat.StatAgility, Stat.StatIntellect, Stat.StatSpirit, Stat.StatStamina] },
-	{ config: Thorns, stats: [Stat.StatResilienceRating, Stat.StatDefenseRating, Stat.StatStamina] },
-	{ config: PowerWordFortitude, stats: [Stat.StatStamina] },
-	{ config: BlessingOfMight, stats: [Stat.StatAttackPower] },
-	{ config: BlessingOfWisdom, stats: [Stat.StatMP5] },
-	{ config: BlessingOfLight, stats: [Stat.StatHealingPower] },
-	{ config: BlessingOfSalvation, stats: [] },
-	{ config: ShadowProtection, stats: [Stat.StatShadowResistance, Stat.StatStamina] },
-	{ config: Innervate, stats: [Stat.StatMP5] },
-	{ config: PowerInfusion, stats: [Stat.StatSpellHasteRating] },
-] as RenderableStatOptions[];
+export const BUFFS_CONFIG = inDisplayOrder(
+	[...Generated.GENERATED_RAID_BUFFS_CONFIG, ...Generated.GENERATED_INDIVIDUAL_BUFFS_CONFIG],
+	[
+		Generated.ArcaneBrilliance,
+		Generated.GreaterBlessingOfKings,
+		Generated.PrayerOfSpirit,
+		Generated.GiftOfTheWild,
+		Generated.Thorns,
+		Generated.PrayerOfFortitude,
+		Generated.GreaterBlessingOfMight,
+		Generated.GreaterBlessingOfWisdom,
+		{ config: GreaterBlessingOfSalvation, stats: [] },
+		{ config: GreaterBlessingOfLight, stats: [Stat.StatHealingPower], ownerClass: Class.ClassPaladin },
+		Generated.PrayerOfShadowProtection,
+		Generated.FireResistanceAura,
+		Generated.FrostResistanceAura,
+		Generated.ShadowResistanceAura,
+		Generated.FireResistanceTotem,
+		Generated.FrostResistanceTotem,
+		Generated.NatureResistanceTotem,
+		Generated.AspectOfTheWild,
+		Generated.Innervates,
+		Generated.PowerInfusions,
+	],
+);
 
-// Debuffs
-export const BloodFrenzy = makeBooleanDebuffInput({ actionId: ActionId.fromSpellId(29859), fieldName: 'bloodFrenzy', label: 'Blood Frenzy' });
-export const HuntersMark = makeTristateDebuffInput({
-	actionId: ActionId.fromSpellId(14325),
-	impId: ActionId.fromSpellId(19425),
-	fieldName: 'huntersMark',
-	label: "Hunter's Mark",
-});
-export const ImprovedScorch = makeBooleanDebuffInput({ actionId: ActionId.fromSpellId(12873), fieldName: 'improvedScorch', label: 'Improved Scorch' });
-export const JudgementOfTheCrusader = makeBooleanDebuffInput({
-	actionId: ActionId.fromSpellId(20303),
-	fieldName: 'judgementOfTheCrusader',
-	label: 'Judgement of the Crusader',
-});
-export const JudgementOfWisdom = makeBooleanDebuffInput({
-	actionId: ActionId.fromSpellId(20355),
-	fieldName: 'judgementOfWisdom',
-	label: 'Judgement of Wisdom',
-});
-export const JudgementOfLight = makeBooleanDebuffInput({
-	actionId: ActionId.fromSpellId(20346),
-	fieldName: 'judgementOfLight',
-	label: 'Judgement of Light',
-});
-export const Mangle = makeBooleanDebuffInput({ actionId: ActionId.fromSpellId(33876), fieldName: 'mangle', label: 'Mangle' });
-export const Misery = makeBooleanDebuffInput({ actionId: ActionId.fromSpellId(33195), fieldName: 'misery', label: 'Misery' });
-export const ShadowWeaving = makeBooleanDebuffInput({ actionId: ActionId.fromSpellId(15334), fieldName: 'shadowWeaving', label: 'Shadow Weaving' });
-export const CurseOfElements = makeTristateDebuffInput({
-	actionId: ActionId.fromSpellId(27228),
-	impId: ActionId.fromSpellId(32484),
-	fieldName: 'curseOfElements',
-	label: 'Curse of Elements',
-});
-export const CurseOfRecklessness = makeBooleanDebuffInput({
-	actionId: ActionId.fromSpellId(11717),
-	fieldName: 'curseOfRecklessness',
-	label: 'Curse of Recklessness',
-});
-export const FaerieFire = makeTristateDebuffInput({
-	actionId: ActionId.fromSpellId(9907),
-	impId: ActionId.fromSpellId(33602),
-	fieldName: 'faerieFire',
-	label: 'Faerie Fire',
-});
-export const ExposeArmor = makeTristateDebuffInput({
-	actionId: ActionId.fromSpellId(11198),
-	impId: ActionId.fromSpellId(14169),
-	fieldName: 'exposeArmor',
-	label: 'Expose Armor',
-});
-export const SunderArmor = makeBooleanDebuffInput({ actionId: ActionId.fromSpellId(11597), fieldName: 'sunderArmor', label: 'Sunder Armor' });
-export const WintersChill = makeBooleanDebuffInput({ actionId: ActionId.fromSpellId(28595), fieldName: 'wintersChill', label: "Winter's Chill" });
-export const GiftOfArthas = makeBooleanDebuffInput({ actionId: ActionId.fromSpellId(11374), fieldName: 'giftOfArthas', label: 'Gift of Arthas' });
-export const DemoralizingRoar = makeTristateDebuffInput({
-	actionId: ActionId.fromSpellId(9898),
-	impId: ActionId.fromSpellId(16862),
-	fieldName: 'demoralizingRoar',
-	label: 'Demoralizing Roar',
-});
-export const DemoralizingShout = makeTristateDebuffInput({
-	actionId: ActionId.fromSpellId(25203),
-	impId: ActionId.fromSpellId(12879),
-	fieldName: 'demoralizingShout',
-	label: 'Demoralizing Shout',
-});
-export const Screech = makeBooleanDebuffInput({ actionId: ActionId.fromSpellId(27051), fieldName: 'screech', label: 'Screech' });
-export const ThunderClap = makeTristateDebuffInput({
-	actionId: ActionId.fromSpellId(25264),
-	impId: ActionId.fromSpellId(12666),
-	fieldName: 'thunderClap',
-	label: 'Thunder Clap',
-});
-export const InsectSwarm = makeBooleanDebuffInput({ actionId: ActionId.fromSpellId(27013), fieldName: 'insectSwarm', label: 'Insect Swarm' });
-export const ScorpidSting = makeBooleanDebuffInput({ actionId: ActionId.fromSpellId(3043), fieldName: 'scorpidSting', label: 'Scorpid Sting' });
-export const ShadowEmbrace = makeBooleanDebuffInput({ actionId: ActionId.fromSpellId(32394), fieldName: 'shadowEmbrace', label: 'Shadow Embrace' });
-
-export const DEBUFFS_CONFIG = [
-	{ config: BloodFrenzy, stats: [Stat.StatAttackPower] },
-	{ config: HuntersMark, stats: [Stat.StatRangedAttackPower] },
-	{ config: ImprovedScorch, stats: [Stat.StatFireDamage] },
-	{ config: JudgementOfTheCrusader, stats: [Stat.StatHolyDamage, Stat.StatSpellDamage] },
-	{ config: JudgementOfLight, stats: [Stat.StatResilienceRating] },
-	{ config: JudgementOfWisdom, stats: [Stat.StatMP5] },
-	{ config: Mangle, stats: [] },
-	{ config: Misery, stats: [] },
-	{ config: ShadowWeaving, stats: [Stat.StatShadowDamage] },
-	{ config: CurseOfElements, stats: [Stat.StatSpellDamage] },
-	{ config: CurseOfRecklessness, stats: [Stat.StatAttackPower] },
-	{ config: FaerieFire, stats: [Stat.StatAttackPower, Stat.StatMeleeHitRating] },
-	{ config: ExposeArmor, stats: [Stat.StatAttackPower] },
-	{ config: SunderArmor, stats: [Stat.StatAttackPower] },
-	{ config: WintersChill, stats: [Stat.StatFrostDamage] },
-	{ config: GiftOfArthas, stats: [Stat.StatAttackPower, Stat.StatResilienceRating] },
-	{ config: DemoralizingRoar, stats: [Stat.StatStamina, Stat.StatResilienceRating] },
-	{ config: DemoralizingShout, stats: [Stat.StatStamina, Stat.StatResilienceRating] },
-	{ config: Screech, stats: [Stat.StatStamina, Stat.StatResilienceRating] },
-	{ config: ThunderClap, stats: [Stat.StatStamina, Stat.StatResilienceRating] },
-	{ config: InsectSwarm, stats: [Stat.StatStamina, Stat.StatResilienceRating] },
-	{ config: ScorpidSting, stats: [Stat.StatStamina, Stat.StatResilienceRating] },
-	{ config: ShadowEmbrace, stats: [Stat.StatStamina, Stat.StatResilienceRating] },
-] as RenderableStatOptions[];
+export const DEBUFFS_CONFIG = inDisplayOrder(Generated.GENERATED_DEBUFFS_CONFIG, [
+	Generated.HuntersMark,
+	Generated.JudgementOfTheCrusader,
+	Generated.JudgementOfLight,
+	Generated.JudgementOfWisdom,
+	Generated.CurseOfElements,
+	Generated.CurseOfRecklessness,
+	Generated.FaerieFire,
+	Generated.ExposeArmor,
+	Generated.SunderArmor,
+	Generated.GiftOfArthas,
+	Generated.DemoralizingRoar,
+	Generated.DemoralizingShout,
+	Generated.ThunderClap,
+	Generated.InsectSwarm,
+	Generated.ScorpidSting,
+]);
 
 export const DEBUFFS_MISC_CONFIG = [] as IconPickerStatOption[];

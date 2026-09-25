@@ -28,14 +28,15 @@ func ComputeStats(csr *proto.ComputeStatsRequest) *proto.ComputeStatsResult {
 // StatDependencyManager. Lightweight compared to ComputeStats — builds the character and
 // resolves all stat dependencies but does not run the simulation.
 func ComputeStatDependencies(request *proto.ComputeStatsRequest) *stats.StatDependencyManager {
-	_, sdm := ComputeStatsAndDeps(request)
+	_, sdm, _ := ComputeStatsAndDeps(request)
 	return sdm
 }
 
 // ComputeStatsAndDeps combines a skip-rotation ComputeStats with ComputeStatDependencies
 // in a single NewEnvironment call. Use this when both are needed for the same raid to
-// avoid building the character environment twice.
-func ComputeStatsAndDeps(request *proto.ComputeStatsRequest) (*proto.ComputeStatsResult, *stats.StatDependencyManager) {
+// avoid building the character environment twice. It also returns which of block and parry
+// the character's sheet shows.
+func ComputeStatsAndDeps(request *proto.ComputeStatsRequest) (*proto.ComputeStatsResult, *stats.StatDependencyManager, SheetAvoidance) {
 	encounter := request.Encounter
 	if encounter == nil {
 		encounter = &proto.Encounter{}
@@ -46,7 +47,7 @@ func ComputeStatsAndDeps(request *proto.ComputeStatsRequest) (*proto.ComputeStat
 		EncounterStats: encounterStats,
 	}
 	if len(env.Raid.Parties) == 0 || len(env.Raid.Parties[0].Players) == 0 {
-		return result, &stats.StatDependencyManager{}
+		return result, &stats.StatDependencyManager{}, SheetAvoidance{}
 	}
 	character := env.Raid.Parties[0].Players[0].GetCharacter()
 	// FillPlayerStats activates build-phase auras to compute FinalStats then clears them.
@@ -54,7 +55,7 @@ func ComputeStatsAndDeps(request *proto.ComputeStatsRequest) (*proto.ComputeStat
 	// dependencies are intentionally handled separately by the reforge optimizer.
 	character.applyBuildPhaseAuras(CharacterBuildPhaseBase | CharacterBuildPhaseGear | CharacterBuildPhaseBuffs)
 	sdm := character.StatDependencyManager
-	return result, &sdm
+	return result, &sdm, character.sheetAvoidance()
 }
 
 /**

@@ -7,7 +7,8 @@ import (
 )
 
 // The bleed lasts 21 sec and carries 40% of the Mongoose Bite that applied it. The tooltip gives no
-// tick interval, so it ticks every 3 sec like every other bleed.
+// tick interval, so it ticks every 3 sec like every other bleed. Its ticks crit where the client marks
+// Periodic Can Crit (1310536, set in build 70009).
 func (hunter *Hunter) registerLaceratingStrikesSpell() {
 	if !hunter.Talents.LaceratingStrikes {
 		return
@@ -32,7 +33,7 @@ func (hunter *Hunter) registerLaceratingStrikesSpell() {
 			TickLength:    time.Second * 3,
 
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, spellData.LaceratingStrikesTriggered.Highest().TickOutcomeHitRolled(dot))
 			},
 		},
 

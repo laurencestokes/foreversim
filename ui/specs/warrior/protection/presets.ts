@@ -1,7 +1,8 @@
 import * as PresetUtils from '@app/preset_utils';
-import { ConsumesSpec, Debuffs, PartyBuffs, Profession, Race, RaidBuffs, TristateEffect } from '@generated/proto/common';
+import { Debuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { ConsumesSpec, Profession, Race } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
-import { ProtectionWarrior_Options as ProtectionWarriorOptions, WarriorShout, WarriorStance } from '@generated/proto/warrior';
+import { ProtectionWarrior_Options as ProtectionWarriorOptions, WarriorStance } from '@generated/proto/warrior';
 import { OtherDefaults as SimUIOtherDefaults } from '@sim/spec_config';
 
 import * as WarriorPresets from '../shared/presets';
@@ -29,7 +30,7 @@ export const DefaultOptions = ProtectionWarriorOptions.create({
 	classOptions: {
 		queueDelay: 250,
 		startingRage: 0,
-		defaultShout: WarriorShout.WarriorShoutBattle,
+		useBattleShout: true,
 		defaultStance: WarriorStance.WarriorStanceDefensive,
 	},
 });
@@ -50,14 +51,14 @@ export const DefaultConsumables = ConsumesSpec.create({
 });
 
 export const DefaultRaidBuffs = RaidBuffs.create({
-	giftOfTheWild: TristateEffect.TristateEffectImproved,
-	powerWordFortitude: TristateEffect.TristateEffectImproved,
+	giftOfTheWild: true,
+	prayerOfFortitude: true,
+	fireResistanceAura: true,
 });
 
 export const DefaultPartyBuffs = PartyBuffs.create({
 	...WarriorPresets.DefaultPartyBuffs,
 	devotionAura: true,
-	fireResistanceAura: true,
 });
 
 export const DefaultDebuffs = Debuffs.create({

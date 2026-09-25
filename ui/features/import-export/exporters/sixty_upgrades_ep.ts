@@ -40,7 +40,6 @@ const STAT_NAMES: Record<Stat, string> = {
 	[Stat.StatDefenseRating]: 'defense',
 	[Stat.StatBlockRating]: 'block',
 	[Stat.StatBlockValue]: 'blockValueBonus',
-	[Stat.StatResilienceRating]: 'resilienceRating',
 	[Stat.StatArcaneResistance]: 'arcaneResistance',
 	[Stat.StatFireResistance]: 'fireResistance',
 	[Stat.StatFrostResistance]: 'frostResistance',

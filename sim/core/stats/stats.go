@@ -49,7 +49,6 @@ const (
 	BlockValue
 	DodgeRating
 	ParryRating
-	ResilienceRating
 	Armor
 	BonusArmor
 	Health
@@ -67,7 +66,7 @@ const (
 	// Stats in UnitStats proto messages, since they are not required in the
 	// database files. However, it is valuable to keep these as proper Stats
 	// in the back-end, since they are used in various stat dependencies.
-	// The units for all 7 of these are percentages (between 0 and 100).
+	// The units for all 11 of these are percentages (between 0 and 100).
 	PhysicalHitPercent
 	SpellHitPercent
 	PhysicalCritPercent
@@ -75,6 +74,10 @@ const (
 	BlockPercent
 	RangedHitPercent
 	RangedCritPercent
+	DodgePercent
+	ParryPercent
+	ReducedCritTakenPercent
+	ExpertisePercent
 	// DO NOT add new stats here without discussing it first; new stats come
 	// with a performance penalty.
 
@@ -182,8 +185,6 @@ func (s Stat) StatName() string {
 		return "NatureDamage"
 	case ShadowDamage:
 		return "ShadowDamage"
-	case ResilienceRating:
-		return "ResilienceRating"
 	case Armor:
 		return "Armor"
 	case BonusArmor:
@@ -204,6 +205,18 @@ func (s Stat) StatName() string {
 		return "SpellCritPercent"
 	case BlockPercent:
 		return "BlockPercent"
+	case RangedHitPercent:
+		return "RangedHitPercent"
+	case RangedCritPercent:
+		return "RangedCritPercent"
+	case DodgePercent:
+		return "DodgePercent"
+	case ParryPercent:
+		return "ParryPercent"
+	case ReducedCritTakenPercent:
+		return "ReducedCritTakenPercent"
+	case ExpertisePercent:
+		return "ExpertisePercent"
 	case DefenseRating:
 		return "DefenseRating"
 	case BlockRating:
@@ -242,20 +255,64 @@ func FromProtoArray(values []float64) Stats {
 // dependencies). Make sure to update this function if you add any back-end Stat entries that are modeled as
 // PseudoStats in the front-end.
 func FromUnitStatsProto(unitStatsMessage *proto.UnitStats) Stats {
-	simStats := FromProtoArray(unitStatsMessage.Stats)
+	return FromProtoArray(unitStatsMessage.Stats).Add(FromPseudoStatsProto(unitStatsMessage.PseudoStats))
+}
 
-	if unitStatsMessage.PseudoStats != nil {
-		pseudoStatsMessage := unitStatsMessage.PseudoStats
-		simStats[PhysicalHitPercent] = pseudoStatsMessage[proto.PseudoStat_PseudoStatMeleeHitPercent]
-		simStats[SpellHitPercent] = pseudoStatsMessage[proto.PseudoStat_PseudoStatSpellHitPercent]
-		simStats[PhysicalCritPercent] = pseudoStatsMessage[proto.PseudoStat_PseudoStatMeleeCritPercent]
-		simStats[SpellCritPercent] = pseudoStatsMessage[proto.PseudoStat_PseudoStatSpellCritPercent]
-		simStats[BlockPercent] = pseudoStatsMessage[proto.PseudoStat_PseudoStatBlockPercent]
-		simStats[RangedHitPercent] = pseudoStatsMessage[proto.PseudoStat_PseudoStatRangedHitPercent] - pseudoStatsMessage[proto.PseudoStat_PseudoStatMeleeHitPercent]
-		simStats[RangedCritPercent] = pseudoStatsMessage[proto.PseudoStat_PseudoStatRangedCritPercent] - pseudoStatsMessage[proto.PseudoStat_PseudoStatMeleeCritPercent]
+// The percent PseudoStats an item or enchant states, as the back-end Stats that model them. Ranged hit and
+// crit are totals that include the melee share. Dodge, parry and block are read as chance added to the
+// base; GetPseudoStatsProto writes them as the total chance.
+func FromPseudoStatsProto(pseudoStats []float64) Stats {
+	var simStats Stats
+	for _, pair := range PercentPseudoStats {
+		simStats[pair.Stat] = PseudoStatValue(pseudoStats, pair.PseudoStat)
+		if pair.MeleeShare != nil {
+			simStats[pair.Stat] -= PseudoStatValue(pseudoStats, pair.MeleeShare.PseudoStat)
+		}
 	}
-
 	return simStats
+}
+
+// The weights a UnitStats message carries, per point of whatever each stat counts: a percent's weight
+// is copied as it is, so Block% stays per percent and ranged hit and crit keep their own weight.
+func WeightsFromUnitStatsProto(weights *proto.UnitStats) Stats {
+	simStats := FromProtoArray(weights.Stats)
+	for _, pair := range PercentPseudoStats {
+		simStats[pair.Stat] = PseudoStatValue(weights.PseudoStats, pair.PseudoStat)
+	}
+	return simStats
+}
+
+// A percent the character sheet shows as a PseudoStat and the back end models as a Stat. A ranged total
+// on the sheet includes its MeleeShare, which the ranged Stat leaves out.
+type PercentPseudoStat struct {
+	Stat       Stat
+	PseudoStat proto.PseudoStat
+	MeleeShare *PercentPseudoStat
+}
+
+var (
+	meleeHitPercent  = PercentPseudoStat{PhysicalHitPercent, proto.PseudoStat_PseudoStatMeleeHitPercent, nil}
+	meleeCritPercent = PercentPseudoStat{PhysicalCritPercent, proto.PseudoStat_PseudoStatMeleeCritPercent, nil}
+)
+
+var PercentPseudoStats = []PercentPseudoStat{
+	meleeHitPercent,
+	{SpellHitPercent, proto.PseudoStat_PseudoStatSpellHitPercent, nil},
+	meleeCritPercent,
+	{SpellCritPercent, proto.PseudoStat_PseudoStatSpellCritPercent, nil},
+	{BlockPercent, proto.PseudoStat_PseudoStatBlockPercent, nil},
+	{RangedHitPercent, proto.PseudoStat_PseudoStatRangedHitPercent, &meleeHitPercent},
+	{RangedCritPercent, proto.PseudoStat_PseudoStatRangedCritPercent, &meleeCritPercent},
+	{DodgePercent, proto.PseudoStat_PseudoStatDodgePercent, nil},
+	{ParryPercent, proto.PseudoStat_PseudoStatParryPercent, nil},
+	{ExpertisePercent, proto.PseudoStat_PseudoStatExpertisePercent, nil},
+}
+
+func PseudoStatValue(pseudoStats []float64, pseudoStat proto.PseudoStat) float64 {
+	if int(pseudoStat) < len(pseudoStats) {
+		return pseudoStats[pseudoStat]
+	}
+	return 0
 }
 
 // Adds two Stats together, returning the new Stats.
@@ -305,7 +362,7 @@ func (stats Stats) Floor() Stats {
 //
 // Unlike attributes, combat ratings must NOT be floored here: the sim uses
 // rating stats as mixed accumulators that include fractional conversions from
-// talents and racials (e.g. dodge% talents stored as DodgeRating), and TBC has
+// talents and racials (e.g. dodge from Agility stored as DodgeRating), and TBC has
 // no rating multipliers, so real rating totals are already integers.
 var flooredGameStats = []Stat{
 	Strength, Agility, Stamina, Intellect, Spirit,
@@ -467,7 +524,7 @@ type PseudoStats struct {
 	MeleeSpeedMultiplier  float64
 	RangedSpeedMultiplier float64
 	RangedHasteMultiplier float64
-	AttackSpeedMultiplier float64 // Used for real haste effects like Bloodlust that modify resoruce regen and are used for RPPM effects
+	AttackSpeedMultiplier float64 // Used for real haste effects that modify resoruce regen and are used for RPPM effects
 
 	FiveSecondRuleRefreshTime time.Duration // last time a spell was cast
 	SpiritRegenRateCasting    float64       // percentage of spirit regen allowed during casting
@@ -535,8 +592,8 @@ type PseudoStats struct {
 	BaseParryChance float64
 	BaseBlockChance float64
 
-	BaseReducedCritTakenPercent float64 // Base crit reduction from talents/auras (before Defense/Resilience contributions).
-	ReducedCritTakenPercent     float64 // Total crit reduction including Defense and Resilience contributions.
+	BaseReducedCritTakenPercent float64 // Base crit reduction from talents/auras (before the Defense contribution).
+	ReducedCritTakenPercent     float64 // Total crit reduction including the Defense contribution.
 
 	BonusHealingTaken          float64 // Talisman of Troll Divinity
 	BonusSpellCritPercentTaken float64 // Imp Shadow Bolt / Imp Scorch / Winter's Chill debuff

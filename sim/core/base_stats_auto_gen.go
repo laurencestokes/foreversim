@@ -9,7 +9,7 @@ import (
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-const ExpertisePerQuarterPercentReduction = 2.5
+const ExpertiseRatingPerExpertisePercent = 10.000000
 const DefenseRatingPerDefenseLevel = 1.000000
 const DodgeRatingPerDodgePercent = 12.000000
 const ParryRatingPerParryPercent = 15.000000

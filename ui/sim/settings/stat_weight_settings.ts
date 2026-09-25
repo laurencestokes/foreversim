@@ -46,10 +46,6 @@ export class StatWeightActionSettings {
 		return this.slice.excludedPseudoStats.slice();
 	}
 
-	static updateProtoVersion(_: SavedStatWeightSettings) {
-		// No-op, as there are no proto version migrations currently
-	}
-
 	applyDefaults() {
 		this.write({ excludedStats: [], excludedPseudoStats: [] });
 	}
@@ -58,8 +54,6 @@ export class StatWeightActionSettings {
 		const storageValue = this.env.storage.getItem(this.storageKey);
 		if (storageValue) {
 			const settingsProto = SavedStatWeightSettings.fromJsonString(storageValue, { ignoreUnknownFields: true });
-			StatWeightActionSettings.updateProtoVersion(settingsProto);
-
 			this.write({ excludedStats: settingsProto.excludedStats || [], excludedPseudoStats: settingsProto.excludedPseudoStats || [] });
 		}
 	}

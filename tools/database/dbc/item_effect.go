@@ -174,7 +174,7 @@ func (e *ItemEffect) ToProto(itemLevel int) (*proto.ItemEffect, bool) {
 	pe := makeBaseProto(e, statsSpellID)
 	assignTrigger(e, statsSpellID, pe)
 
-	pe.ScalingOptions[int32(0)] = buildBaseStatScalingProps(statsSpellID, e.SpellID)
+	pe.ScalingOptions[int32(0)] = buildItemEffectScalingProps(e.SpellID, itemLevel)
 
 	// The stats may live on the accumulating aura rather than on the one the trigger applies, in
 	// which case the effect is real even though the scaling options above resolved to nothing.
@@ -250,15 +250,14 @@ func buildBaseStatScalingProps(spellID int, itemSpellID int) *proto.ScalingItemE
 	// check if spell is procced by a SPELL_WITH_VALUE
 	if effects := dbcInstance.SpellEffectsInOrder(itemSpellID); len(effects) > 0 {
 		for _, se := range effects {
-			// TBC ANNI: Items can have "static" ItemEffects that don't have a duration.
-			// We need to parse these into stats just as is done for ItemSparse data.
-			if stat, perPoint := PercentAuraToRating(se.EffectAura, se.EffectMiscValues[0]); perPoint > 0 {
-				total[stat] += float64(se.EffectBasePoints+1) * perPoint
+			if se.HitsAnEnemy() {
 				continue
 			}
+			// TBC ANNI: Items can have "static" ItemEffects that don't have a duration.
+			// We need to parse these into stats just as is done for ItemSparse data.
 			stat := ConvertEffectAuraToStatIndex(se.EffectAura, se.EffectMiscValues[0])
 			if stat >= 0 || stat == -2 {
-				value := float64(se.EffectBasePoints + 1)
+				value := float64(se.EffectBasePoints)
 				// Make sure it's not Feral AP
 				if strings.Contains(dbcInstance.Spells[se.SpellID].Description, "forms only") {
 					stat = proto.Stat_StatFeralAttackPower
@@ -306,6 +305,9 @@ func collectStats(spellID, itemLevel int) stats.Stats {
 func (w *chainWalker) collectStats(spellID, itemLevel int, total *stats.Stats) {
 	sp := dbcInstance.Spells[spellID]
 	for _, se := range w.effects(spellID) {
+		if se.HitsAnEnemy() {
+			continue
+		}
 		if s, resolved := se.ParseStatEffect(sp.ScalesWithItemLevel(), itemLevel); resolved {
 			total.AddInplace(&s)
 		} else if se.EffectAura == dbcenums.A_PROC_TRIGGER_SPELL {
@@ -431,34 +433,37 @@ func (w *chainWalker) findTriggerOf(spellIDToMatch int, spellID int) *SpellEffec
 // Parses a UIItem and loops through Scaling Options for that item.
 func MergeItemEffectsForAllStates(parsed *proto.UIItem) []*proto.ItemEffect {
 	var effects []*proto.ItemEffect
+	pseudoStats := make([]float64, stats.PseudoStatsLen)
 
-	for i := range dbcInstance.ItemEffectsByParentID[int(parsed.Id)] {
-		// pick a base effect that has stats if there is more than one effect on the item
-		var baseEff *ItemEffect
+	itemEffects := dbcInstance.ItemEffectsByParentID[int(parsed.Id)]
+	for idx := range itemEffects {
+		baseEff := &itemEffects[idx]
 
-		e := &dbcInstance.ItemEffectsByParentID[int(parsed.Id)][i]
-		statsSpell := resolveStatsSpell(e.SpellID)
-		props := buildBaseStatScalingProps(statsSpell, e.SpellID)
+		if baseEff.TriggerType == ITEM_SPELLTRIGGER_ON_EQUIP {
+			props := buildBaseStatScalingProps(resolveStatsSpell(baseEff.SpellID), baseEff.SpellID)
+			equipStats := stats.FromProtoMap(props.Stats)
+			equipPseudoStats := make([]float64, stats.PseudoStatsLen)
+			addedStats, addedPseudoStats := AddEquipSpellStats(&equipStats, equipPseudoStats, baseEff.SpellID)
 
-		hasStats := len(props.Stats) > 0
-
-		if e.TriggerType == ITEM_SPELLTRIGGER_ON_EQUIP && hasStats {
-			// An item the client ships no stat row for came from our sim's database
-			// (forever_sim_db.json), whose stats already include its equip spells.
-			if _, fromClient := dbcInstance.Items[int(parsed.Id)]; !fromClient {
+			if len(props.Stats) > 0 || addedStats || addedPseudoStats {
+				// An item the client ships no stat row for came from our sim's database
+				// (forever_sim_db.json), whose stats already include its equip spells.
+				if _, fromClient := dbcInstance.Items[int(parsed.Id)]; !fromClient {
+					continue
+				}
+				if areaType := spelldata.AreaTypeOfGroup(dbcInstance.Spells[baseEff.SpellID].RequiredAreasID); areaType != proto.AreaType_AreaTypeUnknown {
+					addAreaStats(parsed.ScalingOptions[0], areaType, equipStats.ToProtoMap())
+					continue
+				}
+				for pseudoStat, value := range equipPseudoStats {
+					pseudoStats[pseudoStat] += value
+				}
+				for stat, value := range equipStats.ToProtoMap() {
+					parsed.ScalingOptions[0].Stats[stat] += value
+				}
 				continue
 			}
-			if areaType := spelldata.AreaTypeOfGroup(dbcInstance.Spells[e.SpellID].RequiredAreasID); areaType != proto.AreaType_AreaTypeUnknown {
-				addAreaStats(parsed.ScalingOptions[0], areaType, props.Stats)
-				continue
-			}
-			for stat, value := range props.Stats {
-				parsed.ScalingOptions[0].Stats[int32(stat)] += value
-			}
-			continue
-		} else if (e.TriggerType == ITEM_SPELLTRIGGER_ON_EQUIP) || (e.TriggerType == ITEM_SPELLTRIGGER_CHANCE_ON_HIT) || e.CoolDownMSec > 0 {
-			baseEff = e
-		} else {
+		} else if baseEff.TriggerType != ITEM_SPELLTRIGGER_CHANCE_ON_HIT && baseEff.CoolDownMSec <= 0 {
 			continue
 		}
 
@@ -488,5 +493,6 @@ func MergeItemEffectsForAllStates(parsed *proto.UIItem) []*proto.ItemEffect {
 		effects = append(effects, pe)
 	}
 
+	parsed.PseudoStats = NullFloat(pseudoStats)
 	return effects
 }

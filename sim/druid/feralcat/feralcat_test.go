@@ -90,16 +90,8 @@ var DefaultSpecOptions = &proto.Player_FeralCatDruid{
 }
 
 var DefaultConsumables = &proto.ConsumesSpec{
-	PotId:            22838, // Haste Potion
-	BattleElixirId:   22831, // Elixir of Major Agility
-	GuardianElixirId: 32067, // Elixir of Draenic Wisdom
-	FoodId:           27664, // Grilled Mudfish
-	MhImbueId:        34340, // Adamantite Weightstone
-	ConjuredId:       12662, // Demonic Rune
-	SuperSapper:      true,
-	GoblinSapper:     true,
-	ScrollAgi:        true,
-	ScrollStr:        true,
+	ConjuredId:   12662, // Demonic Rune
+	GoblinSapper: true,
 }
 
 // Clearcasting (16870, one charge) makes the next ability in its mask free and is spent by it; one

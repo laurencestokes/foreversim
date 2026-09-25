@@ -92,8 +92,8 @@ describe('what CharacterStats re-renders on', () => {
 		const h = mount();
 		const once = { renders: 1, derives: 1 };
 
-		expect(h.step(s => patchSlice(s, 'raid', { debuffs: { faerieFire: 2 } as never }))).toEqual(once);
-		expect(h.step(s => patchSlice(s, 'raid', { partyBuffs: [{ windfuryTotem: 1 }] as never }))).toEqual(once);
+		expect(h.step(s => patchSlice(s, 'raid', { debuffs: { faerieFire: true } as never }))).toEqual(once);
+		expect(h.step(s => patchSlice(s, 'raid', { partyBuffs: [{ windfuryTotem: true }] as never }))).toEqual(once);
 		expect(h.step(s => patchSlice(s, 'encounter', { targets: [{ level: 73 }] as never }))).toEqual(once);
 
 		h.unmount();

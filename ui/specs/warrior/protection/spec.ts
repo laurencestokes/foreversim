@@ -1,7 +1,6 @@
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { APLRotation } from '@generated/proto/apl';
 import { ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
-import * as Mechanics from '@sim/constants/mechanics';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
 import { masterEpWeights } from '@sim/proto/master_ep_weights';
@@ -33,7 +32,6 @@ export default defineSpec<Spec.SpecProtectionWarrior>({
 		Stat.StatMeleeCritRating,
 		Stat.StatArmorPenetration,
 		Stat.StatExpertiseRating,
-		Stat.StatResilienceRating,
 		Stat.StatDefenseRating,
 		Stat.StatBlockRating,
 		Stat.StatBlockValue,
@@ -58,8 +56,6 @@ export default defineSpec<Spec.SpecProtectionWarrior>({
 			Stat.StatAttackPower,
 			Stat.StatBlockValue,
 			Stat.StatDefenseRating,
-			Stat.StatExpertiseRating,
-			Stat.StatResilienceRating,
 			Stat.StatArcaneResistance,
 			Stat.StatFireResistance,
 			Stat.StatFrostResistance,
@@ -73,6 +69,7 @@ export default defineSpec<Spec.SpecProtectionWarrior>({
 			PseudoStat.PseudoStatBlockPercent,
 			PseudoStat.PseudoStatDodgePercent,
 			PseudoStat.PseudoStatParryPercent,
+			PseudoStat.PseudoStatExpertisePercent,
 		],
 	),
 
@@ -101,7 +98,7 @@ export default defineSpec<Spec.SpecProtectionWarrior>({
 		}),
 		statCaps: (() => {
 			const hitCap = new Stats().withPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, 9);
-			const expCap = new Stats().withStat(Stat.StatExpertiseRating, 6.5 * 4 * Mechanics.EXPERTISE_PER_QUARTER_PERCENT_REDUCTION);
+			const expCap = new Stats().withPseudoStat(PseudoStat.PseudoStatExpertisePercent, 6.5);
 			const critImmunityCap = new Stats().withPseudoStat(PseudoStat.PseudoStatReducedCritTakenPercent, 5.6);
 
 			return hitCap.add(expCap).add(critImmunityCap);

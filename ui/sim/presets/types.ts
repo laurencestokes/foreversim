@@ -1,19 +1,7 @@
 import { Player as PlayerProto, ReforgeSettings } from '@generated/proto/api';
 import { APLRotation_Type as APLRotationType } from '@generated/proto/apl';
-import {
-	ConsumesSpec,
-	Debuffs,
-	Encounter as EncounterProto,
-	EquipmentSpec,
-	Faction,
-	HealingModel,
-	IndividualBuffs,
-	ItemSwap,
-	PartyBuffs,
-	Race,
-	RaidBuffs,
-	UnitReference,
-} from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { ConsumesSpec, Encounter as EncounterProto, EquipmentSpec, Faction, HealingModel, ItemSwap, Race, UnitReference } from '@generated/proto/common';
 import { SavedRotation, SavedTalents } from '@generated/proto/ui';
 
 import type { Phase } from '../constants/other';

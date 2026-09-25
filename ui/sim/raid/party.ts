@@ -1,5 +1,6 @@
 import { Party as PartyProto, Player as PlayerProto } from '@generated/proto/api';
-import { Class, PartyBuffs } from '@generated/proto/common';
+import { PartyBuffs } from '@generated/proto/buffs';
+import { Class } from '@generated/proto/common';
 
 import { Player } from '../player/player';
 import { getPlayerSpecFromPlayer } from '../proto/utils';

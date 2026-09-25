@@ -2,6 +2,7 @@ package druid
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 )
 
 var faerieFireRank = spellData.FaerieFire.Highest()
@@ -10,9 +11,8 @@ var faerieFireRank = spellData.FaerieFire.Highest()
 // 9907), so one registration serves every form.
 func (druid *Druid) registerFaerieFireSpell() {
 	druid.FaerieFireAuras = druid.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
-		// TODO: Forever drops Improved Faerie Fire; untalented (0 points) until we know
-		// whether the effect moved onto another talent.
-		return core.FaerieFireAura(target, 0)
+		// Forever has no Improved Faerie Fire node, so there are no talent points to pass.
+		return buffs.FaerieFireAura(target, true, 0)
 	})
 
 	druid.FaerieFire = druid.RegisterSpell(Any, core.SpellConfig{

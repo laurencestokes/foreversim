@@ -128,6 +128,7 @@ export const ItemDetailCell = ({
 					{!!item && (
 						<ItemNoticeIcon
 							itemId={item.item.id}
+							enchantId={item.enchant?.effectId}
 							additionalNotice={item.hasRandomSuffixOptions() && !item.randomSuffix ? MISSING_RANDOM_SUFFIX_WARNING : undefined}
 						/>
 					)}

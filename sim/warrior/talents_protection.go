@@ -59,7 +59,8 @@ func (warrior *Warrior) registerShieldSpecialization() {
 
 	shieldSpecializationEnergize := spellData.ShieldSpecializationTriggered.Highest()
 
-	warrior.AddStat(stats.BlockPercent, spellData.ShieldSpecialization.Effect(dbcenums.A_MOD_BLOCK_PERCENT, 0).FractionAt(warrior.Talents.ShieldSpecialization))
+	// BlockPercent is in percent (5 = 5%) since the core's avoidance rework.
+	warrior.AddStat(stats.BlockPercent, spellData.ShieldSpecialization.Effect(dbcenums.A_MOD_BLOCK_PERCENT, 0).ValueAt(warrior.Talents.ShieldSpecialization))
 
 	warrior.registerRageOnAvoid(
 		"Shield Specialization",
@@ -227,7 +228,7 @@ func (warrior *Warrior) registerShieldSlam() {
 		ClassSpellMask: SpellMaskShieldSlam,
 		SpellSchool:    shieldSlamRank.SpellSchool(),
 		DefenseType:    shieldSlamRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskMeleeMHSpecial,
+		ProcMask:       core.ProcMaskMeleeOHSpecial, // struck with the shield (upstream b6ce30c972)
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 		MaxRange:       core.MaxMeleeRange,
 

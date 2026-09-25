@@ -78,7 +78,7 @@ func TestProtection(t *testing.T) {
 }
 
 // Our Forever sim's builds: the P4 build it tests with, and the deep Protection preset.
-var ProtTalents = "052003003-5530513321301501"
+var ProtTalents = "52003003-5530513321301501"
 var ProtDeepTalents = "-5532513321301551-15"
 
 // A one-hander and a shield, rows both item databases carry. The generated item database does not

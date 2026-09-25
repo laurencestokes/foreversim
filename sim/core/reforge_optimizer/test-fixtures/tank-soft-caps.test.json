@@ -92,23 +92,13 @@
 							]
 						},
 						"consumables": {
-							"potId": 22849,
-							"flaskId": 22861,
-							"foodId": 27657,
 							"conjuredId": 12662,
-							"explosiveId": 30217,
-							"superSapper": true,
 							"goblinSapper": true,
-							"mhImbueId": 28017,
-							"scrollAgi": true,
-							"scrollStr": true,
-							"scrollArm": true,
-							"nightmareSeed": true,
-							"potions": [13442, 18253, 22828, 22832, 22837, 22838, 22839, 22849, 22850, 28101, 31677, 32948, 33935, 34440],
-							"conjuredItems": [22105, 22797, 12662, 22788, 23334, 23381]
+							"potions": [13442, 18253],
+							"conjuredItems": [12662]
 						},
 						"bonusStats": {
-							"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+							"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 							"pseudoStats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 						},
 						"itemSwap": {
@@ -132,15 +122,14 @@
 								{}
 							],
 							"prepullBonusStats": {
-								"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+								"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 								"pseudoStats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 							}
 						},
 						"buffs": {
-							"blessingOfKings": true,
-							"blessingOfSanctuary": true,
-							"blessingOfWisdom": 2,
-							"blessingOfMight": 2
+							"greaterBlessingOfKings": true,
+							"greaterBlessingOfWisdom": 2,
+							"greaterBlessingOfMight": 2
 						},
 						"cooldowns": {
 							"hpPercentForDefensives": 0.4
@@ -168,9 +157,7 @@
 					}
 				],
 				"buffs": {
-					"drums": 4,
 					"manaSpringTotem": 1,
-					"wrathOfAirTotem": 1,
 					"strengthOfEarthTotem": 2
 				}
 			},
@@ -263,41 +250,36 @@
 		],
 		"buffs": {
 			"arcaneBrilliance": true,
-			"powerWordFortitude": 2,
-			"shadowProtection": true,
-			"divineSpirit": 2,
+			"prayerOfFortitude": 2,
+			"prayerOfShadowProtection": true,
+			"prayerOfSpirit": 2,
 			"giftOfTheWild": 2,
-			"thorns": 2,
-			"bloodlust": true
+			"thorns": 2
 		},
 		"debuffs": {
 			"judgementOfWisdom": true,
 			"judgementOfLight": true,
 			"improvedSealOfTheCrusader": 2,
-			"misery": true,
 			"curseOfElements": 2,
-			"bloodFrenzy": true,
 			"exposeArmor": 2,
 			"faerieFire": 2,
 			"sunderArmor": true,
 			"curseOfRecklessness": true,
 			"huntersMark": 2,
-			"exposeWeaknessUptime": 0.9,
-			"exposeWeaknessHunterAgility": 1150,
 			"insectSwarm": true
 		}
 	},
 	"preCapEpWeights": {
-		"stats": [0.33, 0.6, 1.5, 0, 0, 0.67, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.17, 0, 0, 0.54, 0.32, 0.18, 0, 0.67, 0.8, 0.5, 0.4, 0.7, 0.65, 0.3, 0.05, 0.05, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		"stats": [0.33, 0.6, 1.5, 0, 0, 0.67, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.17, 0, 0, 0.54, 0.32, 0.18, 0, 0.67, 0.8, 0.5, 0.4, 0.7, 0.65, 0.05, 0.05, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 		"pseudoStats": [0.5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 	},
 	"undershootCaps": {
-		"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 		"pseudoStats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 	},
 	"settings": {
 		"statCaps": {
-			"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+			"stats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 			"pseudoStats": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 		},
 		"maxGemPhase": 2,

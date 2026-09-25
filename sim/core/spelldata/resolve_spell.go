@@ -25,6 +25,40 @@ var helpfulTargets = []dbcenums.ImplicitTarget{
 	dbcenums.TARGET_UNIT_TARGET_CHAINHEAL_ALLY, dbcenums.TARGET_UNIT_CASTER_AREA_RAID, dbcenums.TARGET_UNIT_TARGET_RAID,
 }
 
+// ImplicitTarget values that name an enemy unit, or a point or area chosen on one.
+var enemyTargets = []dbcenums.ImplicitTarget{
+	dbcenums.TARGET_UNIT_NEARBY_ENEMY, dbcenums.TARGET_UNIT_TARGET_ENEMY, dbcenums.TARGET_UNIT_SRC_AREA_ENEMY,
+	dbcenums.TARGET_UNIT_DEST_AREA_ENEMY, dbcenums.TARGET_UNIT_CONE_ENEMY_24, dbcenums.TARGET_DEST_DYNOBJ_ENEMY,
+	dbcenums.TARGET_DEST_TARGET_ENEMY, dbcenums.TARGET_UNIT_CONE_180_DEG_ENEMY, dbcenums.TARGET_UNIT_CONE_CASTER_TO_DEST_ENEMY,
+	dbcenums.TARGET_UNIT_SRC_AREA_FURTHEST_ENEMY, dbcenums.TARGET_UNIT_AND_DEST_LAST_ENEMY,
+	dbcenums.TARGET_UNIT_CASTER_AREA_ENEMY_CLUMP, dbcenums.TARGET_DEST_CASTER_ENEMY_CLUMP_CENTROID,
+	dbcenums.TARGET_UNIT_RECT_CASTER_ENEMY, dbcenums.TARGET_UNIT_LINE_CASTER_TO_DEST_ENEMY,
+}
+
+// Whether either of the effect's implicit targets is an enemy.
+func (e *Effect) HitsAnEnemy() bool {
+	return TargetsAnEnemy(e.Target[0]) || TargetsAnEnemy(e.Target[1])
+}
+
+// Whether the implicit target names an enemy unit, or a point or area chosen on one.
+func TargetsAnEnemy(target dbcenums.ImplicitTarget) bool {
+	return slices.Contains(enemyTargets, target)
+}
+
+// The enemy targets that pick every enemy in an area, cone, rectangle or line rather than one unit.
+var areaEnemyTargets = []dbcenums.ImplicitTarget{
+	dbcenums.TARGET_UNIT_SRC_AREA_ENEMY, dbcenums.TARGET_UNIT_DEST_AREA_ENEMY, dbcenums.TARGET_UNIT_CONE_ENEMY_24,
+	dbcenums.TARGET_UNIT_CONE_180_DEG_ENEMY, dbcenums.TARGET_UNIT_CONE_CASTER_TO_DEST_ENEMY,
+	dbcenums.TARGET_UNIT_SRC_AREA_FURTHEST_ENEMY, dbcenums.TARGET_UNIT_CASTER_AREA_ENEMY_CLUMP,
+	dbcenums.TARGET_UNIT_RECT_CASTER_ENEMY, dbcenums.TARGET_UNIT_LINE_CASTER_TO_DEST_ENEMY,
+}
+
+// Whether either of the effect's implicit targets picks the enemies in an area. The area is often the
+// second: Shard of the Fallen Star states TARGET_DEST_TARGET_ENEMY, then TARGET_UNIT_DEST_AREA_ENEMY.
+func (e *Effect) HitsAnArea() bool {
+	return slices.Contains(areaEnemyTargets, e.Target[0]) || slices.Contains(areaEnemyTargets, e.Target[1])
+}
+
 // What the client states about a spell, as the fields core registers it through. The caller adds the
 // proc mask, ApplyEffects and anything the client does not carry to the returned value before handing
 // it to RegisterSpell: the resolver fills the row's own fields and nothing else.
@@ -162,6 +196,9 @@ func rowFlags(s *Spell) core.SpellFlag {
 	if s.SuppressesWeaponProcs() {
 		flags |= core.SpellFlagSuppressWeaponProcs
 	}
+	if s.PushedBack() {
+		flags |= core.SpellFlagPushback
+	}
 	// Helpful decides who the APL casts the spell on, so it follows the first effect's target. An
 	// attack whose first effect is a self side-effect reads as helpful here and the caller clears it.
 	if slices.Contains(helpfulTargets, s.EffectN(1).Target[0]) {
@@ -170,7 +207,9 @@ func rowFlags(s *Spell) core.SpellFlag {
 	return flags
 }
 
-func castConfig(unit *core.Unit, s *Spell) core.CastConfig {
+// The cast time and global cooldown the row states and whether haste shortens them, without the
+// cooldowns: for a caller that runs the spell on cooldowns of its own.
+func Cast(s *Spell) core.CastConfig {
 	// Haste shortens a cast and the GCD it spends, which is the school's business rather than the hit
 	// table's: the shouts, Taunt, Piercing Howl and Thunder Clap are physical spells the client files
 	// under the magic defense type, and they ignore haste like every other ability.
@@ -182,6 +221,11 @@ func castConfig(unit *core.Unit, s *Spell) core.CastConfig {
 	if s.StartRecoveryCategory == globalCooldownCategory {
 		cast.DefaultCast.GCD = s.GCD()
 	}
+	return cast
+}
+
+func castConfig(unit *core.Unit, s *Spell) core.CastConfig {
+	cast := Cast(s)
 
 	switch {
 	case s.CooldownMs > 0:

@@ -11,9 +11,6 @@ var PVPSet = core.NewItemSet(core.ItemSet{
 	Name: "Gladiator's Vestments",
 	ID:   577,
 	Bonuses: map[int32]core.ApplySetBonus{
-		2: func(agent core.Agent, setBonusAura *core.Aura) {
-			agent.GetCharacter().AddStat(stats.ResilienceRating, 35)
-		},
 		4: func(agent core.Agent, setBonusAura *core.Aura) {
 			rogue := agent.(RogueAgent).GetRogue()
 			rogue.HasPvpEnergy = true

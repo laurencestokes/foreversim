@@ -4,17 +4,6 @@
     "backgroundUrl": "https://wow.zamimg.com/images/wow/talents/backgrounds/tbc/382.jpg",
     "talents": [
       {
-        "fieldName": "improvedHolyStrike",
-        "fancyName": "Improved Holy Strike",
-        "location": {
-          "rowIdx": 0,
-          "colIdx": 0
-        },
-        "spellId": 1310902,
-        "definitionId": 134823,
-        "maxPoints": 2
-      },
-      {
         "fieldName": "divineStrength",
         "fancyName": "Divine Strength",
         "location": {
@@ -533,17 +522,6 @@
         "spellId": 1311087,
         "definitionId": 135230,
         "maxPoints": 1
-      },
-      {
-        "fieldName": "crusade",
-        "fancyName": "Crusade",
-        "location": {
-          "rowIdx": 3,
-          "colIdx": 3
-        },
-        "spellId": 1311083,
-        "definitionId": 142635,
-        "maxPoints": 2
       },
       {
         "fieldName": "twohandedWeaponSpecialization",

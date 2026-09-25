@@ -137,7 +137,7 @@ whole change.
 - There is no raid sim UI, and never has been — TBC's individual sim models a one-party raid, and the
   `Raid` and `Party` model classes in `ui/sim` exist for that reason, not because a fuller raid sim UI
   was cut.
-- `PartyBuffs` (`proto/common.proto`) is a real, populated message here (`ferocious_inspiration`,
+- `PartyBuffs` (`proto/buffs.proto`) is a real, populated message here (`ferocious_inspiration`,
   `blood_pact`, `moonkin_aura`, `leader_of_the_pack`, …) — unlike the source port's tree, where the
   same message is empty and the party-buff code paths are vestigial. Do not carry that assumption
   over: TBC's party-buff slice, subscription and picker are live code.

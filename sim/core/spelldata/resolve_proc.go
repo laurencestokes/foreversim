@@ -74,14 +74,15 @@ func ChanceFrom(e *Effect) ProcOpt {
 
 // A weapon proc's listener, which no row states: the game casts a "Chance on hit" effect and a
 // combat enchant off every eligible weapon hit, so the trigger hears them all and the weapon it
-// sits on decides which ones count. The outcome stays what the row's tooltip hint read, and the
+// sits on decides which ones count. A hit that lands is enough, so a special that deals no damage,
+// such as Sunder Armor, rolls it too. The outcome stays what the row's tooltip hint read, and the
 // aura-side proc-ness attribute goes: a weapon proc ignores proc-ness by its own rule. A rate option
 // that reads the mask has to come after this one.
 func WeaponProc() ProcOpt {
 	return func(_ *core.Character, trigger *core.ProcTrigger) {
 		trigger.Callback = core.CallbackOnSpellHitDealt
 		trigger.ProcMask = core.ProcMaskUnknown
-		trigger.RequireDamageDealt = true
+		trigger.RequireDamageDealt = false
 		trigger.CanProcFromProcs = false
 		trigger.SpellFlagsExclude &^= core.SpellFlagSuppressWeaponProcs
 		trigger.IsWeaponProc = true
@@ -193,6 +194,25 @@ func (s *Spell) StatedChance() float64 {
 		return 1
 	}
 	return 0
+}
+
+// Whether an item or enchant proc rolls the ProcChance column rather than the chance its tooltip
+// states on an effect: the column holds a real roll, 1 to 99, that the effect's contradicts. Uther's
+// Light 8397 states 2% on effect 1 and 4 in the column. A class spell keeps the effect's, which is
+// where a talent's ranks state theirs.
+func (s *Spell) ItemProcRollsTheColumn() bool {
+	return s.ProcChanceSource == ProcChanceEffectN && s.RPPM == 0 && s.ProcChance > 0 && s.ProcChance < 100 &&
+		float64(s.ProcChance)/100 != s.StatedChance()
+}
+
+// The column's chance on an item or enchant proc ItemProcRollsTheColumn picks it for. A rate option
+// that replaces the chance has to come after this one.
+func ItemProcChance(s *Spell) ProcOpt {
+	return func(_ *core.Character, trigger *core.ProcTrigger) {
+		if s.ItemProcRollsTheColumn() {
+			trigger.ProcChance = float64(s.ProcChance) / 100
+		}
+	}
 }
 
 // A row whose rate is procs per minute states no roll: that rate is a manager, and settleProcRate

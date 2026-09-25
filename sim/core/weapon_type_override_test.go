@@ -9,7 +9,7 @@ import (
 // Registers a plain one-handed sword and a shield under freshly-minted test IDs so these tests
 // don't depend on (or collide with) the real generated database.
 func addWeaponTypeOverrideTestItems() (swordID, shieldID, chestID int32) {
-	const testSwordID, testShieldID, testChestID = 990101, 990102, 990103
+	const testSwordID, testShieldID, testChestID = 991801, 991802, 991803
 	addToDatabase(&proto.SimDatabase{
 		Items: []*proto.SimItem{
 			{

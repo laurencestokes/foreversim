@@ -1,5 +1,125 @@
 [
 	{
+		"number": 456,
+		"title": "core: drop the 200 aura cap that broke full-raid sims",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/456"
+	},
+	{
+		"number": 455,
+		"title": "Standard gear: regenerate every launch set from one pre-raid pool; arena rows use them",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/455"
+	},
+	{
+		"number": 454,
+		"title": "arena: climbs use their own tree's rotation; MythicSim builds as comparison rows",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/454"
+	},
+	{
+		"number": 453,
+		"title": "arena: default to the best build in each talent tree",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/453"
+	},
+	{
+		"number": 452,
+		"title": "rotations: drop over-cautious mana gates (fire Fireball, balance launch Starfire)",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/452"
+	},
+	{
+		"number": 451,
+		"title": "arena: tag low-rank rotations as unconfirmed at 60",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/451"
+	},
+	{
+		"number": 450,
+		"title": "Low-rank Balance and Elemental rotations; register every Wrath/Starfire rank",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/450"
+	},
+	{
+		"number": 449,
+		"title": "priest: add smite_lowrank arena rotation (+40.8% on best Smite build)",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/449"
+	},
+	{
+		"number": 448,
+		"title": "mage: register every rank of Fireball/Frostbolt/Arcane Missiles; add fire_lowrank APL (+10.2%)",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/448"
+	},
+	{
+		"number": 447,
+		"title": "warlock: register every Shadow Bolt rank (low-rank rotations measured, none win)",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/447"
+	},
+	{
+		"number": 446,
+		"title": "arena: drop carried builds the current trees make illegal",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/446"
+	},
+	{
+		"number": 445,
+		"title": "arena: incremental search (skip unchanged specs, resume shape climbs)",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/445"
+	},
+	{
+		"number": 443,
+		"title": "arena runner: generate Go protos in the worktree",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/443"
+	},
+	{
+		"number": 442,
+		"title": "arena: one row per talent build, with a link to open it in the sim",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/442"
+	},
+	{
+		"number": 441,
+		"title": "Forever beta build 70009: data and the 2026-09-24 patch notes",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/441"
+	},
+	{
+		"number": 440,
+		"title": "Merge wowsims/forever master (a539274ef) into master",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/440"
+	},
+	{
+		"number": 438,
+		"title": "Forever client build 1.60.1.70009",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/438"
+	},
+	{
+		"number": 437,
+		"title": "Wowhead Forever data changed (2026-09-25)",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/437"
+	},
+	{
+		"number": 435,
+		"title": "Wowhead Forever data changed (2026-09-24)",
+		"mergedAt": "2026-09-24",
+		"url": "https://github.com/ElliotWood/Forever/pull/435"
+	},
+	{
+		"number": 434,
+		"title": "Wowhead Forever data changed (2026-09-24)",
+		"mergedAt": "2026-09-24",
+		"url": "https://github.com/ElliotWood/Forever/pull/434"
+	},
+	{
 		"number": 433,
 		"title": "Wowhead Forever data changed (2026-09-24)",
 		"mergedAt": "2026-09-24",

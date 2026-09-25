@@ -44,15 +44,15 @@ export const CLASS_RANGED_WEAPON_TYPES: Record<number, RangedWeaponType[]> = {
 };
 
 export const CLASS_RACES: Record<number, Race[]> = {
-	[Class.ClassWarrior]: [Race.RaceHuman, Race.RaceDwarf, Race.RaceNightElf, Race.RaceGnome, Race.RaceOrc, Race.RaceUndead, Race.RaceTauren, Race.RaceTroll, Race.RaceSkyborneHighOrder, Race.RaceSkyborneWindshaper],
+	[Class.ClassWarrior]: [Race.RaceHuman, Race.RaceDwarf, Race.RaceNightElf, Race.RaceGnome, Race.RaceHighOrderSkyborne, Race.RaceOrc, Race.RaceUndead, Race.RaceTauren, Race.RaceTroll, Race.RaceWindshaperSkyborne],
 	[Class.ClassPaladin]: [Race.RaceHuman, Race.RaceDwarf, Race.RaceUndead],
-	[Class.ClassHunter]: [Race.RaceHuman, Race.RaceDwarf, Race.RaceNightElf, Race.RaceOrc, Race.RaceTauren, Race.RaceTroll, Race.RaceSkyborneHighOrder, Race.RaceSkyborneWindshaper],
-	[Class.ClassRogue]: [Race.RaceHuman, Race.RaceDwarf, Race.RaceNightElf, Race.RaceGnome, Race.RaceOrc, Race.RaceUndead, Race.RaceTroll, Race.RaceSkyborneHighOrder, Race.RaceSkyborneWindshaper],
+	[Class.ClassHunter]: [Race.RaceHuman, Race.RaceDwarf, Race.RaceNightElf, Race.RaceHighOrderSkyborne, Race.RaceOrc, Race.RaceTauren, Race.RaceTroll, Race.RaceWindshaperSkyborne],
+	[Class.ClassRogue]: [Race.RaceHuman, Race.RaceDwarf, Race.RaceNightElf, Race.RaceGnome, Race.RaceHighOrderSkyborne, Race.RaceOrc, Race.RaceUndead, Race.RaceTroll, Race.RaceWindshaperSkyborne],
 	[Class.ClassPriest]: [Race.RaceHuman, Race.RaceDwarf, Race.RaceNightElf, Race.RaceGnome, Race.RaceUndead, Race.RaceTroll],
-	[Class.ClassShaman]: [Race.RaceDwarf, Race.RaceOrc, Race.RaceTauren, Race.RaceTroll, Race.RaceSkyborneWindshaper],
-	[Class.ClassMage]: [Race.RaceHuman, Race.RaceGnome, Race.RaceOrc, Race.RaceUndead, Race.RaceTroll, Race.RaceSkyborneHighOrder],
+	[Class.ClassShaman]: [Race.RaceDwarf, Race.RaceOrc, Race.RaceTauren, Race.RaceTroll, Race.RaceWindshaperSkyborne],
+	[Class.ClassMage]: [Race.RaceHuman, Race.RaceGnome, Race.RaceHighOrderSkyborne, Race.RaceOrc, Race.RaceUndead, Race.RaceTroll],
 	[Class.ClassWarlock]: [Race.RaceHuman, Race.RaceGnome, Race.RaceOrc, Race.RaceUndead, Race.RaceTroll],
-	[Class.ClassDruid]: [Race.RaceNightElf, Race.RaceTauren, Race.RaceSkyborneHighOrder, Race.RaceSkyborneWindshaper],
+	[Class.ClassDruid]: [Race.RaceNightElf, Race.RaceHighOrderSkyborne, Race.RaceTauren, Race.RaceWindshaperSkyborne],
 };
 
 export const SPEC_CAN_DUAL_WIELD = new Set<Spec>([

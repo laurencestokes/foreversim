@@ -1,10 +1,10 @@
-import { Debuffs, Encounter as EncounterProto, PartyBuffs, RaidBuffs } from '@generated/proto/common';
+import { Debuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { Encounter as EncounterProto } from '@generated/proto/common';
 import { IndividualSimSettings } from '@generated/proto/ui';
 
 import { CURRENT_API_VERSION } from '../constants/other';
 import { SimSettingCategories } from '../constants/sim_settings';
 import type { Player } from '../player/player';
-import { migrateOldProto, ProtoConversionMap } from '../proto/proto_migration';
 import { Stats } from '../proto/stats';
 import type { ReforgeSettings } from '../settings/reforge_settings';
 import type { Sim } from '../sim';
@@ -17,29 +17,6 @@ export interface IndividualSimSerializationContext {
 	reforgeSettings?: ReforgeSettings;
 	// Fallback EP weights applied when a loaded proto carries none.
 	defaultEpWeights: Stats;
-}
-
-export function updateIndividualSimProtoVersion(settingsProto: IndividualSimSettings) {
-	if (!(settingsProto.apiVersion < CURRENT_API_VERSION)) {
-		return;
-	}
-
-	// Deliberately empty. TBC's only migration is the drums one at version 7, and it
-	// needs a toast, so it runs from ui/app/proto_version.ts before this function is
-	// reached -- ui/sim cannot import @ui-kit.
-	//
-	// The two migrations this map arrived with are upstream's, for versions 2 and 4,
-	// and they must not run here. TBC's IndividualSimSettings happens to carry every
-	// field version 2 reads, so it type-checks and then overwrites reforgeSettings on
-	// any TBC payload below version 2 -- silently replacing a user's saved gem
-	// optimizer settings with values reconstructed from unrelated fields.
-	const conversionMap: ProtoConversionMap<IndividualSimSettings> = new Map();
-
-	// Run the migration utility using the above map.
-	migrateOldProto<IndividualSimSettings>(settingsProto, settingsProto.apiVersion, conversionMap);
-
-	// Flag the version as up-to-date once all migrations are done.
-	settingsProto.apiVersion = CURRENT_API_VERSION;
 }
 
 export function individualSimSettingsToProto(ctx: IndividualSimSerializationContext, exportCategories?: Array<SimSettingCategories>): IndividualSimSettings {
@@ -94,8 +71,6 @@ export function applyIndividualSimSettings(
 	const healingSpec = ctx.player.getPlayerSpec().isHealingSpec;
 
 	batch(() => {
-		updateIndividualSimProtoVersion(settings);
-
 		if (!settings.player) {
 			return;
 		}

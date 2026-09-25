@@ -600,9 +600,9 @@
 		"ability": "Hot Streak",
 		"file": "sim/mage/talents.go",
 		"foreverId": 400625,
-		"note": "Hot Streak is a later expansion spell, so the Classic database has no entry for 44445 and the site renders nothing; the 15 sec, 25% and 3 stacks are all Forever's published numbers, and Frostfire Bolt, which the Forever tooltip also names, has no Classic spell so it cannot grant a stack here.",
+		"note": "Hot Streak is a later expansion spell, so the Classic database has no entry for 44445 and the site renders nothing; the 20 sec (15 before client build 70009), 25% and 3 stacks are all Forever's published numbers, and Frostfire Bolt, which the Forever tooltip also names, has no Classic spell so it cannot grant a stack here.",
 		"source": "forever",
-		"tooltip": "Your non-periodic critical strikes with Fireball, Fire Blast and Scorch grant Hot Streak for 15 sec.\nEach stack reduces the cast time of Pyroblast by 25%, stacking up to 3 times."
+		"tooltip": "Your non-periodic critical strikes with Fireball, Fire Blast and Scorch grant Hot Streak for 20 sec.\nEach stack reduces the cast time of Pyroblast by 25%, stacking up to 3 times."
 	},
 	"44543": {
 		"ability": "Fingers of Frost",

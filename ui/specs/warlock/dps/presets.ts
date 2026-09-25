@@ -1,10 +1,11 @@
 import * as PresetUtils from '@app/preset_utils';
-import { ConsumesSpec, Debuffs, IndividualBuffs, PartyBuffs, Profession, Race, RaidBuffs, TristateEffect } from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { ConsumesSpec, Profession, Race } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import { Warlock_Options as WarlockOptions, WarlockOptions_Armor, WarlockOptions_CurseOptions, WarlockOptions_Summon } from '@generated/proto/warlock';
 
 import AfflictionRot from './apls/affliction.apl.json';
-import BlankAPL from './apls/blank.apl.json';
+import BlankAPL from './apls/default.apl.json';
 import DemonicPactRot from './apls/demonic_pact.apl.json';
 import ShadowAndFlameRot from './apls/destruction.apl.json';
 import DSRuinRot from './apls/ds_ruin.apl.json';
@@ -70,25 +71,25 @@ export const OtherDefaults = {
 
 export const DefaultRaidBuffs = RaidBuffs.create({
 	arcaneBrilliance: true,
-	divineSpirit: TristateEffect.TristateEffectRegular,
-	giftOfTheWild: TristateEffect.TristateEffectImproved,
-	powerWordFortitude: TristateEffect.TristateEffectImproved,
+	giftOfTheWild: true,
+	prayerOfFortitude: true,
+	prayerOfSpirit: true,
+	fireResistanceAura: true, // a raid buff in the new buffs proto
 });
 
 // Master opens as Alliance, so the Horde totems its presets name are not applied.
 export const DefaultPartyBuffs = PartyBuffs.create({
-	fireResistanceAura: true,
-	moonkinAura: TristateEffect.TristateEffectRegular,
+	moonkinAura: true,
 });
 
 export const DefaultIndividualBuffs = IndividualBuffs.create({
-	blessingOfKings: true,
-	blessingOfWisdom: true,
+	greaterBlessingOfKings: true,
+	greaterBlessingOfWisdom: true,
 });
 
 export const DefaultDebuffs = Debuffs.create({
-	exposeArmor: TristateEffect.TristateEffectImproved,
-	faerieFire: TristateEffect.TristateEffectRegular,
+	exposeArmor: true,
+	faerieFire: true,
 	judgementOfWisdom: true,
 	sunderArmor: true,
 });

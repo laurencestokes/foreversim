@@ -297,9 +297,8 @@ func init() {
 		})
 
 		warlock.AddMajorCooldown(core.MajorCooldown{
-			Spell:    spell,
-			Priority: core.CooldownPriorityBloodlust,
-			Type:     core.CooldownTypeDPS,
+			Spell: spell,
+			Type:  core.CooldownTypeDPS,
 		})
 	})
 }

@@ -47,8 +47,8 @@ func TestHolyPaladin(t *testing.T) {
 }
 
 // Our Forever sim's holy builds.
-var StandardTalents = "005321013025131251-503210302"
-var HolyHealerTalents = "205320213225131051-50323"
+var StandardTalents = "05321013025131251-503210302"
+var HolyHealerTalents = "25320213225131051-50323"
 
 var FullConsumes = &proto.ConsumesSpec{
 	FlaskId: 22853, // Flask of Mighty Restoration

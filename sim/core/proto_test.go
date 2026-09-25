@@ -76,7 +76,7 @@ func TestProtoVersioning(t *testing.T) {
 	}
 
 	if breakingChangeDetected && (newVersionNumber == deployedVersionNumber) {
-		t.Fatalf("Breaking proto change detected without corresponding API version increase!\n%s\nEither fix your proto change so that it remains backwards-compatible, or increment the current_version_number option within the ProtoVersion message in proto/common.proto.\nIf you choose the latter route, then you must also modify the updateProtoVersion() method of any affected classes in the front-end code!\nThis ensures that saved browser data and old sim links will be automatically migrated to the new schema.", out)
+		t.Fatalf("Breaking proto change detected without corresponding API version increase!\n%s\nEither fix your proto change so that it remains backwards-compatible, or increment the current_version_number option within the ProtoVersion message in proto/common.proto.\nNothing migrates a saved payload, so the latter route breaks whatever a browser still holds.", out)
 	} else if !breakingChangeDetected && (newVersionNumber != deployedVersionNumber) {
 		t.Fatal("API version increase detected without any breaking changes to protos!\nIf your proto changes are indeed backwards-compatible as detected, then revert the current_version_number option that you incremented in proto/common.proto back to its old value.\nIf your proto changes do in fact break saved browser data or old sim links, then make the breakage more explicit, such as by renaming an affected field.")
 	}

@@ -120,8 +120,8 @@ func (o *reforgeOptimizer) applyReforgeStat(coeffs map[string]float64, stat stat
 		if getUnitStat(preCapEPs, stats.UnitStatFromPseudoStat(child)) == 0 {
 			continue
 		}
-		// ratingPerPseudoStatPercent encodes the per-parent conversion (including the dual
-		// Defense/Resilience parents of ReducedCritTakenPercent), so dividing by it reproduces the
+		// ratingPerPseudoStatPercent encodes the per-parent conversion (including Defense, which
+		// parents Dodge, Parry, Block and ReducedCritTakenPercent), so dividing by it reproduces the
 		// reference's convertStatToChildPseudoStat exactly.
 		if ratingPerPercent := ratingPerPseudoStatPercent(child, stat); ratingPerPercent != 0 {
 			coeffs[pseudoStatCoeffKey(child)] += amount / ratingPerPercent
@@ -149,6 +149,7 @@ func (o *reforgeOptimizer) applyPositiveReforgeStats(coeffs map[string]float64, 
 // passed through unscaled.
 func (o *reforgeOptimizer) resolveCapCoeffs(rawDelta stats.Stats) map[string]float64 {
 	resolved := resolveStatDelta(o.statDeps, o.baseStats, rawUnitStatsFromStats(rawDelta))
+	o.sheet.Gate(resolved.PseudoStats)
 	coeffs := map[string]float64{}
 	eachUnitStat(resolved, func(unitStat stats.UnitStat, value float64) {
 		if value != 0 {

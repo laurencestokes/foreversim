@@ -36,9 +36,9 @@ message DruidTalents {
     bool feral_charge = 24;
     int32 sharpened_claws = 25;
     int32 shredding_attacks = 26;
-    bool mangle = 27;
+    bool primal_bite = 27;
     int32 predatory_strikes = 28;
-    int32 primal_fury = 29;
+    int32 blood_frenzy = 29;
     int32 predatory_instincts = 30;
     bool leader_of_the_pack = 31;
     int32 king_of_the_jungle = 32;

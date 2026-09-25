@@ -23,27 +23,41 @@ import (
 	"github.com/wowsims/forever/sim/core/proto"
 )
 
-// The two raids open at launch. A launch set is worn on the way in, not out.
-var launchRaidZones = map[int32]bool{
+// Every raid and world boss. A launch set is pre-raid gear: what a character walks into the
+// launch raids (Molten Core, Onyxia) wearing, so their loot is out, and so is everything from
+// the raids that open later. The item database used to be generated with post-launch content
+// already filtered out; the forever-next database carries every phase marked phase 1, so the
+// filter has to live here. Without it the "launch" sets averaged item level 72-76 on Naxxramas
+// and Ahn'Qiraj loot.
+var raidZones = map[int32]bool{
 	2717: true, // Molten Core
 	2159: true, // Onyxia's Lair
+	2677: true, // Blackwing Lair
+	1977: true, // Zul'Gurub
+	3429: true, // Ruins of Ahn'Qiraj
+	3428: true, // Ahn'Qiraj
+	3456: true, // Naxxramas
+	16:   true, // Azshara (Azuregos)
+	4:    true, // Blasted Lands (Lord Kazzak)
 }
 
-// Onyxia's drops and the head turn-ins for her and Ragnaros carry no source record at
-// all, so the zone check cannot see them. Item level can: among sourceless items nothing
-// sits between 66 and 70, and everything from 71 up is one of those - Onyxia's drops at 71
-// and 72, her turn-in rewards at 74, the Benediction and Rhok'delar chains at 75, Sulfuras
-// at 80. Below that it is world drops, PvP sets and dungeon loot, all obtainable at launch.
-const maxSourcelessIlvl = 70
+// Items with no drop to judge by - crafted, quest rewards, world drops, PvP rewards, raid
+// turn-ins that carry no source at all - are held to the ceiling of pre-raid dungeon loot:
+// Stratholme and Scholomance top out at 65. Above that it is raid-tier crafting, PvP rank
+// gear and raid turn-ins.
+const maxUnsourcedIlvl = 66
 
 func preRaid(item *proto.UIItem) bool {
+	dropped := false
 	for _, source := range item.Sources {
-		if drop := source.GetDrop(); drop != nil && launchRaidZones[drop.ZoneId] {
-			continue
+		if drop := source.GetDrop(); drop != nil {
+			if !raidZones[drop.ZoneId] {
+				return true
+			}
+			dropped = true
 		}
-		return true
 	}
-	return len(item.Sources) == 0 && item.ScalingOptions[0].GetIlvl() <= maxSourcelessIlvl
+	return !dropped && item.ScalingOptions[0].GetIlvl() <= maxUnsourcedIlvl
 }
 
 type slot struct {

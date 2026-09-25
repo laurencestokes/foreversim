@@ -1,7 +1,6 @@
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { APLRotation } from '@generated/proto/apl';
 import { PseudoStat, Spec, Stat } from '@generated/proto/common';
-import * as Mechanics from '@sim/constants/mechanics';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
 import { masterEpWeights } from '@sim/proto/master_ep_weights';
@@ -47,7 +46,6 @@ export default defineSpec<Spec.SpecRetributionPaladin>({
 			Stat.StatMana,
 			Stat.StatHealth,
 			Stat.StatStamina,
-			Stat.StatExpertiseRating,
 			Stat.StatHolyDamage,
 			Stat.StatArcaneResistance,
 			Stat.StatFireResistance,
@@ -62,6 +60,7 @@ export default defineSpec<Spec.SpecRetributionPaladin>({
 			PseudoStat.PseudoStatSpellHastePercent,
 			PseudoStat.PseudoStatSpellCritPercent,
 			PseudoStat.PseudoStatSpellHitPercent,
+			PseudoStat.PseudoStatExpertisePercent,
 		],
 	),
 
@@ -87,7 +86,7 @@ export default defineSpec<Spec.SpecRetributionPaladin>({
 		}),
 		statCaps: (() => {
 			const hitCap = new Stats().withPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, 9);
-			const expCap = new Stats().withStat(Stat.StatExpertiseRating, 6.5 * 4 * Mechanics.EXPERTISE_PER_QUARTER_PERCENT_REDUCTION);
+			const expCap = new Stats().withPseudoStat(PseudoStat.PseudoStatExpertisePercent, 6.5);
 
 			return hitCap.add(expCap);
 		})(),

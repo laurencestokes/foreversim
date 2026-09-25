@@ -476,7 +476,6 @@ func ScanEnchantsTable(rows *sql.Rows) (dbc.Enchant, error) {
 	var raw dbc.Enchant
 	var effectsString string
 	var effectPointsString string
-	var spellEffectPointsString sql.NullString
 	var effectArgsString string
 	var spellItemEnchantmentFlags dbc.SpellItemEnchantmentFlags
 	err := rows.Scan(
@@ -487,7 +486,6 @@ func ScanEnchantsTable(rows *sql.Rows) (dbc.Enchant, error) {
 		&raw.ProfessionId,
 		&effectsString,
 		&effectPointsString,
-		&spellEffectPointsString,
 		&effectArgsString,
 		&raw.IsWeaponEnchant,
 		&raw.InventoryType,
@@ -498,6 +496,7 @@ func ScanEnchantsTable(rows *sql.Rows) (dbc.Enchant, error) {
 		&raw.RequiredProfession,
 		&raw.EffectName,
 		&spellItemEnchantmentFlags,
+		&raw.IsLive,
 	)
 	if err != nil {
 		return raw, fmt.Errorf("scanning enchant data for effect ID %d: %w", raw.EffectId, err)
@@ -511,11 +510,6 @@ func ScanEnchantsTable(rows *sql.Rows) (dbc.Enchant, error) {
 	raw.EffectPoints, err = parseIntArrayField(effectPointsString, 3)
 	if err != nil {
 		return raw, fmt.Errorf("parsing effect points for enchant %d (%s): %w", raw.EffectId, effectPointsString, err)
-	}
-
-	raw.SpellEffectPoints, err = PraseEnchantEffectPoints(spellEffectPointsString)
-	if err != nil {
-		return raw, fmt.Errorf("parsing effect points for enchant %d (%s): %w", raw.EffectId, spellEffectPointsString.String, err)
 	}
 
 	raw.EffectArgs, err = parseIntArrayField(effectArgsString, 3)
@@ -555,11 +549,12 @@ func LoadAndWriteRawEnchants(dbHelper *DBHelper, inputsDir string) ([]dbc.Enchan
 				WHEN sie.Effect_2 IN (1, 3) THEN sie.EffectArg_2
 				ELSE se.SpellID
 			END AS spellId,
-			COALESCE(ixie.ItemID, 0) as ItemId,
+			-- The lowest item the client ships (it has an ItemSparse row), else the lowest item. This is the
+			-- query's only aggregate, so the bare columns (icon and quality among them) come from its row.
+			COALESCE(MIN(CASE WHEN isp.ID IS NULL THEN ixie.ItemID + 1000000000 ELSE ixie.ItemID END) % 1000000000, 0) as ItemId,
 			sie.RequiredSkillID as professionId,
 			sie.Effect as Effect,
 			sie.EffectPointsMin as EffectPoints,
-			group_concat(CAST(ese.EffectBasePointsF AS INTEGER) + 1) as SpellEffectPoints, -- REAL in this layout; the parser wants ints
 			sie.EffectArg as EffectArgs,
 			CASE
 				WHEN sei.EquippedItemClass = 4 THEN false
@@ -572,7 +567,15 @@ func LoadAndWriteRawEnchants(dbHelper *DBHelper, inputsDir string) ([]dbc.Enchan
 			COALESCE(isp.OverallQualityID, 1),
 			COALESCE(sla.SkillLine, 0) as RequiredProfession,
 			COALESCE(sie.Name_lang, ""),
-			COALESCE(sie.Flags, 0) AS SpellItemEnchantmentFlags
+			COALESCE(sie.Flags, 0) AS SpellItemEnchantmentFlags,
+			-- A grant is live when a profession teaches it or an item the client ships uses it.
+			EXISTS (SELECT 1 FROM SkillLineAbility WHERE Spell = se.SpellID)
+				OR EXISTS (
+					SELECT 1 FROM ItemEffect lie
+						JOIN ItemXItemEffect lixie ON lixie.ItemEffectID = lie.ID
+						JOIN ItemSparse lisp ON lisp.ID = lixie.ItemID
+					WHERE lie.SpellID = se.SpellID
+				) AS IsLive
 		FROM SpellEffect se
 			JOIN Spell s ON se.SpellID = s.ID
 			JOIN SpellName sn ON se.SpellID = sn.ID
@@ -583,7 +586,6 @@ func LoadAndWriteRawEnchants(dbHelper *DBHelper, inputsDir string) ([]dbc.Enchan
 			LEFT JOIN SkillLineAbility sla ON se.SpellID = sla.Spell
 			LEFT JOIN Item it ON ixie.ItemID = it.ID
 			LEFT JOIN ItemSparse isp ON ixie.ItemID = isp.ID
-			LEFT JOIN SpellEffect ese ON ese.SpellID = sie.ID
 			WHERE se.Effect = 53
 				AND (
 					(
@@ -596,7 +598,7 @@ func LoadAndWriteRawEnchants(dbHelper *DBHelper, inputsDir string) ([]dbc.Enchan
 					OR
 					sie.RequiredSkillID = 773
 				)
-		GROUP BY name `
+		GROUP BY sie.ID, name `
 	items, err := LoadRows(dbHelper.db, query, ScanEnchantsTable)
 	if err != nil {
 		return nil, fmt.Errorf("error loading items for EnchantTables: %w", err)

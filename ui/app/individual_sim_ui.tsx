@@ -14,7 +14,7 @@ import { WarningsRegistry } from '@features/results/model/warnings';
 import { applyEmptyAplRotation, applyIndividualDefaults } from '@features/settings/model/apply_defaults';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { type ErrorOutcome, ErrorOutcomeType } from '@generated/proto/api';
-import { Spec, Stat } from '@generated/proto/common';
+import { Spec } from '@generated/proto/common';
 import { IndividualSimSettings } from '@generated/proto/ui';
 import i18n from '@i18n/config';
 import { LaunchStatus } from '@sim/constants/other';
@@ -260,16 +260,7 @@ export class SimHostObject<SpecType extends Spec> implements IndividualSimHost<S
 	}
 
 	applyDefaultConfigOptions(config: IndividualSimUIConfig<SpecType>): IndividualSimUIConfig<SpecType> {
-		const epStats = [...config.epStats, ...config.includeBuffDebuffInputs];
-		const hasAttackPowerScaling = epStats.includes(Stat.StatAttackPower);
-		const hasSpellDamageScaling = epStats.includes(Stat.StatSpellDamage);
-
-		config.otherInputs.inputs = [
-			...(hasAttackPowerScaling ? [OtherInputs.ExposeWeaknessHunterAgility, OtherInputs.ExposeWeaknessUptime] : []),
-			...(hasSpellDamageScaling ? [OtherInputs.ShadowPriestDPS] : []),
-			...(this.player.getPlayerSpec().isTankSpec ? [OtherInputs.RetributionAuraSpellPower] : []),
-			...config.otherInputs.inputs,
-		];
+		config.otherInputs.inputs = [...(this.player.getPlayerSpec().isTankSpec ? [OtherInputs.RetributionAuraSpellPower] : []), ...config.otherInputs.inputs];
 
 		return config;
 	}
@@ -292,10 +283,6 @@ export class SimHostObject<SpecType extends Spec> implements IndividualSimHost<S
 		applyEmptyAplRotation(this.player);
 	}
 
-	static updateProtoVersion(settingsProto: IndividualSimSettings) {
-		updateIndividualProtoVersion(settingsProto);
-	}
-
 	applyDefaults() {
 		applyIndividualDefaults(this);
 	}
@@ -309,9 +296,9 @@ export class SimHostObject<SpecType extends Spec> implements IndividualSimHost<S
 	}
 
 	fromProto(settings: IndividualSimSettings, includeCategories?: Array<SimSettingCategories>) {
-		// Before `applyIndividualSimSettings`, which runs the shared migrations and then stamps the
-		// proto as current — after which the TBC-only converter would never see an old payload.
-		SimHostObject.updateProtoVersion(settings);
+		// Before `applyIndividualSimSettings`: an old link's buffs and consumables are reset to the
+		// spec's defaults here, and the proto stamped current.
+		updateIndividualProtoVersion(settings, this.individualConfig.defaults);
 		// A gear planner hides the encounter settings, so the default target applied by `applyDefaults`
 		// stays whatever the saved settings or the link carried: stats and the gem optimizer always
 		// have a full environment to build, without a second ComputeStats to put it back.

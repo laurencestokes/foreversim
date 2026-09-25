@@ -19,7 +19,6 @@ const LISTS: Partial<Record<ConsumableType, Array<Consumable>>> = {
 	[ConsumableType.ConsumableTypeBattleElixir]: [consumable(58148)],
 	[ConsumableType.ConsumableTypeGuardianElixir]: [consumable(58090)],
 	[ConsumableType.ConsumableTypeFood]: [consumable(74650)],
-	[ConsumableType.ConsumableTypePetFood]: [consumable(33874)],
 };
 
 const db = { getConsumablesByTypeAndStats: vi.fn((type: ConsumableType) => LISTS[type] ?? []) } as unknown as Database;
@@ -39,15 +38,12 @@ const playerOf = (playerClass: Class, spec: Spec) =>
 			explosiveId: 8,
 			mhImbueId: 9,
 			ohImbueId: 10,
-			drumsId: 11,
-			petFoodId: 12,
 		}),
 	}) as unknown as Player<any>;
 
 const option = (value: number): ConsumableStatOption<number> => ({ stats: [], config: { actionId: ActionId.fromItemId(value), value } });
 
-const build = (player: Player<any>) =>
-	consumeConfigs(player, db, [] as Array<Stat>, [option(5512)], [option(89637)], [option(29453)], [option(29453)], [option(29529)]);
+const build = (player: Player<any>) => consumeConfigs(player, db, [] as Array<Stat>, [option(5512)], [option(89637)], [option(28891)], [option(28891)]);
 
 // The zero entry every list is built with; the ids after it are what the config actually offers.
 const offered = (values: Array<{ value: number }>) => values.slice(1).map(entry => entry.value);
@@ -76,8 +72,6 @@ describe('consumeConfigs', () => {
 			explosive: configs.explosive.getValue(player),
 			mhImbue: configs.mhImbue.getValue(player),
 			ohImbue: configs.ohImbue.getValue(player),
-			drums: configs.drums.getValue(player),
-			petFood: configs.petFood.getValue(player),
 		}).toEqual({
 			potion: 2,
 			conjured: 3,
@@ -88,8 +82,6 @@ describe('consumeConfigs', () => {
 			explosive: 8,
 			mhImbue: 9,
 			ohImbue: 10,
-			drums: 11,
-			petFood: 12,
 		});
 	});
 
@@ -99,11 +91,9 @@ describe('consumeConfigs', () => {
 		expect(offered(configs.battleElixir.values)).toEqual([58148]);
 		expect(offered(configs.guardianElixir.values)).toEqual([58090]);
 		expect(offered(configs.food.values)).toEqual([74650]);
-		expect(offered(configs.petFood.values)).toEqual([33874]);
 		expect(offered(configs.conjured.values)).toEqual([5512]);
 		expect(offered(configs.explosive.values)).toEqual([89637]);
-		expect(offered(configs.mhImbue.values)).toEqual([29453]);
-		expect(offered(configs.ohImbue.values)).toEqual([29453]);
-		expect(offered(configs.drums.values)).toEqual([29529]);
+		expect(offered(configs.mhImbue.values)).toEqual([28891]);
+		expect(offered(configs.ohImbue.values)).toEqual([28891]);
 	});
 });

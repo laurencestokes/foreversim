@@ -91,7 +91,7 @@ func RegisterHunter() {
 	)
 }
 
-func NewHunter(character *core.Character, options *proto.Player, hunterOptions *proto.HunterOptions, raid *proto.Raid) *Hunter {
+func NewHunter(character *core.Character, options *proto.Player, hunterOptions *proto.HunterOptions, _ *proto.Raid) *Hunter {
 	hunter := &Hunter{
 		Character: *character,
 		Talents:   &proto.HunterTalents{},
@@ -99,12 +99,6 @@ func NewHunter(character *core.Character, options *proto.Player, hunterOptions *
 	}
 
 	core.FillTalentsProto(hunter.Talents.ProtoReflect(), options.TalentsString, TalentTreeSizes)
-
-	if raid.Debuffs != nil {
-		if hunter.Options.PetType == proto.HunterOptions_Bat || hunter.Options.PetType == proto.HunterOptions_Owl {
-			raid.Debuffs.Screech = false
-		}
-	}
 
 	hunter.PseudoStats.CanParry = true
 
@@ -312,7 +306,7 @@ func (hunter *Hunter) AddPartyBuffs(partyBuffs *proto.PartyBuffs) {
 		partyBuffs.TrueshotAura = true
 	}
 
-	if partyBuffs.WindfuryTotem != proto.TristateEffect_TristateEffectMissing {
+	if partyBuffs.WindfuryTotem {
 		hunter.windFuryEnabled = true
 	}
 }

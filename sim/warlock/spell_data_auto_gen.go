@@ -101,7 +101,6 @@ type generatedSpellData struct {
 	MasterDemonologist          spelldata.Ladder
 	MasterSummoner              spelldata.Ladder
 	MetamorphosisDemonCharge    spelldata.Ladder
-	MetamorphosisDemonicHowl    spelldata.Ladder
 	MoltenSkin                  spelldata.Ladder
 	Nightfall                   spelldata.Ladder
 	NightfallTriggered          spelldata.Ladder
@@ -226,7 +225,6 @@ var spellData = generatedSpellData{
 	MasterDemonologist:          spelldata.Talent(23785, 5),
 	MasterSummoner:              spelldata.Talent(18709, 2),
 	MetamorphosisDemonCharge:    spelldata.Ranked(412783),
-	MetamorphosisDemonicHowl:    spelldata.Ranked(412784),
 	MoltenSkin:                  spelldata.Talent(1225220, 5),
 	Nightfall:                   spelldata.Talent(18094, 2),
 	NightfallTriggered:          spelldata.Ranked(17941),

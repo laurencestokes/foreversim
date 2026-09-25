@@ -4,7 +4,6 @@ import { ResourceType } from '@generated/proto/spell';
 import { IconData, UIItem as Item } from '@generated/proto/ui';
 
 import { CHARACTER_LEVEL } from '../../constants/mechanics';
-import { CURRENT_PHASE, Phase } from '../../constants/other';
 import { Database } from '../database';
 import { buildWowheadTooltipDataset, wowheadEntityUrl, wowheadIconUrl, WowheadTooltipItemParams, WowheadTooltipSpellParams } from '../wowhead';
 
@@ -315,18 +314,6 @@ export class ActionId {
 				}
 
 				break;
-			case 'Devotion Aura':
-			case 'Pain Suppression':
-			case 'Curse of the Elements':
-			case 'Curse of Recklessness':
-			case 'Improved Seal of the Crusader':
-			case 'Unleashed Rage':
-				if (tag === -1) {
-					name += ' (External)';
-				} else {
-					name += ` (Self)`;
-				}
-				break;
 			case 'Envenom':
 			case 'Eviscerate':
 			case 'Rupture':
@@ -439,8 +426,6 @@ export class ActionId {
 				}
 				break;
 			// For targetted buffs, tag is the source player's raid index or -1 if none.
-			case 'Bloodlust':
-			case 'Ferocious Inspiration':
 			case 'Innervate':
 			case 'Focus Magic':
 			case 'Mana Tide Totem':
@@ -476,14 +461,6 @@ export class ActionId {
 					name += ' (Main Hand)';
 				} else if (tag == 2) {
 					name += ' (Off Hand)';
-				}
-				break;
-			case 'Battle Shout':
-			case 'Commanding Shout':
-				if (tag == 1) {
-					name += ' (External)';
-				} else if (tag == 3) {
-					name += ' (Snapshot)';
 				}
 				break;
 			case 'Heroic Strike':
@@ -593,20 +570,16 @@ export class ActionId {
 					name += ' (Cooldown)';
 				}
 				break;
-			case 'Drums of War':
-			case 'Drums of Battle':
-			case 'Drums of Restoration':
-				if (CURRENT_PHASE >= Phase.Tier3) {
-					name = 'Greater ' + name;
-				}
-				if (tag === -1) {
-					name += ' (External)';
-				}
-				break;
 			case 'Retribution Aura':
 			case 'Holy Shield':
-				if (tag == 2) {
+			case 'Thorns':
+				// A damage shield's proc is tagged two past the aura that carries it: tag 2 is the
+				// player's own copy, tag 1 the copy an outside caster provides, and that copy's
+				// aura is the tag -1 this case names below.
+				if (tag === 1 || tag === 2) {
 					name += ' (Hit)';
+				} else if (tag === -1) {
+					name += ' (External)';
 				}
 				break;
 			case 'Dummy Spell':
@@ -887,7 +860,6 @@ const petNameToActionId: Record<string, ActionId> = {
 	'Frozen Orb': ActionId.fromSpellId(84721),
 	Gargoyle: ActionId.fromSpellId(49206),
 	Ghoul: ActionId.fromSpellId(46584),
-	'Gnomish Flame Turret': ActionId.fromItemId(23841),
 	'Greater Earth Elemental': ActionId.fromSpellId(2062),
 	'Greater Fire Elemental': ActionId.fromSpellId(2894),
 	'Primal Earth Elemental': ActionId.fromSpellId(2062),

@@ -3,6 +3,7 @@ package paladin
 import (
 	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 )
 
 // The heal each rank fires on a hit, and the heal its judgement grants attackers. Neither carries
@@ -23,7 +24,7 @@ func (paladin *Paladin) registerSealOfLight(row shared.SpellData) {
 	judgementID := int32(effectAt(row, 2).Value)
 	healRow := spellData.SealOfLightTriggered.BySpellID(judgementOfLightHealIDs[row.Rank])
 	judgementAuras := paladin.newJudgementAuras(func(target *core.Unit) *core.Aura {
-		return core.JudgementOfLightAura(target, core.JudgementRank{
+		return buffs.JudgementOfLightRankAura(target, buffs.JudgementRank{
 			SpellID: judgementID,
 			Rank:    row.Rank,
 			Value:   shared.SpellDataMin(healRow.Heal),

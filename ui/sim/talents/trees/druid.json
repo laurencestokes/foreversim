@@ -304,8 +304,8 @@
         "maxPoints": 3
       },
       {
-        "fieldName": "mangle",
-        "fancyName": "Mangle",
+        "fieldName": "primalBite",
+        "fancyName": "Primal Bite",
         "location": {
           "rowIdx": 3,
           "colIdx": 1
@@ -330,8 +330,8 @@
         "maxPoints": 3
       },
       {
-        "fieldName": "primalFury",
-        "fancyName": "Primal Fury",
+        "fieldName": "bloodFrenzy",
+        "fancyName": "Blood Frenzy",
         "location": {
           "rowIdx": 3,
           "colIdx": 3

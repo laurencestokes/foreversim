@@ -8,7 +8,7 @@ import (
 
 // Generated with an effect held at its base points, the talent tree stating no rank value for it:
 //   Blood Craze: effect 1 of spell 16487 has no rank curve and is held at its base points
-//   Improved Slam: effect 2, 3, 4, 5, 6 of spell 12862 has no rank curve and is held at its base points
+//   Improved Slam: effect 3, 4, 5, 6, 7 of spell 12862 has no rank curve and is held at its base points
 //   Raging Blows: effect 0, 1 of spell 1310315 has no rank curve and is held at its base points
 //   Vanguard: effect 0, 1, 2 of spell 1310317 has no rank curve and is held at its base points
 
@@ -159,7 +159,7 @@ var spellData = generatedSpellData{
 	BloodrageTriggered:              spelldata.Ranked(29131),
 	Bloodthirst:                     spelldata.Ranked(23881, 23892, 23893, 23894),
 	Bloodthrill:                     spelldata.Talent(1289682, 5),
-	BloodthrillTriggered:            spelldata.Ranked(1289681),
+	BloodthrillTriggered:            spelldata.Ranked(1282733, 1289681),
 	BoomingVoice:                    spelldata.Talent(12321, 5),
 	BoundlessRage:                   spelldata.Talent(1310236, 3),
 	ChallengingShout:                spelldata.Ranked(1161),

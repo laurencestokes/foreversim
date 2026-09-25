@@ -22,7 +22,19 @@ type Hardcast struct {
 	Target      *Unit
 	CanMove     bool
 	IsChanneled bool
+	Pushback    bool
 	CastTime    time.Duration
+}
+
+// A hit pushes a cast back by SpellPushbackDuration, but never leaves more than the full cast time to
+// go. Returns how far the cast moved.
+func (hc *Hardcast) pushBack(currentTime time.Duration) time.Duration {
+	pushback := min(SpellPushbackDuration, currentTime+hc.CastTime-hc.Expires)
+	if pushback <= 0 {
+		return 0
+	}
+	hc.Expires += pushback
+	return pushback
 }
 
 // Input for constructing the CastSpell function for a spell.
@@ -240,6 +252,7 @@ func (spell *Spell) makeCastFunc(config CastConfig) CastSuccessFunc {
 				Target:      target,
 				CanMove:     spell.Flags&SpellFlagCanCastWhileMoving > 0,
 				IsChanneled: isChanneled,
+				Pushback:    spell.Flags.Matches(SpellFlagPushback),
 				CastTime:    spell.CurCast.CastTime,
 			}
 

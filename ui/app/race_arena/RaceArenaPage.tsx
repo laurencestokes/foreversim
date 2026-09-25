@@ -299,7 +299,8 @@ const Caveats = () => (
 				damage alone.
 			</li>
 			<li>
-				The Skyborne are one row, because the High Order and the Windshapers share every racial. A Skyborne mage can only be High Order and a Skyborne
+				The Skyborne are one row: the High Order and the Windshapers share every passive racial and their base attributes, and their on-use racials
+				(Read Ley Line&apos;s regeneration, Skysight&apos;s movement speed) are in no rotation. A Skyborne mage can only be High Order and a Skyborne
 				shaman only a Windshaper; warriors, hunters, rogues and druids can be either.
 			</li>
 		</ul>

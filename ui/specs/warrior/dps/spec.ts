@@ -44,7 +44,6 @@ export default defineSpec<Spec.SpecDpsWarrior>({
 			Stat.StatStrength,
 			Stat.StatAgility,
 			Stat.StatAttackPower,
-			Stat.StatExpertiseRating,
 			Stat.StatArmorPenetration,
 			Stat.StatArcaneResistance,
 			Stat.StatFireResistance,
@@ -52,7 +51,12 @@ export default defineSpec<Spec.SpecDpsWarrior>({
 			Stat.StatNatureResistance,
 			Stat.StatShadowResistance,
 		],
-		[PseudoStat.PseudoStatMeleeHitPercent, PseudoStat.PseudoStatMeleeCritPercent, PseudoStat.PseudoStatMeleeHastePercent],
+		[
+			PseudoStat.PseudoStatMeleeHitPercent,
+			PseudoStat.PseudoStatMeleeCritPercent,
+			PseudoStat.PseudoStatMeleeHastePercent,
+			PseudoStat.PseudoStatExpertisePercent,
+		],
 	),
 
 	defaults: {
@@ -72,7 +76,7 @@ export default defineSpec<Spec.SpecDpsWarrior>({
 			MeleeSpeedMultiplier: 4.69,
 		}),
 		statCaps: (() => {
-			const expCap = new Stats().withStat(Stat.StatExpertiseRating, 6.5 * 4 * Mechanics.EXPERTISE_PER_QUARTER_PERCENT_REDUCTION);
+			const expCap = new Stats().withPseudoStat(PseudoStat.PseudoStatExpertisePercent, 6.5);
 			return expCap;
 		})(),
 		softCapBreakpoints: (() => {

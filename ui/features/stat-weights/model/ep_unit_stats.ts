@@ -20,6 +20,7 @@ const EP_PSEUDO_STATS = [
 	PseudoStat.PseudoStatSchoolHitPercentShadow,
 	PseudoStat.PseudoStatMeleeCritPercent,
 	PseudoStat.PseudoStatSpellCritPercent,
+	PseudoStat.PseudoStatExpertisePercent,
 ];
 
 export const EP_UNIT_STATS: UnitStat[] = UnitStat.getAll().filter(stat => {

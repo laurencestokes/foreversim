@@ -19,7 +19,7 @@ software keeps a user-visible link back to the original project; the site's land
 
 What this repository adds so far:
 
-- **Forever racials** from the beta client's own data (build 1.60.1.69977): the reworked racials, the
+- **Forever racials** from the beta client's own data (build 1.60.1.70009): the reworked racials, the
   Skyborne, Forever's race and class pairings, and Eureka! for warriors, rogues, warlocks, mages and priests. Every value
   is listed with its spell id in [docs/forever_rules.md](docs/forever_rules.md#racials).
 - **Race analysis** tests that take each race's DPS apart, piece by piece, on identical gear

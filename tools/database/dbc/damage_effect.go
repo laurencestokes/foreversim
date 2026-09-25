@@ -26,12 +26,6 @@ var directDamageEffectTypes = []SpellEffectType{dbcenums.E_SCHOOL_DAMAGE, dbcenu
 
 // Resolves the effect's damage to a min and max amount.
 func (s *SpellEffect) DamageRange() (float64, float64) {
-	// An explicit die roll is the amount the client displays, so it wins over the scaling
-	// coefficient. Both agree on the mean, but the coefficient's variance is wider.
-	if s.EffectDieSides > 0 {
-		return float64(s.EffectBasePoints + 1), float64(s.EffectBasePoints + s.EffectDieSides)
-	}
-
 	if s.Coefficient != 0 {
 		return s.Min(BASE_LEVEL, BASE_LEVEL), s.Max(BASE_LEVEL, BASE_LEVEL)
 	}

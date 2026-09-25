@@ -3,6 +3,7 @@ package paladin
 import (
 	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -22,7 +23,7 @@ import (
 func (paladin *Paladin) registerSealOfTheCrusader(row shared.SpellData) {
 	judgementRow := spellData.SealOfTheCrusaderTriggered.BySpellID(int32(effectAt(row, 2).Value))
 	judgementAuras := paladin.newJudgementAuras(func(target *core.Unit) *core.Aura {
-		return core.JudgementOfTheCrusaderAura(target, core.JudgementRank{
+		return buffs.JudgementOfTheCrusaderAura(target, buffs.JudgementRank{
 			SpellID: judgementRow.SpellID,
 			Rank:    row.Rank,
 			Value:   shared.SpellDataMin(judgementRow.Direct) + paladin.judgementOfTheCrusaderBonus,

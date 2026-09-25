@@ -12,8 +12,8 @@ import (
 var TalentTreeSizes = [3]int{17, 18, 18}
 
 type WarriorInputs struct {
-	DefaultShout  proto.WarriorShout
-	DefaultStance proto.WarriorStance
+	UseBattleShout bool
+	DefaultStance  proto.WarriorStance
 
 	StartingRage   float64
 	QueueDelay     int32

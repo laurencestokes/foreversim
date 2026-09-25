@@ -2,6 +2,7 @@ package priest
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/stats"
 )
@@ -295,7 +296,7 @@ func (priest *Priest) applyPowerInfusion() {
 	}
 
 	rank := spellData.PowerInfusion.Highest()
-	piAura := core.PowerInfusionAura(priest.GetCharacter(), priest.Index)
+	piAura := buffs.PowerInfusionsAura(&priest.Unit, true, 0)
 
 	piSpell := priest.RegisterSpell(core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: rank.ID, Tag: priest.Index},

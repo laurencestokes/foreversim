@@ -14,7 +14,7 @@ func (warrior *Warrior) registerShieldBash() {
 		ClassSpellMask: SpellMaskShieldBash,
 		SpellSchool:    core.SpellSchoolPhysical,
 		DefenseType:    core.DefenseTypeMelee,
-		ProcMask:       core.ProcMaskMeleeMHSpecial,
+		ProcMask:       core.ProcMaskMeleeOHSpecial, // struck with the shield (upstream b6ce30c972)
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 		MaxRange:       core.MaxMeleeRange,
 

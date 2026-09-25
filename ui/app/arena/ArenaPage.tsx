@@ -5,12 +5,16 @@
 // headless and this page renders what they produced, with no sim in the browser at all. The
 // results file is the cache and the commit that produced it is the key.
 
+import { IndividualSimSettings } from '@generated/proto/ui';
+import { CURRENT_API_VERSION } from '@sim/constants/other';
 import type { PlayerSpec } from '@sim/player/player_spec';
 import { PlayerSpecs } from '@sim/player/specs';
 import { textClassNameForSpec } from '@sim/proto/utils';
 import type { Composition } from '@sim/spells/rests';
+import { classTalentsConfig } from '@sim/talents/factory';
 import { formatToNumber, formatToPercent } from '@sim/utils/format';
 import clsx from 'clsx';
+import pako from 'pako';
 import { useMemo, useState } from 'react';
 
 import { PageSection, ProductPage, SITE_BASE, SITE_REPO_URL } from '../ProductPage';
@@ -55,14 +59,51 @@ type Build = {
 
 type Results = { sim?: string; commit: string; generated: string; iterations: number; host?: string; builds: Array<Build> };
 const data = results as Results;
-const builds = data.builds;
+const byDps = [...data.builds].sort((a, b) => b.dps - a.dps);
 
-// Best build per spec. Specs ship different numbers of gear sets, so ranking each spec's best
-// across all of them ranks how far ahead somebody wrote its gear; the item level filter is what
-// makes the comparison mean something.
-const bestPerSpec = (from: Array<Build>): Array<Build> => {
+// The arena runs every talent build on every gear set, but this page compares talents, and specs,
+// so every row wears its spec's launch set: the best pre-raid gear from one shared item pool,
+// built by the same rule for every spec (tools/launch_gear), all within a few item levels of
+// each other. A spec with two (rogue daggers or swords, warrior dual wield or two-hander) lets
+// each build take the better. Each talent build appears once, in its best rotation.
+const isLaunchSet = (gear: string) => gear === 'launch' || gear.endsWith('_launch');
+const builds = (() => {
+	const seen = new Set<string>();
+	return byDps.filter(build => {
+		const talents = `${build.spec}|${build.talents}`;
+		if (!isLaunchSet(build.gear) || seen.has(talents)) return false;
+		seen.add(talents);
+		return true;
+	});
+})();
+
+// A sim link carrying only the talents (?i=t), so opening it keeps the visitor's own gear and settings.
+export const talentLink = (spec: PlayerSpec<any>, talents: string) => {
+	const settings = IndividualSimSettings.create({ apiVersion: CURRENT_API_VERSION, player: { talentsString: talents } });
+	const bytes = pako.deflate(IndividualSimSettings.toBinary(settings));
+	return `${spec.simLink}?i=t#${btoa(String.fromCharCode(...bytes))}`;
+};
+
+// The tree a build puts most points in, which is what "a Fury build" means. A tie goes to the
+// earlier tree.
+const mainTree = (build: Build) => {
+	const points = split(build.talents).split('/').map(Number);
+	return points.indexOf(Math.max(...points));
+};
+const treeName = (build: Build) => {
+	const spec = SPECS[build.spec]?.spec;
+	return spec ? (classTalentsConfig[spec.classID as keyof typeof classTalentsConfig]?.[mainTree(build)]?.name ?? '') : '';
+};
+
+// The default view: each spec's best build in each of its trees, so the Arms, Fury and
+// Protection answers all show rather than only whichever tree wins. from is best first, so the
+// first row seen for a spec and tree is its best.
+export const bestPerTree = (from: Array<Build>): Array<Build> => {
 	const best = new Map<string, Build>();
-	for (const build of from) if (!best.has(build.spec)) best.set(build.spec, build);
+	for (const build of from) {
+		const at = `${build.spec}|${mainTree(build)}`;
+		if (!best.has(at)) best.set(at, build);
+	}
 	return [...best.values()].sort((a, b) => b.dps - a.dps);
 };
 
@@ -71,9 +112,9 @@ const bestPerSpec = (from: Array<Build>): Array<Build> => {
 const key = (build: Build) => `${build.spec}|${build.gear}|${build.rotation}`;
 const gains = (() => {
 	const written = new Map<string, number>();
-	for (const build of builds.filter(b => !b.optimised)) written.set(key(build), Math.max(written.get(key(build)) ?? 0, build.dps));
+	for (const build of data.builds.filter(b => !b.optimised)) written.set(key(build), Math.max(written.get(key(build)) ?? 0, build.dps));
 	const out = new Map<string, number>();
-	for (const searched of builds.filter(b => b.optimised)) {
+	for (const searched of data.builds.filter(b => b.optimised)) {
 		const base = written.get(key(searched));
 		if (base) out.set(`${key(searched)}|${searched.talents}`, searched.dps / base - 1);
 	}
@@ -96,28 +137,9 @@ const displayName = (build: Build) => (build.optimised ? build.build.replace(/\s
 const specName = (spec: string) => SPECS[spec]?.name ?? spec;
 const consumablesName = (list: string) => (list || 'unknown consumables').replace('Arena-', '').replace('+class', ' + class imbues').toLowerCase();
 
-// Item level brackets. A zero item level is a gear set the item database could not price, which
-// only the any-gear bracket holds, rather than filing it under the lowest band.
-type Bracket = { key: string; label: string; holds: (ilvl: number) => boolean };
-const BRACKETS: Array<Bracket> = [
-	{ key: 'all', label: 'Any gear', holds: () => true },
-	{ key: 'low', label: 'Under 63', holds: ilvl => ilvl > 0 && ilvl < 63 },
-	{ key: 'mid', label: '63 to 65', holds: ilvl => ilvl >= 63 && ilvl < 66 },
-	{ key: 'high', label: '66 to 68', holds: ilvl => ilvl >= 66 && ilvl < 69 },
-	{ key: 'top', label: '69 and up', holds: ilvl => ilvl >= 69 },
-];
-const specsIn = (bracket: Bracket) => new Set(builds.filter(b => bracket.holds(b.ilvl)).map(b => b.spec)).size;
-// Defaults to the band covering the most specs, since a bracket holding three is a narrower
-// comparison than it looks; to any gear when no band holds any.
-const DEFAULT_BRACKET = BRACKETS.slice(1).reduce((best, b) => (specsIn(b) > specsIn(best) ? b : best), BRACKETS[1]);
-const START_BRACKET = specsIn(DEFAULT_BRACKET) ? DEFAULT_BRACKET : BRACKETS[0];
-
 const ALL_SPECS = [...new Set(builds.map(b => b.spec))].sort((a, b) => specName(a).localeCompare(specName(b)));
-const ALL_CONSUMABLES = [...new Set(builds.map(b => b.consumables))].sort();
 
 const PILL = 'inline-flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-1 text-sm';
-const PILL_OFF = 'border-white/18 text-gray-300 hover:border-brand hover:text-white';
-const PILL_ON = 'border-brand bg-brand/15 text-white';
 const TAG = 'mt-0.5 cursor-help self-start rounded-full border px-1.5 text-xs';
 const CELL = 'px-2 py-1 text-left align-middle whitespace-nowrap';
 const SELECT = 'rounded-sm border border-white/18 bg-black px-2 py-1 text-sm text-gray-300';
@@ -136,7 +158,25 @@ const Row = ({ build, rank, top }: { build: Build; rank: number; top: number }) 
 				<span className="inline-flex flex-col align-middle">
 					<span className="text-xs text-white/60">{specName(build.spec)}</span>
 					<span className={clsx('font-semibold', color)}>{displayName(build)}</span>
-					<span className="text-xs text-white/50 tabular-nums">{split(build.talents)}</span>
+					<span className="text-xs text-white/50 tabular-nums">
+						{split(build.talents)} {treeName(build)}
+						{spec && (
+							<>
+								{' · '}
+								<a
+									className="text-brand hover:underline"
+									href={talentLink(spec, build.talents)}
+									target="_blank"
+									rel="noreferrer"
+									title={`${build.talents}
+
+Opens the sim with these talents. Your gear and other settings are kept.`}
+									data-testid="arena-talents-link">
+									open talents in the sim
+								</a>
+							</>
+						)}
+					</span>
 					{build.optimised && (
 						<span
 							className={clsx(TAG, 'border-brand text-brand')}
@@ -155,6 +195,13 @@ const Row = ({ build, rank, top }: { build: Build; rank: number; top: number }) 
 			<td className={clsx(CELL, 'text-sm')}>
 				<span className="block text-gray-300">{build.gear}</span>
 				<span className="block text-white/50">{build.rotation || 'default rotation'}</span>
+				{build.rotation.endsWith('_lowrank') && (
+					<span
+						className={clsx(TAG, 'block border-brand text-brand')}
+						title="Casts lower spell ranks to save mana. The sim gives lower ranks full spell-power scaling, as the beta does at level 20; whether Forever penalises them at level 60 is not yet known.">
+						low ranks, unconfirmed at 60
+					</span>
+				)}
 				<span
 					className="block text-white/50"
 					title="The consumable list this build drank. Every spec in a role drinks the same one; it is set by the arena, not by the spec.">
@@ -188,39 +235,18 @@ const Row = ({ build, rank, top }: { build: Build; rank: number; top: number }) 
 const Controls = ({
 	showAll,
 	setShowAll,
-	bracket,
-	setBracket,
 	spec,
 	setSpec,
-	consumables,
-	setConsumables,
 }: {
 	showAll: boolean;
 	setShowAll: (value: boolean) => void;
-	bracket: Bracket;
-	setBracket: (value: Bracket) => void;
 	spec: string;
 	setSpec: (value: string) => void;
-	consumables: string;
-	setConsumables: (value: string) => void;
 }) => (
 	<div className="flex flex-wrap items-center gap-x-4 gap-y-2">
 		<button className={clsx(PILL, 'border-brand text-white hover:bg-brand/15')} type="button" onClick={() => setShowAll(!showAll)}>
-			{showAll ? 'Show only the best of each spec' : 'Show every build'}
+			{showAll ? 'Show the best build in each tree' : 'Show every talent build'}
 		</button>
-		<div className="flex flex-wrap gap-1">
-			{BRACKETS.map(b => (
-				<button
-					key={b.key}
-					className={clsx(PILL, b.key === bracket.key ? PILL_ON : PILL_OFF)}
-					type="button"
-					data-active={b.key === bracket.key || undefined}
-					onClick={() => setBracket(b)}>
-					<span>{b.label}</span>
-					<span className="text-white/50 tabular-nums">{b.key === 'all' ? ALL_SPECS.length : specsIn(b)}</span>
-				</button>
-			))}
-		</div>
 		<select className={SELECT} value={spec} onChange={event => setSpec(event.target.value)} aria-label="Spec">
 			<option value="">Every spec</option>
 			{ALL_SPECS.map(s => (
@@ -229,27 +255,17 @@ const Controls = ({
 				</option>
 			))}
 		</select>
-		<select className={SELECT} value={consumables} onChange={event => setConsumables(event.target.value)} aria-label="Consumables">
-			<option value="">Every consumable list</option>
-			{ALL_CONSUMABLES.map(c => (
-				<option key={c} value={c}>
-					{consumablesName(c)}
-				</option>
-			))}
-		</select>
 	</div>
 );
 
 const Leaderboard = () => {
 	const [showAll, setShowAll] = useState(false);
-	const [bracket, setBracket] = useState(START_BRACKET);
 	const [spec, setSpec] = useState('');
-	const [consumables, setConsumables] = useState('');
 
 	const shown = useMemo(() => {
-		const kept = builds.filter(b => bracket.holds(b.ilvl) && (!spec || b.spec === spec) && (!consumables || b.consumables === consumables));
-		return showAll || spec ? kept : bestPerSpec(kept);
-	}, [showAll, bracket, spec, consumables]);
+		const kept = builds.filter(b => !spec || b.spec === spec);
+		return showAll ? kept : bestPerTree(kept);
+	}, [showAll, spec]);
 	const top = shown[0]?.dps || 1;
 	const specCount = new Set(shown.map(b => b.spec)).size;
 
@@ -262,11 +278,11 @@ const Leaderboard = () => {
 
 	return (
 		<div className="flex flex-col gap-3">
-			<Controls {...{ showAll, setShowAll, bracket, setBracket, spec, setSpec, consumables, setConsumables }} />
+			<Controls {...{ showAll, setShowAll, spec, setSpec }} />
 			<p className="m-0 text-white/50" data-testid="arena-count">
-				{showAll || spec
-					? `All ${shown.length} builds matching these filters, best first.`
-					: `The best build of each of ${specCount} spec${specCount === 1 ? '' : 's'} matching these filters.`}
+				{showAll
+					? `All ${shown.length} talent builds, best first. Each spec wears one gear set throughout, so within a spec only the talents differ.`
+					: `The best build in each talent tree of ${specCount} spec${specCount === 1 ? '' : 's'}: ${shown.length} builds, best first.`}
 			</p>
 			{levels.length > 0 && (
 				<p className={clsx('m-0 text-sm', wide ? 'text-brand' : 'text-white/50')} data-wide={wide || undefined}>
@@ -328,7 +344,7 @@ const SimSource = () => {
 export const ArenaPage = () => (
 	<ProductPage
 		title="The build arena"
-		subtitle={`Every talent build crossed with every gear set and every rotation this sim has on file: ${builds.length} builds across ${new Set(builds.map(b => b.spec)).size} specs, each run on its own at ${formatToNumber(data.iterations)} iterations against the same target, with the same buffs and the same consumables, plus the builds a talent search found on top of those. Nothing is simulated in your browser.`}>
+		subtitle={`Every talent build this sim has on file, each on its spec's launch gear: ${builds.length} talent builds across ${new Set(builds.map(b => b.spec)).size} specs, each run on its own at ${formatToNumber(data.iterations)} iterations against the same target, with the same buffs and the same consumables, plus the builds a talent search found on top of those. Nothing is simulated in your browser.`}>
 		<div className="grid grid-cols-[repeat(auto-fit,minmax(min(26rem,100%),1fr))] gap-4">
 			<PageSection title="How a number gets onto this page">
 				<p className="m-0">
@@ -387,15 +403,20 @@ export const ArenaPage = () => (
 				the shaman, which is not a shaman measured fairly, it is a shaman disarmed.
 			</li>
 			<li>
-				<strong>Item level is the filter, not the file name.</strong> This table used to compare every spec on its &quot;launch&quot; gear set, on the
-				grounds that launch is the one tier they all have. Those sets run from item level 63.1 to 70.0, which is most of a tier of difference sitting
-				inside a table claiming to compare specs. So gear is a number on every row and a bracket above them, and the line under the filter says how far
-				apart the rows you are looking at actually are. A <code>?</code> is a gear set the item database could not price.
+				<strong>Every spec wears the same standard of gear.</strong> Each row uses its spec&apos;s launch set: the best pre-raid gear from one shared
+				item pool (dungeons, crafting, quests and world drops, with every raid and world boss left out), picked by the same rule for every spec. They
+				land within about three item levels of each other, and the line under the filter says exactly how far apart the rows you are looking at are. The
+				arena sims the spec&apos;s other gear sets too; they are not shown, because they would compare gear rather than specs.
 			</li>
 			<li>
 				<strong>Rests on a guess</strong> is what the build&apos;s damage is made of, not a verdict on it. Each ability is weighted by its share of that
 				build&apos;s damage and looked up in the <a href={`${SITE_BASE}evidence/`}>evidence manifest</a>. A build ten DPS ahead means something
 				different if a quarter of it is unconfirmed. Hover the bar for the breakdown.
+			</li>
+			<li>
+				<strong>Rotations tagged low ranks</strong> drop to cheaper spell ranks as mana runs down. The sim gives every rank full spell-power scaling,
+				which is what beta players see at level 20; nobody has confirmed whether Forever penalises low ranks at level 60, and if it does those rows will
+				overstate the spec. The spec&apos;s normal rotation is always ranked beside them.
 			</li>
 			<li>
 				<strong>Gear and rotations come from what is already here</strong> - the sets and priority lists on each spec&apos;s page. Nothing invents a

@@ -2,7 +2,6 @@ package database
 
 import (
 	"regexp"
-	"time"
 
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
@@ -19,7 +18,6 @@ var IgnoreSpellEffectByAuraType = map[dbc.EffectAuraType][]int{
 	dbcenums.A_MOD_STEALTH:             {},
 	dbcenums.A_MOD_STEALTH_DETECT:      {},
 	dbcenums.A_MOD_STEALTH_LEVEL:       {},
-	dbcenums.A_MOD_DECREASE_SPEED:      {},
 	dbcenums.A_MOD_INVISIBILITY:        {},
 	dbcenums.A_MOD_INVISIBILITY_DETECT: {},
 	dbcenums.A_MOD_SKILL: {
@@ -36,6 +34,12 @@ var IgnoreSpellEffectByAuraType = map[dbc.EffectAuraType][]int{
 	dbcenums.A_TRACK_CREATURES:                   {},
 	dbcenums.A_TRACK_RESOURCES:                   {},
 	dbcenums.A_FAR_SIGHT:                         {},
+}
+
+// Auras the sim has nothing to simulate for, which put a spell out of scope only where they are all
+// it carries: Frostguard's Chilled 16927 slows movement beside a melee slow.
+var IgnoreSpellEffectAloneByAuraType = []dbc.EffectAuraType{
+	dbcenums.A_MOD_DECREASE_SPEED,
 }
 
 var IgnoreSpellEffectBySpellEffectType = map[dbc.SpellEffectType][]int{
@@ -56,11 +60,15 @@ var IgnoreMissingEffectBySpellID = map[int]string{
 	16372: "Seal of Ascension - no tooltip and no mechanic",
 }
 
-var OtherItemIdsToFetch = []string{}
-var ConsumableOverrides = []*proto.Consumable{
-	{Id: 23334, CooldownDuration: int32(time.Hour.Seconds())}, // Cracked Power Core
-	{Id: 23381, CooldownDuration: int32(time.Hour.Seconds())}, // Chipped Power Core
+// Absorbs a server script restricts to spells the client does not list, keyed by spell ID with the
+// reason the generated file gives. 1287808, Onyxia Blood Talisman's, states 10000000000 beside the
+// A_DUMMY that names the Dragon Breath spells.
+var UnsupportedAbsorbBySpellID = map[int32]string{
+	1287808: "the absorb of 10000000000 beside an A_DUMMY absorbs only the spells a script names, which the client does not list",
 }
+
+var OtherItemIdsToFetch = []string{}
+var ConsumableOverrides = []*proto.Consumable{}
 
 // Empty: all 26 entries were TBC items absent from this client.
 var ItemOverrides = []*proto.UIItem{}
@@ -94,42 +102,38 @@ var ExtraItemIcons = []int32{
 	// Demonic Rune
 	12662,
 
-	// Food IDs
-	27655,
-	27657,
-	27658,
-	27664,
-
 	// Flask IDs
 	13512,
-	22854,
-	22866,
 
 	// Elixer IDs
 	9224,
 	13452,
 	13454,
-	22827,
-	22833,
-	22835,
-	22840,
 
 	// Potions / In Battle Consumes
 	13442,
-	22105,
-	22788,
-	22828,
-	22837,
-	22838,
-	22849,
+	9421,
 
 	// Thistle Tea
 	7676,
 
 	// Scrolls
-	27498,
-	27499,
-	27503,
+	10305,
+	10306,
+	10308,
+	10309,
+	10310,
+
+	// Weapon Imbues
+	12404,
+	12643,
+	18262,
+	20750,
+	23123,
+
+	// Explosives
+	15993,
+	18641,
 }
 
 // Item Ids of consumables to allow
@@ -138,15 +142,11 @@ var ConsumableAllowList = []int32{
 	9088,  // Gift of Arthas
 	9155,  // Arcane Elixir
 	9224,  // Elixir of Demonslaying
+	9421,  // Major Healthstone
 	13442, // Migty Rage Potion
 	13452, // Elixir of the Mongoose
 	13454, // Greater Arcane Elixir
 	12662, // Demonic Rune
-	22105, // Master Healthstone
-	22788, // Flamecap
-	22797, // Nightmare Seed
-	23334, // Cracked Power Core
-	23381, // Chipped Power Core
 	5206,  // Bogling Root
 }
 
@@ -247,7 +247,6 @@ var SharedSpellsIcons = []int32{
 	3738,
 	8227,
 
-	6562,
 	16840,
 
 	// Raid Debuffs
@@ -293,22 +292,38 @@ var SharedSpellsIcons = []int32{
 	17768, // Wolfshead Helm
 	18803, // Focus
 	19615, // Frenzy Effect
+	20554, // Berserking
+	20572, // Blood Fury
 	20574, // Axe Specialization
-	20575, // Command
-	20576, // Command
 	20594, // Stoneform
-	20595, // Gun Specialization
 	20597, // Sword Specialization
-	20864, // Mace Specialization
 	23110, // Dash
 	23563, // Enhanced Battle Shout
 	25076, // Cobra Reflexes
-	25894, // Greater Blessing of Wisdom
+	21564, // Prayer of Fortitude
 	25895, // Greater Blessing of Salvation
+	25916, // Greater Blessing of Might
+	25918, // Greater Blessing of Wisdom
+	27681, // Prayer of Spirit
+	27683, // Prayer of Shadow Protection
 	26654, // Sweeping Strikes
 	28142, // Power of the Guardian
 	28143, // Power of the Guardian
 	29414, // Haste
+
+	1259686, // Skysight
+	1259688, // Elemental Blessing
+	1259705, // Read Ley Line
+	1259719, // Mace Specialization
+	1259799, // Elune's Light
+	1259812, // Eureka!
+	1259813, // Eureka!
+	1259817, // Eureka!
+	1259821, // Eureka!
+	1259823, // Eureka!
+	1260198, // Touch of the Grave
+	1270842, // Energized
+	1299026, // Shatter Curse
 }
 
 // If any of these match the item name, don't include it.
@@ -362,31 +377,16 @@ var EnchantDenyListSpells = map[int32]struct{}{}
 var EnchantDenyListItems = map[int32]struct{}{}
 var GemDenyList = map[int32]struct{}{}
 
-var EnchantDenyList = map[int32]struct{}{
-	3269: {}, // Truesilver Fishing Line
-	3289: {}, // Skybreaker Whip/Riding Crop
-	3315: {}, // Carrot on a Stick
-	4671: {}, // Kyle's Test Enchantment
-	4687: {}, // Enchant Weapon - Ninja (TEST VERSION)
-	4717: {}, // Enchant Weapon - Pandamonium (DNT)
-	5029: {}, // Custom - Jaina - Crackling Lightning
-	5110: {}, // Lightweave Embroidery - Junk
-}
+var EnchantDenyList = map[int32]struct{}{}
 
 var EnchantAllowList = []int32{
-	368,  // Enchant Cloak - Greater Agility
 	804,  // Enchant Cloak - Lesser Shadow Resistance
-	369,  // Enchant Bracer - Major Intellect
 	684,  // Enchant Gloves - Major Strength
 	963,  // Enchant Weapon - Major Striking
-	1593, // Bracer 24 AP
-	1594, // Gloves 26 AP
 	1900, // Enchant Weapon - Crusader
 	2564, // Weapon 15 Agi
 	2583, // Presence of Might
 	2588, // Presence of Sight
-	2647, // Enchant Bracer - Brawn
-	2659, // Enchant Chest - Exceptional Health
 }
 
 // Note: EffectId is required for all enchants, because they are

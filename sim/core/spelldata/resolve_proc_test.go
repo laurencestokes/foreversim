@@ -122,6 +122,40 @@ func TestProcTriggerFromARow(t *testing.T) {
 	}
 }
 
+// A weapon proc rolls off any hit of its weapon that lands, a special that deals no damage
+// included, and off nothing that misses or is avoided.
+func TestWeaponProcHearsALandedHitThatDealsNoDamage(t *testing.T) {
+	withRows(t, procRows())
+
+	procs := 0
+	trigger := ProcTrigger(testCharacter(), Find(2100), func(*core.Simulation, *core.Spell, *core.SpellResult) {
+		procs++
+	}, WeaponProc())
+	trigger.TriggerImmediately = true
+
+	aura := &core.Aura{}
+	aura.AttachProcTriggerCallback(&core.Unit{}, trigger)
+
+	sim := &core.Simulation{}
+	special := &core.Spell{ProcMask: core.ProcMaskMeleeMHSpecial}
+	for _, row := range []struct {
+		name    string
+		outcome core.HitOutcome
+		want    int
+	}{
+		{"a landed special that deals no damage", core.OutcomeHit, 1},
+		{"a miss", core.OutcomeMiss, 0},
+		{"a dodge", core.OutcomeDodge, 0},
+		{"a parry", core.OutcomeParry, 0},
+	} {
+		procs = 0
+		aura.OnSpellHitDealt(aura, sim, special, &core.SpellResult{Outcome: row.outcome})
+		if procs != row.want {
+			t.Errorf("%s rolled the proc %d times, want %d", row.name, procs, row.want)
+		}
+	}
+}
+
 // The column is the roll only where the source says so, and the 101 sentinel is not a roll at all.
 func TestProcTriggerChanceBySource(t *testing.T) {
 	withRows(t, procRows())

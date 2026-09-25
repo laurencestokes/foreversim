@@ -26,9 +26,9 @@ func (druid *Druid) registerFeralCombatTalents() {
 
 	// Tier 4
 	druid.applyShreddingAttacks()
-	// Mangle implemented in mangle.go
+	// Primal Bite implemented in primal_bite.go
 	druid.applyPredatoryStrikes()
-	druid.applyPrimalFury()
+	druid.applyBloodFrenzy()
 
 	// Tier 5
 	druid.applyPredatoryInstincts()
@@ -140,14 +140,14 @@ func (druid *Druid) applyFerocity() {
 	}
 
 	druid.AddStaticMod(core.SpellModConfig{
-		ClassMask: DruidSpellRake | DruidSpellMangleBear | DruidSpellMaul | DruidSpellSwipe,
+		ClassMask: DruidSpellRake | DruidSpellPrimalBite | DruidSpellMaul | DruidSpellSwipe,
 		Kind:      core.SpellMod_PowerCost_Flat,
 		IntValue:  -druid.Talents.Ferocity,
 	})
 }
 
 // Forever's Savage Fury names Shred, which Classic's did not. Its class masks (16998: 38912 on the
-// damage effect, 4096 on the periodic one) hold Claw/Rake/Shred and Maul/Swipe; Mangle (word 1, 64)
+// damage effect, 4096 on the periodic one) hold Claw/Rake/Shred and Maul/Swipe; Primal Bite (word 1, 64)
 // is not in them.
 func (druid *Druid) applySavageFury() {
 	if druid.Talents.SavageFury == 0 {
@@ -180,15 +180,15 @@ func (druid *Druid) applyShreddingAttacks() {
 	})
 }
 
-// Forever folds the old Blood Frenzy combo point proc into Primal Fury: a combo point on a Cat
-// builder crit, and Rage on a Bear crit.
-func (druid *Druid) applyPrimalFury() {
-	if druid.Talents.PrimalFury == 0 {
+// Blood Frenzy (Primal Fury until build 70009) folds the old combo point proc and Primal Fury's
+// Rage together: a combo point on a Cat builder crit, and Rage on a Bear crit.
+func (druid *Druid) applyBloodFrenzy() {
+	if druid.Talents.BloodFrenzy == 0 {
 		return
 	}
 
-	procChance := spellData.PrimalFury.EffectAt(1).FractionAt(druid.Talents.PrimalFury)
-	triggered := spellData.PrimalFuryTriggered.Highest()
+	procChance := spellData.BloodFrenzy.EffectAt(1).FractionAt(druid.Talents.BloodFrenzy)
+	triggered := spellData.BloodFrenzyTriggered.Highest()
 	actionID := core.ActionID{SpellID: triggered.ID}
 	// The client's E_ENERGIZE is in its own units: 50 is 5 Rage.
 	rage := triggered.EffectN(1).BaseValue() / 10
@@ -196,7 +196,7 @@ func (druid *Druid) applyPrimalFury() {
 	cpMetrics := druid.NewComboPointMetrics(actionID)
 
 	druid.MakeProcTriggerAura(core.ProcTrigger{
-		Name:           "Primal Fury (Cat)",
+		Name:           "Blood Frenzy (Cat)",
 		ActionID:       actionID,
 		Callback:       core.CallbackOnSpellHitDealt,
 		ClassSpellMask: DruidSpellBuilder,
@@ -211,7 +211,7 @@ func (druid *Druid) applyPrimalFury() {
 	})
 
 	druid.MakeProcTriggerAura(core.ProcTrigger{
-		Name:       "Primal Fury (Bear)",
+		Name:       "Blood Frenzy (Bear)",
 		ActionID:   actionID,
 		Callback:   core.CallbackOnSpellHitDealt,
 		ProcMask:   core.ProcMaskMelee,
@@ -314,15 +314,15 @@ func (druid *Druid) IsBleeding(target *core.Unit) bool {
 }
 
 // Berserk, new in Forever (client 417141): 3 minute cooldown (SpellCooldowns), and for 15 seconds
-// +100% critical strike chance on the Combo Point builders (effect 0). Its Mangle half (no
-// cooldown, up to 3 targets) is in mangle.go.
+// +100% critical strike chance on the Combo Point builders (effect 0). Its Primal Bite half (no
+// cooldown, up to 3 targets) is in primal_bite.go.
 func (druid *Druid) applyBerserk() {
 	if !druid.Talents.Berserk {
 		return
 	}
 
 	actionID := core.ActionID{SpellID: 417141}
-	// Effect 0's class mask is Claw/Rake, Shred, Ravage and Pounce (233472); Mangle is not in it.
+	// Effect 0's class mask is Claw/Rake, Shred, Ravage and Pounce (233472); Primal Bite is not in it.
 	critMod := druid.AddDynamicMod(core.SpellModConfig{
 		Kind:       core.SpellMod_BonusCrit_Percent,
 		ClassMask:  DruidSpellShred | DruidSpellRake | DruidSpellRavage,

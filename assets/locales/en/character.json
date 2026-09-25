@@ -51,21 +51,20 @@
 	"races": {
 		"unknown": "None",
 		"blood_elf": "Blood Elf",
-		"draenei": "Draenei",
 		"dwarf": "Dwarf",
 		"gnome": "Gnome",
 		"goblin": "Goblin",
 		"human": "Human",
 		"night_elf": "Night Elf",
 		"orc": "Orc",
-		"skyborne_high_order": "Skyborne (High Order)",
-		"skyborne_windshaper": "Skyborne (Windshaper)",
 		"alliance_pandaren": "Pandaren (A)",
 		"horde_pandaren": "Pandaren (H)",
 		"tauren": "Tauren",
 		"troll": "Troll",
 		"undead": "Undead",
-		"worgen": "Worgen"
+		"worgen": "Worgen",
+		"high_order_skyborne": "High Order Skyborne",
+		"windshaper_skyborne": "Windshaper Skyborne"
 	},
 	"professions": {
 		"unknown": "None",

@@ -96,6 +96,10 @@ func (db *WowDatabase) MergeItem(src *proto.UIItem) {
 			dst.Stats = src.Stats
 			src.Stats = nil
 		}
+		if src.PseudoStats != nil {
+			dst.PseudoStats = src.PseudoStats
+			src.PseudoStats = nil
+		}
 		if src.SocketBonus != nil {
 			dst.SocketBonus = src.SocketBonus
 			src.SocketBonus = nil
@@ -119,6 +123,10 @@ func (db *WowDatabase) MergeEnchant(src *proto.UIEnchant) {
 		if src.Stats != nil {
 			dst.Stats = src.Stats
 			src.Stats = nil
+		}
+		if src.PseudoStats != nil {
+			dst.PseudoStats = src.PseudoStats
+			src.PseudoStats = nil
 		}
 		googleProto.Merge(dst, src)
 	} else {

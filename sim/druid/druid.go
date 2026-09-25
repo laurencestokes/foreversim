@@ -39,7 +39,7 @@ type Druid struct {
 	Innervate            *DruidSpell
 	InsectSwarm          *DruidSpell
 	Lacerate             *DruidSpell
-	MangleBear           *DruidSpell
+	PrimalBite           *DruidSpell
 	Maul                 *DruidSpell
 	Moonfire             *DruidSpell
 	NaturesSwiftness     *DruidSpell
@@ -65,7 +65,7 @@ type Druid struct {
 	FrenziedRegenerationAura *core.Aura
 	DemoralizingRoarAuras    core.AuraArray
 	FaerieFireAuras          core.AuraArray
-	MangleAuras              core.AuraArray // never applied: Forever's Mangle has no debuff; the legacy cat rotation reads it
+	MangleAuras              core.AuraArray // always nil: Forever's Mangle has no debuff; the legacy cat rotation reads it as inactive
 	BerserkAura              *core.Aura
 	MoonkinFormAura          *core.Aura
 	EclipseAura              *core.Aura
@@ -102,7 +102,7 @@ const (
 	DruidSpellInnervate
 	DruidSpellInsectSwarm
 	DruidSpellLacerate
-	DruidSpellMangleBear
+	DruidSpellPrimalBite
 	DruidSpellMaul
 	DruidSpellMoonfireInitial
 	DruidSpellMoonfireDoT
@@ -139,8 +139,7 @@ const (
 	DruidSpellDoT                = DruidSpellMoonfireDoT | DruidSpellInsectSwarm
 	DruidSpellHoT                = DruidSpellRejuvenation | DruidSpellLifebloom | DruidSpellRegrowth
 	DruidSpellInstant            = DruidSpellMoonfire | DruidSpellFaerieFire
-	DruidSpellMangle             = DruidSpellMangleBear
-	DruidSpellBuilder            = DruidSpellMangle | DruidSpellShred | DruidSpellRake | DruidSpellRavage
+	DruidSpellBuilder            = DruidSpellPrimalBite | DruidSpellShred | DruidSpellRake | DruidSpellRavage
 	DruidSpellFinisher           = DruidSpellFerociousBite | DruidSpellRip
 	DruidArcaneSpells            = DruidSpellMoonfire | DruidSpellMoonfireDoT | DruidSpellStarfire
 	DruidNatureSpells            = DruidSpellWrath | DruidSpellHurricane | DruidSpellInsectSwarm
@@ -159,9 +158,9 @@ func (druid *Druid) GetCharacter() *core.Character {
 
 func (druid *Druid) AddPartyBuffs(partyBuffs *proto.PartyBuffs) {
 	if druid.InForm(Cat|Bear) && druid.Talents.LeaderOfThePack {
-		partyBuffs.LeaderOfThePack = core.Ternary(druid.HasItemEquipped(32387, []proto.ItemSlot{proto.ItemSlot_ItemSlotRanged}), proto.TristateEffect_TristateEffectImproved, proto.TristateEffect_TristateEffectRegular)
+		partyBuffs.LeaderOfThePack = true
 	} else if druid.InForm(Moonkin) && druid.Talents.MoonkinForm {
-		partyBuffs.MoonkinAura = core.Ternary(druid.HasItemEquipped(32387, []proto.ItemSlot{proto.ItemSlot_ItemSlotRanged}), proto.TristateEffect_TristateEffectImproved, proto.TristateEffect_TristateEffectRegular)
+		partyBuffs.MoonkinAura = true
 	}
 }
 
@@ -245,7 +244,7 @@ func (druid *Druid) registerFormBreakingConsumes() {
 func (druid *Druid) RegisterBalanceSpells() {
 	StarfireRankMap.Each(func(_ int32, r *spelldata.Spell) { druid.registerStarfireSpell(r) })
 	druid.registerMoonfireSpell()
-	druid.registerWrathSpell()
+	spellData.Wrath.Each(func(_ int32, r *spelldata.Spell) { druid.registerWrathSpell(r) })
 	druid.registerHurricaneSpell()
 	druid.registerFaerieFireSpell()
 }
@@ -272,7 +271,7 @@ func (druid *Druid) RegisterFeralTankSpells() {
 	druid.registerEnrageSpell()
 	druid.registerFrenziedRegenerationSpell()
 	druid.registerLacerateSpell()
-	druid.registerMangleBearSpell()
+	druid.registerPrimalBiteSpell()
 	druid.registerMaulSpell()
 	druid.registerSwipeBearSpell()
 }

@@ -23,19 +23,23 @@ export const getWeaponDPS = (item: Item, upgradeStep: 0): number => {
 	return (weaponDamageMin + weaponDamageMax) / 2 / (item.weaponSpeed || 1);
 };
 
-export const getWeaponStatsBySlot = (item: Item, slot: ItemSlot, upgradeStep: 0) => {
-	let itemStats = new Stats();
-	if (item.weaponSpeed > 0) {
-		const weaponDps = getWeaponDPS(item, upgradeStep);
-		if (slot === ItemSlot.ItemSlotMainHand) {
-			itemStats = itemStats.withPseudoStat(PseudoStat.PseudoStatMainHandDps, weaponDps);
-		} else if (slot === ItemSlot.ItemSlotOffHand) {
-			itemStats = itemStats.withPseudoStat(PseudoStat.PseudoStatOffHandDps, weaponDps);
-		} else if (slot === ItemSlot.ItemSlotRanged) {
-			itemStats = itemStats.withPseudoStat(PseudoStat.PseudoStatRangedDps, weaponDps);
-		}
+export const getWeaponDpsStatsBySlot = (weaponDps: number, slot: ItemSlot): Stats => {
+	const stats = new Stats();
+	if (slot === ItemSlot.ItemSlotMainHand) {
+		return stats.withPseudoStat(PseudoStat.PseudoStatMainHandDps, weaponDps);
+	} else if (slot === ItemSlot.ItemSlotOffHand) {
+		return stats.withPseudoStat(PseudoStat.PseudoStatOffHandDps, weaponDps);
+	} else if (slot === ItemSlot.ItemSlotRanged) {
+		return stats.withPseudoStat(PseudoStat.PseudoStatRangedDps, weaponDps);
 	}
-	return itemStats;
+	return stats;
+};
+
+export const getWeaponStatsBySlot = (item: Item, slot: ItemSlot, upgradeStep: 0) => {
+	if (item.weaponSpeed > 0) {
+		return getWeaponDpsStatsBySlot(getWeaponDPS(item, upgradeStep), slot);
+	}
+	return new Stats();
 };
 
 type EquippedItemOptions = {
@@ -328,7 +332,7 @@ export class EquippedItem {
 	// if slot is provided it will include slot specific stats like weapon DPS
 	calcStats(slot?: ItemSlot): Stats {
 		const item = this.item;
-		let stats = new Stats(item.stats);
+		let stats = new Stats(item.stats, item.pseudoStats);
 		if (typeof slot === 'number') stats = stats.add(getWeaponStatsBySlot(item, slot, 0));
 		return stats;
 	}

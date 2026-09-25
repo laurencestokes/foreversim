@@ -32,6 +32,21 @@ describe('migrateLegacySettingsJson', () => {
 		expect(migrateLegacySettingsJson(both)).toBe(both);
 	});
 
+	it('drops the TristateEffect buffs and the consumables of a pre-17 blob so the rest still parses', () => {
+		const old = {
+			apiVersion: 16,
+			raidBuffs: { giftOfTheWild: 'TristateEffectImproved' },
+			partyBuffs: { bloodPact: 'TristateEffectRegular' },
+			debuffs: { faerieFire: 'TristateEffectImproved' },
+			player: { name: 'Kept', buffs: { blessingOfKings: true }, consumables: { drumsId: 'LesserDrumsOfBattle' } },
+		};
+		const migrated = migrateLegacySettingsJson(old) as any;
+		expect(migrated).toEqual({ apiVersion: 16, player: { name: 'Kept' } });
+		expect(() => IndividualSimSettings.fromJson(migrated, { ignoreUnknownFields: true })).not.toThrow();
+		const current = { ...old, apiVersion: 17 };
+		expect(migrateLegacySettingsJson(current)).toBe(current);
+	});
+
 	it('parses text and migrates it, and still throws on invalid JSON', () => {
 		expect((parseLegacySettingsJson('{"player":{"priest":{}}}') as any).player.dpsPriest).toEqual({});
 		expect(() => parseLegacySettingsJson('{not json')).toThrow();

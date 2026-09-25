@@ -14,9 +14,9 @@ import { displayStatOrder, Stats, UnitStat } from './stats';
 describe('UnitStat', () => {
 	// The MoP placeholder evaluated `displayStatOrder` at module scope against MoP's PseudoStat set
 	// and threw inside getRootStat on TBC's, taking every transitive importer down with it.
-	it('builds displayStatOrder at module scope over TBC 42-stat shape', () => {
+	it('builds displayStatOrder at module scope over the 41-stat shape', () => {
 		expect(displayStatOrder.length).toBeGreaterThan(0);
-		expect(new Stats().asProtoArray().length).toBe(42);
+		expect(new Stats().asProtoArray().length).toBe(41);
 	});
 
 	it('roots the six school hit pseudo-stats at SpellHitRating and leaves their own root null', () => {
@@ -32,6 +32,14 @@ describe('UnitStat', () => {
 			expect(UnitStat.fromPseudoStat(school).hasRootStat()).toBe(false);
 			expect(UnitStat.getChildren(Stat.StatSpellHitRating)).toContain(school);
 		}
+	});
+
+	it('roots ExpertisePercent at ExpertiseRating and converts at the gametable ratio, with no quarter-point floor', () => {
+		const percent = UnitStat.fromPseudoStat(PseudoStat.PseudoStatExpertisePercent);
+		expect(percent.getRootStat()).toBe(Stat.StatExpertiseRating);
+		expect(UnitStat.getChildren(Stat.StatExpertiseRating)).toEqual([PseudoStat.PseudoStatExpertisePercent]);
+		expect(UnitStat.fromStat(Stat.StatExpertiseRating).convertRatingToPercent(12)).toBeCloseTo(1.2);
+		expect(percent.convertPercentToRating(6.5)).toBeCloseTo(6.5 * Mechanics.EXPERTISE_RATING_PER_EXPERTISE_PERCENT);
 	});
 
 	// Melee and spell hit each convert through their own constant. Forever's CombatRatings
@@ -54,11 +62,9 @@ describe('UnitStat', () => {
 		expect(() => unitStat.convertEpToRatingScale(0).toFixed(2)).not.toThrow();
 	});
 
-	// TBC-only second parameter: ReducedCritTakenPercent has two possible rating sources.
 	it('needs a parentStat to turn ReducedCritTakenPercent back into a rating', () => {
 		const unitStat = UnitStat.fromPseudoStat(PseudoStat.PseudoStatReducedCritTakenPercent);
 		expect(unitStat.convertPercentToRating(1)).toBeNull();
-		expect(unitStat.convertPercentToRating(1, Stat.StatResilienceRating)).toBeCloseTo(Mechanics.RESILIENCE_RATING_PER_CRIT_REDUCTION_CHANCE);
 		expect(unitStat.convertPercentToRating(1, Stat.StatDefenseRating)).toBeCloseTo(
 			Mechanics.DEFENSE_RATING_PER_DEFENSE_LEVEL / Mechanics.MISS_DODGE_PARRY_BLOCK_CRIT_CHANCE_PER_DEFENSE,
 		);

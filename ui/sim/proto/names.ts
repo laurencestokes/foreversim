@@ -14,7 +14,6 @@ export const armorTypeNames: Map<ArmorType, string> = new Map([
 export const raceNames: Map<Race, string> = new Map([
 	[Race.RaceUnknown, 'None'],
 	[Race.RaceBloodElf, 'Blood Elf'],
-	[Race.RaceDraenei, 'Draenei'],
 	[Race.RaceDwarf, 'Dwarf'],
 	[Race.RaceGnome, 'Gnome'],
 	[Race.RaceHuman, 'Human'],
@@ -23,8 +22,8 @@ export const raceNames: Map<Race, string> = new Map([
 	[Race.RaceTauren, 'Tauren'],
 	[Race.RaceTroll, 'Troll'],
 	[Race.RaceUndead, 'Undead'],
-	[Race.RaceSkyborneHighOrder, 'Skyborne (High Order)'],
-	[Race.RaceSkyborneWindshaper, 'Skyborne (Windshaper)'],
+	[Race.RaceHighOrderSkyborne, 'High Order Skyborne'],
+	[Race.RaceWindshaperSkyborne, 'Windshaper Skyborne'],
 ]);
 
 export function nameToRace(name: string): Race {

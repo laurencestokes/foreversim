@@ -56,6 +56,9 @@ func buildAgainst(files map[string][]byte) error {
 
 	overlay := map[string]string{}
 	for path, out := range files {
+		if filepath.Ext(path) != ".go" {
+			continue
+		}
 		absolute, err := filepath.Abs(path)
 		if err != nil {
 			return err
@@ -117,12 +120,14 @@ func buildStaged(staging string, overlay map[string]string, packages []string) e
 	return nil
 }
 
-// The packages to type-check: the ones the rendered files belong to, which is the store, the shared
-// enums and one per class.
+// The packages to type-check: the ones the rendered Go files belong to, which is the store, the
+// shared enums, the buffs and one per class. The settings inputs and the proto messages are not Go.
 func packagesOf(files map[string][]byte) []string {
 	seen := map[string]bool{}
 	for path := range files {
-		seen["./"+filepath.ToSlash(filepath.Dir(path))+"/"] = true
+		if filepath.Ext(path) == ".go" {
+			seen["./"+filepath.ToSlash(filepath.Dir(path))+"/"] = true
+		}
 	}
 	return slices.Sorted(maps.Keys(seen))
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -112,8 +113,8 @@ func processEnchantmentEffects(
 	effects []int,
 	effectArgs []int,
 	effectPoints []int,
-	spellEffectPoints []int,
 	outStats *stats.Stats,
+	outPseudoStats []float64,
 	addRanged bool,
 ) {
 	for i, effect := range effects {
@@ -130,19 +131,15 @@ func processEnchantmentEffects(
 				continue
 			}
 			for _, stat := range mapped {
-				if effectPoints[i] == 0 && spellEffectPoints != nil {
-					// This might be stored in a SpellEffect row
-					outStats[stat] = float64(spellEffectPoints[i] + 1)
-				} else {
-					outStats[stat] = float64(effectPoints[i])
+				outStats[stat] = float64(effectPoints[i])
 
-					// If the bonus stat is attack power, copy it to ranged attack power
-					if addRanged && stat == proto.Stat_StatAttackPower {
-						outStats[proto.Stat_StatRangedAttackPower] = float64(effectPoints[i])
-					}
+				// If the bonus stat is attack power, copy it to ranged attack power
+				if addRanged && stat == proto.Stat_StatAttackPower {
+					outStats[proto.Stat_StatRangedAttackPower] = float64(effectPoints[i])
 				}
 			}
 		case ITEM_ENCHANTMENT_EQUIP_SPELL: //Buff
+			AddEquipSpellStats(outStats, outPseudoStats, effectArgs[i])
 			spellEffects := dbcInstance.SpellEffects[effectArgs[i]]
 			for _, spellEffect := range spellEffects {
 				points := spellEffect.EffectBasePoints + spellEffect.EffectDieSides
@@ -170,8 +167,6 @@ func processEnchantmentEffects(
 					outStats[proto.Stat_StatFrostResistance] += float64(points)
 					outStats[proto.Stat_StatNatureResistance] += float64(points)
 					outStats[proto.Stat_StatShadowResistance] += float64(points)
-				} else if stat, perPoint := PercentAuraToRating(spellEffect.EffectAura, spellEffect.EffectMiscValues[0]); perPoint > 0 {
-					outStats[stat] += float64(points) * perPoint
 				} else {
 					stat := ConvertEffectAuraToStatIndex(spellEffect.EffectAura, spellEffect.EffectMiscValues[0])
 					if stat >= 0 || stat == -2 {
@@ -198,37 +193,93 @@ func processEnchantmentEffects(
 	}
 }
 
-// Forever's enchants and Classic-era equip spells still state hit, crit, dodge, parry, block,
-// haste and defense as percent (or skill) auras: Falcon's Call's "+1% Hit", Deflection's
-// "Defense +7", Counterweight's "+3% Attack Speed". This engine carries them as rating, at the
-// client's CombatRatings conversion. perPoint is 0 for any other aura.
-func PercentAuraToRating(effectAura EffectAuraType, effectMisc int) (stat proto.Stat, perPoint float64) {
-	switch effectAura {
-	case dbcenums.A_MOD_HIT_CHANCE:
-		return proto.Stat_StatMeleeHitRating, core.PhysicalHitRatingPerHitPercent
-	case dbcenums.A_MOD_SPELL_HIT_CHANCE:
-		return proto.Stat_StatSpellHitRating, core.SpellHitRatingPerHitPercent
-	case dbcenums.A_MOD_WEAPON_CRIT_PERCENT:
-		return proto.Stat_StatMeleeCritRating, core.PhysicalCritRatingPerCritPercent
-	case dbcenums.A_MOD_SPELL_CRIT_CHANCE:
-		return proto.Stat_StatSpellCritRating, core.SpellCritRatingPerCritPercent
-	case dbcenums.A_MOD_DODGE_PERCENT:
-		return proto.Stat_StatDodgeRating, core.DodgeRatingPerDodgePercent
-	case dbcenums.A_MOD_PARRY_PERCENT:
-		return proto.Stat_StatParryRating, core.ParryRatingPerParryPercent
-	case dbcenums.A_MOD_BLOCK_PERCENT:
-		return proto.Stat_StatBlockRating, core.BlockRatingPerBlockPercent
-	case dbcenums.A_MOD_MELEE_HASTE, dbcenums.A_MOD_MELEE_HASTE_3:
-		return proto.Stat_StatMeleeHasteRating, core.PhysicalHasteRatingPerHastePercent
-	case dbcenums.A_MOD_SKILL:
-		if effectMisc == skillLineDefense {
-			return proto.Stat_StatDefenseRating, core.DefenseRatingPerDefenseLevel
+const rangedWeaponSubclassMask = rangedMask | ITEM_SUBCLASS_BIT_WEAPON_THROWN | ITEM_SUBCLASS_BIT_WEAPON_WAND
+
+const SkillLineDefense = 95
+
+// Adds what an equip spell states that no stat index carries, and reports whether it added to each of
+// the two: to outStats the defense skill and flat block value - 24148 (Presence of Might) states
+// A_MOD_SKILL 7 on the Defense skill line and A_MOD_BLOCK_VALUE_FLAT 15 - and to pseudoStats, indexed by
+// proto.PseudoStat and skipped where nil, the percents for hit, crit, block, dodge, parry and attack and
+// cast speed. Only auras on the wearer count: Atiesh's 28142 is a party aura and reaches the sim as a
+// raid buff.
+//
+// A spell that names weapons applies its hit and weapon crit only to attacks with them. Melee is
+// credited when it names no weapon or a melee one and ranged when it names no weapon or a ranged one,
+// and ranged is written as the total the character sheet shows, melee share included, which
+// stats.FromPseudoStatsProto takes back out. So 22780 (Biznicks 247x128 Accurascope, hit restricted to
+// bows, guns and crossbows) is ranged hit alone, and 1310308 (SAF-T Ultra Precision Scope, the all-crit
+// aura under the same restriction) is ranged crit alone, with no spell crit.
+func AddEquipSpellStats(outStats *stats.Stats, pseudoStats []float64, spellID int) (addedStats bool, addedPseudoStats bool) {
+	spell := dbcInstance.Spells[spellID]
+	namesWeapons := spell.EquippedItemClass == ITEM_CLASS_WEAPON && spell.EquippedItemSubclass != 0
+	melee := !namesWeapons || spell.EquippedItemSubclass&^rangedWeaponSubclassMask != 0
+	ranged := !namesWeapons || spell.EquippedItemSubclass&rangedWeaponSubclassMask != 0
+
+	add := func(pseudoStat proto.PseudoStat, value float64) {
+		pseudoStats[pseudoStat] += value
+		addedPseudoStats = true
+	}
+	addWeapon := func(meleeStat, rangedStat proto.PseudoStat, value float64) {
+		if melee {
+			add(meleeStat, value)
+		}
+		if ranged {
+			add(rangedStat, value)
 		}
 	}
-	return 0, 0
-}
 
-const skillLineDefense = 95
+	for _, effect := range dbcInstance.SpellEffectsInOrder(spellID) {
+		if effect.EffectType != dbcenums.E_APPLY_AURA {
+			continue
+		}
+		value := effect.EffectBasePoints + effect.EffectDieSides
+
+		switch {
+		case effect.EffectAura == dbcenums.A_MOD_SKILL && effect.EffectMiscValues[0] == SkillLineDefense:
+			outStats[proto.Stat_StatDefenseRating] += value * core.DefenseRatingPerDefenseLevel
+			addedStats = true
+			continue
+		case effect.EffectAura == dbcenums.A_MOD_BLOCK_VALUE_FLAT:
+			outStats[proto.Stat_StatBlockValue] += value
+			addedStats = true
+			continue
+		}
+
+		// 1293881 (Pendulum of Doom) states a zero melee haste and changes the speed through its procs.
+		if pseudoStats == nil || value == 0 {
+			continue
+		}
+
+		switch effect.EffectAura {
+		case dbcenums.A_MOD_HIT_CHANCE:
+			addWeapon(proto.PseudoStat_PseudoStatMeleeHitPercent, proto.PseudoStat_PseudoStatRangedHitPercent, value)
+		case dbcenums.A_MOD_WEAPON_CRIT_PERCENT:
+			addWeapon(proto.PseudoStat_PseudoStatMeleeCritPercent, proto.PseudoStat_PseudoStatRangedCritPercent, value)
+		case dbcenums.A_MOD_CRIT_PCT:
+			addWeapon(proto.PseudoStat_PseudoStatMeleeCritPercent, proto.PseudoStat_PseudoStatRangedCritPercent, value)
+			if !namesWeapons {
+				add(proto.PseudoStat_PseudoStatSpellCritPercent, value)
+			}
+		case dbcenums.A_MOD_SPELL_HIT_CHANCE:
+			add(proto.PseudoStat_PseudoStatSpellHitPercent, value)
+		case dbcenums.A_MOD_SPELL_CRIT_CHANCE:
+			add(proto.PseudoStat_PseudoStatSpellCritPercent, value)
+		case dbcenums.A_MOD_BLOCK_PERCENT:
+			add(proto.PseudoStat_PseudoStatBlockPercent, value)
+		case dbcenums.A_MOD_DODGE_PERCENT:
+			add(proto.PseudoStat_PseudoStatDodgePercent, value)
+		case dbcenums.A_MOD_PARRY_PERCENT:
+			add(proto.PseudoStat_PseudoStatParryPercent, value)
+		}
+
+		for _, pseudoStat := range spelldata.SpeedAuraPseudoStats[effect.EffectAura] {
+			add(pseudoStat, value)
+		}
+	}
+
+	return addedStats, addedPseudoStats
+}
 
 func ConvertEffectAuraToStatIndex(effectAura EffectAuraType, effectMisc int) proto.Stat {
 	switch effectAura {
@@ -328,8 +379,6 @@ func ConvertModRatingFlagToRatingStat(flag int) proto.Stat {
 		return proto.Stat_StatMeleeCritRating
 	case 1024:
 		return proto.Stat_StatSpellCritRating
-	case 49152:
-		return proto.Stat_StatResilienceRating
 	case 131072:
 		return proto.Stat_StatMeleeHasteRating
 	case 393216:

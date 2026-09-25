@@ -32,6 +32,8 @@ var safeDepsOrder = []Stat{
 	SpellHitRating,
 	SpellCritRating,
 	SpellHasteRating,
+	DefenseRating,
+	BlockRating,
 	BlockPercent,
 	DodgeRating,
 	ParryRating,
@@ -43,6 +45,10 @@ var safeDepsOrder = []Stat{
 	PhysicalCritPercent,
 	SpellHitPercent,
 	PhysicalHitPercent,
+	DodgePercent,
+	ParryPercent,
+	ReducedCritTakenPercent,
+	ExpertisePercent,
 }
 
 func isSafeDep(s Stat) bool {
@@ -83,6 +89,9 @@ type StatDependency struct {
 	// Note that amount is treated differently depending on whether src and dst
 	// stats are the same.
 	amount float64
+
+	// Where non-zero, src counts in whole steps of this size only.
+	step float64
 }
 
 func (sd StatDependency) String() string {
@@ -131,6 +140,13 @@ func (sdm *StatDependencyManager) AddStatDependency(src Stat, dst Stat, amount f
 		dst:     dst,
 		amount:  amount,
 	})
+}
+
+// Adds amount of dst per point of src, counting src in whole steps of step
+// points only.
+func (sdm *StatDependencyManager) AddFlooredStatDependency(src Stat, dst Stat, step float64, amount float64) {
+	sdm.AddStatDependency(src, dst, amount)
+	sdm.deps[len(sdm.deps)-1].step = step
 }
 
 func (sdm *StatDependencyManager) MultiplyStat(s Stat, amount float64) {
@@ -204,9 +220,10 @@ func (sdm *StatDependencyManager) sortDeps() {
 					continue
 				}
 
-				if dep.dynamic {
+				if dep.dynamic || dep.step != 0 {
 					// Dynamic deps need to remain separate, so
-					// they can be turned on/off.
+					// they can be turned on/off, and floored ones
+					// so they keep their step.
 					deps = append(deps, dep)
 				} else {
 					if srcStat == dstStat {
@@ -256,6 +273,8 @@ func (sdm *StatDependencyManager) ApplyStatDependencies(s Stats) Stats {
 		if dep.enabled {
 			if dep.src == dep.dst {
 				s[dep.dst] *= dep.amount
+			} else if dep.step != 0 {
+				s[dep.dst] += math.Floor(s[dep.src]/dep.step) * dep.step * dep.amount
 			} else if isFlooredGameStat[dep.src] {
 				// The dep sort guarantees the source stat is final here, and
 				// the game floors attributes before dependents consume them

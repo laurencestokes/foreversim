@@ -16,7 +16,7 @@ import {
 	BLOCK_RATING_PER_BLOCK_PERCENT,
 	DEFENSE_RATING_PER_DEFENSE_LEVEL,
 	DODGE_RATING_PER_DODGE_PERCENT,
-	EXPERTISE_PER_QUARTER_PERCENT_REDUCTION,
+	EXPERTISE_RATING_PER_EXPERTISE_PERCENT,
 	PARRY_RATING_PER_PARRY_PERCENT,
 	PHYSICAL_CRIT_RATING_PER_CRIT_PERCENT,
 	PHYSICAL_HASTE_RATING_PER_HASTE_PERCENT,
@@ -58,7 +58,6 @@ const SPEC_KEYS: Record<string, string> = {
 // Master stat -> our stat(s) and how many of ours one of master's is worth. Master's secondaries
 // are percentages (1 MeleeHit = 1% hit), ours are ratings. Names not listed map to the same name,
 // or are dropped when we have no such stat (Energy, Rage, weapon skills).
-const expertiseRatingPerPercent = 4 * EXPERTISE_PER_QUARTER_PERCENT_REDUCTION;
 const STAT_MAP: Record<string, Array<[string, number]>> = {
 	StatSpellPower: [
 		['StatSpellDamage', 1],
@@ -77,12 +76,11 @@ const STAT_MAP: Record<string, Array<[string, number]>> = {
 	StatMeleeHit: [['StatMeleeHitRating', PHYSICAL_HIT_RATING_PER_HIT_PERCENT]],
 	StatMeleeCrit: [['StatMeleeCritRating', PHYSICAL_CRIT_RATING_PER_CRIT_PERCENT]],
 	StatMeleeHaste: [['StatMeleeHasteRating', PHYSICAL_HASTE_RATING_PER_HASTE_PERCENT]],
-	StatExpertise: [['StatExpertiseRating', expertiseRatingPerPercent]],
+	StatExpertise: [['StatExpertiseRating', EXPERTISE_RATING_PER_EXPERTISE_PERCENT]],
 	StatDefense: [['StatDefenseRating', DEFENSE_RATING_PER_DEFENSE_LEVEL]],
 	StatBlock: [['StatBlockRating', BLOCK_RATING_PER_BLOCK_PERCENT]],
 	StatDodge: [['StatDodgeRating', DODGE_RATING_PER_DODGE_PERCENT]],
 	StatParry: [['StatParryRating', PARRY_RATING_PER_PARRY_PERCENT]],
-	StatResilience: [['StatResilienceRating', 1]],
 	PseudoStatDodge: [['PseudoStatDodgePercent', 1]],
 	PseudoStatParry: [['PseudoStatParryPercent', 1]],
 	BonusPhysicalDamage: [['StatPhysicalDamage', 1]],
@@ -121,10 +119,10 @@ const CONSUMABLE_ITEMS: Record<string, number> = {
 	ConjuredMinorRecombobulator: 4381,
 	ConjuredDemonicRune: 12662,
 	ConjuredRogueThistleTea: 7676,
-	ExplosiveSolidDynamite: 10507,
-	ExplosiveGoblinLandMine: 4395,
-	ExplosiveDenseDynamite: 18641,
-	ExplosiveThoriumGrenade: 15993,
+	// Explosives by the value our picker and sim/core/consumes.go use (the spell); master's Solid
+	// Dynamite and Goblin Land Mine have none, so they are dropped.
+	ExplosiveDenseDynamite: 23063,
+	ExplosiveThoriumGrenade: 19769,
 	FlaskOfTheTitans: 13510,
 	FlaskOfDistilledWisdom: 13511,
 	FlaskOfSupremePower: 13512,

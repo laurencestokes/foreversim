@@ -1,5 +1,6 @@
 import * as PresetUtils from '@app/preset_utils';
-import { ConsumesSpec, Debuffs, IndividualBuffs, PartyBuffs, Profession, Race, RaidBuffs, TristateEffect } from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { ConsumesSpec, Profession, Race, TristateEffect } from '@generated/proto/common';
 import {
 	Hunter_Options as HunterOptions,
 	HunterOptions_Ammo,
@@ -37,24 +38,24 @@ export const DefaultIndividualBuffs = IndividualBuffs.create({});
 
 export const DefaultPartyBuffs = PartyBuffs.create({
 	battleShout: TristateEffect.TristateEffectImproved,
-	fireResistanceTotem: true,
-	graceOfAirTotem: TristateEffect.TristateEffectImproved,
+	graceOfAirTotem: true,
 	manaSpringTotem: TristateEffect.TristateEffectRegular,
-	strengthOfEarthTotem: TristateEffect.TristateEffectImproved,
+	strengthOfEarthTotem: true,
 });
 
 export const DefaultRaidBuffs = RaidBuffs.create({
 	arcaneBrilliance: true,
-	divineSpirit: TristateEffect.TristateEffectRegular,
-	giftOfTheWild: TristateEffect.TristateEffectImproved,
+	fireResistanceTotem: true,
+	giftOfTheWild: true,
+	prayerOfSpirit: true,
 });
 
 export const DefaultDebuffs = Debuffs.create({
 	curseOfRecklessness: true,
-	exposeArmor: TristateEffect.TristateEffectImproved,
-	faerieFire: TristateEffect.TristateEffectRegular,
-	// Improved Hunter's Mark is gone from the Forever trees, assumed baseline rather than removed.
-	huntersMark: TristateEffect.TristateEffectImproved,
+	exposeArmor: true,
+	faerieFire: true,
+	// A flat 71 ranged attack power: Forever's hunter tree has no Improved Hunter's Mark node.
+	huntersMark: true,
 	sunderArmor: true,
 });
 
@@ -73,8 +74,6 @@ export const DefaultConsumables = ConsumesSpec.create({
 	potId: 13444, // Major Mana Potion
 	conjuredId: 12662, // Demonic Rune
 	ohImbueId: 18262, // Elemental Sharpening Stone
-	petScrollAgi: true,
-	petScrollStr: true,
 });
 
 export const OtherDefaults = {

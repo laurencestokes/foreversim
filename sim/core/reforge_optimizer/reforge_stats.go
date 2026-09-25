@@ -1,6 +1,7 @@
 package reforgeoptimizer
 
 import (
+	"math"
 	"slices"
 
 	"github.com/wowsims/forever/sim/core"
@@ -8,12 +9,15 @@ import (
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
+// protoToCoreUnitStats reads weights, caps and sheet stats alike. The percent pseudo stats stay in
+// PseudoStats in the sheet's percent, the unit GetPseudoStatsProto writes: a cap is compared there and a
+// weight is read there, so a Block% weight or cap stays per percent and ranged hit and crit stay totals.
 func protoToCoreUnitStats(protoStats *proto.UnitStats) core.UnitStats {
 	if protoStats == nil {
 		return core.NewUnitStats()
 	}
 	return core.UnitStats{
-		Stats:       stats.FromUnitStatsProto(protoStats),
+		Stats:       stats.FromProtoArray(protoStats.Stats),
 		PseudoStats: slices.Clone(protoStats.PseudoStats),
 	}
 }
@@ -40,18 +44,6 @@ func setUnitStat(unitStats core.UnitStats, unitStat stats.UnitStat, value float6
 	}
 	unitStats.PseudoStats[pseudoStatIdx] = value
 	return unitStats
-}
-
-func addUnitStats(unitStats core.UnitStats, other core.UnitStats) core.UnitStats {
-	result := unitStats
-	result.Stats = unitStats.Stats.Add(other.Stats)
-	maxLen := max(len(unitStats.PseudoStats), len(other.PseudoStats))
-	result.PseudoStats = make([]float64, maxLen)
-	copy(result.PseudoStats, unitStats.PseudoStats)
-	for idx, value := range other.PseudoStats {
-		result.PseudoStats[idx] += value
-	}
-	return result
 }
 
 func isEmptyUnitStats(unitStats core.UnitStats) bool {
@@ -96,7 +88,8 @@ func rawUnitStatsFromStats(statValues stats.Stats) core.UnitStats {
 // conversions such as HitRating→Hit%, CritRating→Crit%, Agility→PhysicalCritPercent.
 // It also mirrors the resolved Stats values back to their corresponding PseudoStats
 // so that LP constraint evaluation (which reads PseudoStats for hit/crit/haste caps)
-// sees the correct contribution.
+// sees the correct contribution. A rating counted in whole steps moves its percent by
+// the steps it adds on top of baseStats.
 //
 // Haste% is multiplicative with a speed multiplier that is not captured by the dep
 // manager. We read it from baseStats.PseudoStats (populated by GetPseudoStatsProto):
@@ -107,27 +100,32 @@ func resolveStatDelta(sdm *stats.StatDependencyManager, baseStats core.UnitStats
 		return delta
 	}
 	delta.Stats = sdm.ApplyStatDependencies(delta.Stats)
+	for _, conversion := range core.RatingConversions {
+		rating := delta.Stats[conversion.Rating]
+		if conversion.Step == 0 || rating == 0 {
+			continue
+		}
+		base := baseStats.Stats[conversion.Rating]
+		counted := math.Floor(rating / conversion.Step)
+		whole := math.Floor((base+rating)/conversion.Step) - math.Floor(base/conversion.Step)
+		delta.Stats[conversion.Percent] += (whole - counted) * conversion.Step / conversion.RatingPerPercent
+	}
 
 	// Mirror dual-stored stats from Stats (updated by SDM — e.g. HitRating→Hit%,
 	// CritRating→Crit%, Agility→PhysicalCritPercent) back to their PseudoStat indices.
-	delta = setUnitStat(delta, stats.UnitStatFromPseudoStat(proto.PseudoStat_PseudoStatMeleeHitPercent), delta.Stats[stats.PhysicalHitPercent])
-	delta = setUnitStat(delta, stats.UnitStatFromPseudoStat(proto.PseudoStat_PseudoStatSpellHitPercent), delta.Stats[stats.SpellHitPercent])
-	delta = setUnitStat(delta, stats.UnitStatFromPseudoStat(proto.PseudoStat_PseudoStatRangedHitPercent), delta.Stats[stats.PhysicalHitPercent]+delta.Stats[stats.RangedHitPercent])
+	for _, pair := range stats.PercentPseudoStats {
+		value := delta.Stats[pair.Stat]
+		if pair.MeleeShare != nil {
+			value = delta.Stats[pair.MeleeShare.Stat] + value
+		}
+		delta = setUnitStat(delta, stats.UnitStatFromPseudoStat(pair.PseudoStat), value)
+	}
 	spellHitDelta := delta.Stats[stats.SpellHitPercent]
-	for _, schoolHitPS := range []proto.PseudoStat{
-		proto.PseudoStat_PseudoStatSchoolHitPercentArcane,
-		proto.PseudoStat_PseudoStatSchoolHitPercentFire,
-		proto.PseudoStat_PseudoStatSchoolHitPercentFrost,
-		proto.PseudoStat_PseudoStatSchoolHitPercentHoly,
-		proto.PseudoStat_PseudoStatSchoolHitPercentNature,
-		proto.PseudoStat_PseudoStatSchoolHitPercentShadow,
-	} {
+	for _, schoolHitPS := range schoolHitPercents {
 		delta = setUnitStat(delta, stats.UnitStatFromPseudoStat(schoolHitPS), spellHitDelta)
 	}
-	delta = setUnitStat(delta, stats.UnitStatFromPseudoStat(proto.PseudoStat_PseudoStatMeleeCritPercent), delta.Stats[stats.PhysicalCritPercent])
-	delta = setUnitStat(delta, stats.UnitStatFromPseudoStat(proto.PseudoStat_PseudoStatRangedCritPercent), delta.Stats[stats.PhysicalCritPercent]+delta.Stats[stats.RangedCritPercent])
-	delta = setUnitStat(delta, stats.UnitStatFromPseudoStat(proto.PseudoStat_PseudoStatSpellCritPercent), delta.Stats[stats.SpellCritPercent])
-	delta = setUnitStat(delta, stats.UnitStatFromPseudoStat(proto.PseudoStat_PseudoStatBlockPercent), delta.Stats[stats.BlockPercent])
+	delta = setUnitStat(delta, stats.UnitStatFromPseudoStat(proto.PseudoStat_PseudoStatReducedCritTakenPercent),
+		delta.Stats[stats.ReducedCritTakenPercent])
 
 	// Haste% pseudo-stats: read speed multipliers from baseStats.PseudoStats, which
 	// GetPseudoStatsProto populates as MeleeSpeedMultiplier×AttackSpeedMultiplier etc.
@@ -155,66 +153,62 @@ func eachUnitStat(vec core.UnitStats, fn func(unitStat stats.UnitStat, value flo
 	}
 }
 
-func childPseudoStats(parent stats.Stat) []proto.PseudoStat {
-	switch parent {
-	case stats.MeleeHitRating:
-		return []proto.PseudoStat{proto.PseudoStat_PseudoStatMeleeHitPercent, proto.PseudoStat_PseudoStatRangedHitPercent}
-	case stats.SpellHitRating:
-		return []proto.PseudoStat{
-			proto.PseudoStat_PseudoStatSpellHitPercent,
-			proto.PseudoStat_PseudoStatSchoolHitPercentArcane,
-			proto.PseudoStat_PseudoStatSchoolHitPercentFire,
-			proto.PseudoStat_PseudoStatSchoolHitPercentFrost,
-			proto.PseudoStat_PseudoStatSchoolHitPercentHoly,
-			proto.PseudoStat_PseudoStatSchoolHitPercentNature,
-			proto.PseudoStat_PseudoStatSchoolHitPercentShadow,
-		}
-	case stats.MeleeCritRating:
-		return []proto.PseudoStat{proto.PseudoStat_PseudoStatMeleeCritPercent, proto.PseudoStat_PseudoStatRangedCritPercent}
-	case stats.SpellCritRating:
-		return []proto.PseudoStat{proto.PseudoStat_PseudoStatSpellCritPercent}
-	case stats.MeleeHasteRating:
-		return []proto.PseudoStat{proto.PseudoStat_PseudoStatMeleeHastePercent, proto.PseudoStat_PseudoStatRangedHastePercent}
-	case stats.SpellHasteRating:
-		return []proto.PseudoStat{proto.PseudoStat_PseudoStatSpellHastePercent}
-	case stats.ResilienceRating, stats.DefenseRating:
+var schoolHitPercents = []proto.PseudoStat{
+	proto.PseudoStat_PseudoStatSchoolHitPercentArcane,
+	proto.PseudoStat_PseudoStatSchoolHitPercentFire,
+	proto.PseudoStat_PseudoStatSchoolHitPercentFrost,
+	proto.PseudoStat_PseudoStatSchoolHitPercentHoly,
+	proto.PseudoStat_PseudoStatSchoolHitPercentNature,
+	proto.PseudoStat_PseudoStatSchoolHitPercentShadow,
+}
+
+// sheetPseudoStats returns the pseudo-stats the character sheet shows a back-end percent stat in: its
+// own, the ranged total it is the melee share of, and for spell hit the per-school percentages.
+func sheetPseudoStats(percent stats.Stat) []proto.PseudoStat {
+	if percent == stats.ReducedCritTakenPercent {
 		return []proto.PseudoStat{proto.PseudoStat_PseudoStatReducedCritTakenPercent}
-	default:
-		return nil
 	}
+	var pseudoStats []proto.PseudoStat
+	for _, pair := range stats.PercentPseudoStats {
+		if pair.Stat == percent || (pair.MeleeShare != nil && pair.MeleeShare.Stat == percent) {
+			pseudoStats = append(pseudoStats, pair.PseudoStat)
+		}
+	}
+	if percent == stats.SpellHitPercent {
+		pseudoStats = append(pseudoStats, schoolHitPercents...)
+	}
+	return pseudoStats
+}
+
+// childPseudoStats returns the percent pseudo-stats a rating moves, from the core rating conversions
+// and the haste ratings, in the order core.RatingConversions lists them.
+func childPseudoStats(parent stats.Stat) []proto.PseudoStat {
+	var children []proto.PseudoStat
+	for _, conversion := range core.RatingConversions {
+		if conversion.Rating == parent {
+			children = append(children, sheetPseudoStats(conversion.Percent)...)
+		}
+	}
+	for _, p := range hasteRatingSpeedMultiplierPairs {
+		if p.hasteRatingStat == parent {
+			children = append(children, p.hastePS)
+		}
+	}
+	return children
 }
 
 func ratingPerPseudoStatPercent(pseudoStat proto.PseudoStat, parent stats.Stat) float64 {
-	switch pseudoStat {
-	case proto.PseudoStat_PseudoStatMeleeHitPercent:
-		return core.PhysicalHitRatingPerHitPercent
-	case proto.PseudoStat_PseudoStatRangedHitPercent:
-		return core.PhysicalHitRatingPerHitPercent
-	case proto.PseudoStat_PseudoStatSpellHitPercent:
-		return core.SpellHitRatingPerHitPercent
-	case proto.PseudoStat_PseudoStatSchoolHitPercentArcane, proto.PseudoStat_PseudoStatSchoolHitPercentFire, proto.PseudoStat_PseudoStatSchoolHitPercentFrost, proto.PseudoStat_PseudoStatSchoolHitPercentHoly, proto.PseudoStat_PseudoStatSchoolHitPercentNature, proto.PseudoStat_PseudoStatSchoolHitPercentShadow:
-		return core.SpellHitRatingPerHitPercent
-	case proto.PseudoStat_PseudoStatMeleeCritPercent:
-		return core.PhysicalCritRatingPerCritPercent
-	case proto.PseudoStat_PseudoStatRangedCritPercent:
-		return core.PhysicalCritRatingPerCritPercent
-	case proto.PseudoStat_PseudoStatSpellCritPercent:
-		return core.SpellCritRatingPerCritPercent
-	case proto.PseudoStat_PseudoStatMeleeHastePercent, proto.PseudoStat_PseudoStatRangedHastePercent:
-		return core.PhysicalHasteRatingPerHastePercent
-	case proto.PseudoStat_PseudoStatSpellHastePercent:
-		return core.SpellHasteRatingPerHastePercent
-	case proto.PseudoStat_PseudoStatReducedCritTakenPercent:
-		if parent == stats.DefenseRating {
-			return core.DefenseRatingPerDefenseLevel / core.MissDodgeParryBlockCritChancePerDefense
+	for _, conversion := range core.RatingConversions {
+		if conversion.Rating == parent && slices.Contains(sheetPseudoStats(conversion.Percent), pseudoStat) {
+			return conversion.RatingPerPercent
 		}
-		if parent == stats.ResilienceRating {
-			return core.ResilienceRatingPerCritReductionChance
-		}
-		return 1
-	default:
-		return 1
 	}
+	for _, p := range hasteRatingSpeedMultiplierPairs {
+		if p.hasteRatingStat == parent && p.hastePS == pseudoStat {
+			return p.hasteRatingConst
+		}
+	}
+	return 1
 }
 
 // computeGapToCap returns the remaining room from the current sheet value to cap. A gap of

@@ -189,10 +189,10 @@ func RacialBreakdown(config RacialBreakdownConfig) string {
 	var rows []row
 	for _, race := range config.Races {
 		name := strings.TrimPrefix(race.String(), "Race")
-		if race == proto.Race_RaceSkyborneWindshaper && slices.Contains(config.Races, proto.Race_RaceSkyborneHighOrder) {
+		if race == proto.Race_RaceWindshaperSkyborne && slices.Contains(config.Races, proto.Race_RaceHighOrderSkyborne) {
 			continue // Shares every racial with the High Order.
 		}
-		if race == proto.Race_RaceSkyborneHighOrder && slices.Contains(config.Races, proto.Race_RaceSkyborneWindshaper) {
+		if race == proto.Race_RaceHighOrderSkyborne && slices.Contains(config.Races, proto.Race_RaceWindshaperSkyborne) {
 			name = "Skyborne (either)"
 		}
 

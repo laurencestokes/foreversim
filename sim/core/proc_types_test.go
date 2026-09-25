@@ -153,6 +153,22 @@ func TestDecodeProcTypeMask(t *testing.T) {
 			outcome:  OutcomeLanded,
 		},
 		{
+			name:     "Recovery 1248761, whose trigger is the wearer's melee attack dodged or parried",
+			mask:     [2]uint32{0x14, 0},
+			hint:     ProcHintAttackDodged | ProcHintAttackParried,
+			callback: CallbackOnSpellHitDealt,
+			procMask: ProcMaskMeleeWhiteHit | ProcMaskMeleeSpecial,
+			outcome:  OutcomeDodge | OutcomeParry,
+		},
+		{
+			name:     "the wearer's attack parried alone",
+			mask:     [2]uint32{0x14, 0},
+			hint:     ProcHintAttackParried,
+			callback: CallbackOnSpellHitDealt,
+			procMask: ProcMaskMeleeWhiteHit | ProcMaskMeleeSpecial,
+			outcome:  OutcomeParry,
+		},
+		{
 			name:               "a word-1 bit",
 			mask:               [2]uint32{0, 0x4},
 			outcome:            OutcomeLanded,

@@ -167,13 +167,9 @@ export function enchantAppliesToItem(enchant: Enchant, item: Item): boolean {
 
 	if (enchant.enchantType === EnchantType.EnchantTypeShield && item.weaponType !== WeaponType.WeaponTypeShield) return false;
 
-	if (
-		(enchant.enchantType === EnchantType.EnchantTypeOffHand) !==
-		(item.weaponType === WeaponType.WeaponTypeOffHand ||
-			// All off-hand enchants can be applied to shields as well
-			(item.weaponType === WeaponType.WeaponTypeShield && enchant.enchantType !== EnchantType.EnchantTypeShield))
-	)
-		return false;
+	if ((enchant.enchantType === EnchantType.EnchantTypeOffHand) !== (item.weaponType === WeaponType.WeaponTypeOffHand)) return false;
+
+	if (item.weaponType === WeaponType.WeaponTypeShield && enchant.enchantType !== EnchantType.EnchantTypeShield) return false;
 
 	if (enchant.type == ItemType.ItemTypeRanged) {
 		if (

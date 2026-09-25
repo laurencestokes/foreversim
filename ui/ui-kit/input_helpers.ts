@@ -1,4 +1,5 @@
-import { PartyBuffs, Spec, TristateEffect } from '@generated/proto/common';
+import { PartyBuffs } from '@generated/proto/buffs';
+import { Spec, TristateEffect } from '@generated/proto/common';
 import type { StoreField } from '@sim/hooks/useStoreField';
 import { Player } from '@sim/player/player';
 import { ActionId } from '@sim/proto/action_id';

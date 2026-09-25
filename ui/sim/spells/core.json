@@ -143,66 +143,6 @@
 		"note": "Frost Oil's 10% proc really does cast Frostbolt 1191 for 33 to 38, so the Classic name and icon are the right ones.",
 		"source": "classic"
 	},
-	"1259710": {
-		"ability": "Wind Blessed",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the Skyborne passive, 1% melee, ranged and casting speed (auras 342 and 65). Both Skyborne halves share it.",
-		"source": "forever",
-		"tooltip": "Passive\nIncreases your spellcasting, melee, and ranged Haste by 1%."
-	},
-	"1259719": {
-		"ability": "Mace Specialization",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: moved to the dwarves, 1% critical strike while a one- or two-handed mace is equipped.",
-		"source": "forever",
-		"tooltip": "Passive\nIncreases your critical strike chance with all spells and attacks by 1% while you have a mace or two-handed mace equipped."
-	},
-	"1259799": {
-		"ability": "Elune's Light",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the night elf's Forever cooldown, +10% critical strike chance (aura 290) for 15 sec on a 3 min cooldown.",
-		"source": "forever",
-		"tooltip": "Instant\n3 min cooldown\nIncreases your critical strike chance with all spells and attacks by 10% for 15 sec."
-	},
-	"1259812": {
-		"ability": "Eureka! (rogue)",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the next 3 of the abilities on its SpellEffect class mask within 15 sec cost 20% less Energy and deal 10% more damage, Rupture and Garrote ticks included; 2 min cooldown.",
-		"source": "assumed",
-		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Energy cost reduced by 20% and deal 10% more damage.",
-		"assumptions": ["Blade Flurry is on the client mask but deals no damage itself, so it is taken not to spend a charge (\"damaging abilities\")."]
-	},
-	"1259813": {
-		"ability": "Eureka! (warrior)",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the next 3 of the abilities on its SpellEffect class mask within 15 sec (SpellAuraOptions charges) cost 40% less Rage and deal 10% more damage; 2 min cooldown.",
-		"source": "forever",
-		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Rage cost reduced by 40% and deal 10% more damage."
-	},
-	"1259817": {
-		"ability": "Eureka! (mage)",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the next 3 of the spells on its SpellEffect class mask within 15 sec cost 50% less Mana and deal 10% more damage, periodic damage included (Fireball's and Pyroblast's DoTs, Frostfire Bolt); 2 min cooldown.",
-		"source": "forever",
-		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Mana cost reduced by 50% and deal 10% more damage."
-	},
-	"1259821": {
-		"ability": "Eureka! (warlock)",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the next 3 of the spells on its SpellEffect class masks within 15 sec cost 50% less Mana and deal 10% more damage, periodic damage included; 2 min cooldown.",
-		"source": "forever",
-		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Mana cost reduced by 50% and deal 10% more damage."
-	},
-	"1259823": {
-		"ability": "Eureka! (priest)",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the next 3 of the spells on its SpellEffect class mask within 15 sec cost 15% less Mana and deal 10% more damage; 2 min cooldown.",
-		"source": "assumed",
-		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Mana cost reduced by 15% and deal 10% more damage.",
-		"assumptions": [
-			"The client mask also covers the heals (Flash Heal, Greater Heal, Heal, Renew, etc.), but the tooltip reads \"damaging abilities\", so heals are taken not to spend a charge or take the bonus."
-		]
-	},
 	"1260198": {
 		"ability": "Touch of the Grave",
 		"file": "sim/core/racials.go",
@@ -220,13 +160,6 @@
 		"note": "Forever makes the fire vulnerability personal to the mage who stacked it (docs/forever_rules.md, panel), and the live Forever version is sim/mage/talents.go applyImprovedScorch; sim/core/debuffs.go still registers the Classic raid-wide target debuff with no IsForever() gate and the UI still offers the checkbox under Forever, which is a bug.",
 		"source": "forever",
 		"tooltip": "Passive\nYour Scorch has a 33% chance per point to increase the Fire damage you deal to the target by 3% for 30 sec. Stacks up to 5 times, for 15% at full stacks.\nThe bonus is yours alone; it no longer raises the Fire damage the rest of the raid deals."
-	},
-	"1299026": {
-		"ability": "Shatter Curse",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the orc's Forever cooldown in place of Command, 15% less magic damage taken (aura 87, school mask 126) for 8 sec on a 3 min cooldown. A survival cooldown.",
-		"source": "forever",
-		"tooltip": "Instant\n3 min cooldown\nInstantly removes and grants immunity to all Curses and Banes, and reduces all Magical damage taken by 15% for 8 sec."
 	},
 	"1382": {
 		"ability": "Shadow Bolt (Shadow Oil proc)",
@@ -351,13 +284,6 @@
 		"note": "50% chance on a landed direct attack to return 59 mana, 10 sec; unchanged from upstream Classic.",
 		"source": "classic"
 	},
-	"20554": {
-		"ability": "Berserking",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: a flat 10% melee, ranged and casting speed (auras 319, 140 and 65) for 10 sec on a 3 min cooldown, for every class, with no SpellPower cost row.",
-		"source": "forever",
-		"tooltip": "Instant\n3 min cooldown\nIncreases your spellcasting and attack speed by 10% for 10 sec."
-	},
 	"20572": {
 		"ability": "Blood Fury",
 		"file": "sim/core/racials.go",
@@ -365,26 +291,12 @@
 		"source": "forever",
 		"tooltip": "Instant\n2 min cooldown\nIncreases Attack Power and Spell Power by 10% for 15 sec."
 	},
-	"20574": {
-		"ability": "Axe Specialization",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the orc racial pays 1% critical strike while a one- or two-handed axe is equipped.",
-		"source": "forever",
-		"tooltip": "Passive\nIncreases your critical strike chance with all spells and abilities by 1% while you have an axe or a two-handed axe equipped."
-	},
 	"20594": {
 		"ability": "Stoneform",
 		"file": "sim/core/racials.go",
 		"note": "Beta client build 1.60.1.69977: Forever replaced the armor bonus with 10% less Physical damage taken (aura 87, school mask 1); 8 sec, 3 min cooldown. A survival cooldown, so it only fires under a health threshold.",
 		"source": "forever",
 		"tooltip": "Instant\n3 min cooldown\nInstantly removes and grants immunity to all Bleed, Poison, and Disease effects, and reduces all Physical damage taken by 10% for 8 sec."
-	},
-	"20597": {
-		"ability": "Sword Specialization",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the human racial pays 2% critical strike (aura 290) while a one- or two-handed sword is equipped (SpellEquippedItems).",
-		"source": "forever",
-		"tooltip": "Passive\nIncreases your critical strike chance with all spells and attacks by 2% while you have a sword or two-handed sword equipped."
 	},
 	"20906": {
 		"ability": "Trueshot Aura",
@@ -620,5 +532,93 @@
 		"note": "Rank 6, the druid's own cast. Beta client 1.60.1.69893: 22 Nature damage per melee hit taken, up from Classic Era's 18; Improved Thorns still adds 25% a point. The damage itself is dealt under 26992.",
 		"source": "forever",
 		"tooltip": "320 Mana\nInstant\nThorns sprout from the friendly target causing 22 Nature damage to attackers when hit. Lasts 10 min."
+	},
+	"1259710": {
+		"ability": "Wind Blessed",
+		"file": "sim/core/racials.go",
+		"note": "Beta client build 1.60.1.69977: the Skyborne passive, 1% melee, ranged and casting speed (auras 342 and 65). Both Skyborne halves share it.",
+		"source": "forever",
+		"tooltip": "Passive\nIncreases your spellcasting, melee, and ranged Haste by 1%."
+	},
+	"1259719": {
+		"ability": "Mace Specialization",
+		"file": "sim/core/racials.go",
+		"note": "Beta client build 1.60.1.69977: moved to the dwarves, 1% critical strike while a one- or two-handed mace is equipped.",
+		"source": "forever",
+		"tooltip": "Passive\nIncreases your critical strike chance with all spells and attacks by 1% while you have a mace or two-handed mace equipped."
+	},
+	"1259799": {
+		"ability": "Elune's Light",
+		"file": "sim/core/racials.go",
+		"note": "Beta client build 1.60.1.69977: the night elf's Forever cooldown, +10% critical strike chance (aura 290) for 15 sec on a 3 min cooldown.",
+		"source": "forever",
+		"tooltip": "Instant\n3 min cooldown\nIncreases your critical strike chance with all spells and attacks by 10% for 15 sec."
+	},
+	"1259812": {
+		"ability": "Eureka! (rogue)",
+		"file": "sim/core/racials.go",
+		"note": "Beta client build 1.60.1.70009: the next 3 of the abilities on its SpellEffect class mask within 15 sec cost 10% less Energy and deal 10% more damage, Rupture and Garrote ticks included; 2 min cooldown.",
+		"source": "assumed",
+		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Energy cost reduced by 10% and deal 10% more damage.",
+		"assumptions": ["Blade Flurry is on the client mask but deals no damage itself, so it is taken not to spend a charge (\"damaging abilities\")."]
+	},
+	"1259813": {
+		"ability": "Eureka! (warrior)",
+		"file": "sim/core/racials.go",
+		"note": "Beta client build 1.60.1.70009: the next 3 of the abilities on its SpellEffect class mask within 15 sec (SpellAuraOptions charges) cost 10% less Rage and deal 10% more damage; 2 min cooldown.",
+		"source": "forever",
+		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Rage cost reduced by 10% and deal 10% more damage."
+	},
+	"1259817": {
+		"ability": "Eureka! (mage)",
+		"file": "sim/core/racials.go",
+		"note": "Beta client build 1.60.1.70009: the next 3 of the spells on its SpellEffect class mask within 15 sec cost 10% less Mana and deal 10% more damage, periodic damage included (Fireball's and Pyroblast's DoTs, Frostfire Bolt); 2 min cooldown.",
+		"source": "forever",
+		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Mana cost reduced by 10% and deal 10% more damage."
+	},
+	"1259821": {
+		"ability": "Eureka! (warlock)",
+		"file": "sim/core/racials.go",
+		"note": "Beta client build 1.60.1.70009: the next 3 of the spells on its SpellEffect class masks within 15 sec cost 10% less Mana and deal 10% more damage, periodic damage included; 2 min cooldown.",
+		"source": "forever",
+		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Mana cost reduced by 10% and deal 10% more damage."
+	},
+	"1259823": {
+		"ability": "Eureka! (priest)",
+		"file": "sim/core/racials.go",
+		"note": "Beta client build 1.60.1.70009: the next 3 of the spells on its SpellEffect class mask within 15 sec cost 10% less Mana and deal 10% more damage; 2 min cooldown.",
+		"source": "assumed",
+		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Mana cost reduced by 10% and deal 10% more damage.",
+		"assumptions": [
+			"The client mask also covers the heals (Flash Heal, Greater Heal, Heal, Renew, etc.), but the tooltip reads \"damaging abilities\", so heals are taken not to spend a charge or take the bonus."
+		]
+	},
+	"1299026": {
+		"ability": "Shatter Curse",
+		"file": "sim/core/racials.go",
+		"note": "Beta client build 1.60.1.69977: the orc's Forever cooldown in place of Command, 15% less magic damage taken (aura 87, school mask 126) for 8 sec on a 3 min cooldown. A survival cooldown.",
+		"source": "forever",
+		"tooltip": "Instant\n3 min cooldown\nInstantly removes and grants immunity to all Curses and Banes, and reduces all Magical damage taken by 15% for 8 sec."
+	},
+	"20554": {
+		"ability": "Berserking",
+		"file": "sim/core/racials.go",
+		"note": "Beta client build 1.60.1.69977: a flat 10% melee, ranged and casting speed (auras 319, 140 and 65) for 10 sec on a 3 min cooldown, for every class, with no SpellPower cost row.",
+		"source": "forever",
+		"tooltip": "Instant\n3 min cooldown\nIncreases your spellcasting and attack speed by 10% for 10 sec."
+	},
+	"20574": {
+		"ability": "Axe Specialization",
+		"file": "sim/core/racials.go",
+		"note": "Beta client build 1.60.1.69977: the orc racial pays 1% critical strike while a one- or two-handed axe is equipped.",
+		"source": "forever",
+		"tooltip": "Passive\nIncreases your critical strike chance with all spells and abilities by 1% while you have an axe or a two-handed axe equipped."
+	},
+	"20597": {
+		"ability": "Sword Specialization",
+		"file": "sim/core/racials.go",
+		"note": "Beta client build 1.60.1.69977: the human racial pays 2% critical strike (aura 290) while a one- or two-handed sword is equipped (SpellEquippedItems).",
+		"source": "forever",
+		"tooltip": "Passive\nIncreases your critical strike chance with all spells and attacks by 2% while you have a sword or two-handed sword equipped."
 	}
 }

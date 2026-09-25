@@ -1,4 +1,5 @@
-import { ConsumesSpec, Debuffs, HealingModel, IndividualBuffs, ItemSwap, PartyBuffs, RaidBuffs } from '@generated/proto/common';
+import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
+import { ConsumesSpec, HealingModel, ItemSwap } from '@generated/proto/common';
 import { SavedSettings } from '@generated/proto/ui';
 import { Stats } from '@sim/proto/stats';
 import type { IndividualSimHost } from '@sim/sim_host';

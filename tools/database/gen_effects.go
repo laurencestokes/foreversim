@@ -83,9 +83,8 @@ type Entry struct {
 	// but the two shapes that need more than the rows state: a window that accumulates a second
 	// aura, and an effect a hand-written constructor already covers.
 	Proc *ProcRouting
-	// Set when the effect deals flat damage instead of granting stats. Those resolve no stats, so
-	// without this they are dropped before they are ever emitted.
-	DealsDamage bool
+	// What a registered on-use leaves out, stated beside its call.
+	NotSimulated string
 }
 
 // The literals a stacking on-use needs in the generated call. Everything else - stacks,
@@ -105,13 +104,52 @@ type ProcRouting struct {
 	// A "Chance on hit" item effect or a combat enchant, cast by the game off every eligible weapon
 	// hit whatever the row's proc flags say.
 	IsWeaponProc bool
-	// Set where the spell the proc applies deals damage instead of granting an aura, which is a
-	// constructor of its own: there is no buff to build.
-	Damage bool
+	Shape        ProcShape
 	// Empty when the rows state enough to build the listener.
 	Unsupported []string
 	// What the rows resolve to, for the reader of the generated file.
 	Summary string
+}
+
+type ProcShape uint8
+
+const (
+	// A buff granting stats, or on an on-use none of the shapes below.
+	ShapeStats ProcShape = iota
+	// Deals damage instead of granting an aura: there is no buff to build.
+	ShapeDamage
+	// Heals the wearer.
+	ShapeHeal
+	// Shields the wearer with an absorb.
+	ShapeAbsorb
+	// An on-use that raises the wearer's speeds.
+	ShapeSpeed
+	// Restores the wearer's mana, rage or energy.
+	ShapeEnergize
+	// Puts a debuff on the enemy it lands on.
+	ShapeDebuff
+	// Applies auras on the wearer, its pets or an enemy.
+	ShapeAura
+	// An equip spell's auras, kept up for as long as the item is worn rather than applied by a proc.
+	ShapeEquip
+)
+
+var procShapes = [...]struct {
+	procConstructor  string
+	onUseConstructor string
+	onUseGroup       string
+	unsupported      func(*spelldata.Spell) []string
+	alwaysNamesBuff  bool
+}{
+	ShapeStats:    {"NewSpellDataProc", "NewSimpleStatActive", "", nil, false},
+	ShapeDamage:   {"NewSpellDataDamageProc", "NewSpellDataDamageOnUse", "Damage", damageUnsupported, true},
+	ShapeHeal:     {"NewSpellDataHealProc", "NewSpellDataHealOnUse", "Heals", healUnsupported, true},
+	ShapeAbsorb:   {"NewSpellDataAbsorbProc", "NewSpellDataAbsorbOnUse", "Absorbs", absorbUnsupported, true},
+	ShapeSpeed:    {"NewSpellDataProc", "NewSpellDataSpeedOnUse", "Speed", nil, false},
+	ShapeEnergize: {"NewSpellDataProc", "NewSpellDataEnergizeOnUse", "Resources", nil, false},
+	ShapeDebuff:   {"NewSpellDataDebuffProc", "NewSimpleStatActive", "", debuffUnsupported, false},
+	ShapeAura:     {"NewSpellDataAuraProc", "NewSpellDataAuraOnUse", "Auras", procAuraUnsupported, false},
+	ShapeEquip:    {"NewSpellDataEquipAura", "NewSimpleStatActive", "", nil, false},
 }
 
 func (r *ProcRouting) Supported() bool {
@@ -138,19 +176,134 @@ func routeProc(triggerSpellID int, buffSpellID int, isWeaponProc bool) *ProcRout
 	return routing
 }
 
-// A proc whose spell deals damage rather than granting an aura. The spell is named separately
-// because the client hangs it below the trigger rather than on it.
-func (r *ProcRouting) asDamage(damageSpellID int32) {
-	r.Damage = true
-	r.BuffSpellID = int(damageSpellID)
+// A proc that grants no stats: it casts or applies spellID, which the client hangs below the trigger
+// or states on it, and whose row says what the sim cannot model.
+func (r *ProcRouting) as(shape ProcShape, spellID int32) {
+	r.Shape = shape
+	r.BuffSpellID = int(spellID)
+	if !procShapes[shape].alwaysNamesBuff && r.BuffSpellID == r.TriggerSpellID {
+		r.BuffSpellID = 0
+	}
+	r.Unsupported = append(r.Unsupported, procShapes[shape].unsupported(spelldata.Find(spellID))...)
+	r.Summary = procSummary(r.TriggerSpellID, spelldata.Find(int32(r.TriggerSpellID)), int(spellID))
+}
 
-	if damage := spelldata.Find(damageSpellID); damage == spelldata.Nil {
-		r.Unsupported = append(r.Unsupported, "the damage spell has no row in the store")
-	} else if damage.DamageEffect() == spelldata.NilEffect {
-		r.Unsupported = append(r.Unsupported, "the damage spell's row states no damage")
+func pickNoStatShape(spellID int, debuffID int32) (ProcShape, int32) {
+	if damage := dbc.ResolveDamageEffect(spellID); damage != nil {
+		return ShapeDamage, int32(damage.SpellID)
+	}
+	if heal := dbc.ResolveTriggered(spellID, heals); heal != 0 {
+		return ShapeHeal, heal
+	}
+	if absorb := dbc.ResolveTriggered(spellID, absorbs); absorb != 0 {
+		return ShapeAbsorb, absorb
+	}
+	if spelldata.Find(debuffID).DebuffsTheTarget() {
+		return ShapeDebuff, debuffID
+	}
+	return ShapeStats, 0
+}
+
+func damageUnsupported(damage *spelldata.Spell) []string {
+	switch {
+	case damage == spelldata.Nil:
+		return []string{"the damage spell has no row in the store"}
+	case damage.DamageEffect() == spelldata.NilEffect:
+		return []string{"the damage spell's row states no damage"}
+	}
+	return nil
+}
+
+func debuffUnsupported(debuff *spelldata.Spell) []string {
+	if debuff.DurationMs <= 0 {
+		return []string{"the debuff states no duration"}
+	}
+	return nil
+}
+
+func procAuraUnsupported(buff *spelldata.Spell) []string {
+	return spelldata.ItemAuraUnsupported(buff, false)
+}
+
+func healUnsupported(heal *spelldata.Spell) []string {
+	effect := heal.ProcHealEffect()
+	unsupported := wearerTarget("heal", effect)
+	if effect.Aura == dbcenums.A_PERIODIC_HEAL {
+		unsupported = append(unsupported, tickUnsupported("heal", heal, effect)...)
+	}
+	return unsupported
+}
+
+func wearerTarget(what string, effect *spelldata.Effect) []string {
+	if effect.Target[0] == dbcenums.TARGET_UNIT_CASTER {
+		return nil
+	}
+	return []string{fmt.Sprintf("the %s lands on implicit target %d, not the wearer", what, effect.Target[0])}
+}
+
+func tickUnsupported(what string, s *spelldata.Spell, effect *spelldata.Effect) []string {
+	if effect.PeriodMs > 0 && s.DurationMs > 0 {
+		return nil
+	}
+	return []string{fmt.Sprintf("the %s over time states no period or no duration to tick over", what)}
+}
+
+func energizeUnsupported(s *spelldata.Spell, effect *spelldata.Effect) []string {
+	unsupported := wearerTarget("gain", effect)
+	switch dbcenums.PowerType(effect.Misc) {
+	case dbcenums.POWER_MANA, dbcenums.POWER_RAGE, dbcenums.POWER_ENERGY:
+	default:
+		unsupported = append(unsupported, fmt.Sprintf("the gain fills power type %d, not mana, rage or energy", effect.Misc))
+	}
+	if effect.Aura == dbcenums.A_PERIODIC_ENERGIZE {
+		unsupported = append(unsupported, tickUnsupported("gain", s, effect)...)
+	}
+	return unsupported
+}
+
+func absorbUnsupported(absorb *spelldata.Spell) []string {
+	effect := absorb.AbsorbEffect()
+	unsupported := wearerTarget("absorb", effect)
+	if reason, ok := UnsupportedAbsorbBySpellID[absorb.ID]; ok {
+		unsupported = append(unsupported, reason)
+	}
+	if absorb.DurationMs == 0 {
+		unsupported = append(unsupported, "the absorb states no duration")
+	}
+	for _, id := range absorbLinkedDamage(absorb) {
+		unsupported = append(unsupported, fmt.Sprintf("the damage of %d (%s) the absorb's row names is not simulated", id, spelldata.Find(id).Name))
+	}
+	return unsupported
+}
+
+// The spells dealing damage that an absorb's row triggers or its tooltip references, which the shield
+// alone does not deal: Adaptive Combat Assistant's 1291097 names 1291099, Nature damage when the
+// shield breaks early. Registering the shield without it would model half the item.
+func absorbLinkedDamage(absorb *spelldata.Spell) []int32 {
+	linked := slices.Clone(absorb.RefIDs)
+	for _, e := range absorb.Effects {
+		if e.TriggerID != 0 {
+			linked = append(linked, e.TriggerID)
+		}
 	}
 
-	r.Summary = procSummary(r.TriggerSpellID, spelldata.Find(int32(r.TriggerSpellID)), r.BuffSpellID)
+	var damage []int32
+	for _, id := range linked {
+		s := spelldata.Find(id)
+		if id != absorb.ID && s != spelldata.Nil && !slices.Contains(damage, id) &&
+			(s.DamageEffect() != spelldata.NilEffect || s.PeriodicDamageEffect() != spelldata.NilEffect) {
+			damage = append(damage, id)
+		}
+	}
+	return damage
+}
+
+func heals(s *spelldata.Spell) bool {
+	return s.ProcHealEffect() != spelldata.NilEffect
+}
+
+func absorbs(s *spelldata.Spell) bool {
+	return s.AbsorbEffect() != spelldata.NilEffect
 }
 
 // The buff the proc applies has to last for something: an aura of no duration is one the sim
@@ -194,6 +347,8 @@ func procRateSummary(trigger *spelldata.Spell) string {
 	switch {
 	case trigger.RPPM > 0:
 		return fmt.Sprintf("%v ppm", trigger.RPPM)
+	case trigger.ItemProcRollsTheColumn():
+		return fmt.Sprintf("%d%%, the column over effect %d's %v%%", trigger.ProcChance, trigger.ProcChanceEffect, trigger.StatedChance()*100)
 	case trigger.ProcChanceSource == spelldata.ProcChanceEffectN:
 		return fmt.Sprintf("effect %d's chance", trigger.ProcChanceEffect)
 	case trigger.ProcChanceSource == spelldata.ProcChanceAlways:
@@ -330,7 +485,10 @@ func entryOrder(a *Entry, b *Entry) bool {
 	if a.Variants[0].ID != b.Variants[0].ID {
 		return a.Variants[0].ID < b.Variants[0].ID
 	}
-	return a.Variants[0].SpellID < b.Variants[0].SpellID
+	if a.Variants[0].SpellID != b.Variants[0].SpellID || a.Proc == nil || b.Proc == nil {
+		return a.Variants[0].SpellID < b.Variants[0].SpellID
+	}
+	return a.Proc.TriggerSpellID < b.Proc.TriggerSpellID
 }
 
 // Escapes a rendered tooltip for use inside a double-quoted TypeScript string. Tooltips
@@ -375,36 +533,22 @@ func GenerateMissingEffectsFile() error {
 
 func GenerateEnchantEffects(instance *dbc.DBC, db *WowDatabase) {
 	groupMapProc := map[string]Group{}
-	enchantSpellEffects := map[int]*dbc.SpellEffect{}
+	enchantSpellEffects := enchantGrantEffects(instance.SpellEffectsById)
 
-	// Several spells can grant the same enchant -- an enchant that was re-taught
-	// by a later expansion's recipe has one spell per version, up to five here.
-	// Map iteration order is randomized, so keep the lowest spell ID rather than
-	// letting whichever one is visited last win and churn the generated file.
-	for _, effect := range instance.SpellEffectsById {
-		if effect.EffectType == dbcenums.E_ENCHANT_ITEM {
-			enchantID := effect.EffectMiscValues[0]
-			if existing, ok := enchantSpellEffects[enchantID]; ok && existing.SpellID <= effect.SpellID {
-				continue
-			}
-			enchantSpellEffects[enchantID] = &effect
-		}
-		enchantID := effect.EffectMiscValues[0]
-		if existing, ok := enchantSpellEffects[enchantID]; ok && existing.SpellID <= effect.SpellID {
+	// The raw rows repeat an enchant once per recipe name, and an enchant registers once.
+	generated := map[int32]bool{}
+	for _, enchant := range instance.Enchants {
+		if generated[int32(enchant.EffectId)] {
 			continue
 		}
-		enchantSpellEffects[enchantID] = &effect
-	}
-
-	for _, enchant := range instance.Enchants {
-		parsed := enchant.ToProto()
+		parsed, slots := enchant.ToProtoWithSlots()
 		if _, ok := db.Enchants[EnchantToDBKey(parsed)]; !ok {
 			continue
 		}
+		generated[parsed.EffectId] = true
 
-		for _, enchantEffect := range parsed.EnchantEffects {
-			TryParseEnchantEffect(parsed, enchantEffect, groupMapProc, instance, enchantSpellEffects)
-		}
+		TryParseEnchantEffect(parsed, slots, groupMapProc, instance, enchantSpellEffects)
+		storeUnmappedSpeedEnchant(instance, enchant, parsed, enchantSpellEffects)
 	}
 
 	var procGroups []*Group
@@ -413,6 +557,60 @@ func GenerateEnchantEffects(instance *dbc.DBC, db *WowDatabase) {
 	}
 
 	GenerateEffectsFile(procGroups, "sim/common/forever/enchants_auto_gen.go", TmplStrEnchant)
+}
+
+var speedAuras = []dbcenums.EffectAuraType{
+	dbcenums.A_MOD_MELEE_HASTE, dbcenums.A_MOD_MELEE_RANGED_HASTE, dbcenums.A_HASTE_SPELLS,
+	dbcenums.A_MOD_MELEE_HASTE_2, dbcenums.A_MOD_RANGED_HASTE_2,
+}
+
+// These attack and cast speed auras reach no enchant field, so an enchant whose equip spell states
+// one is listed as missing its effect unless it is implemented by hand.
+func storeUnmappedSpeedEnchant(instance *dbc.DBC, enchant dbc.Enchant, parsed *proto.UIEnchant, enchantSpellEffects map[int]*dbc.SpellEffect) {
+	grant, ok := enchantSpellEffects[int(parsed.EffectId)]
+	if !ok || core.HasEnchantEffect(parsed.EffectId) {
+		return
+	}
+
+	for idx, effect := range enchant.Effects {
+		if effect != dbc.ITEM_ENCHANTMENT_EQUIP_SPELL || idx >= len(enchant.EffectArgs) {
+			continue
+		}
+		spellID := enchant.EffectArgs[idx]
+		for _, spellEffect := range instance.SpellEffectsInOrder(spellID) {
+			if spellEffect.EffectType == dbcenums.E_APPLY_AURA && slices.Contains(speedAuras, spellEffect.EffectAura) {
+				StoreMissingEffect("EnchantEffects", parsed.Name, Variant{
+					ID:      int(parsed.EffectId),
+					Name:    renderSpellTooltip(instance, grant.SpellID) + " (an attack or cast speed aura, which no enchant stat carries)",
+					SpellID: spellID,
+				})
+				return
+			}
+		}
+	}
+}
+
+// The E_ENCHANT_ITEM effect that grants each enchant, by enchant ID. Only that effect names an
+// enchant in its first misc value; any other effect's misc value is a school, a stat or a power.
+//
+// Several spells can grant the same enchant -- an enchant that was re-taught
+// by a later expansion's recipe has one spell per version, up to five here.
+// Map iteration order is randomized, so keep the lowest spell ID rather than
+// letting whichever one is visited last win and churn the generated file. The store's
+// loadEnchantGrants keeps the same one.
+func enchantGrantEffects(effects map[int]dbc.SpellEffect) map[int]*dbc.SpellEffect {
+	grants := map[int]*dbc.SpellEffect{}
+	for _, effect := range effects {
+		if effect.EffectType != dbcenums.E_ENCHANT_ITEM {
+			continue
+		}
+		enchantID := effect.EffectMiscValues[0]
+		if existing, ok := grants[enchantID]; ok && existing.SpellID <= effect.SpellID {
+			continue
+		}
+		grants[enchantID] = &effect
+	}
+	return grants
 }
 
 // Names the ignore-list rule that excluded an effect, for the comment emitted in the generated
@@ -432,7 +630,20 @@ func ignoredEffectReason(instance *dbc.DBC, effectID int) string {
 		}
 	}
 
+	if effects := instance.SpellEffectsInOrder(effectID); carriesOnlyAloneIgnoredAuras(effects) {
+		return fmt.Sprintf("ignored aura type %d", effects[0].EffectAura)
+	}
+
 	return ""
+}
+
+func carriesOnlyAloneIgnoredAuras(effects []dbc.SpellEffect) bool {
+	for _, effect := range effects {
+		if !slices.Contains(IgnoreSpellEffectAloneByAuraType, effect.EffectAura) {
+			return false
+		}
+	}
+	return len(effects) > 0
 }
 
 // Records an effect excluded by an ignore list so the generated file documents it. Kept in its
@@ -481,7 +692,7 @@ func ItemEffectIsSupported(instance *dbc.DBC, effectID int) bool {
 			}
 		}
 	}
-	return supported
+	return supported && !carriesOnlyAloneIgnoredAuras(instance.SpellEffectsInOrder(effectID))
 }
 
 func GenerateItemEffects(instance *dbc.DBC, db *WowDatabase, itemSources map[int][]*proto.DropSource) {
@@ -514,8 +725,19 @@ func GenerateItemEffects(instance *dbc.DBC, db *WowDatabase, itemSources map[int
 				ParseTooltipForMissingEffect(parsed, itemEffect, instance, groupMapProc, "Procs")
 				continue
 			}
-			if TryParseOnUseEffect(parsed, itemEffect, instance, groupMapOnUse) == EffectParseResultSuccess {
+			switch TryParseOnUseEffect(parsed, itemEffect, instance, groupMapOnUse) {
+			case EffectParseResultSuccess:
 				generated = true
+				continue
+			case EffectParseResultRefused:
+				continue
+			}
+
+			switch TryParseEquipAuraEffect(parsed, itemEffect, instance, groupMapProc) {
+			case EffectParseResultSuccess:
+				generated = true
+				continue
+			case EffectParseResultRefused:
 				continue
 			}
 
@@ -655,16 +877,14 @@ func TryParseProcEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, inst
 			return EffectParseResultSuccess
 		}
 
-		tooltipString, id := dbc.GetItemEffectSpellTooltip(int(parsed.Id), int(itemEffect.BuffId))
-		tooltip, _ := tooltip.ParseTooltip(tooltipString, tooltip.DBCTooltipDataProvider{DBC: instance}, int64(id))
+		renderedTooltip, rendered := renderItemEffectTooltip(parsed, itemEffect, instance)
 
 		grp, exists := groupMapProc["Procs"]
 		if !exists {
 			grp = Group{Name: "Procs"}
 		}
 
-		if tooltip != nil {
-			renderedTooltip := tooltip.String()
+		if rendered {
 			entry := Entry{Tooltip: strings.Split(renderedTooltip, "\n"), Variants: []*Variant{{ID: int(parsed.Id), Name: parsed.Name, SpellID: int(itemEffect.BuffId)}}}
 			entry.ProcInfo, entry.Supported = BuildProcInfo(parsed, int(itemEffect.BuffId), instance, renderedTooltip)
 
@@ -685,7 +905,8 @@ func TryParseProcEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, inst
 			// reads here - and that decision is the whole of it, rather than the tooltip reading
 			// BuildProcInfo does for the shapes below. The two that need more than the rows state
 			// stay where they are: a window accumulating a second aura, and an effect with no stats.
-			if itemEffect.StackingAura == nil && len(dbc.EffectStats(itemEffect)) > 0 {
+			grantsStats := len(dbc.EffectStats(itemEffect)) > 0
+			if itemEffect.StackingAura == nil && grantsStats {
 				entry.Proc = routeItemProc(parsed, itemEffect)
 				if entry.Proc != nil {
 					entry.Proc.requireABuffDuration()
@@ -693,21 +914,25 @@ func TryParseProcEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, inst
 				}
 			}
 
-			// An effect that resolves no stats may still deal flat damage, which is a shape of its
-			// own rather than a reason to refuse: there is no buff, so the proc casts the spell the
+			// An effect that resolves no stats may still deal flat damage, heal or shield the wearer,
+			// debuff the enemy it lands on, or apply auras the stat path cannot state, each a shape of
+			// its own rather than a reason to refuse: there is no buff, so the proc casts the spell the
 			// client hangs below its trigger, read from that spell's own row.
-			if len(dbc.EffectStats(itemEffect)) == 0 {
-				if damage := dbc.ResolveDamageEffect(int(itemEffect.BuffId)); damage != nil {
+			if !grantsStats {
+				shape, spellID := pickNoStatShape(int(itemEffect.BuffId), itemEffect.BuffId)
+				if shape == ShapeStats && appliesAnItemAura(spelldata.Find(itemEffect.BuffId)) {
+					shape, spellID = ShapeAura, itemEffect.BuffId
+				}
+				if shape != ShapeStats {
 					entry.Proc = routeItemProc(parsed, itemEffect)
 					if entry.Proc != nil {
-						entry.Proc.asDamage(int32(damage.SpellID))
+						entry.Proc.as(shape, spellID)
 						entry.Supported = entry.Proc.Supported()
-						entry.DealsDamage = true
 					}
 				}
 			}
 
-			if (len(dbc.EffectStats(itemEffect)) == 0 && !entry.DealsDamage) || !entry.Supported {
+			if (!grantsStats && entry.Proc == nil) || !entry.Supported {
 				StoreMissingEffect("ItemEffects", parsed.Name, Variant{
 					ID:      int(parsed.Id),
 					Name:    renderedTooltip,
@@ -757,6 +982,56 @@ func routeItemProc(parsed *proto.UIItem, itemEffect *proto.ItemEffect) *ProcRout
 	return routeProc(effect.SpellID, int(itemEffect.BuffId), effect.TriggerType == dbc.ITEM_SPELLTRIGGER_CHANCE_ON_HIT)
 }
 
+// An equip spell with no stats that applies an aura the stat path cannot state, read from the row it
+// keeps up. One the rows cannot build is refused in an entry of its own, with the reasons.
+func TryParseEquipAuraEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC, groupMapProc map[string]Group) EffectParseResult {
+	if parsed.ScalingOptions[0].Ilvl < MIN_EFFECT_ILVL || core.HasItemEffect(parsed.Id) || len(dbc.EffectStats(itemEffect)) > 0 {
+		return EffectParseResultInvalid
+	}
+
+	effect := dbc.GetItemEffectForBuffID(int(parsed.Id), int(itemEffect.BuffId))
+	if effect == nil || effect.TriggerType != dbc.ITEM_SPELLTRIGGER_ON_EQUIP {
+		return EffectParseResultInvalid
+	}
+
+	equip := spelldata.Find(itemEffect.BuffId)
+	row := spelldata.EquipAuraRow(equip)
+	if !appliesAnItemAura(row) {
+		return EffectParseResultInvalid
+	}
+
+	routing := &ProcRouting{
+		TriggerSpellID: int(itemEffect.BuffId),
+		Shape:          ShapeEquip,
+		Unsupported:    spelldata.ItemAuraUnsupported(row, true),
+		Summary:        fmt.Sprintf("equip: %d", equip.ID),
+	}
+	if row != equip {
+		routing.Summary += fmt.Sprintf(" keeps %d up", row.ID)
+	}
+	routing.Summary += fmt.Sprintf(" (%s)", spellEffectKinds(instance, int(row.ID)))
+
+	rendered := itemEffectTooltip(parsed, itemEffect, instance)
+	entry := &Entry{
+		Tooltip:   strings.Split(rendered, "\n"),
+		Variants:  []*Variant{{ID: int(parsed.Id), Name: parsed.Name, SpellID: int(itemEffect.BuffId)}},
+		Proc:      routing,
+		Supported: routing.Supported(),
+	}
+
+	grp := groupMapProc["Equip"]
+	grp.Name = "Equip"
+	grp.Entries = append(grp.Entries, entry)
+	groupMapProc["Equip"] = grp
+
+	if entry.Supported {
+		return EffectParseResultSuccess
+	}
+
+	StoreMissingEffect("ItemEffects", parsed.Name, Variant{ID: int(parsed.Id), Name: rendered, SpellID: int(itemEffect.BuffId)})
+	return EffectParseResultRefused
+}
+
 func TryParseOnUseEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC, groupMap map[string]Group) EffectParseResult {
 	// Effect was already manually implemented
 	if core.HasItemEffect(parsed.Id) {
@@ -766,6 +1041,10 @@ func TryParseOnUseEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, ins
 	if itemEffect.GetOnUse() != nil && parsed.ScalingOptions[0].Ilvl >= MIN_EFFECT_ILVL {
 		if itemEffect.GetOnUse().CooldownMs < 0 && itemEffect.GetOnUse().CategoryCooldownMs < 0 {
 			return EffectParseResultUnsupported
+		}
+
+		if len(dbc.EffectStats(itemEffect)) == 0 {
+			return parseOnUseSpell(parsed, itemEffect, instance, groupMap)
 		}
 
 		groupName := GetEffectStatString(itemEffect)
@@ -794,9 +1073,13 @@ func TryParseOnUseEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, ins
 			return EffectParseResultSuccess
 		}
 
-		if len(dbc.EffectStats(itemEffect)) == 0 {
-			entry.Supported = false
-			return EffectParseResultUnsupported
+		if trigger := buffProcTrigger(itemEffect.BuffId); trigger != 0 {
+			entry.NotSimulated = fmt.Sprintf("the proc the buff carries, %d (%s)", trigger, spellEffectKinds(instance, int(trigger)))
+			StoreMissingEffect("ItemEffects", parsed.Name, Variant{
+				ID:      int(parsed.Id),
+				Name:    itemEffectTooltip(parsed, itemEffect, instance),
+				SpellID: int(itemEffect.BuffId),
+			})
 		}
 
 		return EffectParseResultSuccess
@@ -805,88 +1088,369 @@ func TryParseOnUseEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, ins
 	return EffectParseResultInvalid
 }
 
-func TryParseEnchantEffect(enchant *proto.UIEnchant, enchantEffect *proto.ItemEffect, groupMapProc map[string]Group, instance *dbc.DBC, enchantSpellEffects map[int]*dbc.SpellEffect) EffectParseResult {
-	if (enchantEffect.GetProc() != nil || EnchantHasDummyEffect(enchant, instance)) && isGeneratableEnchant(enchant.EffectId) {
-
-		// Effect was already manually implemented
-		if core.HasEnchantEffect(enchant.EffectId) {
-			return EffectParseResultSuccess
-		}
-
-		if enchantingSpell, ok := enchantSpellEffects[int(enchant.EffectId)]; ok {
-			tooltipString := instance.Spells[enchantingSpell.SpellID].Description
-			tooltip, _ := tooltip.ParseTooltip(tooltipString, tooltip.DBCTooltipDataProvider{DBC: instance}, int64(enchantingSpell.SpellID))
-
-			grp, exists := groupMapProc["Enchants"]
-			if !exists {
-				grp = Group{Name: "Enchants"}
-			}
-
-			renderedTooltip := tooltip.String()
-			entry := Entry{Tooltip: strings.Split(renderedTooltip, "\n"), Variants: []*Variant{{ID: int(enchant.EffectId), Name: enchant.Name, SpellID: int(enchantingSpell.SpellID)}}}
-			entry.ProcInfo, entry.Supported = BuildEnchantProcInfo(enchant, instance, renderedTooltip)
-
-			// The same two ids an item proc carries. An enchant's trigger is the spell the client
-			// hangs on the enchantment; the buff is what the shipped entry says it applies.
-			entry.Proc = routeEnchantProc(enchant, instance)
-			if entry.Proc != nil {
-				entry.Supported = entry.Proc.Supported()
-			}
-
-			grp.Entries = append(grp.Entries, &entry)
-			groupMapProc["Enchants"] = grp
-
-			if !entry.Supported {
-				StoreMissingEffect("EnchantEffects", enchant.Name, Variant{
-					ID:      int(enchant.EffectId),
-					Name:    renderedTooltip,
-					SpellID: int(enchant.SpellId),
-				})
-				return EffectParseResultUnsupported
-			}
-
-			return EffectParseResultSuccess
-		}
-	}
-
-	return EffectParseResultInvalid
+// The spell an A_PROC_TRIGGER_SPELL on the buff casts, or 0. The flat on-use grants the buff's stats
+// and nothing it procs: Aegis of Preservation 23780's heal on every hit taken, 23781.
+func buffProcTrigger(buffID int32) int32 {
+	return spelldata.Find(buffID).FirstAura(dbcenums.A_PROC_TRIGGER_SPELL).TriggerID
 }
 
-// The rows an enchant's proc is resolved from. An enchant applies its effect through one spell, so
-// the trigger is that spell and the buff is whatever the shipped entry names - the same spell again
-// where the client grants the stats through it directly.
-func routeEnchantProc(enchant *proto.UIEnchant, instance *dbc.DBC) *ProcRouting {
-	if enchant.SpellId == 0 {
-		return nil
+// An on-use with no stats to grant, resolved from the spell it casts. One the sim cannot build from
+// that is refused in an entry of its own, with the reason, and listed as missing.
+func parseOnUseSpell(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC, groupMap map[string]Group) EffectParseResult {
+	routing := routeOnUse(parsed, itemEffect, instance)
+	entry := &Entry{
+		Variants:  []*Variant{{ID: int(parsed.Id), Name: parsed.Name, SpellID: int(itemEffect.BuffId)}},
+		Proc:      routing,
+		Supported: routing.Supported(),
 	}
 
-	raw, ok := instance.EnchantsByEffectId[int(enchant.EffectId)]
-	isWeaponProc := ok && raw.IsCombatSpell(int(enchant.SpellId))
+	groupName := ""
+	if entry.Supported {
+		groupName = procShapes[routing.Shape].onUseGroup
+	}
+	grp := groupMap[groupName]
+	grp.Name = groupName
+	grp.Entries = append(grp.Entries, entry)
+	groupMap[groupName] = grp
 
-	buffSpellID := int(enchant.SpellId)
-	for _, effect := range enchant.EnchantEffects {
-		if effect.GetProc() != nil {
-			buffSpellID = int(effect.BuffId)
+	if entry.Supported {
+		return EffectParseResultSuccess
+	}
+
+	if _, ignored := IgnoreMissingEffectBySpellID[int(itemEffect.BuffId)]; !ignored {
+		StoreMissingEffect("ItemEffects", parsed.Name, Variant{
+			ID:      int(parsed.Id),
+			Name:    itemEffectTooltip(parsed, itemEffect, instance),
+			SpellID: int(itemEffect.BuffId),
+		})
+	}
+	return EffectParseResultRefused
+}
+
+// The spell an on-use casts, read from the store the way the sim reads it: damage on the enemy it is
+// used on, a heal, an absorb, mana, rage or energy for the wearer, or a buff raising the wearer's
+// speeds. What else the row does - a root, a stun - is left out, and the summary names it.
+func routeOnUse(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC) *ProcRouting {
+	spellID := int(itemEffect.BuffId)
+	routing := &ProcRouting{TriggerSpellID: spellID}
+	s := spelldata.Find(itemEffect.BuffId)
+	direct, periodic, heal, absorb, energize := s.DamageEffect(), s.PeriodicDamageEffect(), s.ProcHealEffect(), s.AbsorbEffect(), s.ProcEnergizeEffect()
+
+	switch {
+	case !castsOnUse(parsed, spellID, instance):
+		routing.Unsupported = append(routing.Unsupported, fmt.Sprintf("the item's on-use row does not cast %d itself", spellID))
+	case s == spelldata.Nil:
+		routing.Unsupported = append(routing.Unsupported, "the spell has no row in the store")
+	case direct != spelldata.NilEffect || periodic != spelldata.NilEffect:
+		routing.Shape = ShapeDamage
+		routing.Summary = onUseSummary(s, direct, periodic)
+		if direct != spelldata.NilEffect && direct.Type != dbcenums.E_SCHOOL_DAMAGE {
+			routing.Unsupported = append(routing.Unsupported, fmt.Sprintf("the direct damage is %v rather than an amount", direct.Type))
+		}
+		for _, e := range []*spelldata.Effect{direct, periodic} {
+			if e != spelldata.NilEffect && !e.HitsAnEnemy() {
+				routing.Unsupported = append(routing.Unsupported, fmt.Sprintf("the damage lands on implicit target %d, not an enemy", e.Target[0]))
+			}
+		}
+		if periodic != spelldata.NilEffect {
+			routing.Unsupported = append(routing.Unsupported, tickUnsupported("damage", s, periodic)...)
+		}
+	case heal != spelldata.NilEffect:
+		routing.Shape = ShapeHeal
+		routing.Summary = onUseSummary(s, heal)
+		routing.Unsupported = append(routing.Unsupported, healUnsupported(s)...)
+	case absorb != spelldata.NilEffect:
+		routing.Shape = ShapeAbsorb
+		routing.Summary = onUseSummary(s, absorb)
+		routing.Unsupported = append(routing.Unsupported, absorbUnsupported(s)...)
+	case energize != spelldata.NilEffect:
+		routing.Shape = ShapeEnergize
+		routing.Summary = onUseSummary(s, energize)
+		routing.Unsupported = append(routing.Unsupported, energizeUnsupported(s, energize)...)
+	case len(s.SpeedEffects()) > 0:
+		routing.Shape = ShapeSpeed
+		routing.Summary = onUseSummary(s, s.SpeedEffects()...)
+		if s.DurationMs <= 0 {
+			routing.Unsupported = append(routing.Unsupported, "the speed buff states no duration")
+		}
+	case appliesAnItemAura(s):
+		routing.Shape = ShapeAura
+		routing.Summary = onUseSummary(s, allEffects(s)...)
+		routing.Unsupported = append(routing.Unsupported, procAuraUnsupported(s)...)
+	default:
+		routing.Unsupported = append(routing.Unsupported,
+			fmt.Sprintf("%d deals no damage and heals no one (%s)", spellID, spellEffectKinds(instance, spellID)))
+	}
+
+	return routing
+}
+
+// Whether the item's own on-use row names the spell, rather than a spell that reaches it through a
+// trigger: the sim casts the spell the effect names.
+func castsOnUse(parsed *proto.UIItem, spellID int, instance *dbc.DBC) bool {
+	return slices.ContainsFunc(instance.ItemEffectsByParentID[int(parsed.Id)], func(e dbc.ItemEffect) bool {
+		return e.TriggerType == dbc.ITEM_SPELLTRIGGER_ON_USE && e.SpellID == spellID
+	})
+}
+
+func onUseSummary(s *spelldata.Spell, modelled ...*spelldata.Effect) string {
+	var cast, left []string
+	for i := range s.Effects {
+		e := &s.Effects[i]
+		kind := effectKind(e.Type, e.Aura)
+		if slices.Contains(modelled, e) {
+			cast = append(cast, kind)
+		} else {
+			left = append(left, kind)
+		}
+	}
+
+	summary := fmt.Sprintf("on use: %d (%s)", s.ID, strings.Join(cast, ", "))
+	if len(left) > 0 {
+		summary += fmt.Sprintf("; not simulated: %s", strings.Join(left, ", "))
+	}
+	return summary
+}
+
+// The item effect's tooltip as the missing-effects list shows it, or the spell's name where the
+// tooltip does not render.
+func itemEffectTooltip(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC) string {
+	if rendered, ok := renderItemEffectTooltip(parsed, itemEffect, instance); ok {
+		return rendered
+	}
+	return instance.Spells[int(itemEffect.BuffId)].NameLang
+}
+
+func renderItemEffectTooltip(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC) (string, bool) {
+	tooltipString, id := dbc.GetItemEffectSpellTooltip(int(parsed.Id), int(itemEffect.BuffId))
+	rendered, _ := tooltip.ParseTooltip(tooltipString, tooltip.DBCTooltipDataProvider{DBC: instance}, int64(id))
+	if rendered == nil {
+		return "", false
+	}
+	return rendered.String(), true
+}
+
+// The constructor an on-use routed from its spell registers through. A refused one that is neither
+// damage nor a heal names the stat constructor in its commented call.
+func (r *ProcRouting) OnUseConstructor() string {
+	return procShapes[r.Shape].onUseConstructor
+}
+
+// The constructor an item or enchant proc registers through.
+func (r *ProcRouting) ProcConstructor() string {
+	return procShapes[r.Shape].procConstructor
+}
+
+// The auras the item aura shape is emitted for: the damage, healing, cost, armor and stat multipliers
+// and the flat damage taken, none of which an item states as a stat.
+var itemAuraKinds = []dbcenums.EffectAuraType{
+	dbcenums.A_MOD_DAMAGE_PERCENT_DONE,
+	dbcenums.A_MOD_DAMAGE_PERCENT_TAKEN,
+	dbcenums.A_MOD_HEALING_DONE_PERCENT,
+	dbcenums.A_MOD_POWER_COST_SCHOOL_PCT,
+	dbcenums.A_MOD_DAMAGE_TAKEN,
+	dbcenums.A_MOD_BASE_RESISTANCE_PCT,
+	dbcenums.A_MOD_PERCENT_STAT,
+}
+
+func appliesAnItemAura(s *spelldata.Spell) bool {
+	return s.FirstAura(itemAuraKinds...) != spelldata.NilEffect
+}
+
+func allEffects(s *spelldata.Spell) []*spelldata.Effect {
+	effects := make([]*spelldata.Effect, len(s.Effects))
+	for i := range s.Effects {
+		effects[i] = &s.Effects[i]
+	}
+	return effects
+}
+
+func TryParseEnchantEffect(enchant *proto.UIEnchant, slots []dbc.EnchantProcSlot, groupMapProc map[string]Group, instance *dbc.DBC, enchantSpellEffects map[int]*dbc.SpellEffect) {
+	if len(slots) == 0 || !isGeneratableEnchant(enchant.EffectId) {
+		return
+	}
+
+	// Effect was already manually implemented
+	if core.HasEnchantEffect(enchant.EffectId) {
+		return
+	}
+
+	enchantingSpell, ok := enchantSpellEffects[int(enchant.EffectId)]
+	if !ok {
+		return
+	}
+
+	renderedTooltip := renderSpellTooltip(instance, enchantingSpell.SpellID)
+
+	grp, exists := groupMapProc["Enchants"]
+	if !exists {
+		grp = Group{Name: "Enchants"}
+	}
+
+	for _, routing := range routeEnchantProcs(slots, instance) {
+		grp.Entries = append(grp.Entries, &Entry{
+			Tooltip:   strings.Split(renderedTooltip, "\n"),
+			Variants:  []*Variant{{ID: int(enchant.EffectId), Name: enchant.Name, SpellID: int(enchantingSpell.SpellID)}},
+			Proc:      routing,
+			Supported: routing.Supported(),
+		})
+
+		if !routing.Supported() {
+			StoreMissingEffect("EnchantEffects", enchant.Name, Variant{
+				ID:      int(enchant.EffectId),
+				Name:    renderedTooltip,
+				SpellID: int(enchant.SpellId),
+			})
+		}
+	}
+	groupMapProc["Enchants"] = grp
+}
+
+// The rows an enchant's procs are resolved from, one per slot. A combat spell and an equip aura that
+// apply the same spell are one proc stated twice (Crusader 1900), so one of the two is kept: the
+// combat spell, unless only the aura states a rate. An enchant registers once, so where two slots
+// could, the first does.
+func routeEnchantProcs(slots []dbc.EnchantProcSlot, instance *dbc.DBC) []*ProcRouting {
+	routings := make([]*ProcRouting, len(slots))
+	for i, slot := range slots {
+		routings[i] = routeEnchantSlot(slot, instance)
+	}
+
+	for i, combat := range slots {
+		if !combat.IsCombatSpell {
+			continue
+		}
+		for j, aura := range slots {
+			if aura.IsCombatSpell || routings[j] == nil || aura.AppliesSpellID != combat.AppliesSpellID {
+				continue
+			}
+
+			kept, dropped := i, j
+			if statesNoRate(routings[i]) && !statesNoRate(routings[j]) {
+				kept, dropped = j, i
+			}
+			routings[kept].Summary += fmt.Sprintf("; slot spell %d applies the same spell and is not registered", slots[dropped].SpellID)
+			routings[dropped] = nil
 			break
 		}
 	}
 
-	routing := routeProc(int(enchant.SpellId), buffSpellID, isWeaponProc)
-
-	if len(enchant.EnchantEffects) == 0 {
-		if damage := dbc.ResolveDamageEffect(int(enchant.SpellId)); damage != nil {
-			routing.asDamage(int32(damage.SpellID))
-			return routing
+	var kept []*ProcRouting
+	registers := false
+	for _, routing := range routings {
+		if routing == nil {
+			continue
 		}
-
-		routing.Unsupported = append(routing.Unsupported, "the enchant grants neither stats nor damage")
-		return routing
+		if routing.Supported() && registers {
+			routing.Unsupported = append(routing.Unsupported, "another slot of the enchant registers")
+		}
+		registers = registers || routing.Supported()
+		kept = append(kept, routing)
 	}
 
-	routing.requireABuffDuration()
+	return kept
+}
+
+func renderSpellTooltip(instance *dbc.DBC, spellID int) string {
+	tooltip, _ := tooltip.ParseTooltip(instance.Spells[spellID].Description, tooltip.DBCTooltipDataProvider{DBC: instance}, int64(spellID))
+	return tooltip.String()
+}
+
+func statesNoRate(routing *ProcRouting) bool {
+	return slices.Contains(routing.Unsupported, spelldata.ReasonStatesNoRate)
+}
+
+// One slot's proc. The trigger is the slot's spell; the buff is what the shipped entry says it
+// applies, where it resolves stats, and otherwise the spell it deals damage through or the auras the
+// slot applies.
+func routeEnchantSlot(slot dbc.EnchantProcSlot, instance *dbc.DBC) *ProcRouting {
+	applied := slot.AppliesSpellID
+	if applied == 0 {
+		applied = slot.SpellID
+	}
+
+	effect := slot.Effect
+	hasStats := effect != nil
+
+	buffSpellID := slot.SpellID
+	if hasStats {
+		buffSpellID = int(effect.BuffId)
+	}
+
+	routing := routeProc(slot.SpellID, buffSpellID, slot.IsCombatSpell)
+	trigger := spelldata.Find(int32(slot.SpellID))
+	if !slot.IsCombatSpell {
+		routing.Unsupported = spelldata.EnchantAuraUnsupported(trigger)
+	}
+
+	shape, spellID := ShapeStats, int32(0)
+	if !hasStats {
+		shape, spellID = pickNoStatShape(slot.SpellID, int32(applied))
+		if shape == ShapeStats && appliesAnItemAura(spelldata.Find(int32(applied))) {
+			shape, spellID = ShapeAura, int32(applied)
+		}
+	}
+
+	if hasStats {
+		routing.requireABuffDuration()
+	} else if shape != ShapeStats {
+		routing.as(shape, spellID)
+		if mask := spelldata.Find(spellID).TargetCreatureType; shape == ShapeDamage && mask != 0 {
+			routing.Unsupported = append(routing.Unsupported,
+				fmt.Sprintf("the damage spell hits %s (TargetCreatureType %d) only", creatureTypeNames(mask), mask))
+		}
+	} else {
+		routing.Unsupported = append(routing.Unsupported,
+			fmt.Sprintf("the enchant's effect entry resolves no stats from %d (%s)", applied, spellEffectKinds(instance, applied)))
+	}
+
+	if !slot.IsCombatSpell && trigger.ProcHint.Matches(core.ProcHintAttackAvoided) {
+		decoded := core.DecodeProcTypeMask(trigger.ProcFlags, trigger.ProcHint)
+		routing.Summary += fmt.Sprintf("; the enchant's tooltip restricts it to %s", asCoreOutcome(decoded.Outcome))
+	}
 
 	return routing
 }
+
+// The client's CreatureType ids, which TargetCreatureType names as 1 << (id - 1). The damage proc does
+// not read the restriction.
+var creatureTypes = []string{1: "beasts", 2: "dragonkin", 3: "demons", 4: "elementals", 5: "giants",
+	6: "undead", 7: "humanoids", 8: "critters", 9: "mechanicals"}
+
+func creatureTypeNames(mask int32) string {
+	var names []string
+	for id := 1; id <= 32; id++ {
+		if mask&(1<<(id-1)) == 0 {
+			continue
+		}
+		if id < len(creatureTypes) {
+			names = append(names, creatureTypes[id])
+		} else {
+			names = append(names, fmt.Sprintf("creature type %d", id))
+		}
+	}
+	return strings.Join(names, " and ")
+}
+
+func spellEffectKinds(instance *dbc.DBC, spellID int) string {
+	var kinds []string
+	for _, effect := range instance.SpellEffectsInOrder(spellID) {
+		kinds = append(kinds, effectKind(effect.EffectType, effect.EffectAura))
+	}
+	return strings.Join(kinds, ", ")
+}
+
+func effectKind(typ dbcenums.SpellEffectType, aura dbcenums.EffectAuraType) string {
+	if typ == dbcenums.E_APPLY_AURA {
+		return aura.String()
+	}
+	return typ.String()
+}
+
+// "Often", "sometimes" and "occasionally" are how a tooltip says its proc has a rate the rows do not
+// carry. "No more often than" states a cooldown instead.
+var rateWordMatcher = regexp.MustCompile(`(?i)\b(often|sometimes|occasionally)\b`)
+var cooldownWordingMatcher = regexp.MustCompile(`(?i)more often than`)
 
 func ParseTooltipForMissingEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC, groupMap map[string]Group, groupMapName string) {
 	if parsed.ScalingOptions[0].Ilvl >= MIN_EFFECT_ILVL {
@@ -895,16 +1459,14 @@ func ParseTooltipForMissingEffect(parsed *proto.UIItem, itemEffect *proto.ItemEf
 			return
 		}
 
-		tooltipString, id := dbc.GetItemEffectSpellTooltip(int(parsed.Id), int(itemEffect.BuffId))
-		tooltip, _ := tooltip.ParseTooltip(tooltipString, tooltip.DBCTooltipDataProvider{DBC: instance}, int64(id))
+		renderedTooltip, rendered := renderItemEffectTooltip(parsed, itemEffect, instance)
 
 		grp, exists := groupMap[groupMapName]
 		if !exists {
 			grp = Group{Name: groupMapName}
 		}
 
-		if tooltip != nil {
-			renderedTooltip := tooltip.String()
+		if rendered {
 			entry := Entry{
 				Tooltip:   strings.Split(renderedTooltip, "\n"),
 				Supported: false,
@@ -960,9 +1522,30 @@ var hasGenericMatcher = regexp.MustCompile(`a spell`)
 // rather than an attack on it.
 var outcomeConditionMatcher = regexp.MustCompile(`(?i)when .{0,60}?(is|are) resisted|((each|every) time|when|whenever) you (block|dodge|parry)|after a (block|dodge|parry)`)
 
-// A tooltip stating that the effect only happens sometimes. Where the data pairs that with a 100%
-// rate, the real rate is the one thing the data does not carry.
-var statedChanceMatcher = regexp.MustCompile(`(?i)chance (to|of|when)|has a chance`)
+// The wearer's own attack dodged or parried, named as the trigger: Recovery's "when you are Parried
+// or Dodged". The same words also state a magnitude - "reduces the chance for your attacks to be
+// dodged or parried" - so only the condition clause counts.
+var attackAvoidedMatcher = regexp.MustCompile(`(?i)((each|every) time|when|whenever) (you are|your (melee )?attacks? (is|are)) (dodged|parried)((,? or|,) (dodged|parried))*`)
+var attackDodgedMatcher = regexp.MustCompile(`(?i)dodged`)
+var attackParriedMatcher = regexp.MustCompile(`(?i)parried`)
+
+func attackAvoidedHints(tooltip string) core.ProcHint {
+	var hints core.ProcHint
+	for _, clause := range attackAvoidedMatcher.FindAllString(tooltip, -1) {
+		if attackDodgedMatcher.MatchString(clause) {
+			hints |= core.ProcHintAttackDodged
+		}
+		if attackParriedMatcher.MatchString(clause) {
+			hints |= core.ProcHintAttackParried
+		}
+	}
+	return hints
+}
+
+// A tooltip stating that the effect only happens sometimes: "a chance to", "Chance on hit", "Chance on
+// harmful spell cast". Where the data pairs that with a 100% rate, the real rate is the one thing the
+// data does not carry.
+var statedChanceMatcher = regexp.MustCompile(`(?i)chance (to|of|when|on)|has a chance`)
 
 // What a sentence names as feeding the proc. A clause stating a chance says nothing about a rate
 // unless it also says what the chance is rolled on or what it does: Force Reactive Disk's "This also
@@ -979,10 +1562,10 @@ var increasedChanceMatcher = regexp.MustCompile(`(?i)increase[sd]?[^.]{0,40}?cha
 // splits a sentence in two, and neither changes which half carries the trigger.
 var sentenceBreak = regexp.MustCompile(`[.!?](?:\s|$)|\r?\n`)
 
-// Whether the tooltip says the effect only happens sometimes and leaves the rate unsaid. Read from
-// the sentence that states the trigger rather than from the whole text: "increases your critical
-// strike chance" is a magnitude on hundreds of spells, and a chance in a sentence that names nothing
-// the proc fires on is about something else entirely.
+// Whether the tooltip says the effect only happens sometimes and leaves the rate unsaid. A stated
+// chance is read from the sentence that states the trigger rather than from the whole text:
+// "increases your critical strike chance" is a magnitude on hundreds of spells, and a chance in a
+// sentence that names nothing the proc fires on is about something else entirely.
 func tooltipStatesAnUnknownRate(description string) bool {
 	for _, sentence := range sentenceBreak.Split(description, -1) {
 		if !statedChanceMatcher.MatchString(sentence) {
@@ -998,7 +1581,8 @@ func tooltipStatesAnUnknownRate(description string) bool {
 		return true
 	}
 
-	return false
+	return rateWordMatcher.MatchString(description) &&
+		rateWordMatcher.MatchString(cooldownWordingMatcher.ReplaceAllString(description, ""))
 }
 
 // Wording that names the cast itself as the trigger rather than the spell landing:
@@ -1050,6 +1634,8 @@ func procTooltipHints(tooltip string) core.ProcHint {
 		hints |= core.ProcHintOutcomeTaken
 	}
 
+	hints |= attackAvoidedHints(tooltip)
+
 	return hints
 }
 
@@ -1099,29 +1685,6 @@ func BuildProcInfo(parsed *proto.UIItem, itemEffectID int, instance *dbc.DBC, to
 	procInfo.setIsWeaponProc(isWeaponProc)
 
 	if SpellHasDummyEffect(int(procId), instance) {
-		return procInfo, false
-	}
-
-	return procInfo, supported
-}
-
-func BuildEnchantProcInfo(enchant *proto.UIEnchant, instance *dbc.DBC, tooltip string) (ProcInfo, bool) {
-	procSpellID := enchant.SpellId
-	if procSpellID == 0 {
-		fmt.Printf("WARN: Enchant %d with no spell id", enchant.EffectId)
-		return ProcInfo{}, false
-	}
-
-	procSpell, ok := instance.Spells[int(procSpellID)]
-	if !ok {
-		panic(fmt.Sprintf("Could not find proc aura %d spell for item effect %d.\n", procSpellID, enchant.EffectId))
-	}
-
-	procInfo, supported := BuildSpellProcInfo(&procSpell, tooltip, enchant.Type)
-	raw, ok := instance.EnchantsByEffectId[int(enchant.EffectId)]
-	procInfo.setIsWeaponProc(ok && raw.IsCombatSpell(int(procSpellID)))
-
-	if SpellHasDummyEffect(int(procSpellID), instance) {
 		return procInfo, false
 	}
 
@@ -1310,6 +1873,17 @@ func asCoreOutcome(outcome core.HitOutcome) string {
 
 	if outcome.Matches(core.OutcomeLanded) {
 		return "core.OutcomeLanded"
+	}
+
+	var avoided []string
+	if outcome.Matches(core.OutcomeDodge) {
+		avoided = append(avoided, "core.OutcomeDodge")
+	}
+	if outcome.Matches(core.OutcomeParry) {
+		avoided = append(avoided, "core.OutcomeParry")
+	}
+	if len(avoided) > 0 {
+		return strings.Join(avoided, " | ")
 	}
 
 	return "core.OutcomeEmpty"

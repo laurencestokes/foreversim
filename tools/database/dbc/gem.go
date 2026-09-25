@@ -39,6 +39,6 @@ func (gem *Gem) ToProto() *proto.UIGem {
 
 func (gem *Gem) GetItemEnchantmentStats() stats.Stats {
 	stats := stats.Stats{}
-	processEnchantmentEffects(gem.Effects, gem.EffectArgs, gem.EffectPoints, nil, &stats, false)
+	processEnchantmentEffects(gem.Effects, gem.EffectArgs, gem.EffectPoints, &stats, nil, false)
 	return stats
 }

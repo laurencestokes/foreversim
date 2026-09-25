@@ -5,14 +5,14 @@ import (
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-// Life Tap is a plain mana gain, not damage: 11689 converts $s1 (424) health into
-// ($m1 + Spirit) * (1 + Improved Life Tap 18182) mana, so no damage done / taken modifier touches
-// either side. Demonic Energies hands the pet a share of the restore (the talent's second effect,
+// Life Tap is a plain mana gain, not damage: 11689 converts ($m1 (424) + Spirit) * (1 + Improved
+// Life Tap 18182) health into as much mana (the build 70009 tooltip states both sides that way), so
+// no damage done / taken modifier touches either side. Demonic Energies hands the pet a share of the restore (the talent's second effect,
 // 50% per point).
 func (warlock *Warlock) registerLifeTap() {
 	rank := spellData.LifeTap.Highest()
 	actionID := core.ActionID{SpellID: rank.ID}
-	healthCost := rank.EffectN(1).Average(core.CharacterLevel)
+	baseAmount := rank.EffectN(1).Average(core.CharacterLevel)
 	manaMultiplier := 1 + spellData.ImprovedLifeTap.FractionAt(warlock.Talents.ImprovedLifeTap)
 	petManaShare := spellData.DemonicEnergies.EffectAt(2).FractionAt(warlock.Talents.DemonicEnergies)
 
@@ -39,8 +39,8 @@ func (warlock *Warlock) registerLifeTap() {
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			restore := (healthCost + warlock.GetStat(stats.Spirit)) * manaMultiplier
-			warlock.RemoveHealth(sim, healthCost)
+			restore := (baseAmount + warlock.GetStat(stats.Spirit)) * manaMultiplier
+			warlock.RemoveHealth(sim, restore)
 			warlock.AddMana(sim, restore, manaMetrics)
 
 			if petManaShare > 0 && warlock.ActivePet != nil {

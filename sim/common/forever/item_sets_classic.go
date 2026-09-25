@@ -653,8 +653,8 @@ var ItemSetDeathboneGuardian = core.NewItemSet(core.ItemSet{
 		},
 		// +5 All Resistances (18676, was 15).
 		4: setStats(setResistances(5)),
-		// Reduces the chance for your attacks to be dodged or parried by 2% (1213289): 8 expertise.
-		5: setStats(stats.Stats{stats.ExpertiseRating: 8 * core.ExpertisePerQuarterPercentReduction}),
+		// Reduces the chance for your attacks to be dodged or parried by 2% (1213289).
+		5: setStats(stats.Stats{stats.ExpertiseRating: 2 * core.ExpertiseRatingPerExpertisePercent}),
 	},
 })
 

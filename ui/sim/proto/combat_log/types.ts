@@ -58,14 +58,13 @@ export class Entity {
 }
 
 // Every token sim/core/flags.go:130 prints, one per damage line. 'critical-block' is the sim's
-// BlockedCrit; a suppressed crit is a hit that rolled crit and lost it to the attack table's crit
-// suppression, so it gets its own token rather than folding into either.
-export const OUTCOMES = ['hit', 'crit', 'suppressed-crit', 'crush', 'miss', 'dodge', 'parry', 'glance', 'block', 'critical-block'] as const;
+// BlockedCrit.
+export const OUTCOMES = ['hit', 'crit', 'crush', 'miss', 'dodge', 'parry', 'glance', 'block', 'critical-block'] as const;
 
 export type Outcome = (typeof OUTCOMES)[number];
 
-// sim/core/flags.go:156 appends " (25% Resist)" and its 50 and 75 siblings to a glance, crit,
-// suppressed crit or hit.
+// sim/core/flags.go:156 appends " (25% Resist)" and its 50 and 75 siblings to a glance, crit or
+// hit.
 export type PartialResist = 0 | 25 | 50 | 75;
 
 /** Avoidance: the attack never landed, so there is no amount to render and nothing to add to a total. */

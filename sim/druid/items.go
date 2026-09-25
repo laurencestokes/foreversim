@@ -37,11 +37,11 @@ func init() {
 	// https://www.wowhead.com/forever/item=23198/idol-of-brutality
 	//
 	// Reduces the rage cost of Maul and Swipe by 2 (28855: -20 in the client's tenths of rage, the
-	// scale Ferocity's -10 a rank is on); Classic's took 3. The client's mask also names Mangle, as
+	// scale Ferocity's -10 a rank is on); Classic's took 3. The client's mask also names Primal Bite, as
 	// Ferocity's does.
 	core.NewItemEffect(23198, func(agent core.Agent) {
 		agent.GetCharacter().AddStaticMod(core.SpellModConfig{
-			ClassMask: DruidSpellMaul | DruidSpellSwipe | DruidSpellMangleBear,
+			ClassMask: DruidSpellMaul | DruidSpellSwipe | DruidSpellPrimalBite,
 			Kind:      core.SpellMod_PowerCost_Flat,
 			IntValue:  -2,
 		})

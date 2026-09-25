@@ -90,7 +90,7 @@ func runWarlock(t *testing.T, race proto.Race, gear *proto.EquipmentSpec, talent
 		ReactionTimeMs:     200,
 		ChannelClipDelayMs: 150,
 		DistanceFromTarget: 25,
-		Buffs:              &proto.IndividualBuffs{BlessingOfKings: true, BlessingOfWisdom: true},
+		Buffs:              &proto.IndividualBuffs{GreaterBlessingOfKings: true, GreaterBlessingOfWisdom: true},
 		Consumables: &proto.ConsumesSpec{
 			FlaskId:            13512, // Flask of Supreme Power
 			SpellPowerElixirId: 13454, // Greater Arcane Elixir
@@ -106,14 +106,15 @@ func runWarlock(t *testing.T, race proto.Race, gear *proto.EquipmentSpec, talent
 
 	result := core.RunRaidSim(&proto.RaidSimRequest{
 		Raid: core.SinglePlayerRaidProto(player,
-			&proto.PartyBuffs{FireResistanceAura: true, MoonkinAura: proto.TristateEffect_TristateEffectRegular},
+			&proto.PartyBuffs{MoonkinAura: true},
 			&proto.RaidBuffs{
 				ArcaneBrilliance:   true,
-				DivineSpirit:       proto.TristateEffect_TristateEffectRegular,
-				GiftOfTheWild:      proto.TristateEffect_TristateEffectImproved,
-				PowerWordFortitude: proto.TristateEffect_TristateEffectImproved,
+				PrayerOfSpirit:     true,
+				GiftOfTheWild:      true,
+				PrayerOfFortitude:  true,
+				FireResistanceAura: true,
 			},
-			&proto.Debuffs{ExposeArmor: proto.TristateEffect_TristateEffectImproved, FaerieFire: proto.TristateEffect_TristateEffectRegular, JudgementOfWisdom: true, SunderArmor: true}),
+			&proto.Debuffs{ExposeArmor: true, FaerieFire: true, JudgementOfWisdom: true, SunderArmor: true}),
 		Encounter:  core.MakeSingleTargetEncounter(0),
 		SimOptions: &proto.SimOptions{Iterations: iterations, RandomSeed: 101},
 	})

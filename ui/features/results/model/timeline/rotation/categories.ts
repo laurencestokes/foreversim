@@ -42,7 +42,6 @@ export const rotationCategoryOverrides: Record<number, number> = {
 	[8024]: 0.12, // Flametongue Weapon
 	[8033]: 0.12, // Frostbrand Weapon
 	[17364]: MELEE_ACTION_CATEGORY + 0.1, // Stormstrike
-	[2825]: DEFAULT_ACTION_CATEGORY + 0.1, // Bloodlust
 
 	// Warlock
 	[603]: SPELL_ACTION_CATEGORY + 0.01, // Curse of Doom

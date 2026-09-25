@@ -339,8 +339,8 @@ func (shaman *Shaman) applyMaelstromWeapon() {
 
 }
 
-// applyRageOfTheFarseer implements Rage of the Farseer, new in Forever: a melee and cast haste
-// cooldown (425336).
+// applyRageOfTheFarseer implements Rage of the Farseer, new in Forever: a melee haste cooldown
+// (425336). Build 70009 dropped its cast-speed effect.
 func (shaman *Shaman) applyRageOfTheFarseer() {
 	if !shaman.Talents.RageOfTheFarseer {
 		return
@@ -353,7 +353,7 @@ func (shaman *Shaman) applyRageOfTheFarseer() {
 		Label:    "Rage of the Farseer",
 		ActionID: core.ActionID{SpellID: rank.ID},
 		Duration: rank.Duration(),
-	}).AttachMultiplyMeleeSpeed(multiplier).AttachMultiplyCastSpeed(multiplier)
+	}).AttachMultiplyMeleeSpeed(multiplier)
 
 	spell := shaman.RegisterSpell(core.SpellConfig{
 		ActionID: core.ActionID{SpellID: rank.ID},
