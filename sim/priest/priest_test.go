@@ -173,9 +173,10 @@ var arenaSmite = arenalib.Spec{
 	Talents:            "Smite",
 	GearSets:           []string{"smite_launch"},
 	Rotations:          []string{"smite", "smite_lowrank"},
-	// The page's default gear is the Shadow set; Smite has its own.
+	// The page's default gear is the Shadow set; Smite has its own. The low-rank rotation is a
+	// build arena comparison, not the page's.
 	RaceBuilds: map[string]arenalib.RaceBuild{
-		"Smite 31/17/3": {Gear: "smite_launch"},
+		"Smite 31/17/3": {Gear: "smite_launch", Rotation: "smite"},
 	},
 }
 

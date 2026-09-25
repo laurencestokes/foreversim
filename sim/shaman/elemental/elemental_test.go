@@ -82,4 +82,9 @@ var arenaSpec = arenalib.Spec{
 	Role: arenalib.Caster,
 	// Flame Shock is 20 yd in the client (SpellRange 3).
 	DistanceFromTarget: 20,
+	// The low-rank rotation is a build arena comparison, not the page's.
+	RaceBuilds: map[string]arenalib.RaceBuild{
+		"Elemental 31/6/14":   {Rotation: "forever"},
+		"Stormcaller 28/23/0": {Rotation: "forever"},
+	},
 }
