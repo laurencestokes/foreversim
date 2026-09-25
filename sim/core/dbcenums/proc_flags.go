@@ -70,11 +70,14 @@ const (
 		PROC_FLAG_DEAL_HELPFUL_SPELL
 )
 
-// Named bits of ProcTypeMask word 1, under TrinityCore's names. The sim models none of them.
+// Named bits of ProcTypeMask word 1, under TrinityCore's names. The sim models only
+// PROC_FLAG_2_MAIN_HAND_ONLY, which carries no TrinityCore name: Bloodthrill and the main-hand
+// weapon procs that state it hear main-hand melee attacks alone.
 const (
 	PROC_FLAG_2_TARGET_DIES       uint32 = 0x00000001 // 32 Kill or assist in killing the target
 	PROC_FLAG_2_KNOCKBACK         uint32 = 0x00000002 // 33 Knockback
 	PROC_FLAG_2_CAST_SUCCESSFUL   uint32 = 0x00000004 // 34 Cast successful
 	PROC_FLAG_2_SUCCESSFUL_DISPEL uint32 = 0x00000010 // 36 Successful dispel
+	PROC_FLAG_2_MAIN_HAND_ONLY    uint32 = 0x00000020 // 37 Main-hand melee attacks only
 	PROC_FLAG_2_DO_EMOTE          uint32 = 0x00000040 // 38 Do emote
 )

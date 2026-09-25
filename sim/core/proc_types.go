@@ -211,6 +211,9 @@ func DecodeProcTypeMask(mask [2]uint32, hint ProcHint) ProcTypeInfo {
 	case dbcenums.PROC_FLAG_OFF_HAND_WEAPON_SWING:
 		info.ProcMask &= ^ProcMaskMeleeMH
 	}
+	if mask[1]&dbcenums.PROC_FLAG_2_MAIN_HAND_ONLY != 0 {
+		info.ProcMask &= ^ProcMaskMeleeOH
+	}
 
 	// An avoidance outcome - a dodge, a parry, a miss, a full block or a resist - is a hit that
 	// landed on nothing, so a listener whose trigger is one hears a hit that dealt no damage.
@@ -265,8 +268,8 @@ var unsupportedProcFlagNames = map[uint32]string{
 // dealt, 0x800 taken) are left out on purpose: next to real bits they change nothing the decode
 // says, and on their own they leave the callback empty, which the caller refuses anyway.
 func unsupportedProcFlags(mask [2]uint32) []string {
-	// Everything from the death bit up is a state change rather than a hit, and word 1 names
-	// nothing the sim models.
+	// Everything from the death bit up is a state change rather than a hit, and of word 1 the sim
+	// models the main-hand restriction alone.
 	unsupported := mask[0] & (dbcenums.PROC_FLAG_HEARTBEAT | dbcenums.PROC_FLAG_KILL | dbcenums.PROC_FLAG_TAKE_HELPFUL_SPELL | ^(dbcenums.PROC_FLAG_DEATH - 1))
 
 	var names []string
@@ -283,7 +286,7 @@ func unsupportedProcFlags(mask [2]uint32) []string {
 	}
 
 	for bit := 0; bit < 32; bit++ {
-		if mask[1]&(1<<bit) != 0 {
+		if mask[1]&^dbcenums.PROC_FLAG_2_MAIN_HAND_ONLY&(1<<bit) != 0 {
 			names = append(names, fmt.Sprintf("bit %d", 32+bit))
 		}
 	}

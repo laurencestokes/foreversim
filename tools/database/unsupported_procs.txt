@@ -90,14 +90,11 @@
 1294530 states no rate
 1297085 states no rate
 1298230 ProcTypeMask ENTER_COMBAT; no callback in the proc mask
-1298413 ProcTypeMask bit 37
-1298500 ProcTypeMask bit 37
 1299737 states no rate
 1299740 states no rate
 1299948 states no rate
 1300781 states no rate
 1300890 ProcTypeMask DEATH; no callback in the proc mask
-1301046 ProcTypeMask bit 37
 1301123 states no rate
 1302108 ProcTypeMask KILL
 1302190 states no rate

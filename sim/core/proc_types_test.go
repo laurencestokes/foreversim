@@ -63,6 +63,14 @@ func TestDecodeProcTypeMask(t *testing.T) {
 			requireDamageDealt: true,
 		},
 		{
+			name:               "Bloodthrill, melee swings and abilities from the main hand alone",
+			mask:               [2]uint32{0x14, 0x20},
+			callback:           CallbackOnSpellHitDealt,
+			procMask:           ProcMaskMeleeMH,
+			outcome:            OutcomeLanded,
+			requireDamageDealt: true,
+		},
+		{
 			name:               "the unknown top bit",
 			mask:               [2]uint32{0x80000000, 0},
 			outcome:            OutcomeLanded,
