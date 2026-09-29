@@ -7,12 +7,13 @@
 // generated files it can rewrite without compiling them, and a broken store stops it the same way a
 // broken class file stops gen_db. Neither reaches the tree from here: spelldata_write.go
 // type-checks the rendered files in a staging directory and writes none of them until they build -
-// unless -unchecked says to write them anyway, for a class just flipped to the store whose call
-// sites have not moved off the family table yet.
+// unless -unchecked says to write them anyway, for a class file whose call sites cannot compile
+// until they move onto what it will state.
 //
 //	go run ./tools/database/gen_spelldata
 //	go run ./tools/database/gen_spelldata -check
 //	go run ./tools/database/gen_spelldata -unchecked
+//	go run ./tools/database/gen_spelldata -everyClassSpell -unchecked   # a store of every class spell, for tools/spelldata -dump
 package main
 
 import (
@@ -26,11 +27,13 @@ import (
 
 var dbPath = flag.String("dbPath", "./tools/database/wowsims.db", "Location of the wowsims.db file produced by tools/db2tool")
 var check = flag.Bool("check", false, "Name the generated files that are not what this generator writes, and write nothing")
-var unchecked = flag.Bool("unchecked", false, "Write the rendered files without type-checking them first, for a class just flipped to the store whose call sites have not moved off the family table yet")
+var everyClassSpell = flag.Bool("everyClassSpell", false, "Root the store at every class spell the client has, not only what the sim reaches - for an export with tools/spelldata -dump, not to commit")
+var unchecked = flag.Bool("unchecked", false, "Write the rendered files without type-checking them first, for a class file whose call sites cannot compile until they move onto what it will state")
 
 func main() {
 	flag.Parse()
 	database.DatabasePath = *dbPath
+	database.EveryClassSpell = *everyClassSpell
 
 	helper, err := database.NewDBHelper()
 	if err != nil {

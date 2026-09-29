@@ -9,9 +9,7 @@ name: Update DB
 # request; nothing changed means no pull request.
 on:
     workflow_dispatch:
-    # To also refresh the hotfixes on a schedule:
-    # schedule:
-    #     - cron: '0 6 * * *'
+    # Manual only: generate and test a pull request for review before merging or deploying.
 
 env:
     PRODUCT: wow_classic_beta
@@ -120,6 +118,14 @@ jobs:
                   go test ./tools/database/
                   npm run type-check
 
+            # New client numbers move the sim's golden results. Re-bless them here so the full test run
+            # below checks the sim still runs, and the PR diff shows how far every number moved.
+            - name: Re-bless the golden results 📊
+              run: |
+                  go test --tags=with_db ./sim/... > "$RUNNER_TEMP/golden.log" 2>&1 || true
+                  make update-tests
+                  git status --short -- '*.results' | wc -l | xargs echo "golden files changed:"
+
             - name: Set date
               id: date
               run: echo "date=$(date -u +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
@@ -141,9 +147,9 @@ jobs:
 
     # The pull request checks do not run for a pull request the workflow token
     # opened, so run the same test suite against the branch here.
-    #test:
-    #    needs: update-db
-    #    if: needs.update-db.outputs.pull-request-operation == 'created' || needs.update-db.outputs.pull-request-operation == 'updated'
-    #    uses: ./.github/workflows/run_tests.yml
-    #    with:
-    #        ref: update_db
+    test:
+        needs: update-db
+        if: needs.update-db.outputs.pull-request-operation == 'created' || needs.update-db.outputs.pull-request-operation == 'updated'
+        uses: ./.github/workflows/run_tests.yml
+        with:
+            ref: update_db

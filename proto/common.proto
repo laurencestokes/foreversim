@@ -27,7 +27,9 @@ message ProtoVersion {
 	// missing (0) or lower than current_version_number.
 	// 17: upstream #39 renumbered RaidBuffs/PartyBuffs/IndividualBuffs/Debuffs (now buffs.proto)
 	// and ConsumesSpec; links older than 17 get the spec default buffs and consumables.
-	option (current_version_number) = 17;
+	// 18: upstream's slimmed buff manifest renumbered RaidBuffs/PartyBuffs/IndividualBuffs/Debuffs
+	// again; links older than 18 get the spec default buffs and debuffs.
+	option (current_version_number) = 18;
 
 	// The actual field value is only used within unit tests.
 	int32 saved_version_number = 1;

@@ -99,6 +99,8 @@ message WarlockOptions {
 	Armor armor = 4;
 	PetOptions pet_options = 6;
 	CurseOptions curse_options = 7;
+	// With Demonic Pact: the demon sacrificed before the pull, whose buff stays while `summon` is out.
+	Summon pact_sacrifice = 8;
 }
 
 message Warlock {

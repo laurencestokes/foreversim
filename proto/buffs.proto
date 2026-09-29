@@ -9,11 +9,11 @@ import "common.proto";
 // Next index: 14
 message RaidBuffs {
 	bool arcane_brilliance = 1;
-	bool prayer_of_fortitude = 2;
-	bool prayer_of_shadow_protection = 3;
-	bool prayer_of_spirit = 4;
-	bool gift_of_the_wild = 5;
-	bool thorns = 6;
+	bool prayer_of_spirit = 2;
+	bool gift_of_the_wild = 3;
+	bool thorns = 4;
+	bool prayer_of_fortitude = 5;
+	bool prayer_of_shadow_protection = 6;
 	bool fire_resistance_aura = 7;
 	bool frost_resistance_aura = 8;
 	bool shadow_resistance_aura = 9;
@@ -27,50 +27,50 @@ message RaidBuffs {
 // Next index: 20
 message PartyBuffs {
 	bool blood_pact = 1;
-	bool moonkin_aura = 2;
-	bool leader_of_the_pack = 3;
-	bool devotion_aura = 4;
-	bool retribution_aura = 5;
-	bool trueshot_aura = 6;
-	int32 atiesh_mage = 7;
-	int32 atiesh_warlock = 8;
-	TristateEffect mana_spring_totem = 9;
-	int32 mana_tide_totems = 10;
-	bool grace_of_air_totem = 11;
-	bool strength_of_earth_totem = 12;
-	bool windfury_totem = 13;
-	TristateEffect battle_shout = 14;
-	bool totem_twisting = 15;
-	int32 atiesh_druid = 16;
-	int32 atiesh_priest = 17;
-	bool concentration_aura = 18;
-	double retribution_aura_spell_power = 19;
+	TristateEffect battle_shout = 2;
+	bool devotion_aura = 3;
+	bool leader_of_the_pack = 4;
+	TristateEffect mana_spring_totem = 5;
+	int32 mana_tide_totems = 6;
+	bool moonkin_aura = 7;
+	bool retribution_aura = 8;
+	double retribution_aura_spell_power = 9;
+	bool concentration_aura = 10;
+	bool trueshot_aura = 11;
+	int32 atiesh_mage = 12;
+	int32 atiesh_warlock = 13;
+	bool strength_of_earth_totem = 14;
+	bool grace_of_air_totem = 15;
+	bool windfury_totem = 16;
+	int32 atiesh_druid = 17;
+	int32 atiesh_priest = 18;
+	bool totem_twisting = 19;
 }
 
 // These are usually individual actions taken by other Characters.
 // Next index: 8
 message IndividualBuffs {
 	bool greater_blessing_of_kings = 1;
-	bool greater_blessing_of_salvation = 2;
+	bool greater_blessing_of_might = 2;
 	bool greater_blessing_of_wisdom = 3;
-	bool greater_blessing_of_might = 4;
-	int32 innervates = 5;
-	int32 power_infusions = 6;
-	bool greater_blessing_of_light = 7;
+	bool greater_blessing_of_salvation = 4;
+	bool greater_blessing_of_light = 5;
+	int32 innervates = 6;
+	int32 power_infusions = 7;
 }
 
 // Next index: 16
 message Debuffs {
-	bool judgement_of_wisdom = 1;
-	bool judgement_of_light = 2;
-	bool judgement_of_the_crusader = 3;
-	bool curse_of_elements = 4;
-	bool gift_of_arthas = 5;
-	bool expose_armor = 6;
+	bool hunters_mark = 1;
+	bool judgement_of_the_crusader = 2;
+	bool judgement_of_light = 3;
+	bool judgement_of_wisdom = 4;
+	bool curse_of_elements = 5;
+	bool curse_of_recklessness = 6;
 	bool faerie_fire = 7;
-	bool sunder_armor = 8;
-	bool curse_of_recklessness = 9;
-	bool hunters_mark = 10;
+	bool expose_armor = 8;
+	bool sunder_armor = 9;
+	bool gift_of_arthas = 10;
 	bool demoralizing_roar = 11;
 	bool demoralizing_shout = 12;
 	bool thunder_clap = 13;

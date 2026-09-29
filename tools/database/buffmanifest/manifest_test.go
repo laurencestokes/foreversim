@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -12,8 +11,8 @@ import (
 
 func TestUniqueScopeField(t *testing.T) {
 	seen := map[string]bool{}
-	for _, spec := range Manifest {
-		key := fmt.Sprintf("%s/%s", spec.Scope, spec.Field)
+	for _, row := range All() {
+		key := fmt.Sprintf("%s/%s", row.Scope, row.Field)
 		if seen[key] {
 			t.Errorf("duplicate (scope, field): %s", key)
 		}
@@ -21,97 +20,50 @@ func TestUniqueScopeField(t *testing.T) {
 	}
 }
 
-func TestUniqueScopeNumber(t *testing.T) {
-	seen := map[string]string{}
-	for _, spec := range Manifest {
-		key := fmt.Sprintf("%s/%d", spec.Scope, spec.Number)
-		if other, ok := seen[key]; ok {
-			t.Errorf("duplicate (scope, number) %s: %s and %s", key, other, spec.Field)
-		}
-		seen[key] = spec.Field
-	}
-}
-
-func TestScopeNumbersAreDense(t *testing.T) {
-	for _, scope := range []BuffScope{ScopeRaid, ScopeParty, ScopeIndividual, ScopeDebuff} {
-		rows := ByScope(scope)
-		taken := make([]int32, len(rows))
-		for i, spec := range rows {
-			taken[i] = spec.Number
-		}
-		slices.Sort(taken)
-		for i, number := range taken {
-			if number != int32(i+1) {
-				t.Errorf("%s takes the numbers %v, want 1..%d", scope, taken, len(rows))
-				break
-			}
-		}
-	}
-}
-
 func TestUniqueGoStem(t *testing.T) {
 	seen := map[string]bool{}
-	for _, spec := range Manifest {
-		if spec.Go == "" {
-			t.Errorf("%s has no Go stem", spec.Field)
-			continue
+	for _, row := range All() {
+		if seen[row.GoStem()] {
+			t.Errorf("duplicate Go stem: %s", row.GoStem())
 		}
-		if seen[spec.Go] {
-			t.Errorf("duplicate Go stem: %s", spec.Go)
-		}
-		seen[spec.Go] = true
-		if want := strings.ReplaceAll(spec.GoField(), "_", ""); spec.Go != want {
-			t.Errorf("%s has Go stem %q, want %q", spec.Field, spec.Go, want)
-		}
+		seen[row.GoStem()] = true
 	}
 }
 
-func TestShellRowsHaveNotes(t *testing.T) {
-	for _, spec := range Manifest {
-		switch spec.Kind {
-		case KindManual, KindAbsent, KindFlag:
-			if spec.Notes == "" {
-				t.Errorf("%s is %s and needs Notes", spec.Field, spec.Kind)
-			}
+func TestFlagRowsHaveAReason(t *testing.T) {
+	for _, row := range All() {
+		if row.Kind == KindFlag && row.Reason == "" {
+			t.Errorf("%s is %s and needs a Reason", row.Field, row.Kind)
+		}
+		if row.Kind != KindFlag && row.Reason != "" {
+			t.Errorf("%s is %s, which renders no Reason", row.Field, row.Kind)
 		}
 	}
 }
 
 func TestResolvableRowsNameASpell(t *testing.T) {
-	for _, spec := range Manifest {
-		switch spec.Kind {
-		case KindAbsent, KindFlag:
-			continue
-		}
-		if spec.SpellID == 0 {
-			t.Errorf("%s (%s) names no spell", spec.Field, spec.Kind)
+	for _, row := range All() {
+		if (row.SpellID == 0) != (row.Kind == KindFlag) {
+			t.Errorf("%s (%s) names spell %d", row.Field, row.Kind, row.SpellID)
 		}
 	}
 }
 
-func TestProtoTypeMatchesKind(t *testing.T) {
-	for _, spec := range Manifest {
-		switch spec.Kind {
-		case KindFlag:
-			if spec.Proto != ProtoBool && spec.Proto != ProtoDouble {
-				t.Errorf("%s is KindFlag and must be %s or %s, got %s", spec.Field, ProtoBool, ProtoDouble, spec.Proto)
-			}
-		case KindDebuffUptime:
-			if spec.Proto != ProtoDouble {
-				t.Errorf("%s is KindDebuffUptime and must be %s, got %s", spec.Field, ProtoDouble, spec.Proto)
-			}
-		case KindItemCount, KindExternalCD:
-			if spec.Proto != ProtoInt32 {
-				t.Errorf("%s is %s and must be %s, got %s", spec.Field, spec.Kind, ProtoInt32, spec.Proto)
-			}
-		}
+func TestProtoType(t *testing.T) {
+	cases := []struct {
+		spec BuffSpec
+		want BuffProtoType
+	}{
+		{BuffSpec{}, ProtoBool},
+		{BuffSpec{Talent: 16187}, ProtoTristate},
+		{BuffSpec{ImpAction: &ActionRef{SpellID: 23563}}, ProtoTristate},
+		{BuffSpec{Kind: KindExternalCD}, ProtoInt32},
+		{BuffSpec{Kind: KindItemCount}, ProtoInt32},
+		{BuffSpec{Kind: KindFlag, Proto: ProtoDouble}, ProtoDouble},
 	}
-}
-
-func TestTalentImpliesTristate(t *testing.T) {
-	for _, spec := range Manifest {
-		if spec.Talent != nil && spec.Proto != ProtoTristate {
-			t.Errorf("%s carries talent %q but is %s", spec.Field, spec.Talent.Name, spec.Proto)
+	for _, c := range cases {
+		if got := c.spec.ProtoType(); got != c.want {
+			t.Errorf("%+v is %s, want %s", c.spec, got, c.want)
 		}
 	}
 }
@@ -139,7 +91,7 @@ func TestFieldNaming(t *testing.T) {
 }
 
 func TestFieldNamesRoundTrip(t *testing.T) {
-	for _, spec := range Manifest {
+	for _, spec := range All() {
 		goName := spec.GoField()
 		if goName == "" {
 			t.Errorf("%s has an empty GoField", spec.Field)
@@ -155,9 +107,9 @@ func TestFieldNamesRoundTrip(t *testing.T) {
 
 // proto/buffs.proto is rendered from this manifest, so this test is not an independent oracle for
 // the field set: it catches a hand edit to the committed proto drifting from the manifest, and
-// nothing more. What the numbers and types are checked against is gen_buffs_proto's
-// TestRenderMatchesCommittedFile: the committed file is what the manifest renders.
-func TestCensusMatchesProto(t *testing.T) {
+// nothing more. What the numbers and types are checked against is tools/database's
+// TestBuffFilesRegenerateFromTheCommittedInputs: the committed file is what the manifest renders.
+func TestBuffsMatchProto(t *testing.T) {
 	messages := map[string]BuffScope{
 		"RaidBuffs":       ScopeRaid,
 		"PartyBuffs":      ScopeParty,
@@ -173,8 +125,8 @@ func TestCensusMatchesProto(t *testing.T) {
 	}
 
 	got := map[string]bool{}
-	for _, spec := range Manifest {
-		key := fmt.Sprintf("%s/%s", spec.Scope, spec.Field)
+	for _, row := range All() {
+		key := fmt.Sprintf("%s/%s", row.Scope, row.Field)
 		got[key] = true
 
 		declared, ok := want[key]
@@ -182,11 +134,11 @@ func TestCensusMatchesProto(t *testing.T) {
 			t.Errorf("%s is in the manifest but not in buffs.proto", key)
 			continue
 		}
-		if spec.Number != declared.number {
-			t.Errorf("%s has number %d in the manifest and %d in buffs.proto", key, spec.Number, declared.number)
+		if row.Number != declared.number {
+			t.Errorf("%s has number %d in the manifest and %d in buffs.proto", key, row.Number, declared.number)
 		}
-		if !declared.allows(spec.Proto) {
-			t.Errorf("%s is %s in the manifest and %s in buffs.proto", key, spec.Proto, declared.kind)
+		if !declared.allows(row.ProtoType()) {
+			t.Errorf("%s is %s in the manifest and %s in buffs.proto", key, row.ProtoType(), declared.kind)
 		}
 	}
 	for key := range want {

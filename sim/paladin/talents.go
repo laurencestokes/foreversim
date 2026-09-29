@@ -29,11 +29,11 @@ func (paladin *Paladin) registerTalentSpells() {
 		paladin.registerTemplarsBulwark()
 	}
 	if paladin.Talents.HolyShield {
-		HolyShieldRankMap.RegisterAll(paladin.registerHolyShield)
+		HolyShieldRankMap.Each(paladin.registerHolyShield)
 	}
 
 	// Retribution
 	if paladin.Talents.SealOfCommand {
-		SealOfCommandRankMap.RegisterAll(paladin.registerSealOfCommand)
+		SealOfCommandRankMap.Each(paladin.registerSealOfCommand)
 	}
 }

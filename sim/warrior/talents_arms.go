@@ -124,7 +124,8 @@ func (warrior *Warrior) registerDeepWounds() {
 	share := spellData.DeepWounds.FractionAt(warrior.Talents.DeepWounds)
 	tick := deepWoundsBleed.EffectN(1)
 
-	// TODO: Test in-game for behavior
+	// Beta logs (foreverlogs reports 33/35, two level 20 warriors with 1 point) fit a tick of share x the main hand's average
+	// weapon damage / 4, attack power left out, and a crit that lands on a running bleed adds what it still owed to the new one.
 	warrior.DeepWounds = warrior.RegisterSpell(core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: deepWoundsBleed.ID},
 		SpellSchool:    core.SpellSchoolPhysical,
@@ -143,16 +144,17 @@ func (warrior *Warrior) registerDeepWounds() {
 			TickLength:    tick.Period(),
 
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				baseDamage := warrior.AutoAttacks.MH().CalculateAverageWeaponDamage(dot.Spell.MeleeAttackPower(target))
-				dot.Spell.CalcAndDealPeriodicDamage(sim, target, baseDamage/float64(dot.HastedTickCount())*share, deepWoundsBleed.TickOutcome(dot))
+				dot.Spell.CalcAndDealPeriodicDamage(sim, target, dot.SnapshotBaseDamage, deepWoundsBleed.TickOutcome(dot))
 			},
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			spell.CalcAndDealOutcome(sim, target, spell.OutcomeAlwaysHitNoHitCounter)
 			dot := spell.Dot(target)
+			owed := dot.OutstandingDmg()
 			dot.Deactivate(sim)
 			dot.Apply(sim)
+			dot.SnapshotBaseDamage = (owed + warrior.AutoAttacks.MH().AverageDamage()*share) / float64(dot.HastedTickCount())
 		},
 	})
 

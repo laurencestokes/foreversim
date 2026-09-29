@@ -3,7 +3,7 @@ import { ConsumesSpec } from '@generated/proto/common';
 import type { IndividualSimSettings } from '@generated/proto/ui';
 import type { WarriorOptions } from '@generated/proto/warrior';
 import i18n from '@i18n/config';
-import { BUFFS_REWRITE_API_VERSION, CURRENT_API_VERSION } from '@sim/constants/other';
+import { BUFFS_RENUMBER_API_VERSION, BUFFS_REWRITE_API_VERSION, CURRENT_API_VERSION } from '@sim/constants/other';
 import type { IndividualSimUIConfig } from '@sim/spec_config';
 import { toastManager } from '@ui-kit/Toast';
 
@@ -14,6 +14,9 @@ export type ProtoVersionDefaults = Pick<
 
 // Lives here rather than beside the shared migrations in `ui/sim` because it reports itself with a
 // toast, and that layer may not reach `@ui-kit`.
+//
+// Version 18 is upstream's slimmed buff manifest, which renumbered the four buff messages again; a
+// version-17 payload keeps its consumables and class options and takes the spec's buffs and debuffs.
 //
 // Version 17 is the upstream buff rewrite: the buff messages moved to buffs.proto and were
 // renumbered, ConsumesSpec was renumbered, and WarriorOptions field 6 (our queue_delay) became
@@ -51,6 +54,18 @@ export function updateIndividualProtoVersion(settingsProto: IndividualSimSetting
 			variant: 'warning',
 			delay: 8000,
 			body: i18n.t('protoVersion.17.body', { ns: 'updates' }),
+		});
+	} else if (settingsProto.apiVersion < BUFFS_RENUMBER_API_VERSION) {
+		settingsProto.raidBuffs = RaidBuffs.clone(defaults.raidBuffs);
+		settingsProto.partyBuffs = PartyBuffs.clone(defaults.partyBuffs);
+		settingsProto.debuffs = Debuffs.clone(defaults.debuffs);
+		if (settingsProto.player) {
+			settingsProto.player.buffs = IndividualBuffs.clone(defaults.individualBuffs);
+		}
+		toastManager.add({
+			variant: 'warning',
+			delay: 8000,
+			body: i18n.t('protoVersion.18.body', { ns: 'updates' }),
 		});
 	}
 

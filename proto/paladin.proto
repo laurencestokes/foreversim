@@ -63,61 +63,32 @@ message PaladinTalents {
 
 // END GENERATED
 
-enum PaladinJudgement {
-	JudgementNone = 0;
-	JudgementOfLight = 1;
-	JudgementOfWisdom = 2;
-}
-
-enum PaladinAura {
-	AuraNone = 0;
-	DevotionAura = 1;
-	RetributionAura = 2;
-	ConcentrationAura = 3;
-	FireResistanceAura = 4;
-	FrostResistanceAura = 5;
-	ShadowResistanceAura = 6;
-}
-
 message PaladinOptions {
 }
 
 message RetributionPaladin {
-	message Rotation {
-		bool useExorcism = 1;
-		int32 consecrationRank = 2;
-		int32 delayMajorCDs = 3;
-		bool prepullSotC = 4;
-		PaladinAura aura = 5;
-	}
+	message Rotation {}
 
 	message Options {
 		PaladinOptions class_options = 1;
 	}
-	Options options = 3;
+	Options options = 1;
 }
 
 message ProtectionPaladin {
-	message Rotation {
-		bool prioritizeHolyShield = 1;
-		int32 consecrationRank = 2;
-		bool useExorcism = 3;
-		PaladinJudgement maintainJudgement = 5;
-		PaladinAura aura = 6;
-		bool useHammerOfWrath = 8;
-	}
+	message Rotation {}
 
 	message Options {
 		PaladinOptions class_options = 1;
 	}
-	Options options = 3;
+	Options options = 1;
 }
 
 message HolyPaladin {
 	message Rotation {}
 
 	message Options {
-		PaladinOptions class_options = 2;
+		PaladinOptions class_options = 1;
 	}
-	Options options = 3;
+	Options options = 1;
 }

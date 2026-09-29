@@ -13,6 +13,7 @@
 //	go run ./tools/spelldata -config 'spelldata.SpellConfig(&warrior.Unit, executeRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))' -package warrior   # the config the resolver builds
 //	go run ./tools/spelldata -hover sim/warrior/execute.go 12:40   # the markdown an editor hover shows at line:column, 1-based
 //	go run ./tools/spelldata -lsp            # a language server on stdio answering those hovers
+//	go run ./tools/spelldata -dump out/      # every class spell in the store, one <class>.txt each
 package main
 
 import (
@@ -51,7 +52,7 @@ type options struct {
 	all      bool
 }
 
-const usage = "usage: go run ./tools/spelldata <id | name> [-all] [-json] | -family <class>/<Family> | -expr <call> [-package <class>] | -config <SpellConfig call> [-package <class>] | -hover <file> <line>:<column> | -lsp"
+const usage = "usage: go run ./tools/spelldata <id | name> [-all] [-json] | -family <class>/<Family> | -expr <call> [-package <class>] | -config <SpellConfig call> [-package <class>] | -hover <file> <line>:<column> | -lsp | -dump <dir>"
 
 // The flags are taken in any position: `11574 -json` is how a caller writes it, and the stdlib flag
 // package stops reading flags at the first positional argument. The ones that take a value read it as
@@ -60,7 +61,7 @@ const usage = "usage: go run ./tools/spelldata <id | name> [-all] [-json] | -fam
 func parseArgs(args []string) (options, error) {
 	var opts options
 	var positional []string
-	askOne := fmt.Errorf("ask for one thing: a spell, -family, -expr, -config, -hover or -lsp")
+	askOne := fmt.Errorf("ask for one thing: a spell, -family, -expr, -config, -hover, -lsp or -dump")
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -75,7 +76,7 @@ func parseArgs(args []string) (options, error) {
 		case name == "all" && !valued:
 			opts.all = true
 		case name == "stdio" && !valued && opts.mode == "lsp":
-		case name == "lsp" && !valued, name == "package", name == "family", name == "expr", name == "config", name == "hover":
+		case name == "lsp" && !valued, name == "package", name == "family", name == "expr", name == "config", name == "hover", name == "dump":
 			if name != "lsp" && !valued {
 				if i+1 >= len(args) {
 					return opts, fmt.Errorf("%s takes a value", arg)
@@ -131,6 +132,8 @@ func run(args []string, out io.Writer) error {
 		return runConfig(out, opts)
 	case "lsp":
 		return runLSP(os.Stdin, out)
+	case "dump":
+		return runDump(opts.arg)
 	}
 
 	if id, err := strconv.ParseInt(opts.arg, 10, 32); err == nil {

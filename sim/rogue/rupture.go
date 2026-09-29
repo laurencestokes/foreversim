@@ -17,8 +17,7 @@ func (rogue *Rogue) registerRupture() {
 	baseTickCount := int32(ruptureRank.Duration() / tickLength)
 
 	// The beta client cut the per combo point step with the tick (rank 6: 60 + 8 -> 35 + 4.73).
-	// The table carries the 35; the step sits on a dummy effect the generator reads as 0.
-	const damagePerComboPoint = 4.73
+	damagePerComboPoint := float64(tick.PointsPerResource)
 	apCoeffByComboPoint := []float64{0, 0.01, 0.02, 0.03, 0.03, 0.03}
 
 	// Combo points spent and the Hemorrhage bonus are fixed at cast, for each target's Rupture;

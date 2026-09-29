@@ -5,6 +5,7 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -70,8 +71,31 @@ func setUndeadSlaying(agent core.Agent, setBonusAura *core.Aura) {
 		})
 }
 
-// A melee proc that deals min..max damage of the given school.
-func setMeleeDamageProc(agent core.Agent, setBonusAura *core.Aura, name string, triggerID, spellID int32, school core.SpellSchool, chance, min, max float64) {
+// +n melee and ranged attack power against humanoids.
+func setHumanoidAttackPower(n float64) core.ApplySetBonus {
+	return func(agent core.Agent, setBonusAura *core.Aura) {
+		character := agent.GetCharacter()
+		bonus := setAttackPower(n)
+		setBonusAura.
+			ApplyOnGain(func(_ *core.Aura, _ *core.Simulation) {
+				for _, at := range character.AttackTables {
+					if at != nil {
+						at.MobTypeBonusStats[proto.MobType_MobTypeHumanoid] = at.MobTypeBonusStats[proto.MobType_MobTypeHumanoid].Add(bonus)
+					}
+				}
+			}).
+			ApplyOnExpire(func(_ *core.Aura, _ *core.Simulation) {
+				for _, at := range character.AttackTables {
+					if at != nil {
+						at.MobTypeBonusStats[proto.MobType_MobTypeHumanoid] = at.MobTypeBonusStats[proto.MobType_MobTypeHumanoid].Subtract(bonus)
+					}
+				}
+			})
+	}
+}
+
+// A melee proc that deals min..max damage of the given school, at the trigger's client chance.
+func setMeleeDamageProc(agent core.Agent, setBonusAura *core.Aura, name string, triggerID, spellID int32, school core.SpellSchool, min, max float64) {
 	character := agent.GetCharacter()
 	procSpell := character.RegisterSpell(core.SpellConfig{
 		ActionID:    core.ActionID{SpellID: spellID},
@@ -94,7 +118,7 @@ func setMeleeDamageProc(agent core.Agent, setBonusAura *core.Aura, name string, 
 		Callback:   core.CallbackOnSpellHitDealt,
 		Outcome:    core.OutcomeLanded,
 		ProcMask:   core.ProcMaskMelee,
-		ProcChance: chance,
+		ProcChance: spelldata.MustFind(triggerID).StatedChance(),
 		Handler: func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
 			procSpell.Cast(sim, result.Target)
 		},
@@ -196,11 +220,11 @@ var ItemSetIronfeatherArmor = core.NewItemSet(core.ItemSet{
 var ItemSetStormshroudArmor = core.NewItemSet(core.ItemSet{
 	Name: "Stormshroud Armor",
 	Bonuses: map[int32]core.ApplySetBonus{
-		// 5% chance of dealing 15 to 25 Nature damage on a successful melee attack.
+		// 10% chance of dealing 15 to 25 Nature damage on a successful melee attack (client 18979; Era 5%).
 		2: func(agent core.Agent, setBonusAura *core.Aura) {
-			setMeleeDamageProc(agent, setBonusAura, "Lightning", 18979, 18980, core.SpellSchoolNature, 0.05, 15, 25)
+			setMeleeDamageProc(agent, setBonusAura, "Lightning", 18979, 18980, core.SpellSchoolNature, 15, 25)
 		},
-		// 2% chance on melee attack of restoring 30 energy.
+		// 4% chance on melee attack of restoring 30 energy (client 23863; Era 2%).
 		3: func(agent core.Agent, setBonusAura *core.Aura) {
 			character := agent.GetCharacter()
 			if !character.HasEnergyBar() {
@@ -213,7 +237,7 @@ var ItemSetStormshroudArmor = core.NewItemSet(core.ItemSet{
 				Callback:   core.CallbackOnSpellHitDealt,
 				Outcome:    core.OutcomeLanded,
 				ProcMask:   core.ProcMaskMelee,
-				ProcChance: 0.02,
+				ProcChance: spelldata.MustFind(23863).StatedChance(),
 				Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
 					character.AddEnergy(sim, 30, metrics)
 				},
@@ -236,9 +260,10 @@ var ItemSetVolcanicArmor = core.NewItemSet(core.ItemSet{
 	Name: "Volcanic Armor",
 	ID:   141,
 	Bonuses: map[int32]core.ApplySetBonus{
-		// Beta client 1.60.1 (spell 9057): 30 to 50 Fire damage, doubled from Era's 15 to 25.
+		// Beta client 1.60.1 (spell 9057): 30 to 50 Fire damage, doubled from Era's 15 to 25. The chance
+		// doubled too: 9233's column is 10 (Era 5), though the description still says 5%.
 		3: func(agent core.Agent, setBonusAura *core.Aura) {
-			setMeleeDamageProc(agent, setBonusAura, "Firebolt Trigger (Volcanic Armor)", 9233, 9057, core.SpellSchoolFire, 0.05, 30, 50)
+			setMeleeDamageProc(agent, setBonusAura, "Firebolt Trigger (Volcanic Armor)", 9233, 9057, core.SpellSchoolFire, 30, 50)
 		},
 	},
 })
@@ -696,25 +721,7 @@ var ItemSetSpiritOfEskhandar = core.NewItemSet(core.ItemSet{
 	Name: "Spirit of Eskhandar",
 	Bonuses: map[int32]core.ApplySetBonus{
 		// +30 Attack Power against Humanoids (1298478), new in Forever.
-		2: func(agent core.Agent, setBonusAura *core.Aura) {
-			character := agent.GetCharacter()
-			bonus := setAttackPower(30)
-			setBonusAura.
-				ApplyOnGain(func(_ *core.Aura, _ *core.Simulation) {
-					for _, at := range character.AttackTables {
-						if at != nil {
-							at.MobTypeBonusStats[proto.MobType_MobTypeHumanoid] = at.MobTypeBonusStats[proto.MobType_MobTypeHumanoid].Add(bonus)
-						}
-					}
-				}).
-				ApplyOnExpire(func(_ *core.Aura, _ *core.Simulation) {
-					for _, at := range character.AttackTables {
-						if at != nil {
-							at.MobTypeBonusStats[proto.MobType_MobTypeHumanoid] = at.MobTypeBonusStats[proto.MobType_MobTypeHumanoid].Subtract(bonus)
-						}
-					}
-				})
-		},
+		2: setHumanoidAttackPower(30),
 		// Improves your chance to crit by 1% (1314828), new in Forever. The client doubles it at
 		// night, which the sim has no clock for.
 		3: setStats(setCritPercent(1)),

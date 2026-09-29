@@ -3,8 +3,8 @@ package paladin
 import (
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -17,10 +17,12 @@ import (
 // Unleashing this Seal's energy will judge an enemy, instantly causing Holy damage, double if the
 // target is stunned or incapacitated.
 //
-// The client states the stunned number and halves it otherwise. The proc spell 20424 has no
-// rank subtext and so is in no table: its 70% of weapon damage and the 0.29 coefficient on that
-// same effect are read from the trigger row, and 7 procs per minute is the number the Classic sim
-// carries.
+// The client states the stunned number and halves it otherwise. The judgement's damage sits on the
+// spell its own dummy names, which the family's triggered ladder carries one rank above the proc.
+// The proc spell 20424 has no rank subtext and heads that ladder: its 70% of weapon damage and the
+// 0.29 coefficient on that same effect are read from it. The client marks the seal as procs per
+// minute but states no rate; 7 is the number the Classic sim carries, and the beta's public combat
+// logs agree (532 procs off white hits of four level 20 paladins, 6.75 +- 0.23 a minute).
 //
 // The coefficient sits on the weapon-percent effect, and the percent applies to the paladin's own
 // spell power as well as the weapon: at 27 spell power the Forever beta measured 5.5 of each proc
@@ -28,25 +30,26 @@ import (
 // percent itself (the tooltip reads 80% with the talent, 70 * 1.15). The Holy damage the target
 // takes extra, Judgement of the Crusader and the damage-against-mob-type gear, is added after the
 // percent at the full coefficient, so it scales at 29% whatever the talent.
-func (paladin *Paladin) registerSealOfCommand(row shared.SpellData) {
-	judgeRow := spellData.JudgementOfCommand.ByRank(row.Rank)
+func (paladin *Paladin) registerSealOfCommand(_ int32, rank *spelldata.Spell) {
+	judgeRank := spellData.JudgementOfCommand.Rank(rank.RankNumber())
+	judgeDamage := spellData.SealOfCommandTriggered.ByID(int32(judgeRank.EffectN(1).BaseValue())).DamageEffect()
 
 	// Melee in SpellCategories with No Active Defense: hit and crit on the melee table, never
 	// dodged, parried or blocked.
 	judgement := paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: judgeRow.SpellID},
-		SpellSchool:    judgeRow.SpellSchool,
-		DefenseType:    judgeRow.DefenseType,
+		ActionID:       core.ActionID{SpellID: judgeRank.ID},
+		SpellSchool:    judgeRank.SpellSchool(),
+		DefenseType:    judgeRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagMeleeMetrics,
 		ClassSpellMask: SpellMaskJudgementOfCommand,
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		BonusCoefficient: judgeRow.Direct.BonusCoefficient(),
+		BonusCoefficient: judgeDamage.Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			baseDamage := directDamage(sim, judgeRow)
+			baseDamage := judgeDamage.Roll(sim, core.CharacterLevel)
 			if !target.PseudoStats.Stunned {
 				baseDamage /= 2
 			}
@@ -54,12 +57,12 @@ func (paladin *Paladin) registerSealOfCommand(row shared.SpellData) {
 		},
 	})
 
-	procRow := spellData.SealOfCommandTriggered.ByRank(1)
-	procEffect := effectAt(procRow, 0)
-	weaponPercent := procEffect.Value / 100 * spellData.ImprovedSeals.MultiplierAt(paladin.Talents.ImprovedSeals)
-	coefficient := procEffect.Coef
+	procRank := spellData.SealOfCommandTriggered.Rank(1)
+	procEffect := procRank.EffectN(1)
+	weaponPercent := procEffect.Percent() * spellData.ImprovedSeals.MultiplierAt(paladin.Talents.ImprovedSeals)
+	coefficient := procEffect.Coeff()
 	procSpell := paladin.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: procRow.SpellID},
+		ActionID:    core.ActionID{SpellID: procRank.ID},
 		SpellSchool: core.SpellSchoolHoly,
 		DefenseType: core.DefenseTypeMelee,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
@@ -97,8 +100,8 @@ func (paladin *Paladin) registerSealOfCommand(row shared.SpellData) {
 	}
 
 	aura := paladin.makeSealExclusive(paladin.RegisterAura(core.Aura{
-		Label:    sealLabel("Seal of Command", paladin, row),
-		ActionID: core.ActionID{SpellID: row.SpellID},
+		Label:    sealLabel("Seal of Command", paladin, rank),
+		ActionID: core.ActionID{SpellID: rank.ID},
 		Duration: sealDuration,
 	}).AttachProcTrigger(core.ProcTrigger{
 		Callback: core.CallbackOnSpellHitDealt,
@@ -110,7 +113,7 @@ func (paladin *Paladin) registerSealOfCommand(row shared.SpellData) {
 	}))
 
 	paladin.registerSealSpell(&sealConfig{
-		row:       row,
+		rank:      rank,
 		classMask: SpellMaskSealOfCommand,
 		aura:      aura,
 		judgement: judgement,

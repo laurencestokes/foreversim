@@ -2,8 +2,8 @@ package database
 
 // The manifest pins the spell each buff reads, so generation needs no client database. What pinned
 // it is the rank resolution below, which reads SkillLineAbility, SkillLine and the rune enchantments -
-// tables the store does not capture - so this is where a new client is checked against the pins.
-// Skips without tools/database/wowsims.db.
+// tables the store does not capture - so this is where a new client is checked against the pins, and
+// against the names and owners the generator reads off them. Skips without tools/database/wowsims.db.
 
 import (
 	"database/sql"
@@ -16,7 +16,6 @@ import (
 
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
-	"github.com/wowsims/forever/tools/database/buffmanifest"
 	"github.com/wowsims/forever/tools/database/dbc"
 )
 
@@ -44,42 +43,44 @@ func TestManifestAnchorsMatchTheClient(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	for _, spec := range buffmanifest.Manifest {
+	for _, row := range resolveCommittedBuffs(t) {
 		// A row without a castable family - an item's aura, an elixir's debuff - is pinned by hand.
-		if spec.Name == "" {
+		if row.Name == "" {
+			continue
+		}
+		// A deliberate lower-rank pin (see LowerRank) is not the top rank by design.
+		if row.LowerRank {
 			continue
 		}
 
-		classMask := ownerClassMask(spec.Owner)
-		cands, err := anchorCandidates(db, spec.Name, classMask)
+		// A totem or dummy whose cast the manifest does not name reads the aura's name, which no
+		// skill line grants, so it fails here.
+		classMask := ownerClassMask(row.Owner)
+		cands, err := anchorCandidates(db, row.Name, classMask)
 		if err != nil {
-			t.Fatalf("%s: %v", spec.Field, err)
+			t.Fatalf("%s: %v", row.Field, err)
 		}
 		if len(cands) == 0 {
-			t.Errorf("%s: no SkillLineAbility row grants %q to %s", spec.Field, spec.Name, spec.Owner)
+			t.Errorf("%s: no SkillLineAbility row grants %q to %s", row.Field, row.Name, row.Owner)
 			continue
 		}
 
 		cast := topRank(cands, classMask)
 		aura := cast.SpellID
-		if spec.AuraName != "" {
-			if aura, err = auraFamilyMember(db, spec.AuraName, cast.Subtext, spec.Kind != buffmanifest.KindProc); err != nil {
-				t.Fatalf("%s: %v", spec.Field, err)
+		if row.AuraName != "" {
+			if aura, err = auraFamilyMember(db, row.AuraName, cast.Subtext); err != nil {
+				t.Fatalf("%s: %v", row.Field, err)
 			}
 		}
 
-		if spec.SpellID != aura {
-			t.Errorf("%s: the manifest pins spell %d, the client resolves %d", spec.Field, spec.SpellID, aura)
+		if row.SpellID != aura {
+			t.Errorf("%s: the manifest pins spell %d, the client resolves %d", row.Field, row.SpellID, aura)
 		}
-		if spec.CastID != 0 && spec.CastID != cast.SpellID {
-			t.Errorf("%s: the manifest pins cast %d, the client resolves %d", spec.Field, spec.CastID, cast.SpellID)
-		}
-		if spec.Kind == buffmanifest.KindExternalCD && cast.SpellID != aura && spec.CastID == 0 {
-			t.Errorf("%s: the cast %d times the cooldown and states what the aura %d does not, so the manifest has to pin it",
-				spec.Field, cast.SpellID, aura)
+		if row.CastID != 0 && row.CastID != cast.SpellID {
+			t.Errorf("%s: the manifest pins cast %d, the client resolves %d", row.Field, row.CastID, cast.SpellID)
 		}
 		if runes[aura] {
-			t.Errorf("%s: spell %d is granted by a rune, which is a class rune and not a raid buff", spec.Field, aura)
+			t.Errorf("%s: spell %d is granted by a rune, which is a class rune and not a raid buff", row.Field, aura)
 		}
 	}
 }
@@ -214,11 +215,8 @@ func topRank(cands []buffCandidate, classMask int32) buffCandidate {
 // The aura of a totem or of a dummy passive, which the client only ties to the cast by name. The
 // rank subtext of the cast picks the matching rank; where neither carries one - Leader of the Pack
 // is 17007 and 24932, both rankless - the spell that applies a party or raid aura is the one other
-// players see.
-// preferShared picks the aura that reaches the party over a same-named one that only its caster
-// holds. A proc row wants the reverse: since client build 70009 Windfury Totem's party aura (10612)
-// shares the name of the proc aura it hands out (10610), and the proc aura is the one that states it.
-func auraFamilyMember(db *sql.DB, name string, subtext string, preferShared bool) (int32, error) {
+// players see, unless it only procs the buff, the way Windfury Totem's 10612 procs 10610.
+func auraFamilyMember(db *sql.DB, name string, subtext string) (int32, error) {
 	type auraCandidate struct {
 		SpellID int32
 		Subtext string
@@ -264,12 +262,26 @@ func auraFamilyMember(db *sql.DB, name string, subtext string, preferShared bool
 	}
 	if len(matching) > 1 {
 		for _, c := range matching {
-			if c.Shared == preferShared {
-				return c.SpellID, nil
+			if c.Shared {
+				return procTarget(db, c.SpellID)
 			}
 		}
 	}
 	return matching[0].SpellID, nil
+}
+
+// The spell a proc-trigger aura fires, named by EffectTriggerSpell or, where that is 0, by the base
+// points; any other aura is its own buff.
+func procTarget(db *sql.DB, aura int32) (int32, error) {
+	var target int32
+	err := db.QueryRow(`
+		SELECT CASE WHEN EffectTriggerSpell != 0 THEN EffectTriggerSpell ELSE CAST(EffectBasePointsF AS INTEGER) END
+		FROM SpellEffect WHERE SpellID = ? AND EffectAura IN (?, ?)`,
+		aura, dbcenums.A_PROC_TRIGGER_SPELL, dbcenums.A_PROC_TRIGGER_SPELL_WITH_VALUE).Scan(&target)
+	if err == sql.ErrNoRows {
+		return aura, nil
+	}
+	return target, err
 }
 
 func isSharedTarget(target dbc.ImplicitTarget) bool {

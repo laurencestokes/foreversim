@@ -283,6 +283,10 @@ func (shaman *Shaman) applyImprovedStormstrike() {
 // The client states the per-point, per-stack value (408498) and the buff (408505, 30 sec, -20% cast
 // and cost at five stacks) but no proc rate at all: no procs-per-minute entry and no proc chance
 // below 100. 2 PPM per point is ours, from master; it puts 5/5 at a full stack roughly every 30 sec.
+// 408498 is Season of Discovery's rune spell, and the Era client's row carries the same unexplained
+// eff1 = 50: there it is the tooltip's "chance increased by 50% with Windfury Weapon, and another 50%
+// with a two-hander" on SoD's 10 PPM (wowsims/sod). Forever's tooltip drops that sentence, so 10 PPM
+// at 5/5 matches SoD's base; whether the Windfury and two-hander bonuses survive is unconfirmed.
 func (shaman *Shaman) applyMaelstromWeapon() {
 	if shaman.Talents.MaelstromWeapon == 0 {
 		return

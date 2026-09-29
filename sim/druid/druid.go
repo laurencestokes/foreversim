@@ -237,6 +237,13 @@ func (druid *Druid) registerFormBreakingConsumes() {
 					druid.ClearForm(sim)
 				}
 			}
+			// Nobody pots out of form on a timer: left to fire on cooldown, Mighty Rage Potion
+			// dropped the bear out of form every two minutes and cut it from 410 DPS to 153.
+			// The automatic use waits for caster form; a rotation can still drink one in form on
+			// purpose, as the cat's powershifting does.
+			druid.AddActivationCondition(spell.ActionID, func(_ *core.Simulation, _ *core.Character) bool {
+				return !druid.InForm(Bear) && !druid.InForm(Cat)
+			})
 		}
 	})
 }
@@ -259,6 +266,8 @@ func (druid *Druid) RegisterFeralCatSpells() {
 	// Forever drops Faerie Fire (Feral); the Balance version is the only one.
 	druid.registerFaerieFireSpell()
 	druid.registerShredSpell()
+	druid.registerProwlSpell()
+	druid.registerRavageSpell()
 	druid.registerTigersFurySpell()
 }
 

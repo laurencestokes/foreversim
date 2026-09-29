@@ -15,27 +15,28 @@ func TestRenderBuffsDebuffsTSShapes(t *testing.T) {
 	rows := []ResolvedBuff{
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "prayer_of_shadow_protection", Scope: buffmanifest.ScopeRaid, Proto: buffmanifest.ProtoBool,
-				Kind: buffmanifest.KindResistance, Go: "PrayerOfShadowProtection", Owner: proto.Class_ClassPriest,
+				Field: "prayer_of_shadow_protection",
 				Stats: []proto.Stat{proto.Stat_StatShadowResistance, proto.Stat_StatStamina},
 			},
+			Scope: buffmanifest.ScopeRaid, Proto: buffmanifest.ProtoBool, Go: "PrayerOfShadowProtection",
+			Owner:   proto.Class_ClassPriest,
 			SpellID: 27683, DBName: "Prayer of Shadow Protection",
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "hunters_mark", Scope: buffmanifest.ScopeDebuff, Proto: buffmanifest.ProtoTristate,
-				Kind: buffmanifest.KindDebuffStat, Go: "HuntersMark", Owner: proto.Class_ClassHunter,
-				Stats: []proto.Stat{proto.Stat_StatRangedAttackPower},
+				Field: "hunters_mark", Stats: []proto.Stat{proto.Stat_StatRangedAttackPower},
 			},
+			Scope: buffmanifest.ScopeDebuff, Proto: buffmanifest.ProtoTristate, Go: "HuntersMark",
+			Owner:   proto.Class_ClassHunter,
 			SpellID: 14325, DBName: "Hunter's Mark",
 			TalentRanks: 1, TalentSpellID: 19425,
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "mana_tide_totems", Scope: buffmanifest.ScopeParty, Proto: buffmanifest.ProtoInt32,
-				Kind: buffmanifest.KindExternalCD, Go: "ManaTideTotems", Owner: proto.Class_ClassShaman,
-				Stats: []proto.Stat{proto.Stat_StatMP5}, Label: "Mana Tide Totem",
+				Field: "mana_tide_totems", Stats: []proto.Stat{proto.Stat_StatMP5}, Label: "Mana Tide Totem",
 			},
+			Scope: buffmanifest.ScopeParty, Proto: buffmanifest.ProtoInt32, Kind: buffmanifest.KindExternalCD,
+			Go: "ManaTideTotems", Owner: proto.Class_ClassShaman,
 			SpellID: 17359, DBName: "Mana Tide Totem",
 		},
 	}
@@ -97,18 +98,16 @@ func TestRenderBuffsDebuffsTSShapes(t *testing.T) {
 func TestRenderBuffsDebuffsTSSkips(t *testing.T) {
 	rows := []ResolvedBuff{
 		{
-			BuffSpec: buffmanifest.BuffSpec{
-				Field: "misery", Scope: buffmanifest.ScopeDebuff, Proto: buffmanifest.ProtoBool,
-				Kind: buffmanifest.KindAbsent, Go: "Misery", Owner: proto.Class_ClassPriest,
-			},
+			BuffSpec: buffmanifest.BuffSpec{Field: "misery"},
+			Scope:    buffmanifest.ScopeDebuff, Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindFlag,
+			Go: "Misery", Owner: proto.Class_ClassPriest,
 			SpellID: 33195, DBName: "Misery",
 			Reason: "no SpellName row for Misery.",
 		},
 		{
-			BuffSpec: buffmanifest.BuffSpec{
-				Field: "greater_blessing_of_salvation", Scope: buffmanifest.ScopeIndividual, Proto: buffmanifest.ProtoBool,
-				Kind: buffmanifest.KindPseudoMult, Go: "GreaterBlessingOfSalvation", Owner: proto.Class_ClassPaladin,
-			},
+			BuffSpec: buffmanifest.BuffSpec{Field: "greater_blessing_of_salvation"},
+			Scope:    buffmanifest.ScopeIndividual, Proto: buffmanifest.ProtoBool,
+			Go: "GreaterBlessingOfSalvation", Owner: proto.Class_ClassPaladin,
 			SpellID: 25895, DBName: "Greater Blessing of Salvation",
 		},
 	}
@@ -136,10 +135,9 @@ func TestRenderBuffsDebuffsTSSkips(t *testing.T) {
 
 func TestRenderBuffsDebuffsTSRejectsAnUncountedInt32(t *testing.T) {
 	rows := []ResolvedBuff{{
-		BuffSpec: buffmanifest.BuffSpec{
-			Field: "totem_of_wrath", Scope: buffmanifest.ScopeParty, Proto: buffmanifest.ProtoInt32,
-			Kind: buffmanifest.KindItemCount, Go: "TotemOfWrath", Owner: proto.Class_ClassShaman,
-		},
+		BuffSpec: buffmanifest.BuffSpec{Field: "totem_of_wrath"},
+		Scope:    buffmanifest.ScopeParty, Proto: buffmanifest.ProtoInt32, Kind: buffmanifest.KindItemCount,
+		Go: "TotemOfWrath", Owner: proto.Class_ClassShaman,
 		SpellID: 30706, DBName: "Totem of Wrath",
 	}}
 

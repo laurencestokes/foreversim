@@ -45,8 +45,8 @@ func (mage *Mage) registerFrostTalents() {
 
 // registerFrostWarding implements Frost Warding, new in Forever.
 //
-// TODO: To be implemented. Needs the Forever tooltip and a spellData ladder before
-// the effect can be modelled; there is no TBC equivalent to port.
+// Not modelled: 11189 raises Frost/Ice Armor's armor and resistance and lets Frost Ward reflect
+// Frost spells; neither changes damage dealt.
 func (mage *Mage) registerFrostWarding() {
 	if mage.Talents.FrostWarding == 0 {
 		return
@@ -90,32 +90,30 @@ func (mage *Mage) registerIceShards() {
 
 // registerPermafrost implements Permafrost, new in Forever.
 //
-// TODO: To be implemented. Needs the Forever tooltip and a spellData ladder before
-// the effect can be modelled; there is no TBC equivalent to port.
+// Not modelled: 11175 lengthens Chill effects 11/22/33% and slows 3/7/10% more; neither changes
+// damage in the sim.
 func (mage *Mage) registerPermafrost() {
 	if mage.Talents.Permafrost == 0 {
 		return
 	}
 }
 
-// TODO: To be implemented. TBC body below needs no porting; kept commented until this class's port is reviewed.
+// Improved Frost Nova (11165): Frost Nova's cooldown -2/-4 s.
 func (mage *Mage) registerImprovedFrostNova() {
 	if mage.Talents.ImprovedFrostNova == 0 {
 		return
 	}
 
-	// The TBC implementation, kept for the port:
-	// mage.AddStaticMod(core.SpellModConfig{
-	// 	ClassMask: MageSpellFrostNova,
-	// 	TimeValue: time.Second * time.Duration(-2*mage.Talents.ImprovedFrostNova),
-	// 	Kind:      core.SpellMod_CastTime_Flat,
-	// })
+	mage.AddStaticMod(core.SpellModConfig{
+		ClassMask: MageSpellFrostNova,
+		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedFrostNova.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COOLDOWN)).ValueAt(mage.Talents.ImprovedFrostNova)),
+		Kind:      core.SpellMod_Cooldown_Flat,
+	})
 }
 
 // registerFrostbite implements Frostbite, new in Forever.
 //
-// TODO: To be implemented. Needs the Forever tooltip and a spellData ladder before
-// the effect can be modelled; there is no TBC equivalent to port.
+// Not modelled: 11071 gives Chill effects a 5/10/15% chance to freeze (12494); bosses are immune.
 func (mage *Mage) registerFrostbite() {
 	if mage.Talents.Frostbite == 0 {
 		return
@@ -156,8 +154,8 @@ func (mage *Mage) registerFrostChanneling() {
 
 // registerArcticReach implements Arctic Reach, new in Forever.
 //
-// TODO: To be implemented. Needs the Forever tooltip and a spellData ladder before
-// the effect can be modelled; there is no TBC equivalent to port.
+// Not modelled: 16757 adds 10/20% to Frostbolt and Blizzard range and Frost Nova and Cone of Cold
+// radius; the sim has no range.
 func (mage *Mage) registerArcticReach() {
 	if mage.Talents.ArcticReach == 0 {
 		return
@@ -166,26 +164,24 @@ func (mage *Mage) registerArcticReach() {
 
 // registerIceBlock implements Ice Block, new in Forever.
 //
-// TODO: To be implemented. Needs the Forever tooltip and a spellData ladder before
-// the effect can be modelled; there is no TBC equivalent to port.
+// Not modelled: 11958 is a defensive immunity during which the mage cannot act.
 func (mage *Mage) registerIceBlock() {
 	if !mage.Talents.IceBlock {
 		return
 	}
 }
 
-// TODO: To be implemented. TBC body below needs no porting; kept commented until this class's port is reviewed.
+// Improved Cone of Cold (11190): Cone of Cold damage +12/23/35%.
 func (mage *Mage) registerImprovedConeOfCold() {
 	if mage.Talents.ImprovedConeOfCold == 0 {
 		return
 	}
 
-	// The TBC implementation, kept for the port:
-	// mage.AddStaticMod(core.SpellModConfig{
-	// 	ClassMask:  MageSpellConeOfCold,
-	// 	FloatValue: .15 + (.10 * (float64(mage.Talents.ImprovedConeOfCold) - 1)),
-	// 	Kind:       core.SpellMod_DamageDone_Flat,
-	// })
+	mage.AddStaticMod(core.SpellModConfig{
+		ClassMask:  MageSpellConeOfCold,
+		FloatValue: spellData.ImprovedConeOfCold.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(mage.Talents.ImprovedConeOfCold),
+		Kind:       core.SpellMod_DamageDone_Flat,
+	})
 }
 
 // Raid bosses cannot be chilled or frozen, so Fingers of Frost is the only thing that gets Shatter
@@ -326,8 +322,7 @@ func (mage *Mage) registerWinterChill() {
 
 // registerIceBarrier implements Ice Barrier, new in Forever.
 //
-// TODO: To be implemented. Needs the Forever tooltip and a spellData ladder before
-// the effect can be modelled; there is no TBC equivalent to port.
+// Not modelled: 11426 is an absorb shield (rank 1 431); the sim models no damage taken for a mage.
 func (mage *Mage) registerIceBarrier() {
 	if !mage.Talents.IceBarrier {
 		return

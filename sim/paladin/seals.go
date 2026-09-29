@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 // Only one seal is up at a time.
@@ -14,7 +14,7 @@ const SealCategory = "PaladinSeal"
 // One rank of one seal: the castable spell's row, the aura the cast puts up, the judgement it
 // unleashes, and the per-hit effect Twist of Light's Echo can replay.
 type sealConfig struct {
-	row       shared.SpellData
+	rank      *spelldata.Spell
 	classMask int64
 	spell     *core.Spell
 	aura      *core.Aura
@@ -48,22 +48,25 @@ var (
 	SealOfCommandRankMap       = spellData.SealOfCommand
 	SealOfLightRankMap         = spellData.SealOfLight
 	SealOfWisdomRankMap        = spellData.SealOfWisdom
-	SealOfJusticeRankMap       = spellData.SealOfJustice
 	SealOfTheCrusaderRankMap   = spellData.SealOfTheCrusader
 	SealOfFuryRankMap          = spellData.SealOfFury
 )
 
 func (paladin *Paladin) registerSeals() {
-	SealOfRighteousnessRankMap.RegisterAll(paladin.registerSealOfRighteousness)
-	SealOfLightRankMap.RegisterAll(paladin.registerSealOfLight)
-	SealOfWisdomRankMap.RegisterAll(paladin.registerSealOfWisdom)
-	SealOfJusticeRankMap.RegisterAll(paladin.registerSealOfJustice)
-	SealOfTheCrusaderRankMap.RegisterAll(paladin.registerSealOfTheCrusader)
-	SealOfFuryRankMap.RegisterAll(paladin.registerSealOfFury)
+	SealOfRighteousnessRankMap.Each(paladin.registerSealOfRighteousness)
+	SealOfLightRankMap.Each(paladin.registerSealOfLight)
+	SealOfWisdomRankMap.Each(paladin.registerSealOfWisdom)
+	paladin.registerSealOfJustice()
+	SealOfTheCrusaderRankMap.Each(paladin.registerSealOfTheCrusader)
+	SealOfFuryRankMap.Each(paladin.registerSealOfFury)
 }
 
-func sealLabel(name string, paladin *Paladin, row shared.SpellData) string {
-	return fmt.Sprintf("%s%s Rank %d", name, paladin.Label, row.Rank)
+// Seal of Justice has one rank and no rank subtext, so its label carries no rank.
+func sealLabel(name string, paladin *Paladin, rank *spelldata.Spell) string {
+	if rank.RankNumber() == 0 {
+		return name + paladin.Label
+	}
+	return fmt.Sprintf("%s%s Rank %d", name, paladin.Label, rank.RankNumber())
 }
 
 // Every seal aura joins the seal category, so casting one seal drops the other.
@@ -75,18 +78,18 @@ func (paladin *Paladin) makeSealExclusive(aura *core.Aura) *core.Aura {
 // The castable seal spell: instant, on the GCD, priced as the row says.
 func (paladin *Paladin) registerSealSpell(cfg *sealConfig) *core.Spell {
 	cfg.spell = paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: cfg.row.SpellID},
-		SpellSchool:    cfg.row.SpellSchool,
-		DefenseType:    cfg.row.DefenseType,
+		ActionID:       core.ActionID{SpellID: cfg.rank.ID},
+		SpellSchool:    cfg.rank.SpellSchool(),
+		DefenseType:    cfg.rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: cfg.classMask,
-		Rank:           cfg.row.Rank,
+		Rank:           cfg.rank.RankNumber(),
 
-		ManaCost: manaCost(cfg.row),
+		ManaCost: manaCost(cfg.rank),
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: cfg.row.GCD,
+				GCD: cfg.rank.GCD(),
 			},
 		},
 

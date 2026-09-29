@@ -42,31 +42,28 @@ func syntheticBuffRows() []ResolvedBuff {
 	rows := []ResolvedBuff{
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "mana_spring_totem", Scope: buffmanifest.ScopeParty,
-				Proto: buffmanifest.ProtoTristate, Kind: buffmanifest.KindStatFlat,
-				Go: "SynthManaSpring", Name: "Mana Spring Totem", Category: "ManaSpringTotem",
+				Field: "mana_spring_totem", Category: "ManaSpringTotem",
 			},
+			Scope: buffmanifest.ScopeParty, Proto: buffmanifest.ProtoTristate,
+			Go: "SynthManaSpring", Name: "Mana Spring Totem",
 			SpellID: 10494, CastSpellID: 10494, Supported: true,
 			Spell:         spell(10494, core.SpellSchoolNature, 0, mana),
 			TalentRanks:   5,
-			TalentApplies: buffmanifest.TalentScalesValue,
 			TalentSpellID: 16187, TalentPosition: 1,
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "mana_tide_totems", Scope: buffmanifest.ScopeParty,
-				Proto: buffmanifest.ProtoInt32, Kind: buffmanifest.KindExternalCD,
-				Go: "SynthManaTide", Name: "Mana Tide Totem", Category: "ManaTideTotem",
+				Field: "mana_tide_totems", Category: "ManaTideTotem",
 			},
+			Scope: buffmanifest.ScopeParty, Proto: buffmanifest.ProtoInt32, Kind: buffmanifest.KindExternalCD,
+			Go: "SynthManaTide", Name: "Mana Tide Totem",
 			SpellID: 17360, CastSpellID: 17359, DurationMs: 12000, CooldownMs: 300000, Supported: true,
 			Spell: spell(17360, core.SpellSchoolNature, 0, mana),
 		},
 		{
-			BuffSpec: buffmanifest.BuffSpec{
-				Field: "greater_blessing_of_kings", Scope: buffmanifest.ScopeIndividual,
-				Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindStatPct,
-				Go: "SynthBlessingOfKings", Name: "Blessing of Kings",
-			},
+			BuffSpec: buffmanifest.BuffSpec{Field: "greater_blessing_of_kings"},
+			Scope:    buffmanifest.ScopeIndividual, Proto: buffmanifest.ProtoBool,
+			Go: "SynthBlessingOfKings", Name: "Blessing of Kings",
 			SpellID: 20217, CastSpellID: 20217, DurationMs: 3600000, Supported: true,
 			Spell: spell(20217, core.SpellSchoolHoly, 3600000,
 				aura(dbcenums.A_MOD_TOTAL_STAT_PERCENTAGE, 0, 10),
@@ -74,68 +71,63 @@ func syntheticBuffRows() []ResolvedBuff {
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "battle_shout", Scope: buffmanifest.ScopeParty,
-				Proto: buffmanifest.ProtoTristate, Kind: buffmanifest.KindStatFlat,
-				Go: "SynthBattleShout", Name: "Battle Shout", Category: "SynthBattleShout",
+				Field: "battle_shout", Category: "SynthBattleShout",
 				SingleAura: true, Driver: true,
 			},
+			Scope: buffmanifest.ScopeParty, Proto: buffmanifest.ProtoTristate,
+			Go: "SynthBattleShout", Name: "Battle Shout",
 			SpellID: 25289, CastSpellID: 25289, DurationMs: 180000, Supported: true,
 			Spell: spell(25289, core.SpellSchoolPhysical, 180000, aura(dbcenums.A_MOD_ATTACK_POWER, 0, 139)),
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "devotion_aura", Scope: buffmanifest.ScopeParty,
-				Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindResistance,
-				Go: "SynthDevotionAura", Name: "Devotion Aura", Category: "DevotionAura",
+				Field: "devotion_aura", Category: "DevotionAura",
 				SharedCategory: "SynthPaladinAura", SingleAura: true,
-				SkipAuras: []string{"A_MOD_HEALING_PCT"},
 			},
+			Scope: buffmanifest.ScopeParty, Proto: buffmanifest.ProtoBool,
+			Go: "SynthDevotionAura", Name: "Devotion Aura",
 			SpellID: 10293, CastSpellID: 10293, DurationMs: 600000, Supported: true,
 			Spell: spell(10293, core.SpellSchoolHoly, 600000,
 				aura(dbcenums.A_MOD_RESISTANCE, 1, 735),
 				aura(dbcenums.A_MOD_HEALING_PCT, 0, 0)),
-			TalentRanks:   2,
-			TalentApplies: buffmanifest.TalentScalesDuration,
-			TalentSpellID: 20140, TalentPosition: 2,
+			TalentRanks:          2,
+			TalentScalesDuration: true,
+			TalentSpellID:        20140, TalentPosition: 2,
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "frost_resistance_aura", Scope: buffmanifest.ScopeRaid,
-				Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindResistance,
-				Go: "SynthFrostResistanceAura", Name: "Frost Resistance Aura",
-				Category: "FrostResistanceAura", SharedCategory: "SynthPaladinAura", SingleAura: true,
+				Field: "frost_resistance_aura", Category: "FrostResistanceAura", SharedCategory: "SynthPaladinAura", SingleAura: true,
 			},
+			Scope: buffmanifest.ScopeRaid, Proto: buffmanifest.ProtoBool,
+			Go: "SynthFrostResistanceAura", Name: "Frost Resistance Aura",
 			SpellID: 19898, CastSpellID: 19898, Supported: true,
 			Spell: spell(19898, core.SpellSchoolHoly, -1, aura(dbcenums.A_MOD_RESISTANCE, 16, 60)),
 		},
 		{
-			BuffSpec: buffmanifest.BuffSpec{
-				Field: "frost_resistance_totem", Scope: buffmanifest.ScopeRaid,
-				Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindResistance,
-				Go: "SynthFrostResistanceTotem", Name: "Frost Resistance Totem", Category: "ResistanceFrost",
-			},
+			BuffSpec: buffmanifest.BuffSpec{Field: "frost_resistance_totem"},
+			Scope:    buffmanifest.ScopeRaid, Proto: buffmanifest.ProtoBool,
+			Go: "SynthFrostResistanceTotem", Name: "Frost Resistance Totem",
 			SpellID: 10477, CastSpellID: 10477, Supported: true,
 			Spell: spell(10477, core.SpellSchoolNature, 0, aura(dbcenums.A_MOD_RESISTANCE, 16, 60)),
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "thunder_clap", Scope: buffmanifest.ScopeDebuff,
-				Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindDebuffAtkSpeed,
-				Go: "SynthThunderClap", Name: "Thunder Clap", Category: "AtkSpdReduction",
+				Field: "thunder_clap", Category: "AtkSpdReduction",
 			},
+			Scope: buffmanifest.ScopeDebuff, Proto: buffmanifest.ProtoBool,
+			Go: "SynthThunderClap", Name: "Thunder Clap",
 			SpellID: 11581, CastSpellID: 11581, DurationMs: 30000, Supported: true,
 			Spell:         spell(11581, core.SpellSchoolPhysical, 30000, aura(dbcenums.A_MOD_MELEE_HASTE_3, 0, -20)),
 			TalentRanks:   2,
-			TalentApplies: buffmanifest.TalentScalesValue,
 			TalentSpellID: 12287, TalentPosition: 1,
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "innervates", Scope: buffmanifest.ScopeIndividual,
-				Proto: buffmanifest.ProtoInt32, Kind: buffmanifest.KindExternalCD,
-				Go: "SynthInnervates", Name: "Innervate", Label: "Innervates",
+				Field: "innervates", Label: "Innervates",
 				Category: "Innervate",
 			},
+			Scope: buffmanifest.ScopeIndividual, Proto: buffmanifest.ProtoInt32, Kind: buffmanifest.KindExternalCD,
+			Go: "SynthInnervates", Name: "Innervate",
 			SpellID: 29166, CastSpellID: 29166, DurationMs: 20000, CooldownMs: 360000, Supported: true,
 			Spell: spell(29166, core.SpellSchoolNature, 20000,
 				aura(dbcenums.A_MOD_MANA_REGEN_INTERRUPT, 0, 100),
@@ -143,11 +135,11 @@ func syntheticBuffRows() []ResolvedBuff {
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "power_infusions", Scope: buffmanifest.ScopeIndividual,
-				Proto: buffmanifest.ProtoInt32, Kind: buffmanifest.KindExternalCD,
-				Go: "SynthPowerInfusions", Name: "Power Infusion", Label: "Power Infusions",
+				Field: "power_infusions", Label: "Power Infusions",
 				Category: "PowerInfusion",
 			},
+			Scope: buffmanifest.ScopeIndividual, Proto: buffmanifest.ProtoInt32, Kind: buffmanifest.KindExternalCD,
+			Go: "SynthPowerInfusions", Name: "Power Infusion",
 			SpellID: 10060, CastSpellID: 10060, DurationMs: 15000, CooldownMs: 180000, Supported: true,
 			Spell: spell(10060, core.SpellSchoolHoly, 15000,
 				aura(dbcenums.A_MOD_DAMAGE_PERCENT_DONE, 126, 20),
@@ -155,40 +147,39 @@ func syntheticBuffRows() []ResolvedBuff {
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "totem_twisting", Scope: buffmanifest.ScopeParty,
-				Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindAbsent,
-				Go: "SynthAbsent", Category: "Absent",
+				Field: "totem_twisting", Category: "Absent",
 			},
+			Scope: buffmanifest.ScopeParty, Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindFlag,
+			Go:     "SynthAbsent",
 			Reason: "the client has no row for it",
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "atiesh_mage", Scope: buffmanifest.ScopeParty,
-				Proto: buffmanifest.ProtoInt32, Kind: buffmanifest.KindItemCount,
-				Go: "SynthAtieshMage", Label: "Atiesh - Mage",
+				Field: "atiesh_mage", Label: "Atiesh - Mage",
 			},
+			Scope: buffmanifest.ScopeParty, Proto: buffmanifest.ProtoInt32, Kind: buffmanifest.KindItemCount,
+			Go:      "SynthAtieshMage",
 			SpellID: 28142, CastSpellID: 28142, Supported: true,
 			Spell: spell(28142, core.SpellSchoolPhysical, -1, aura(dbcenums.A_MOD_SPELL_CRIT_CHANCE, 0, 2)),
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "thorns", Scope: buffmanifest.ScopeRaid,
-				Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindDamageShield,
-				Go: "SynthThorns", Name: "Thorns", Category: "Thorns",
+				Field: "thorns", Category: "Thorns",
 			},
+			Scope: buffmanifest.ScopeRaid, Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindDamageShield,
+			Go: "SynthThorns", Name: "Thorns",
 			SpellID: 9910, CastSpellID: 9910, DurationMs: 600000, Supported: true,
 			Spell:         spell(9910, core.SpellSchoolNature, 600000, aura(dbcenums.A_DAMAGE_SHIELD, 0, 18)),
 			TalentRanks:   2,
-			TalentApplies: buffmanifest.TalentScalesValue,
 			TalentSpellID: 16836, TalentPosition: 1,
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "sunder_armor", Scope: buffmanifest.ScopeDebuff,
-				Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindDebuffStacking,
-				Go: "SynthSunderArmor", Name: "Sunder Armor", Category: "MajorArmorReduction",
+				Field: "sunder_armor", Category: "MajorArmorReduction",
 				SingleAura: true, Driver: true,
 			},
+			Scope: buffmanifest.ScopeDebuff, Proto: buffmanifest.ProtoBool,
+			Go: "SynthSunderArmor", Name: "Sunder Armor",
 			SpellID: 11597, CastSpellID: 11597, DurationMs: 30000, Supported: true,
 			Spell: func() *spelldata.Spell {
 				s := spell(11597, core.SpellSchoolPhysical, 30000, aura(dbcenums.A_MOD_RESISTANCE, 1, -450))
@@ -198,22 +189,22 @@ func syntheticBuffRows() []ResolvedBuff {
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "expose_armor", Scope: buffmanifest.ScopeDebuff,
-				Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindDebuffStat,
-				Go: "SynthExposeArmor", Name: "Expose Armor", Category: "MajorArmorReduction",
+				Field: "expose_armor", Category: "MajorArmorReduction",
 				SingleAura: true,
 			},
+			Scope: buffmanifest.ScopeDebuff, Proto: buffmanifest.ProtoBool,
+			Go: "SynthExposeArmor", Name: "Expose Armor",
 			SpellID: 11198, CastSpellID: 11198, DurationMs: 30000, Supported: true,
 			Spell: spell(11198, core.SpellSchoolPhysical, 30000, spelldata.Effect{Type: dbcenums.E_APPLY_AURA,
 				Aura: dbcenums.A_MOD_RESISTANCE, Misc: 1, PointsPerResource: -450}),
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "curse_of_elements", Scope: buffmanifest.ScopeDebuff,
-				Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindDebuffDamageTaken,
-				Go: "SynthCurseOfElements", Name: "Curse of the Elements", Category: "CurseOfElements",
+				Field: "curse_of_elements", Category: "CurseOfElements",
 				SingleAura: true,
 			},
+			Scope: buffmanifest.ScopeDebuff, Proto: buffmanifest.ProtoBool,
+			Go: "SynthCurseOfElements", Name: "Curse of the Elements",
 			SpellID: 1311680, CastSpellID: 1311680, DurationMs: 300000, Supported: true,
 			Spell: spell(1311680, core.SpellSchoolShadow, 300000,
 				aura(dbcenums.A_MOD_RESISTANCE, 124, -75),
@@ -221,11 +212,10 @@ func syntheticBuffRows() []ResolvedBuff {
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
-				Field: "judgement_of_the_crusader", Scope: buffmanifest.ScopeDebuff,
-				Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindDebuffStat,
-				Go: "SynthJudgementOfTheCrusader", Name: "Judgement of the Crusader",
-				Category: "Judgement of the Crusader", SingleAura: true,
+				Field: "judgement_of_the_crusader", Category: "Judgement of the Crusader", SingleAura: true,
 			},
+			Scope: buffmanifest.ScopeDebuff, Proto: buffmanifest.ProtoBool,
+			Go: "SynthJudgementOfTheCrusader", Name: "Judgement of the Crusader",
 			SpellID: 20303, CastSpellID: 20303, DurationMs: 10000, Supported: true,
 			Spell: spell(20303, core.SpellSchoolHoly, 10000, aura(dbcenums.A_MOD_DAMAGE_TAKEN, 2, 140)),
 		},
@@ -234,13 +224,7 @@ func syntheticBuffRows() []ResolvedBuff {
 		if rows[i].Spell == nil {
 			continue
 		}
-		if err := resolveSkipAuras(&rows[i]); err != nil {
-			panic(err)
-		}
 		parseBuff(&rows[i])
-		if isSchoolResistanceCategory(rows[i].Category) {
-			rows[i].Category = ""
-		}
 	}
 	return rows
 }

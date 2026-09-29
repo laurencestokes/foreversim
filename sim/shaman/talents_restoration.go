@@ -181,18 +181,15 @@ func (shaman *Shaman) applyHealingFocus() {
 	}
 }
 
-// applyWaterShield implements Water Shield, new in Forever.
-//
-// TODO: To be implemented. Needs the Forever tooltip and a spellData ladder before
-// the effect can be modelled; there is no TBC equivalent to port.
+// applyWaterShield: the talent teaches Water Shield (409941 -> 408510), which registerWaterShieldSpell
+// in shields.go registers when the talent is taken.
 func (shaman *Shaman) applyWaterShield() {
 	if !shaman.Talents.WaterShield {
 		return
 	}
 }
 
-// applyManaTideTotem is Forever's healing talent granting a party mana-restoring totem. The DPS specs never
-// spend a point here and the sim scores no healing, so it changes no number.
+// applyManaTideTotem: the totem is the ManaTideTotems party buff, which AddPartyBuffs adds.
 func (shaman *Shaman) applyManaTideTotem() {
 	if !shaman.Talents.ManaTideTotem {
 		return

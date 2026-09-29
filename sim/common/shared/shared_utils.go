@@ -679,6 +679,12 @@ func applySpellDataDamageProc(agent core.Agent, cfg SpellDataProc, source effect
 	source.registerTrigger(character, config)
 }
 
+// The spell a proc of the row casts, for a proc registered outside the item effect registry, such as
+// a set bonus's.
+func SpellDataProcDamageSpell(character *core.Character, damage *spelldata.Spell) core.SpellConfig {
+	return spellDataProcDamageSpell(character, damage, true)
+}
+
 // The spell the proc casts, as its row states it: school, defense type, spell power share, travel
 // time and the amount it rolls. What the row cannot state is that it is a proc's spell - out of the
 // rotation, not a cast of its own, and its hits do not feed the damage-dealt listeners, which is

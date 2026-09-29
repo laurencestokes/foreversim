@@ -273,9 +273,9 @@ Anything shared by several specs of the same class lives in `ui/specs/<class>/sh
 fixed name: `inputs.ts` for the input configs that would otherwise sit at the pre-port
 `<class>/inputs.ts`, and `presets.ts` for encounter presets, EP-breakpoint tables and a class's
 `DefaultRaidBuffs` where its specs share one raid-buff default. Only the classes that need it have
-the directory — today `paladin/shared/inputs.ts`, `shaman/shared/inputs.ts` and
-`warrior/shared/{inputs,presets}.ts`; druid's four specs share nothing at this level, so there is no
-`druid/shared/`.
+the directory — today `shaman/shared/inputs.ts` and `warrior/shared/{inputs,presets}.ts`; druid's
+four specs and paladin's three share nothing at this level, so there is no `druid/shared/` or
+`paladin/shared/`.
 
 If a rule ever has to be shared as a `DerivedSetting`, declare it `DerivedSetting<any>`: `Player<S>`
 is invariant in `S`, so a rule typed against a spec union is not assignable into any one spec's

@@ -7,7 +7,7 @@ import { LandingHeader } from './LandingHeader';
 
 export const LandingPage = () => (
 	<>
-		<div className="fixed -z-1 h-full w-full bg-landing bg-cover bg-center bg-no-repeat opacity-30" />
+		<div className="fixed -z-1 h-full w-full bg-landing bg-cover bg-center bg-no-repeat opacity-30 max-md:bg-landing-sm" />
 		<div id="homepage" className="flex h-full flex-col">
 			<LandingHeader />
 			<main>

@@ -110,11 +110,36 @@ export const DenseDynamite = {
 	showWhen: (player: Player<any>) => player.hasProfession(Profession.Engineering),
 };
 
+// A mage's vendor scroll; it shares the explosives' 1 min cooldown, so it takes their slot.
+export const ScrollOfCryoblast = {
+	actionId: ActionId.fromItemId(217495),
+	value: 440212,
+	showWhen: (player: Player<any>) => player.getClass() == Class.ClassMage,
+};
+
+// Forever's SAF-T / EZ-Thro bombs: required level 1 and no Engineering (ItemSparse 70009).
+// Keyed on the use spell, like the sim; best average damage first.
+export const SaftBombs = [
+	[260817, 1269334], // EZ-Thro Dark Bomb
+	[260814, 1269282], // SAF-T Clever Dynamite
+	[260816, 1269330], // EZ-Thro Thorium Grenade
+	[260803, 1269270], // EZ-Thro Grenade
+	[260805, 1269272], // SAF-T Bomb
+	[260809, 1269278], // Tru-Trigger Frag Bomb
+	[260798, 1269264], // SAF-T Jumbo Dynamite
+	[260797, 1269216], // SAF-T Bronze Bomb
+	[260795, 1269192], // EZ-Thro Copper Bomb XL
+	[260792, 1269155], // SAF-T Dynamite
+	[260793, 1269161], // SAF-T Copper Bomb
+].map(([itemId, value]) => ({ actionId: ActionId.fromItemId(itemId), value }));
+
 export const EXPLOSIVE_CONFIG = [
+	{ config: ScrollOfCryoblast, stats: [] },
 	{ config: ThoriumGrenade, stats: [] },
 	{ config: DenseDynamite, stats: [] },
 	{ config: CrystalCharge, stats: [] },
 	{ config: EzThroDynamiteTwo, stats: [] },
+	...SaftBombs.map(config => ({ config, stats: [] })),
 ] as ConsumableStatOption<number>[];
 export const makeExplosivesInput = makeConsumeInputFactory({ consumesFieldName: 'explosiveId' });
 

@@ -38,6 +38,13 @@ func StringFromActionIDs(actionIDs []ActionID) string {
 	return strings.Join(names, ", ")
 }
 func (unit *Unit) ExecuteResourceGain(sim *Simulation, resource proto.ResourceType, amount float64, metrics *ResourceMetrics) {
+	// A resource the unit has no bar for is not gained: a rogue drinks Mighty Rage Potion for its
+	// Strength and gets no rage from it. Adding to the missing bar dereferenced nil.
+	if resource == proto.ResourceType_ResourceTypeRage && !unit.HasRageBar() ||
+		resource == proto.ResourceType_ResourceTypeEnergy && !unit.HasEnergyBar() ||
+		resource == proto.ResourceType_ResourceTypeMana && !unit.HasManaBar() {
+		return
+	}
 	switch {
 	case resource == proto.ResourceType_ResourceTypeMana && amount > 0:
 		unit.AddMana(sim, amount, metrics)

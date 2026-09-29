@@ -1,12 +1,9 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 )
-
-var DivineFavorRankMap = spellData.DivineFavor
 
 // Divine Favor (talent)
 // https://www.wowhead.com/forever/spell=20216
@@ -14,8 +11,8 @@ var DivineFavorRankMap = spellData.DivineFavor
 // When activated, gives your next Flash of Light, Holy Light, or Holy Shock spell a 100% critical
 // effect chance.
 func (paladin *Paladin) registerDivineFavor() {
-	row := DivineFavorRankMap.HighestRank()
-	actionID := core.ActionID{SpellID: row.SpellID}
+	rank := spellData.DivineFavor.Highest()
+	actionID := core.ActionID{SpellID: rank.ID}
 
 	var divineFavorAura *core.Aura
 	divineFavorAura = paladin.RegisterAura(core.Aura{
@@ -25,7 +22,7 @@ func (paladin *Paladin) registerDivineFavor() {
 	}).AttachSpellMod(core.SpellModConfig{
 		Kind:       core.SpellMod_BonusCrit_Percent,
 		ClassMask:  SpellMaskHealingSpells | SpellMaskHolyShock,
-		FloatValue: row.Effect(shared.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CRITICAL_CHANCE)).Value,
+		FloatValue: rank.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CRITICAL_CHANCE)).Average(core.CharacterLevel),
 	}).AttachProcTrigger(core.ProcTrigger{
 		CanProcFromProcs:   true, // 20216 carries the bit.
 		Callback:           core.CallbackOnCastComplete,
@@ -38,19 +35,19 @@ func (paladin *Paladin) registerDivineFavor() {
 
 	divineFavor := paladin.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
-		SpellSchool:    row.SpellSchool,
-		DefenseType:    row.DefenseType,
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		Flags:          core.SpellFlagAPL | core.SpellFlagHelpful,
 		ClassSpellMask: SpellMaskDivineFavor,
 
-		ManaCost: manaCost(row),
+		ManaCost: manaCost(rank),
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
 				NonEmpty: true,
 			},
 			CD: core.Cooldown{
 				Timer:    paladin.NewTimer(),
-				Duration: row.Cooldown,
+				Duration: cooldown(rank),
 			},
 		},
 

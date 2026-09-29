@@ -1,8 +1,8 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core/buffs"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 var DevotionAuraRankMap = spellData.DevotionAura
@@ -13,8 +13,8 @@ var DevotionAuraRankMap = spellData.DevotionAura
 // Gives 735 additional armor to party members within 30 yards. Players may only have one Aura on
 // them per Paladin at any one time.
 func (paladin *Paladin) registerDevotionAura() {
-	DevotionAuraRankMap.RegisterAll(func(row shared.SpellData) {
-		aura := buffs.DevotionAuraBuff(&paladin.Character, true, auraRank(row))
-		paladin.registerAuraSpell(row, aura, SpellMaskDevotionAura)
+	DevotionAuraRankMap.Each(func(_ int32, rank *spelldata.Spell) {
+		aura := buffs.DevotionAuraBuff(&paladin.Character, true, auraRank(rank))
+		paladin.registerAuraSpell(rank, aura, SpellMaskDevotionAura)
 	})
 }

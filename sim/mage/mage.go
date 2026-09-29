@@ -83,6 +83,7 @@ func (mage *Mage) registerSpells() {
 	mage.registerFrostboltSpell()
 	mage.registerEvocation()
 	mage.registerFireballSpell()
+	mage.registerFrostfireBoltSpell()
 	mage.registerFireBlastSpell()
 	mage.registerFrostNovaSpell()
 	mage.registerIceLanceSpell()
@@ -119,15 +120,14 @@ func NewMage(character *core.Character, options *proto.Player) *Mage {
 	core.FillTalentsProto(mage.Talents.ProtoReflect(), options.TalentsString, TalentTreeSizes)
 
 	// The gnome's Eureka! (1259817): its SpellEffect class mask read against the mage's damaging
-	// spells. Frostfire Bolt is on the client's list too, but the sim has no implementation of it
-	// yet (frostfire_bolt.go), so it is left out here. Arcane Missiles' tick is a spell of its own
+	// spells, including Frostfire Bolt. Arcane Missiles' tick is a spell of its own
 	// (MageSpellArcaneMissilesTick) and takes the bonus, but only the cast that opens the channel
 	// (MageSpellArcaneMissilesCast) spends a charge. Blizzard's periodic damage is likewise cast as
 	// its own spell each tick (blizzard.go), but unlike Arcane Missiles it reuses the channel's own
 	// mask (MageSpellBlizzard) rather than a tick-only one, so there is no bit that names just the
 	// opening cast; Blizzard stays in the damage mask but out of the charge mask; the mage's other
 	// Eureka!-covered casts spend the charges instead.
-	mage.EurekaSpellMask = MageSpellFrostbolt | MageSpellFireball | MageSpellPyroblast | MageSpellScorch | MageSpellFireBlast |
+	mage.EurekaSpellMask = MageSpellFrostbolt | MageSpellFrostfireBolt | MageSpellFireball | MageSpellPyroblast | MageSpellScorch | MageSpellFireBlast |
 		MageSpellArcaneMissilesCast | MageSpellArcaneMissilesTick | MageSpellArcaneBlast | MageSpellArcaneExplosion |
 		MageSpellBlizzard | MageSpellConeOfCold | MageSpellFlamestrike | MageSpellBlastWave | MageSpellIceLance
 	mage.EurekaChargeMask = mage.EurekaSpellMask &^ (MageSpellArcaneMissilesTick | MageSpellBlizzard)
@@ -135,8 +135,8 @@ func NewMage(character *core.Character, options *proto.Player) *Mage {
 	mage.EnableManaBar()
 	mage.AddStatDependency(stats.Agility, stats.PhysicalCritPercent, core.CritPerAgiMaxLevel[character.Class])
 
-	// TODO: Forever drops Summon Water Elemental; the pet is never created until we know
-	// whether the talent moved elsewhere.
+	// Forever has no Water Elemental: client 70009 carries no Summon Water Elemental (31687) at all,
+	// so the pet is never created.
 
 	return mage
 }
@@ -180,8 +180,6 @@ const (
 	MageSpellManaGem
 	MageSpellCombustion
 	MageSpellImprovedBlizzard
-
-	// TODO: Forever abilities the sim does not model yet; see the stub file named for each.
 	MageSpellFrostfireBolt
 
 	MageSpellLast
@@ -192,14 +190,14 @@ const (
 	MageSpellsAllDamaging = MageSpellArcaneBlast | MageSpellArcaneExplosion | MageSpellArcaneMissilesTick | MageSpellBlizzard |
 		MageSpellFireBlast | MageSpellFireball | MageSpellFlamestrike | MageSpellFrostbolt |
 		MageSpellIceLance | MageSpellPyroblast | MageSpellPyroblastDot | MageSpellScorch |
-		MageSpellBlastWave | MageSpellConeOfCold | MageSpellFrostNova
+		MageSpellBlastWave | MageSpellConeOfCold | MageSpellFrostNova | MageSpellFrostfireBolt
 	MageSpellInstantCast = MageSpellArcaneMissilesCast | MageSpellArcaneMissilesTick | MageSpellFireBlast | MageSpellArcaneExplosion | MageSpellPyroblastDot |
 		MageSpellCombustion | MageSpellConeOfCold | MageSpellIceLance | MageSpellManaGems | MageSpellPresenceOfMind
 	MageSpellExtraResult    = MageSpellArcaneMissilesTick | MageSpellBlizzard
 	FireSpellIgnitable      = MageSpellFireball | MageSpellScorch | MageSpellPyroblast
 	MageSpellArcaneMissiles = MageSpellArcaneMissilesCast | MageSpellArcaneMissilesTick
 
-	// The chill effects Fingers of Frost rolls on: Frostbolt's slow, Cone of Cold's, and Improved
-	// Blizzard's.
-	MageSpellChill = MageSpellFrostbolt | MageSpellConeOfCold | MageSpellImprovedBlizzard
+	// The chill effects Fingers of Frost rolls on: Frostbolt's slow, Cone of Cold's, Frostfire Bolt's
+	// (all three carry the client's chill bit, 0x100000) and Improved Blizzard's.
+	MageSpellChill = MageSpellFrostbolt | MageSpellConeOfCold | MageSpellFrostfireBolt | MageSpellImprovedBlizzard
 )

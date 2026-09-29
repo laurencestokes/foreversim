@@ -31,12 +31,13 @@ func NewShaman(character *core.Character, talents string, selfBuffs SelfBuffs) *
 	// Add Shaman stat dependencies
 	shaman.AddStatDependency(stats.BonusArmor, stats.Armor, 1)
 	shaman.AddStatDependency(stats.Agility, stats.PhysicalCritPercent, core.CritPerAgiMaxLevel[shaman.Class])
-	shaman.AddStatDependency(stats.Agility, stats.DodgeRating, 1.0/25*core.DodgeRatingPerDodgePercent)
+	// Dodge per agility equals crit per agility, as in Classic (20 agility at 60, not TBC's 25).
+	shaman.AddStatDependency(stats.Agility, stats.DodgeRating, core.CritPerAgiMaxLevel[shaman.Class]*core.DodgeRatingPerDodgePercent)
 	shaman.EnableManaBarWithModifier()
 
 	shaman.AddStatDependency(stats.Strength, stats.AttackPower, 2.0)
 
-	shaman.WindfuryAPBonus = 333.0 // 16361, Windfury Weapon rank 4
+	shaman.WindfuryAPBonus = windfuryImbue.EffectN(1).Average(core.CharacterLevel) // 16361, 333 at 60
 
 	return shaman
 }
@@ -129,6 +130,15 @@ func (shaman *Shaman) GetCharacter() *core.Character {
 }
 
 func (shaman *Shaman) AddRaidBuffs(raidBuffs *proto.RaidBuffs) {
+}
+
+// The talented Mana Tide Totem (16190) is the party buff's totem, dropped by this shaman.
+// ponytail: it does not take Mana Spring's water slot for its 12 s; model the slot if a sim ever
+// shows the overlap mattering.
+func (shaman *Shaman) AddPartyBuffs(partyBuffs *proto.PartyBuffs) {
+	if shaman.Talents.ManaTideTotem {
+		partyBuffs.ManaTideTotems++
+	}
 }
 
 func (shaman *Shaman) Initialize() {

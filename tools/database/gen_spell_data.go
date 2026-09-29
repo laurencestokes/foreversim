@@ -18,60 +18,6 @@ import (
 
 var rankSubtext = regexp.MustCompile(`^Rank (\d+)$`)
 
-type generatedRow struct {
-	Rank            int32
-	SpellID         int32
-	Cost            int32
-	PowerCostPct    float64
-	CastTimeMs      int32
-	GCDMs           int32
-	CooldownMs      int32
-	DurationMs      int32
-	MinRange        float64
-	MaxRange        float64
-	MissileSpeed    float64
-	ProcChance      int32
-	ProcCharges     int32
-	MaxTargets      int32
-	RefundsOnMiss   bool
-	PeriodicCanCrit bool
-	FlatThreatBonus float64
-	SchoolMask      int32
-	DefenseType     int32
-	Effects         []generatedEffect
-	Direct          *generatedAmount
-	Heal            *generatedAmount
-	Periodic        *generatedAmount
-	Energize        *generatedAmount
-
-	SecondaryPeriodic *generatedAmount
-}
-
-type generatedEffect struct {
-	Index          int32
-	Effect         dbc.SpellEffectType
-	Aura           dbc.EffectAuraType
-	Misc           int32
-	Value          float64
-	ValueMax       float64
-	ChainAmplitude float64
-	Coef           float64
-	APCoef         float64
-}
-
-type generatedAmount struct {
-	Min    float64
-	Max    float64
-	Coef   float64
-	APCoef float64
-
-	PeriodMs int32
-	Ticks    int32
-
-	// The effect's spell where it is not the rank's own, which only a periodic value renders.
-	SpellID int32
-}
-
 // SkillLineAbility.AcquireMethod: 0 trainer, 1 with the skill, 2 on level, 3 granted by another spell.
 const (
 	acquireOnLevel = 2
@@ -367,10 +313,16 @@ func triggeredSpells(db *sql.DB, spellID int32) ([]int32, error) {
 	return ids, nil
 }
 
-// The rows of a family's triggered table: one per spell the family's ranks trigger. Where every rank
-// triggers the same spell there is one row, rank 1; where each rank triggers its own, the row takes
-// the rank's number; anything else is numbered in id order.
-func triggeredRows(db *sql.DB, l rankLadder, mask int) ([]generatedRow, error) {
+// One spell of a family's triggered ladder, and the rank the ladder files it under.
+type triggeredRow struct {
+	Rank    int32
+	SpellID int32
+}
+
+// The spells a family's ranks trigger, numbered for its triggered ladder. Where every rank triggers
+// the same spell there is one row, rank 1; where each rank triggers its own, the row takes the
+// rank's number; anything else is numbered in id order.
+func triggeredRows(db *sql.DB, l rankLadder) ([]triggeredRow, error) {
 	ranks := make([]int32, 0, len(l.Ranks))
 	for rank := range l.Ranks {
 		ranks = append(ranks, rank)
@@ -417,13 +369,9 @@ func triggeredRows(db *sql.DB, l rankLadder, mask int) ([]generatedRow, error) {
 		}
 	}
 
-	var out []generatedRow
+	out := make([]triggeredRow, 0, len(order))
 	for _, id := range order {
-		row, err := buildRow(db, numbered[id], id, mask, nil)
-		if err != nil {
-			return nil, fmt.Errorf("triggered spell %d: %w", id, err)
-		}
-		out = append(out, row)
+		out = append(out, triggeredRow{Rank: numbered[id], SpellID: id})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Rank < out[j].Rank })
 	return out, nil
@@ -970,163 +918,6 @@ func overrideReplacements(db *sql.DB, ids map[int32]bool) (map[int32]bool, error
 	return replaced, nil
 }
 
-// Which effect supplies which field. Derived from the effect types rather than declared per family,
-// because the client data already says it: a SCHOOL_DAMAGE effect is direct damage, a HEAL effect is a
-// heal, an ENERGIZE effect is Lay on Hands' mana restore, a periodic aura is a tick.
-// Where points is set the rank's numbers come from the talent tree's curves. Only the effects it prices
-// can fill a role; an effect the tree states no curve for is the same at every rank - Blood Craze's
-// 20% health threshold - and is carried in Effects at the spell's own base points. The same-name
-// sibling search is not wanted there either - it exists for the ability dispatchers, and a talent
-// priced per rank has nothing to borrow.
-func buildRow(db *sql.DB, rank int32, spellID int32, mask int, points map[int32]float64) (generatedRow, error) {
-	var spell RankSpell
-	var candidates []RankEffect
-	var err error
-	if points != nil {
-		spell, err = LoadRankSpell(db, spellID)
-		candidates = spell.Effects
-	} else {
-		spell, candidates, err = RankCandidates(db, spellID, mask)
-	}
-	if err != nil {
-		return generatedRow{}, err
-	}
-	if points != nil {
-		candidates = pricedEffects(spell.Effects, points)
-	}
-
-	derive := func(e RankEffect) (float64, float64) {
-		if value, ok := points[e.Index]; ok {
-			return value, value
-		}
-		return DeriveRankAmount(e, e.SpellLevel, e.MaxLevel)
-	}
-
-	row := generatedRow{
-		Rank: rank, SpellID: spellID,
-		CastTimeMs: spell.CastTimeMs, GCDMs: spell.GCDMs, CooldownMs: spell.CooldownMs,
-		MinRange: spell.MinRange, MaxRange: spell.MaxRange, MissileSpeed: spell.MissileSpeed,
-		ProcChance: spell.ProcChance, ProcCharges: spell.ProcCharges, MaxTargets: spell.MaxTargets, RefundsOnMiss: spell.RefundsOnMiss,
-		PeriodicCanCrit: spell.PeriodicCanCrit,
-		DurationMs:      spell.DurationMs, SchoolMask: spell.SchoolMask, DefenseType: spell.DefenseType,
-	}
-	if spell.ManaCost.Valid {
-		row.Cost = NormalizePowerCost(int32(spell.ManaCost.Int64), spell.PowerType)
-	}
-	row.PowerCostPct = spell.PowerCostPct
-
-	amountOf := func(e RankEffect) *generatedAmount {
-		min, max := derive(e)
-		a := &generatedAmount{Min: min, Max: max, Coef: e.Coefficient, APCoef: e.APCoef}
-		if e.OwnerSpellID != spell.SpellID {
-			a.SpellID = e.OwnerSpellID
-		}
-
-		// A tick count is the duration over the period, which is how every hand-written
-		// NumberOfTicks in the sim was arrived at.
-		if e.AuraPeriod > 0 {
-			a.PeriodMs = e.AuraPeriod
-			if spell.DurationMs > 0 {
-				a.Ticks = spell.DurationMs / e.AuraPeriod
-			}
-		}
-		return a
-	}
-
-	for _, e := range spell.Effects {
-		min, max := derive(e)
-		if max == min {
-			max = 0
-		}
-		row.Effects = append(row.Effects, generatedEffect{
-			Index: e.Index, Effect: e.Effect, Aura: e.Aura, Misc: e.MiscValue, Value: min, ValueMax: max,
-			ChainAmplitude: e.ChainAmplitude, Coef: e.Coefficient, APCoef: e.APCoef,
-		})
-	}
-
-	for _, e := range candidates {
-		switch {
-		// A damage effect with a period is one the description reached and the rank's periodic
-		// dummy times, so it ticks; the rank's own damage effects never carry one. Consecration
-		// names a second, the extra damage on the first few targets.
-		case e.Effect == dbcenums.E_SCHOOL_DAMAGE && e.AuraPeriod > 0:
-			switch {
-			case row.Periodic == nil:
-				row.Periodic = amountOf(e)
-			case row.SecondaryPeriodic == nil:
-				row.SecondaryPeriodic = amountOf(e)
-			default:
-				return generatedRow{}, fmt.Errorf("spell %d names a third ticking value on spell %d, and the row holds two",
-					spellID, e.OwnerSpellID)
-			}
-		// A dummy the description names on a spell the rank's own dummy points at is the rank's number
-		// kept there with its coefficient: Seal of Righteousness' per-hit damage, on its judgement.
-		case e.Effect == dbcenums.E_DUMMY && e.Named && row.Direct == nil:
-			row.Direct = amountOf(e)
-		case (e.Effect == dbcenums.E_SCHOOL_DAMAGE || IsWeaponDamageEffect(e.Effect)) && row.Direct == nil:
-			row.Direct = amountOf(e)
-		case e.Effect == dbcenums.E_HEAL && row.Heal == nil:
-			row.Heal = amountOf(e)
-		case (e.Effect == dbcenums.E_ENERGIZE || e.Aura == dbcenums.A_PERIODIC_ENERGIZE) && row.Energize == nil:
-			row.Energize = amountOf(e)
-		case IsThreatEffect(e.Effect) && row.FlatThreatBonus == 0:
-			min, _ := derive(e)
-			row.FlatThreatBonus = min
-		case IsPeriodicAura(e.Aura) && row.Periodic == nil:
-			row.Periodic = amountOf(e)
-		}
-	}
-
-	// An aura effect reached by the fallbacks below still lands in the role its shape says it has:
-	// Frenzied Regeneration's aura ticks every second, and filing that under Direct would hand the
-	// call site a periodic value through a field that promises a direct one.
-	fallback := func(e RankEffect) {
-		if e.AuraPeriod > 0 {
-			row.Periodic = amountOf(e)
-		} else {
-			row.Direct = amountOf(e)
-		}
-	}
-
-	// Holy Shield keeps its per-block damage on an aura effect that is none of the roles above, and it
-	// is not the only aura effect on the spell: one index holds the block value and another the damage.
-	// The damage is the one that scales with spell power, so a nonzero coefficient is what picks it.
-	if !row.hasValue() {
-		for _, e := range candidates {
-			if e.Aura != 0 && e.BasePoints > 0 && e.Coefficient > 0 {
-				fallback(e)
-				break
-			}
-		}
-	}
-	if !row.hasValue() {
-		for _, e := range candidates {
-			if e.Aura != 0 && e.BasePoints > 0 {
-				fallback(e)
-				break
-			}
-		}
-	}
-
-	return row, nil
-}
-
-func pricedEffects(effects []RankEffect, points map[int32]float64) []RankEffect {
-	var kept []RankEffect
-	for _, e := range effects {
-		if _, ok := points[e.Index]; ok {
-			kept = append(kept, e)
-		}
-	}
-	return kept
-}
-
-// A low rank can legitimately carry no numbers at all - Lay on Hands rank 1 heals a share of max health
-// and restores no mana, so it has no ENERGIZE effect where ranks 2-4 do.
-func (row generatedRow) hasValue() bool {
-	return row.Direct != nil || row.Heal != nil || row.Periodic != nil || row.Energize != nil
-}
-
 // Every file the generator writes, by the path it is written to, rendered and none written: what
 // happens to them is writeSpellDataFiles' business, and -check's business is that nothing does.
 func renderSpellDataFiles(helper *DBHelper) (map[string][]byte, *storeInputs, error) {
@@ -1160,7 +951,7 @@ func renderSpellDataFiles(helper *DBHelper) (map[string][]byte, *storeInputs, er
 		if err != nil {
 			return nil, nil, fmt.Errorf("%s: %w", pkg, err)
 		}
-		out, err := renderClassFile(helper.db, pkg, class, namer, ladders, skipped, partial)
+		out, err := renderClassFile(helper.db, pkg, ladders, skipped, partial)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%s: %w", pkg, err)
 		}
@@ -1185,19 +976,8 @@ func renderSpellDataFiles(helper *DBHelper) (map[string][]byte, *storeInputs, er
 		}
 	}
 
-	// Rendered before any write too: it holds exactly the names the class files above turned out to
-	// reference, and a class file naming a constant this file does not declare breaks the sim - and
-	// with it gen_db, which imports the sim.
-	enums, err := namer.render()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// The store's rows name the enum values through dbcenums, so nothing they reach is recorded on
-	// the namer: the shared file above holds the class tables' names and no others.
-	//
-	// The client rows it is built from are captured on the way through and handed back, so the
-	// caller can write them next to the store and the regeneration can be checked without the
+	// The client rows the store is built from are captured on the way through and handed back, so
+	// the caller can write them next to the store and the regeneration can be checked without the
 	// database - see spelldata_inputs.go.
 	inputs, err := loadStoreInputs(helper.db, ladderIDs, trees)
 	if err != nil {
@@ -1220,7 +1000,6 @@ func renderSpellDataFiles(helper *DBHelper) (map[string][]byte, *storeInputs, er
 		return nil, nil, fmt.Errorf("buffs: %w", err)
 	}
 	files["sim/core/dbcenums/forms_auto_gen.go"] = formsFile
-	files["sim/common/shared/spell_data_enums_auto_gen.go"] = enums
 	files["sim/core/spelldata/spells_auto_gen.go"] = store
 	for pkg, out := range rendered {
 		files[fmt.Sprintf("sim/%s/spell_data_auto_gen.go", pkg)] = out
@@ -1228,10 +1007,9 @@ func renderSpellDataFiles(helper *DBHelper) (map[string][]byte, *storeInputs, er
 	return files, inputs, nil
 }
 
-func renderClassFile(db *sql.DB, pkg string, class dbc.DbcClass, namer *rankEnumNamer, ladders []rankLadder, skipped, partial []string) ([]byte, error) {
+func renderClassFile(db *sql.DB, pkg string, ladders []rankLadder, skipped, partial []string) ([]byte, error) {
 	// Named rather than dropped silently, so a family the resolver could not make sense of is visible
-	// here instead of merely absent. Kept out of the body below, whose text decides which imports the
-	// file needs - a family name containing "time." would otherwise add an unused one.
+	// here instead of merely absent.
 	var notGenerated strings.Builder
 	for _, block := range []struct {
 		header string
@@ -1250,10 +1028,9 @@ func renderClassFile(db *sql.DB, pkg string, class dbc.DbcClass, namer *rankEnum
 		notGenerated.WriteString("\n")
 	}
 
-	mask := classMaskOf(class)
-	triggered := map[string][]generatedRow{}
+	triggered := map[string][]triggeredRow{}
 	for _, l := range ladders {
-		rows, err := triggeredRows(db, l, mask)
+		rows, err := triggeredRows(db, l)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", l.Name, err)
 		}
@@ -1262,99 +1039,16 @@ func renderClassFile(db *sql.DB, pkg string, class dbc.DbcClass, namer *rankEnum
 		}
 	}
 
-	if storeBackedClasses[pkg] {
-		return renderLadderClassFile(pkg, ladders, triggered, notGenerated.String())
-	}
-
-	var b strings.Builder
-	b.WriteString("type generatedSpellData struct {\n")
-	for _, l := range ladders {
-		fmt.Fprintf(&b, "\t%s shared.SpellDataTable\n", l.Field)
-		if triggered[l.Field] != nil {
-			fmt.Fprintf(&b, "\t%sTriggered shared.SpellDataTable\n", l.Field)
-		}
-	}
-	b.WriteString("}\n\nvar spellData = generatedSpellData{\n")
-	for _, l := range ladders {
-		ranks := make([]int32, 0, len(l.Ranks))
-		for rank := range l.Ranks {
-			ranks = append(ranks, rank)
-		}
-		sort.Slice(ranks, func(i, j int) bool { return ranks[i] < ranks[j] })
-
-		fmt.Fprintf(&b, "\t%s: shared.SpellDataTable{\n", l.Field)
-		for _, rank := range ranks {
-			row, err := buildRow(db, rank, l.Ranks[rank], mask, l.Points[rank])
-			if err != nil {
-				return nil, fmt.Errorf("%s rank %d: %w", l.Name, rank, err)
-			}
-			fmt.Fprintf(&b, "\t\t%s\n", formatRow(row, namer))
-		}
-		b.WriteString("\t},\n")
-		if rows := triggered[l.Field]; rows != nil {
-			fmt.Fprintf(&b, "\t%sTriggered: shared.SpellDataTable{\n", l.Field)
-			for _, row := range rows {
-				fmt.Fprintf(&b, "\t\t%s\n", formatRow(row, namer))
-			}
-			b.WriteString("\t},\n")
-		}
-	}
-	b.WriteString("}\n")
-
-	body := b.String()
-
-	// Imports are gated on the body actually using them: an unused import does not compile, and this
-	// file is one the generator itself needs in order to run again.
-	var head strings.Builder
-	fmt.Fprintf(&head, "// Code generated by tools/database/gen_spelldata. DO NOT EDIT.\n\n")
-	fmt.Fprintf(&head, "package %s\n\n", pkg)
-	var std, mod []string
-	if strings.Contains(body, "time.") {
-		std = append(std, `"time"`)
-	}
-	mod = append(mod, `"github.com/wowsims/forever/sim/common/shared"`)
-	if strings.Contains(body, "core.") {
-		mod = append(mod, `"github.com/wowsims/forever/sim/core"`)
-	}
-	head.WriteString("import (\n")
-	for _, i := range std {
-		fmt.Fprintf(&head, "\t%s\n", i)
-	}
-	if len(std) > 0 {
-		head.WriteString("\n")
-	}
-	for _, i := range mod {
-		fmt.Fprintf(&head, "\t%s\n", i)
-	}
-	head.WriteString(")\n\n")
-
-	out, err := format.Source([]byte(head.String() + notGenerated.String() + body))
-	if err != nil {
-		return nil, fmt.Errorf("generated %s file does not parse, refusing to write it: %w", pkg, err)
-	}
-	return out, nil
+	return renderLadderClassFile(pkg, ladders, triggered, notGenerated.String())
 }
 
-// The classes whose file names the store's ladders instead of restating the client's rows. Their
-// numbers come out of sim/core/spelldata, so the file holds one line per family and no data at all.
-var storeBackedClasses = map[string]bool{
-	"warrior": true,
-	"rogue":   true,
-	"warlock": true,
-	"mage":    true,
-	"druid":   true,
-	"priest":  true,
-	"shaman":  true,
-	"hunter":  true,
-}
-
-// A class file as references into the store: the same struct, the same field names, and a ladder per
-// family in place of the rows.
+// A class file is references into the store: one ladder per family, and no data of its own. Every
+// number comes out of sim/core/spelldata.
 //
 // A family the talent tree prices is one spell whose per-rank numbers live in a curve, which is what
 // Talent reads; every other family is one spell per rank, which is Ranked. Both index by position,
 // so a ladder whose ranks are not 1..n would silently misnumber and is refused instead.
-func renderLadderClassFile(pkg string, ladders []rankLadder, triggered map[string][]generatedRow, notGenerated string) ([]byte, error) {
+func renderLadderClassFile(pkg string, ladders []rankLadder, triggered map[string][]triggeredRow, notGenerated string) ([]byte, error) {
 	var b strings.Builder
 	b.WriteString("type generatedSpellData struct {\n")
 	for _, l := range ladders {
@@ -1421,176 +1115,6 @@ func joinIDs(ids []int32) string {
 		parts[i] = strconv.Itoa(int(id))
 	}
 	return strings.Join(parts, ", ")
-}
-
-// core's SpellSchool bits are the client's, so this is a rendering and not a translation: the name
-// emitted for a bit holds that same bit. TestSpellSchoolBitsMatchTheClient asserts the pairing.
-var schoolBitNames = map[int32]string{
-	1:  "core.SpellSchoolPhysical",
-	2:  "core.SpellSchoolHoly",
-	4:  "core.SpellSchoolFire",
-	8:  "core.SpellSchoolNature",
-	16: "core.SpellSchoolFrost",
-	32: "core.SpellSchoolShadow",
-	64: "core.SpellSchoolArcane",
-}
-
-// Nine spells in the build carry two schools - Frostfire and the Nature/Shadow plagues - and the OR of
-// the two names is the value core's own named combination holds, so they are spelled out rather than
-// matched against a list that would need keeping in step.
-func schoolName(mask int32) string {
-	var names []string
-	for bit := int32(1); bit <= 64; bit <<= 1 {
-		if mask&bit != 0 {
-			name, ok := schoolBitNames[bit]
-			if !ok {
-				return ""
-			}
-			names = append(names, name)
-		}
-	}
-	if len(names) == 0 {
-		return ""
-	}
-	return strings.Join(names, " | ")
-}
-
-func defenseTypeName(t int32) string {
-	switch t {
-	case 1:
-		return "core.DefenseTypeMagic"
-	case 2:
-		return "core.DefenseTypeMelee"
-	case 3:
-		return "core.DefenseTypeRanged"
-	}
-	return ""
-}
-
-func formatRow(row generatedRow, namer *rankEnumNamer) string {
-	parts := []string{fmt.Sprintf("Rank: %d", row.Rank), fmt.Sprintf("SpellID: %d", row.SpellID)}
-	if row.Cost > 0 {
-		parts = append(parts, fmt.Sprintf("Cost: %d", row.Cost))
-	}
-	if row.PowerCostPct != 0 {
-		parts = append(parts, fmt.Sprintf("PowerCostPct: %s", num(row.PowerCostPct)))
-	}
-	if row.CastTimeMs > 0 {
-		parts = append(parts, fmt.Sprintf("CastTime: %s", millis(row.CastTimeMs)))
-	}
-	if row.GCDMs > 0 {
-		parts = append(parts, fmt.Sprintf("GCD: %s", millis(row.GCDMs)))
-	}
-	if row.CooldownMs > 0 {
-		parts = append(parts, fmt.Sprintf("Cooldown: %s", millis(row.CooldownMs)))
-	}
-	if row.DurationMs > 0 {
-		parts = append(parts, fmt.Sprintf("Duration: %s", millis(row.DurationMs)))
-	}
-	if row.MinRange > 0 {
-		parts = append(parts, fmt.Sprintf("MinRange: %s", num(row.MinRange)))
-	}
-	if row.MaxRange > 0 {
-		parts = append(parts, fmt.Sprintf("MaxRange: %s", num(row.MaxRange)))
-	}
-	if row.MissileSpeed > 0 {
-		parts = append(parts, fmt.Sprintf("MissileSpeed: %s", num(row.MissileSpeed)))
-	}
-	if row.ProcChance > 0 {
-		parts = append(parts, fmt.Sprintf("ProcChance: %d", row.ProcChance))
-	}
-	if row.ProcCharges > 0 {
-		parts = append(parts, fmt.Sprintf("ProcCharges: %d", row.ProcCharges))
-	}
-	if row.MaxTargets > 0 {
-		parts = append(parts, fmt.Sprintf("MaxTargets: %d", row.MaxTargets))
-	}
-	if row.RefundsOnMiss {
-		parts = append(parts, "RefundsOnMiss: true")
-	}
-	if row.PeriodicCanCrit {
-		parts = append(parts, "PeriodicCanCrit: true")
-	}
-	if row.FlatThreatBonus != 0 {
-		parts = append(parts, fmt.Sprintf("FlatThreatBonus: %s", num(row.FlatThreatBonus)))
-	}
-	if name := schoolName(row.SchoolMask); name != "" {
-		parts = append(parts, "SpellSchool: "+name)
-	}
-	if name := defenseTypeName(row.DefenseType); name != "" {
-		parts = append(parts, "DefenseType: "+name)
-	}
-	if len(row.Effects) > 0 {
-		var es []string
-		for _, e := range row.Effects {
-			f := fmt.Sprintf("{Index: %d, Effect: %s, Aura: %s, Misc: %d, Value: %s",
-				e.Index, namer.Effect(e.Effect), namer.Aura(e.Aura), e.Misc, num(e.Value))
-			if e.ValueMax > 0 {
-				f += ", ValueMax: " + num(e.ValueMax)
-			}
-			if e.ChainAmplitude != 0 && e.ChainAmplitude != 1 {
-				f += ", ChainAmplitude: " + num(e.ChainAmplitude)
-			}
-			if e.Coef != 0 {
-				f += ", Coef: " + num(e.Coef)
-			}
-			if e.APCoef != 0 {
-				f += ", APCoef: " + num(e.APCoef)
-			}
-			es = append(es, f+"}")
-		}
-		parts = append(parts, "Effects: []shared.SpellDataEffect{"+strings.Join(es, ", ")+"}")
-	}
-	for _, role := range []struct {
-		name  string
-		value *generatedAmount
-	}{
-		{"Direct", row.Direct},
-		{"Heal", row.Heal},
-		{"Periodic", row.Periodic},
-		{"Energize", row.Energize},
-		{"SecondaryPeriodic", row.SecondaryPeriodic},
-	} {
-		if role.value != nil {
-			parts = append(parts, role.name+": "+formatValue(*role.value))
-		}
-	}
-	return "{" + strings.Join(parts, ", ") + "},"
-}
-
-// Picks the variant from the shape of the data: a periodic value if it ticks, a range if the client
-// rolls it, a flat number otherwise.
-func formatValue(a generatedAmount) string {
-	tail := fmt.Sprintf("Coef: %s", num(a.Coef))
-	if a.APCoef > 0 {
-		tail += fmt.Sprintf(", APCoef: %s", num(a.APCoef))
-	}
-
-	switch {
-	case a.PeriodMs > 0:
-		tick := num(a.Min)
-		if a.Max > a.Min {
-			tick += fmt.Sprintf(", TickMax: %s", num(a.Max))
-		}
-		out := fmt.Sprintf("shared.SpellDataPeriodic{Tick: %s, %s, TickLength: %s", tick, tail, millis(a.PeriodMs))
-		if a.Ticks > 0 {
-			out += fmt.Sprintf(", NumberOfTicks: %d", a.Ticks)
-		}
-		if a.SpellID > 0 {
-			out += fmt.Sprintf(", SpellID: %d", a.SpellID)
-		}
-		return out + "}"
-	case a.Max > a.Min:
-		return fmt.Sprintf("shared.SpellDataRange{Min: %s, Max: %s, %s}", num(a.Min), num(a.Max), tail)
-	default:
-		return fmt.Sprintf("shared.SpellDataFlat{Value: %s, %s}", num(a.Min), tail)
-	}
-}
-
-// Written as a time.Duration expression rather than a bare number, so the generated file reads the way
-// a hand-written cast time or tick length does.
-func millis(ms int32) string {
-	return fmt.Sprintf("%d * time.Millisecond", ms)
 }
 
 func num(f float64) string {

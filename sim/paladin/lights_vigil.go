@@ -3,8 +3,8 @@ package paladin
 import (
 	"fmt"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 var LightsVigilRankMap = spellData.LightsVigil
@@ -39,66 +39,68 @@ type lightsVigil struct {
 // The sim casts it on enemies: Holy Shock on a vigiled enemy fires the strike and the refund. The
 // friendly path, a party heal off a Holy Shock heal, has no target model here and is not built.
 func (paladin *Paladin) registerLightsVigil() {
-	LightsVigilRankMap.RegisterAll(paladin.registerLightsVigilRank)
+	LightsVigilRankMap.Each(paladin.registerLightsVigilRank)
 }
 
-func (paladin *Paladin) registerLightsVigilRank(row shared.SpellData) {
-	triggered := lightsVigilTriggered[row.Rank]
-	auraRow := spellData.LightsVigilTriggered.BySpellID(triggered.aura)
-	strikeRow := spellData.LightsVigilTriggered.BySpellID(triggered.strike)
+func (paladin *Paladin) registerLightsVigilRank(_ int32, rank *spelldata.Spell) {
+	triggered := lightsVigilTriggered[rank.RankNumber()]
+	auraRank := spellData.LightsVigilTriggered.ByID(triggered.aura)
+	strikeRank := spellData.LightsVigilTriggered.ByID(triggered.strike)
+	strikeDamage := strikeRank.DamageEffect()
 
 	vigil := &lightsVigil{
-		refund: effectAt(row, 1).Value / 100,
+		// The refund share is the rank's second effect.
+		refund: rank.EffectN(2).Percent(),
 	}
 	paladin.lightsVigils = append(paladin.lightsVigils, vigil)
 
 	vigil.auras = paladin.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		return target.GetOrRegisterAura(core.Aura{
-			Label:    fmt.Sprintf("Light's Vigil%s Rank %d", paladin.Label, row.Rank),
-			ActionID: core.ActionID{SpellID: auraRow.SpellID},
-			Duration: auraRow.Duration,
+			Label:    fmt.Sprintf("Light's Vigil%s Rank %d", paladin.Label, rank.RankNumber()),
+			ActionID: core.ActionID{SpellID: auraRank.ID},
+			Duration: auraRank.Duration(),
 		})
 	})
 
 	vigil.strike = paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: strikeRow.SpellID},
-		SpellSchool:    strikeRow.SpellSchool,
-		DefenseType:    strikeRow.DefenseType,
+		ActionID:       core.ActionID{SpellID: strikeRank.ID},
+		SpellSchool:    strikeRank.SpellSchool(),
+		DefenseType:    strikeRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagPassiveSpell,
 		ClassSpellMask: SpellMaskLightsVigilStrike,
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		BonusCoefficient: strikeRow.Direct.BonusCoefficient(),
+		BonusCoefficient: strikeDamage.Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, strikeRow.Direct.Damage(sim), spell.OutcomeMagicHitAndCrit)
+			spell.CalcAndDealDamage(sim, target, strikeDamage.Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 		},
 	})
 
-	manaMetrics := paladin.NewManaMetrics(core.ActionID{SpellID: row.SpellID})
+	manaMetrics := paladin.NewManaMetrics(core.ActionID{SpellID: rank.ID})
 	vigil.strike.RelatedAuraArrays = vigil.auras.ToMap()
 
 	paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: row.SpellID},
-		SpellSchool:    row.SpellSchool,
-		DefenseType:    row.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: SpellMaskLightsVigil,
-		Rank:           row.Rank,
-		MaxRange:       row.MaxRange,
+		Rank:           rank.RankNumber(),
+		MaxRange:       float64(rank.MaxRange),
 
-		ManaCost: manaCost(row),
+		ManaCost: manaCost(rank),
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD:      row.GCD,
-				CastTime: row.CastTime,
+				GCD:      rank.GCD(),
+				CastTime: rank.CastTime(),
 			},
 			CD: core.Cooldown{
 				Timer:    paladin.sharedTimer(&paladin.lightsVigilTimer),
-				Duration: row.Cooldown,
+				Duration: cooldown(rank),
 			},
 		},
 

@@ -405,8 +405,8 @@ func TestGeneratedTrueshotAuraGivesTheTopRanksRangedAttackPower(t *testing.T) {
 		&proto.RaidBuffs{}, &proto.PartyBuffs{TrueshotAura: true}, &proto.IndividualBuffs{})
 	char.ApplyBuildPhaseAuras(core.CharacterBuildPhaseBuffs)
 
-	if got := char.GetStats()[stats.RangedAttackPower]; got != 50 {
-		t.Errorf("Trueshot Aura applied %v ranged attack power, want the client's 50", got)
+	if got := char.GetStats()[stats.RangedAttackPower]; got != 75 {
+		t.Errorf("Trueshot Aura applied %v ranged attack power, want rank 4's 75", got)
 	}
 	if got := char.GetStats()[stats.AttackPower]; got != 0 {
 		t.Errorf("Trueshot Aura applied %v melee attack power, want none", got)
@@ -416,7 +416,7 @@ func TestGeneratedTrueshotAuraGivesTheTopRanksRangedAttackPower(t *testing.T) {
 	if aura == nil {
 		t.Fatalf("no aura is labelled %q; the unit has %v", "Trueshot Aura (External)", auraLabels(char))
 	}
-	if want := (core.ActionID{SpellID: 20906, Tag: -1}); aura.ActionID != want {
+	if want := (core.ActionID{SpellID: 20905, Tag: -1}); aura.ActionID != want {
 		t.Errorf("the external copy is %v, want %v", aura.ActionID, want)
 	}
 	if aura.Duration != core.NeverExpires {

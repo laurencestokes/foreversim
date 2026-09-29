@@ -14,7 +14,7 @@ import { NumberPicker } from '@ui-kit/NumberPicker';
 import { Spinner } from '@ui-kit/Spinner';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 
-import { PageSection, ProductPage, SITE_BASE, SITE_REPO_URL } from '../ProductPage';
+import { PageSection, ProductPage, SITE_BASE } from '../ProductPage';
 import { RestsCell } from '../RestsCell';
 import { composition } from './confidence';
 import { buildRaid, communityBuilds, type RaidSetup, type RankingBuild } from './raid';
@@ -35,14 +35,15 @@ const LINK = 'text-brand hover:underline';
 const Provenance = () => (
 	<PageSection title="These numbers are provisional">
 		<p className="m-0">
-			The beta client was datamined on 17 September, and the numbers here come from its own data tables rather than from BlizzCon tooltips: build
-			1.60.1.69913, read against Classic Era and diffed spell by spell. Talent values come from the client&apos;s rank curves, coefficients from the spell
-			tables, and each rank is scaled to level 60 by the client&apos;s per-level points. {assumedCount} abilities still carry a number the client does not
-			settle and {unreviewedCount} have not been classified; they are listed one line each in the{' '}
-			<a className={LINK} href={`${SITE_REPO_URL}/blob/master/docs/forever_beta_checklist.md`} target="_blank" rel="noreferrer">
-				beta re-verification checklist
+			The numbers here come from the beta client&apos;s own data tables rather than from BlizzCon tooltips, read against Classic Era and diffed spell by
+			spell, and a daily database update brings in each new client build and Blizzard&apos;s hotfixes. Talent values come from the client&apos;s rank
+			curves, coefficients from the spell tables, and each rank is scaled to level 60 by the client&apos;s per-level points. {assumedCount} abilities
+			still carry a number the client does not settle
+			{unreviewedCount > 0 && ` and ${unreviewedCount} have not been classified`}; each is listed, with what would settle it, on the{' '}
+			<a className={LINK} href={`${SITE_BASE}evidence/`}>
+				evidence page
 			</a>
-			, and every one of them can move a number in this table.
+			.
 		</p>
 		<p className="m-0">
 			This is an unofficial fork, not the official Forever sim, and the table is a self-check: run every build under identical conditions and a build the
@@ -55,10 +56,9 @@ const Provenance = () => (
 			.
 		</p>
 		<p className="m-0">
-			There is a second limit under the first one, and the client does not lift it. Downranking is the clearest case: the client carries the full spell
-			power coefficient on low ranks where Classic Era carried a reduced one, so read as written a rank 4 Lightning Bolt does most of a rank 10 for a
-			quarter of the mana. Whether Forever removed that penalty or applies it somewhere the data does not show changes every caster here. The same goes
-			for proc chances the client leaves unset and for combat rules that live on the server rather than in a table.
+			There is a second limit under the first one, and the client does not lift it: rules that live on the server rather than in a table. Proc chances the
+			client leaves unset are the clearest case. A few such numbers have been settled from the beta&apos;s public combat logs, but most of what is left
+			belongs to abilities above the beta&apos;s level cap, which nobody can check yet.
 		</p>
 		<p className="m-0">
 			So: do not pick a main off this table, and do not quote it as a Forever balance claim. It is a place to catch the sim getting something obviously

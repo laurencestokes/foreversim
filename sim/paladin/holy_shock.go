@@ -9,22 +9,22 @@ import (
 // One rank of Holy Shock: the spell the paladin casts, and the damage and heal it triggers. The
 // client ships the damage and heal chains as two ladders under one name, which the generator
 // refuses, so the table is by hand from the client rows: the cast's cost, and each chain's number
-// with its 0.429 coefficient.
+// with its 0.429 coefficient. The damage is the client's min-max roll at the rank's max level.
 type holyShockRank struct {
 	rank     int32
 	spellID  int32
 	cost     int32
 	damageID int32
-	damage   float64
+	damage   [2]float64
 	healID   int32
 	heal     float64
 }
 
 var HolyShockRanks = []holyShockRank{
-	{rank: 1, spellID: 1311606, cost: 160, damageID: 1311604, damage: 134, healID: 1311605, heal: 114},
-	{rank: 2, spellID: 20473, cost: 225, damageID: 25912, damage: 182, healID: 25914, heal: 156},
-	{rank: 3, spellID: 20929, cost: 275, damageID: 25911, damage: 258, healID: 25913, heal: 230},
-	{rank: 4, spellID: 20930, cost: 325, damageID: 25902, damage: 348, healID: 25903, heal: 320},
+	{rank: 1, spellID: 1311606, cost: 160, damageID: 1311604, damage: [2]float64{128, 140}, healID: 1311605, heal: 114},
+	{rank: 2, spellID: 20473, cost: 225, damageID: 25912, damage: [2]float64{175, 189}, healID: 25914, heal: 156},
+	{rank: 3, spellID: 20929, cost: 275, damageID: 25911, damage: [2]float64{248, 268}, healID: 25913, heal: 230},
+	{rank: 4, spellID: 20930, cost: 325, damageID: 25902, damage: [2]float64{334, 362}, healID: 25903, heal: 320},
 }
 
 const (
@@ -81,8 +81,7 @@ func (paladin *Paladin) registerHolyShockRank(rank holyShockRank) {
 				spell.CD.Reset()
 				return
 			}
-			damage := damageRanges[rank.damageID]
-			spell.CalcAndDealDamage(sim, target, sim.Roll(damage[0], damage[1]), spell.OutcomeMagicHitAndCrit)
+			spell.CalcAndDealDamage(sim, target, sim.Roll(rank.damage[0], rank.damage[1]), spell.OutcomeMagicHitAndCrit)
 		},
 	})
 

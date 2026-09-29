@@ -28,9 +28,9 @@ var progress io.Writer = os.Stderr
 // them being in the tree. A failure leaves the tree exactly as it was and prints what the compiler
 // said.
 //
-// unchecked skips the staging build: a class just flipped to the store does not compile until its
-// call sites move off the family table, so nothing would ever write for it otherwise. -check is what
-// closes the loop once they have.
+// unchecked skips the staging build: a class file whose call sites cannot compile against what it
+// will state until they move has to be written first, so nothing would ever write for it otherwise.
+// -check is what closes the loop once they have.
 func writeSpellDataFiles(files map[string][]byte, unchecked bool) error {
 	if !unchecked {
 		if err := buildAgainst(files); err != nil {

@@ -21,9 +21,6 @@ import (
 	"github.com/wowsims/forever/tools/tooltip"
 )
 
-// Sets the minimum itemlevel that should be considered for this expansions
-const MIN_EFFECT_ILVL = 50
-
 // Enchantment IDs at or below this are not generated.
 const MIN_ENCHANT_EFFECT_ID = 0
 
@@ -871,7 +868,7 @@ func BuildItemDifficultyPostfix(itemSources map[int][]*proto.DropSource, itemId 
 }
 
 func TryParseProcEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC, groupMapProc map[string]Group) EffectParseResult {
-	if itemEffect.GetProc() != nil && parsed.ScalingOptions[0].Ilvl >= MIN_EFFECT_ILVL {
+	if itemEffect.GetProc() != nil {
 		// Effect was already manually implemented
 		if core.HasItemEffect(parsed.Id) {
 			return EffectParseResultSuccess
@@ -960,7 +957,7 @@ func TryParseProcEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, inst
 	}
 
 	// check if the item has any kind of proc as we only support stat proc parsing right now
-	if effects, ok := instance.ItemEffectsByParentID[int(parsed.Id)]; ok && parsed.ScalingOptions[0].Ilvl >= MIN_EFFECT_ILVL {
+	if effects, ok := instance.ItemEffectsByParentID[int(parsed.Id)]; ok {
 		for _, effect := range effects {
 			if SpellHasTriggerEffect(effect.SpellID, instance) {
 				return EffectParseResultUnsupported
@@ -985,7 +982,7 @@ func routeItemProc(parsed *proto.UIItem, itemEffect *proto.ItemEffect) *ProcRout
 // An equip spell with no stats that applies an aura the stat path cannot state, read from the row it
 // keeps up. One the rows cannot build is refused in an entry of its own, with the reasons.
 func TryParseEquipAuraEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC, groupMapProc map[string]Group) EffectParseResult {
-	if parsed.ScalingOptions[0].Ilvl < MIN_EFFECT_ILVL || core.HasItemEffect(parsed.Id) || len(dbc.EffectStats(itemEffect)) > 0 {
+	if core.HasItemEffect(parsed.Id) || len(dbc.EffectStats(itemEffect)) > 0 {
 		return EffectParseResultInvalid
 	}
 
@@ -1038,7 +1035,7 @@ func TryParseOnUseEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, ins
 		return EffectParseResultSuccess
 	}
 
-	if itemEffect.GetOnUse() != nil && parsed.ScalingOptions[0].Ilvl >= MIN_EFFECT_ILVL {
+	if itemEffect.GetOnUse() != nil {
 		if itemEffect.GetOnUse().CooldownMs < 0 && itemEffect.GetOnUse().CategoryCooldownMs < 0 {
 			return EffectParseResultUnsupported
 		}
@@ -1453,51 +1450,49 @@ var rateWordMatcher = regexp.MustCompile(`(?i)\b(often|sometimes|occasionally)\b
 var cooldownWordingMatcher = regexp.MustCompile(`(?i)more often than`)
 
 func ParseTooltipForMissingEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC, groupMap map[string]Group, groupMapName string) {
-	if parsed.ScalingOptions[0].Ilvl >= MIN_EFFECT_ILVL {
-		// Effect was already manually implemented
-		if core.HasItemEffect(parsed.Id) {
+	// Effect was already manually implemented
+	if core.HasItemEffect(parsed.Id) {
+		return
+	}
+
+	renderedTooltip, rendered := renderItemEffectTooltip(parsed, itemEffect, instance)
+
+	grp, exists := groupMap[groupMapName]
+	if !exists {
+		grp = Group{Name: groupMapName}
+	}
+
+	if rendered {
+		entry := Entry{
+			Tooltip:   strings.Split(renderedTooltip, "\n"),
+			Supported: false,
+			Variants: []*Variant{
+				{
+					ID:      int(parsed.Id),
+					Name:    parsed.Name,
+					SpellID: int(itemEffect.BuffId),
+				},
+			},
+		}
+
+		grp.Entries = append(grp.Entries, &entry)
+		groupMap[groupMapName] = grp
+
+		// Flavour auras carry no mechanic worth implementing and only add noise to the
+		// report. Suppressing the report only, never the group entry: those
+		// Supported: false entries take part in the variant grouping that decides whether
+		// a whole variant set is emitted live or commented, so dropping one can flip a
+		// real registration.
+		if _, ignored := IgnoreMissingEffectBySpellID[int(itemEffect.BuffId)]; ignored {
 			return
 		}
 
-		renderedTooltip, rendered := renderItemEffectTooltip(parsed, itemEffect, instance)
-
-		grp, exists := groupMap[groupMapName]
-		if !exists {
-			grp = Group{Name: groupMapName}
-		}
-
-		if rendered {
-			entry := Entry{
-				Tooltip:   strings.Split(renderedTooltip, "\n"),
-				Supported: false,
-				Variants: []*Variant{
-					{
-						ID:      int(parsed.Id),
-						Name:    parsed.Name,
-						SpellID: int(itemEffect.BuffId),
-					},
-				},
-			}
-
-			grp.Entries = append(grp.Entries, &entry)
-			groupMap[groupMapName] = grp
-
-			// Flavour auras carry no mechanic worth implementing and only add noise to the
-			// report. Suppressing the report only, never the group entry: those
-			// Supported: false entries take part in the variant grouping that decides whether
-			// a whole variant set is emitted live or commented, so dropping one can flip a
-			// real registration.
-			if _, ignored := IgnoreMissingEffectBySpellID[int(itemEffect.BuffId)]; ignored {
-				return
-			}
-
-			if len(dbc.EffectStats(itemEffect)) == 0 || !entry.Supported {
-				StoreMissingEffect("ItemEffects", parsed.Name, Variant{
-					ID:      int(parsed.Id),
-					Name:    renderedTooltip,
-					SpellID: int(itemEffect.BuffId),
-				})
-			}
+		if len(dbc.EffectStats(itemEffect)) == 0 || !entry.Supported {
+			StoreMissingEffect("ItemEffects", parsed.Name, Variant{
+				ID:      int(parsed.Id),
+				Name:    renderedTooltip,
+				SpellID: int(itemEffect.BuffId),
+			})
 		}
 	}
 }

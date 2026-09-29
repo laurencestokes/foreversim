@@ -7,6 +7,11 @@ import (
 // The beta client carries no spell power coefficient on Arcane Shot at all, so Classic's stand.
 var arcaneShotCoefficients = [9]float64{0, .204, .3, .429, .429, .429, .429, .429, .429}
 
+// Nor any attack power share, but the beta's combat logs show one: four level 20 hunters with known
+// agility and gear (foreverlogs.gg, 2026-09-26) hit for base + 0.10-0.12 of ranged attack power.
+// ponytail: fitted at level 20 from four hunters; refit when a level 60 log shows otherwise.
+const arcaneShotRAPCoefficient = 0.11
+
 func (hunter *Hunter) registerArcaneShotSpell(timer *core.Timer) {
 	rank := spellData.ArcaneShot.Highest()
 	baseDamage := rank.DamageEffect().Average(core.CharacterLevel)
@@ -33,7 +38,7 @@ func (hunter *Hunter) registerArcaneShotSpell(timer *core.Timer) {
 		BonusCoefficient: arcaneShotCoefficients[rank.RankNumber()],
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeRangedHitAndCrit)
+			result := spell.CalcDamage(sim, target, baseDamage+arcaneShotRAPCoefficient*spell.RangedAttackPower(target), spell.OutcomeRangedHitAndCrit)
 
 			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
 				spell.DealDamage(sim, result)

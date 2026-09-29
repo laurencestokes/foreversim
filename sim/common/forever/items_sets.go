@@ -1,8 +1,10 @@
 package forever
 
 import (
+	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -90,5 +92,36 @@ var ItemSetBlessedPlate = core.NewItemSet(core.ItemSet{
 				AttachStatBuff(stats.HolyDamage, 29).
 				ExposeToAPL(21518)
 		},
+	},
+})
+
+// Leather
+// https://www.wowhead.com/forever/item-set=161/defias-leather
+//
+// Forever rebuilt the Deadmines set: the 3 and 4 piece bonuses are new and the old +1 dagger skill
+// moved to five pieces. The sim has no weapon skill, so the 5 piece does nothing here.
+var ItemSetDefiasLeather = core.NewItemSet(core.ItemSet{
+	ID:   161,
+	Name: "Defias Leather",
+	Bonuses: map[int32]core.ApplySetBonus{
+		// Increased Arcane Resistance +5 (14707).
+		2: setStats(stats.Stats{stats.ArcaneResistance: 5}),
+		// +15 Attack Power against Humanoids (1292025).
+		3: setHumanoidAttackPower(15),
+		// Devious Strike (1292028): white hits from behind have a 5% chance to make the target
+		// bleed 15 a second for 5 sec (1292029), ticks that can crit since client 70009.
+		4: func(agent core.Agent, setBonusAura *core.Aura) {
+			character := agent.GetCharacter()
+			if character.PseudoStats.InFrontOfTarget {
+				return
+			}
+			bleed := character.RegisterSpell(shared.SpellDataProcDamageSpell(character, spelldata.MustFind(1292029)))
+			trigger := spelldata.ProcTrigger(character, spelldata.MustFind(1292028), func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
+				bleed.Cast(sim, result.Target)
+			})
+			trigger.TriggerImmediately = true
+			setBonusAura.AttachProcTrigger(trigger)
+		},
+		5: setNoop,
 	},
 })

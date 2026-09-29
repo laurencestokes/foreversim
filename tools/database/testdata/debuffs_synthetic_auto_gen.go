@@ -93,7 +93,7 @@ func SynthCurseOfElementsAura(unit *core.Unit, isPlayer bool, talentPoints int32
 }
 
 // Judgement of the Crusader
-// func SynthJudgementOfTheCrusaderAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura // judgement_of_the_crusader, KindDebuffStat: spell 20303 states no aura effect the parse attaches: effect 1 A_MOD_DAMAGE_TAKEN(14) misc 2
+// func SynthJudgementOfTheCrusaderAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura // judgement_of_the_crusader: spell 20303 states no aura effect the parse attaches: effect 1 A_MOD_DAMAGE_TAKEN(14) misc 2
 
 func applyGeneratedDebuffs(target *core.Unit, debuffs *proto.Debuffs, raid *proto.Raid) {
 	if debuffs.ThunderClap {

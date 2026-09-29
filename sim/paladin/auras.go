@@ -1,9 +1,9 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/buffs"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 func (paladin *Paladin) registerAuras() {
@@ -16,26 +16,26 @@ func (paladin *Paladin) registerAuras() {
 }
 
 // The rank of a paladin aura as sim/core/buffs wants it: the spell the paladin cast and its rank.
-func auraRank(row shared.SpellData) buffs.PaladinAuraRank {
-	return buffs.PaladinAuraRank{SpellID: row.SpellID, Rank: row.Rank}
+func auraRank(rank *spelldata.Spell) buffs.PaladinAuraRank {
+	return buffs.PaladinAuraRank{SpellID: rank.ID, Rank: rank.RankNumber()}
 }
 
 // The castable aura spell: instant, on the GCD, free. The aura it turns on is one of the self-cast
 // paladin auras in sim/core/buffs, which already sit in PaladinAuraCategory so one cast replaces the
 // last.
-func (paladin *Paladin) registerAuraSpell(row shared.SpellData, aura *core.Aura, classMask int64) {
+func (paladin *Paladin) registerAuraSpell(rank *spelldata.Spell, aura *core.Aura, classMask int64) {
 	paladin.RegisterSpell(core.SpellConfig{
 		ActionID:       aura.ActionID,
-		SpellSchool:    row.SpellSchool,
-		DefenseType:    row.DefenseType,
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL | core.SpellFlagHelpful,
 		ClassSpellMask: classMask,
-		Rank:           row.Rank,
+		Rank:           rank.RankNumber(),
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: row.GCD,
+				GCD: rank.GCD(),
 			},
 		},
 

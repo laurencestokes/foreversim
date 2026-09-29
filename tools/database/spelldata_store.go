@@ -295,7 +295,7 @@ func (t *spellTables) row(id int32) storeSpell {
 	s.MinRange, s.MaxRange = m.MinRange, m.MaxRange
 
 	// No SpellLevels row is the client's "no level scaling", which is the spell's own level at the
-	// cap and no maximum - the reading levelsOf gives the generated rank tables.
+	// cap and no maximum.
 	if l, ok := t.Levels[id]; ok {
 		s.SpellLevel, s.BaseLevel, s.MaxLevel = l.SpellLevel, l.BaseLevel, l.MaxLevel
 	} else {

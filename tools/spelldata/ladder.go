@@ -47,9 +47,9 @@ var (
 	familyFields = map[string]bool{}
 )
 
-// The ladder calls that reach this id, in package and field order. A class whose generated file is
-// still a shared.SpellDataTable states no ladder and answers nothing, and so does a file that does
-// not parse - another session editing a class package must not stop the printer.
+// The ladder calls that reach this id, in package and field order. A file that does not parse states
+// no ladder and answers nothing - another session editing a class package must not stop the
+// printer.
 func ladderRefs(id int32) []string {
 	loadLadders.Do(scanLadders)
 

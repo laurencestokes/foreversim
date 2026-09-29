@@ -124,7 +124,7 @@ func (paladin *Paladin) applyReverence() {
 
 // Purifying Power - Reduces the mana cost of your Cleanse and Purify spells by 10/20% and reduces
 // the cooldown of your Exorcism and Holy Wrath spells by 17/33%. Cleanse and Purify are not
-// modelled.
+// modelled; the cooldown is the second effect.
 func (paladin *Paladin) applyPurifyingPower() {
 	if paladin.Talents.PurifyingPower == 0 {
 		return
@@ -133,7 +133,7 @@ func (paladin *Paladin) applyPurifyingPower() {
 	paladin.AddStaticMod(core.SpellModConfig{
 		ClassMask:  SpellMaskExorcism | SpellMaskHolyWrath,
 		Kind:       core.SpellMod_Cooldown_Multiplier,
-		FloatValue: spellData.PurifyingPower.EffectAt(1).MultiplierAt(paladin.Talents.PurifyingPower),
+		FloatValue: spellData.PurifyingPower.EffectAt(2).MultiplierAt(paladin.Talents.PurifyingPower),
 	})
 }
 
@@ -144,13 +144,13 @@ func (paladin *Paladin) applyInfusionOfLight() {
 		return
 	}
 
-	row := spellData.InfusionOfLightTriggered.HighestRank()
+	rank := spellData.InfusionOfLightTriggered.Highest()
 
 	var infusion *core.Aura
 	infusion = paladin.RegisterAura(core.Aura{
 		Label:    "Infusion of Light" + paladin.Label,
-		ActionID: core.ActionID{SpellID: row.SpellID},
-		Duration: row.Duration,
+		ActionID: core.ActionID{SpellID: rank.ID},
+		Duration: rank.Duration(),
 	}).AttachSpellMod(core.SpellModConfig{
 		ClassMask: SpellMaskHolyLight,
 		Kind:      core.SpellMod_CastTime_Flat,
@@ -177,21 +177,22 @@ func (paladin *Paladin) applyInfusionOfLight() {
 
 // Illumination - After getting a critical effect from your Flash of Light, Holy Light, Light's
 // Vigil, or Holy Shock heal spell you have a 20/40/60/80/100% chance to gain Mana equal to 50% of
-// the base cost of the spell. Light's Vigil's heal is not modelled.
+// the base cost of the spell. Light's Vigil's heal is not modelled. The chance is the first
+// effect, the refund the third.
 func (paladin *Paladin) applyIllumination() {
 	if paladin.Talents.Illumination == 0 {
 		return
 	}
 
-	manaMetrics := paladin.NewManaMetrics(core.ActionID{SpellID: spellData.Illumination.HighestRank().SpellID})
-	refund := spellData.Illumination.EffectAt(2).FractionAt(paladin.Talents.Illumination)
+	manaMetrics := paladin.NewManaMetrics(core.ActionID{SpellID: spellData.Illumination.Highest().ID})
+	refund := spellData.Illumination.EffectAt(3).FractionAt(paladin.Talents.Illumination)
 
 	paladin.MakeProcTriggerAura(core.ProcTrigger{
 		Name:           "Illumination" + paladin.Label,
 		Callback:       core.CallbackOnHealDealt,
 		ClassSpellMask: SpellMaskHealingSpells,
 		Outcome:        core.OutcomeCrit,
-		ProcChance:     spellData.Illumination.EffectAt(0).FractionAt(paladin.Talents.Illumination),
+		ProcChance:     spellData.Illumination.EffectAt(1).FractionAt(paladin.Talents.Illumination),
 		Handler: func(sim *core.Simulation, spell *core.Spell, _ *core.SpellResult) {
 			paladin.AddMana(sim, float64(spell.Cost.BaseCost)*refund, manaMetrics)
 		},
@@ -221,14 +222,14 @@ func (paladin *Paladin) applyConsecratedGround() {
 		return
 	}
 
-	row := spellData.ConsecratedGround.HighestRank()
+	rank := spellData.ConsecratedGround.Highest()
 	multiplier := spellData.ConsecratedGround.MultiplierAt(paladin.Talents.ConsecratedGround)
 
 	paladin.consecratedGroundAuras = paladin.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		return target.GetOrRegisterAura(core.Aura{
 			Label:    "Consecrated Ground" + paladin.Label,
-			ActionID: core.ActionID{SpellID: row.SpellID},
-			Duration: spellData.ConsecratedGroundTriggered.HighestRank().Duration,
+			ActionID: core.ActionID{SpellID: rank.ID},
+			Duration: spellData.ConsecratedGroundTriggered.Highest().Duration(),
 		}).AttachDDBC(0, 1, &paladin.AttackTables, func(_ *core.Simulation, spell *core.Spell, _ *core.AttackTable) float64 {
 			if spell.SpellSchool.Matches(core.SpellSchoolHoly) {
 				return multiplier
@@ -238,29 +239,32 @@ func (paladin *Paladin) applyConsecratedGround() {
 	})
 }
 
-// Holy Power - Increases the critical strike chance of your Holy Shock and Holy Strike by
-// 3/6/9/12/15%, and all other spells by 1/2/3/4/5%.
+// Holy Power - Increases the critical strike chance of your Holy Shock and Holy Strike abilities
+// by 3/6/9/12/15%, and of your other Holy damage and healing spells by 1/2/3/4/5%.
 //
-// Build 70009 states both as crit chance modifiers (5923, misc 7) on class masks. Effect 0's
-// "all other spells" is the mask below, not general spell crit: the Holy Shield proc and the Seal
-// of Light heal are outside it, the seal and judgement damage spells inside. Effect 1 names Holy
-// Shock (both halves) and Holy Strike.
+// Both tiers are class-masked percent modifiers on the row. The first covers Consecration,
+// Exorcism, Hammer of Wrath, Holy Wrath, Holy Light, Flash of Light, Lay on Hands, Light's Vigil,
+// the Seal of Righteousness, Seal of Command and Seal of Fury procs and the Judgements of Command,
+// Fury and Righteousness (5923 effect 0's mask: the Righteousness procs are word 1 bit 29); the
+// other seals, their procs and their judgements are not in it. The row also names Retribution
+// Aura, whose damage is a core buff the paladin's masks do not reach.
 func (paladin *Paladin) applyHolyPower() {
 	if paladin.Talents.HolyPower == 0 {
 		return
 	}
 
 	paladin.AddStaticMod(core.SpellModConfig{
-		ClassMask: SpellMaskConsecration | SpellMaskExorcism | SpellMaskFlashOfLight | SpellMaskHammerOfWrath |
-			SpellMaskHolyLight | SpellMaskHolyWrath | SpellMaskLayOnHands | SpellMaskLightsVigil | SpellMaskLightsVigilStrike |
-			SpellMaskJudgementOfRighteousness | SpellMaskJudgementOfCommand | SpellMaskJudgementOfFury |
-			SpellMaskSealOfRighteousnessProc | SpellMaskSealOfCommandProc | SpellMaskSealOfFuryProc,
+		ClassMask: SpellMaskConsecration | SpellMaskExorcism | SpellMaskHammerOfWrath | SpellMaskHolyWrath |
+			SpellMaskHolyLight | SpellMaskFlashOfLight | SpellMaskLayOnHands |
+			SpellMaskLightsVigil | SpellMaskLightsVigilStrike |
+			SpellMaskSealOfRighteousnessProc | SpellMaskSealOfCommandProc | SpellMaskSealOfFuryProc |
+			SpellMaskJudgementOfCommand | SpellMaskJudgementOfFury | SpellMaskJudgementOfRighteousness,
 		Kind:       core.SpellMod_BonusCrit_Percent,
-		FloatValue: spellData.HolyPower.EffectAt(0).ValueAt(paladin.Talents.HolyPower),
+		FloatValue: spellData.HolyPower.EffectAt(1).ValueAt(paladin.Talents.HolyPower),
 	})
 	paladin.AddStaticMod(core.SpellModConfig{
 		ClassMask:  SpellMaskHolyShock | SpellMaskHolyShockHeal | SpellMaskHolyStrike,
 		Kind:       core.SpellMod_BonusCrit_Percent,
-		FloatValue: spellData.HolyPower.EffectAt(1).ValueAt(paladin.Talents.HolyPower),
+		FloatValue: spellData.HolyPower.EffectAt(2).ValueAt(paladin.Talents.HolyPower),
 	})
 }

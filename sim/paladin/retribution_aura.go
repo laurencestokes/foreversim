@@ -1,8 +1,9 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
+	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/buffs"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 var RetributionAuraRankMap = spellData.RetributionAura
@@ -13,10 +14,11 @@ var RetributionAuraRankMap = spellData.RetributionAura
 // Causes 30 Holy damage to any creature that strikes a party member within 30 yards. Players may
 // only have one Aura on them per Paladin at any one time.
 func (paladin *Paladin) registerRetributionAura() {
-	RetributionAuraRankMap.RegisterAll(func(row shared.SpellData) {
-		rank := auraRank(row)
-		rank.Value = shared.SpellDataMin(row.Direct)
-		aura := buffs.RetributionAuraBuff(&paladin.Character, true, rank, 0)
-		paladin.registerAuraSpell(row, aura, SpellMaskRetributionAura)
+	RetributionAuraRankMap.Each(func(_ int32, rank *spelldata.Spell) {
+		// The damage shield's number is the rank's first effect.
+		r := auraRank(rank)
+		r.Value = rank.EffectN(1).Average(core.CharacterLevel)
+		aura := buffs.RetributionAuraBuff(&paladin.Character, true, r, 0)
+		paladin.registerAuraSpell(rank, aura, SpellMaskRetributionAura)
 	})
 }

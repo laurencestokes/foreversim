@@ -199,13 +199,18 @@ func (priest *Priest) applyHolyReach() {
 	}
 }
 
-// applyImprovedHealing implements Improved Healing, new in Forever.
-//
-// TODO: To be implemented. It discounts Heal and Greater Heal, neither of which is modelled.
+// applyImprovedHealing implements Improved Healing, new in Forever. It discounts Lesser Heal, Heal,
+// Greater Heal, Penance and Prayer of Mending; Penance is the only one of those the sim casts.
 func (priest *Priest) applyImprovedHealing() {
 	if priest.Talents.ImprovedHealing == 0 {
 		return
 	}
+
+	priest.AddStaticMod(core.SpellModConfig{
+		ClassMask:  PriestSpellPenance,
+		FloatValue: spellData.ImprovedHealing.FractionAt(priest.Talents.ImprovedHealing),
+		Kind:       core.SpellMod_PowerCost_Pct_Add,
+	})
 }
 
 // Searing Light now buffs every Holy spell and gives Holy Fire ticks a chance to refund the next

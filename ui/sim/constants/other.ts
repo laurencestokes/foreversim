@@ -29,6 +29,10 @@ export const CURRENT_API_VERSION: number = readMessageOption(ProtoVersion, 'prot
 // Settings saved before it carry none of those in a usable form.
 export const BUFFS_REWRITE_API_VERSION = 17;
 
+// Upstream's slimmed buff manifest: RaidBuffs, PartyBuffs, IndividualBuffs and Debuffs renumbered
+// again. Consumables and class options kept their numbers.
+export const BUFFS_RENUMBER_API_VERSION = 18;
+
 // Github pages serves our site under the /forever directory
 export const REPO_NAME = 'forever';
 export const REPO_URL = 'https://github.com/laurencestokes/foreversim';

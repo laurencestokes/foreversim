@@ -155,7 +155,9 @@ func (warrior *Warrior) registerFlurry() {
 	flurryBuff := spellData.FlurryTriggered.Highest()
 
 	// TODO: Ingame test needed: the talent ladder gives 5% per point (25% at rank 5) while the
-	// applied buff 12966 carries a flat 30%.
+	// applied buff 12966 carries a flat 30%. The ladder is kept: the shaman's Flurry buff 16257 still
+	// carries Era's rank-1 10% under the same 5..25% ladder, so a triggered buff's own number is not
+	// what the server applies. One point of Flurry settles it: the buff reads 5% or 30%.
 	flurryAura := warrior.RegisterAura(core.Aura{
 		Label:     "Flurry",
 		ActionID:  core.ActionID{SpellID: flurryBuff.ID},

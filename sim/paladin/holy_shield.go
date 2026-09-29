@@ -1,8 +1,11 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
+	"fmt"
+
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -14,11 +17,15 @@ var HolyShieldRankMap = spellData.HolyShield
 // Increases chance to block by 20% for 10 sec, and deals 221 Holy damage for each attack blocked
 // while active. Damage caused by Holy Shield causes 20% additional threat. Each block expends a
 // charge. 4 charges.
-func (paladin *Paladin) registerHolyShield(row shared.SpellData) {
-	actionID := core.ActionID{SpellID: row.SpellID}
-	damage := shared.SpellDataMin(row.Direct)
-	blockPercent := row.Effect(shared.A_MOD_BLOCK_PERCENT, 0).Value
-	charges := row.ProcCharges
+//
+// The per-block damage and its spell power share sit on the proc-trigger-damage aura effect,
+// beside the block chance on an aura of its own.
+func (paladin *Paladin) registerHolyShield(_ int32, rank *spelldata.Spell) {
+	actionID := core.ActionID{SpellID: rank.ID}
+	damageEffect := rank.Effect(dbcenums.A_PROC_TRIGGER_DAMAGE, 0)
+	damage := damageEffect.Average(core.CharacterLevel)
+	blockPercent := rank.Effect(dbcenums.A_MOD_BLOCK_PERCENT, 0).BaseValue() // stats.BlockPercent is in percent: 30, not 0.3
+	charges := int32(rank.ProcCharges)
 
 	procSpell := paladin.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID.WithTag(2),
@@ -30,7 +37,7 @@ func (paladin *Paladin) registerHolyShield(row shared.SpellData) {
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1.2,
-		BonusCoefficient: row.Direct.BonusCoefficient(),
+		BonusCoefficient: damageEffect.Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMagicHit)
@@ -39,9 +46,9 @@ func (paladin *Paladin) registerHolyShield(row shared.SpellData) {
 
 	var holyShieldAura *core.Aura
 	holyShieldAura = paladin.RegisterAura(core.Aura{
-		Label:     "Holy Shield" + paladin.Label + " " + row.GetRankLabel(),
+		Label:     fmt.Sprintf("Holy Shield%s Rank %d", paladin.Label, rank.RankNumber()),
 		ActionID:  actionID,
-		Duration:  row.Duration,
+		Duration:  rank.Duration(),
 		MaxStacks: charges,
 	}).AttachProcTrigger(core.ProcTrigger{
 		Callback:           core.CallbackOnSpellHitTaken,
@@ -60,21 +67,21 @@ func (paladin *Paladin) registerHolyShield(row shared.SpellData) {
 
 	paladin.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
-		SpellSchool:    row.SpellSchool,
-		DefenseType:    row.DefenseType,
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL | core.SpellFlagHelpful,
 		ClassSpellMask: SpellMaskHolyShield,
-		Rank:           row.Rank,
+		Rank:           rank.RankNumber(),
 
-		ManaCost: manaCost(row),
+		ManaCost: manaCost(rank),
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: row.GCD,
+				GCD: rank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    paladin.sharedTimer(&paladin.holyShieldTimer),
-				Duration: row.Cooldown,
+				Duration: cooldown(rank),
 			},
 		},
 

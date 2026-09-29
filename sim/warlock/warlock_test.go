@@ -75,7 +75,8 @@ func warlockSuite(apl string, talents string, options *proto.WarlockOptions) cor
 	}
 }
 
-// One demon for every rotation: the Succubus, kept out, as the Affliction builds run it.
+// One demon for every rotation: the Succubus, kept out, as the Affliction builds run it. A build
+// with Demonic Pact also keeps an Imp sacrificed before the pull, as the Demonic Pact preset does.
 func TestArena(t *testing.T) {
 	arenalib.Run(t, arenaSpec)
 }
@@ -92,9 +93,10 @@ var arenaSpec = arenalib.Spec{
 	Race:  proto.Race_RaceOrc,
 	SpecOptions: &proto.Player_Warlock{Warlock: &proto.Warlock{Options: &proto.Warlock_Options{
 		ClassOptions: &proto.WarlockOptions{
-			Summon:       proto.WarlockOptions_Succubus,
-			Armor:        proto.WarlockOptions_DemonArmor,
-			CurseOptions: proto.WarlockOptions_Elements,
+			Summon:        proto.WarlockOptions_Succubus,
+			Armor:         proto.WarlockOptions_DemonArmor,
+			CurseOptions:  proto.WarlockOptions_Elements,
+			PactSacrifice: proto.WarlockOptions_Imp,
 		},
 	}}},
 	Role:               arenalib.Caster,

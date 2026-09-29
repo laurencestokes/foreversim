@@ -1,11 +1,9 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
-
-var RighteousFuryRankMap = spellData.RighteousFury
 
 // Righteous Fury
 // https://www.wowhead.com/forever/spell=25780
@@ -15,8 +13,8 @@ var RighteousFuryRankMap = spellData.RighteousFury
 // Improved Righteous Fury adds a damage-taken reduction to the buff, and Instrument of Law's
 // threat reduction only applies while it is down; both attach to the aura from their talents.
 func (paladin *Paladin) registerRighteousFury() {
-	row := RighteousFuryRankMap.HighestRank()
-	actionID := core.ActionID{SpellID: row.SpellID}
+	rank := spellData.RighteousFury.Highest()
+	actionID := core.ActionID{SpellID: rank.ID}
 
 	paladin.RighteousFuryAura = paladin.RegisterAura(core.Aura{
 		Label:    "Righteous Fury",
@@ -25,21 +23,21 @@ func (paladin *Paladin) registerRighteousFury() {
 	}).AttachSpellMod(core.SpellModConfig{
 		Kind:       core.SpellMod_ThreatMultiplier_Pct,
 		School:     core.SpellSchoolHoly,
-		FloatValue: row.Effect(shared.A_MOD_THREAT, 2).Value / 100,
+		FloatValue: rank.Effect(dbcenums.A_MOD_THREAT, 2).Percent(),
 	})
 
 	paladin.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
-		SpellSchool:    row.SpellSchool,
-		DefenseType:    row.DefenseType,
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL | core.SpellFlagHelpful,
 		ClassSpellMask: SpellMaskRighteousFury,
 
-		ManaCost: manaCost(row),
+		ManaCost: manaCost(rank),
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: row.GCD,
+				GCD: rank.GCD(),
 			},
 		},
 

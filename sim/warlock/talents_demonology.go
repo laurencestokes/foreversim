@@ -109,13 +109,23 @@ func (warlock *Warlock) applyImprovedSayaad() {
 // Voidwalker mana (18792) and the Felhunter health (18790). The demon is sacrificed before the pull,
 // so the buff is simply permanent and no pet is ever summoned.
 func (warlock *Warlock) applyDemonicSacrifice() {
-	if !warlock.Talents.DemonicSacrifice || !warlock.Options.SacrificeSummon {
+	if !warlock.Talents.DemonicSacrifice {
 		return
+	}
+
+	demon := warlock.Options.Summon
+	if !warlock.Options.SacrificeSummon {
+		// Demonic Pact (425464): a demon sacrificed before the pull keeps its buff while a different
+		// one is out; summoning the sacrificed demon again cancels it.
+		if !warlock.Talents.DemonicPact || warlock.Options.PactSacrifice == warlock.Options.Summon {
+			return
+		}
+		demon = warlock.Options.PactSacrifice
 	}
 
 	var spellID int32
 	var school stats.SchoolIndex
-	switch warlock.Options.Summon {
+	switch demon {
 	case proto.WarlockOptions_Imp:
 		spellID, school = 18789, stats.SchoolIndexShadow
 	case proto.WarlockOptions_Succubus:
@@ -211,7 +221,10 @@ func (warlock *Warlock) applyDecimation() {
 //
 // The branded hit is the client's SpellDescriptionVariables formula for 1293696/1293697 (beta
 // 1.60.1.69977, the same text Wowhead's Forever tooltip resolves): ((level-26)*1.5)+14 to +17, plus
-// 7.8% of the warlock's Shadow spell power, so 65 to 68 at level 60.
+// 7.8% of the warlock's spell power, so 65 to 68 at level 60. The client splits the hit by pet
+// (1.60.1.70009): the Imp's is Fire (1293698, fire spell power), the others Shadow (1293697, shadow
+// spell power). The brand 1293696 procs on the target taking melee or spell hits (ProcTypeMask
+// 139944), so the Imp's Firebolt and the Succubus' Lash of Pain use charges too.
 func (warlock *Warlock) applyDemonicBrand() {
 	if warlock.Talents.DemonicBrand == 0 {
 		return
@@ -234,9 +247,14 @@ func (warlock *Warlock) applyDemonicBrand() {
 	charges := int32(spellData.DemonicBrand.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CHARGES)).ValueAt(points))
 
 	for _, pet := range warlock.BasePets {
+		school, schoolPower := core.SpellSchoolShadow, stats.ShadowDamage
+		if pet == warlock.Imp {
+			school, schoolPower = core.SpellSchoolFire, stats.FireDamage
+		}
+
 		brandSpell := pet.RegisterSpell(core.SpellConfig{
 			ActionID:    actionID,
-			SpellSchool: core.SpellSchoolShadow,
+			SpellSchool: school,
 			DefenseType: core.DefenseTypeMagic,
 			ProcMask:    core.ProcMaskEmpty,
 			Flags:       core.SpellFlagPassiveSpell | core.SpellFlagNoOnCastComplete,
@@ -246,7 +264,7 @@ func (warlock *Warlock) applyDemonicBrand() {
 
 			ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 				levelBonus := float64(core.CharacterLevel-26) * 1.5
-				spellPower := warlock.GetStat(stats.SpellDamage) + warlock.GetStat(stats.ShadowDamage)
+				spellPower := warlock.GetStat(stats.SpellDamage) + warlock.GetStat(schoolPower)
 				damage := sim.Roll(levelBonus+14, levelBonus+17) + 0.078*spellPower
 				spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMagicHit)
 			},
@@ -258,7 +276,7 @@ func (warlock *Warlock) applyDemonicBrand() {
 			Duration:  triggered.Duration(),
 			MaxStacks: charges,
 			OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-				if result.Landed() && spell.ProcMask.Matches(core.ProcMaskMelee) {
+				if result.Landed() && spell.ProcMask.Matches(core.ProcMaskMelee|core.ProcMaskSpellDamage) {
 					brandSpell.Cast(sim, result.Target)
 					aura.RemoveStack(sim)
 				}
@@ -389,8 +407,8 @@ func (warlock *Warlock) applyImprovedVoidwalker() {
 
 // applyDemonicEnergies implements Demonic Energies, new in Forever.
 //
-// The pet's share of Life Tap is in lifetap.go.
-// TODO: the talent's first effect (8/15) is unidentified.
+// The pet's share of Life Tap is in lifetap.go. The first effect (client 1225214, 8/15%) heals the
+// pet for that share of the warlock's spell damage; the sim's demon takes no damage, so it is left out.
 func (warlock *Warlock) applyDemonicEnergies() {
 	if warlock.Talents.DemonicEnergies == 0 {
 		return
@@ -425,10 +443,8 @@ func (warlock *Warlock) applyImprovedFelhunter() {
 	}
 }
 
-// applyDemonicPact implements Demonic Pact, new in Forever.
-//
-// It keeps a Demonic Sacrifice buff alive while another demon is out, which only matters once the
-// sim summons and sacrifices during the fight.
+// applyDemonicPact implements Demonic Pact, new in Forever. The sacrifice it keeps (PactSacrifice)
+// is applied in applyDemonicSacrifice.
 func (warlock *Warlock) applyDemonicPact() {
 	if !warlock.Talents.DemonicPact {
 		return

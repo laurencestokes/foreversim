@@ -4,8 +4,6 @@ import (
 	"github.com/wowsims/forever/sim/core"
 )
 
-var JudgementRankMap = spellData.Judgement
-
 // Judgement
 // https://www.wowhead.com/forever/spell=20271
 //
@@ -15,23 +13,23 @@ var JudgementRankMap = spellData.Judgement
 // The spell itself has no defense type and rolls nothing: the seal's own judgement spell is Melee in
 // SpellCategories and carries the hit roll along with the effect.
 func (paladin *Paladin) registerJudgement() {
-	row := JudgementRankMap.HighestRank()
+	rank := spellData.Judgement.Highest()
 
 	// No SpellFlagNoOnCastComplete: Sanctified Judgement and Swift Judgement listen for the cast
 	// through OnCastComplete, and the flag silences both.
 	paladin.Judgement = paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: row.SpellID},
-		SpellSchool:    row.SpellSchool,
-		DefenseType:    row.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL | core.SpellFlagPassiveSpell,
 		ClassSpellMask: SpellMaskJudgement,
-		MaxRange:       row.MaxRange,
+		MaxRange:       float64(rank.MaxRange),
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
 
-		ManaCost: manaCost(row),
+		ManaCost: manaCost(rank),
 		Cast: core.CastConfig{
 			// Off the global cooldown, as the client states.
 			DefaultCast: core.Cast{
@@ -39,7 +37,7 @@ func (paladin *Paladin) registerJudgement() {
 			},
 			CD: core.Cooldown{
 				Timer:    paladin.sharedTimer(&paladin.judgementTimer),
-				Duration: row.Cooldown,
+				Duration: cooldown(rank),
 			},
 		},
 

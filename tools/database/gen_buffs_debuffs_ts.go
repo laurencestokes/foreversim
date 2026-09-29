@@ -175,7 +175,7 @@ func RenderBuffsDebuffsTS(rows []ResolvedBuff) ([]byte, error) {
 // tab, so the generator refuses to render.
 func checkBuffInputTables() error {
 	fields := map[string]bool{}
-	for _, spec := range buffmanifest.Manifest {
+	for _, spec := range buffmanifest.All() {
 		fields[spec.Field] = true
 	}
 	for field := range manualBuffInputs {
@@ -216,7 +216,7 @@ func skipBuffInputReason(row ResolvedBuff) string {
 func uninputtableBuffReason(row ResolvedBuff) string {
 	var fixed string
 	switch {
-	case row.Kind == buffmanifest.KindAbsent, row.Kind == buffmanifest.KindFlag:
+	case row.Kind == buffmanifest.KindFlag:
 		fixed = fmt.Sprintf("%s renders no settings input.", row.Kind)
 	case row.Proto == buffmanifest.ProtoDouble:
 		fixed = fmt.Sprintf("%s has no settings factory.", row.Proto)
@@ -234,7 +234,7 @@ func buffInput(row ResolvedBuff) (*tsBuffInput, error) {
 		Const:     row.Go,
 		SpellID:   row.SpellID,
 		FieldName: row.TSField(),
-		Label:     tsString(buffInputLabel(row)),
+		Label:     tsString(buffLabel(row)),
 	}
 
 	scopes := map[buffmanifest.BuffScope]string{
@@ -291,13 +291,6 @@ func buffInputImpID(row ResolvedBuff) (string, error) {
 		return "", fmt.Errorf("a tristate row needs the talent that prices its improved state")
 	}
 	return fmt.Sprintf("ActionId.fromSpellId(%d)", row.TalentSpellID), nil
-}
-
-func buffInputLabel(row ResolvedBuff) string {
-	if row.Label != "" {
-		return row.Label
-	}
-	return row.DBName
 }
 
 func buffsDebuffsTSImports(factories map[string]bool) string {
