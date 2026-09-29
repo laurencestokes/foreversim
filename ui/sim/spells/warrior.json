@@ -1,175 +1,130 @@
 {
-	"11567": {
-		"ability": "Heroic Strike",
-		"file": "sim/warrior/heroic_strike_cleave.go",
-		"note": "Beta client 1.60.1.69893: 138 (rank 8) and 157 (rank 9) bonus damage for 15 Rage, identical to Classic Era.",
-		"source": "classic"
-	},
-	"11572": {
-		"ability": "Rend",
-		"file": "sim/warrior/rend.go",
-		"note": "Beta client 1.60.1.69893: every Rend rank the sim uses has Classic Era's damage, tick count and 10 Rage cost.",
-		"source": "classic"
-	},
-	"11573": {
-		"ability": "Rend",
-		"file": "sim/warrior/rend.go",
-		"note": "Beta client 1.60.1.69893: every Rend rank the sim uses has Classic Era's damage, tick count and 10 Rage cost.",
-		"source": "classic"
-	},
 	"11574": {
 		"ability": "Rend",
 		"file": "sim/warrior/rend.go",
-		"note": "Beta client 1.60.1.69893: every Rend rank the sim uses has Classic Era's damage, tick count and 10 Rage cost.",
-		"source": "classic"
+		"note": "Client 1.60.1.70009: rank 7 deals 21 every 3 sec for 21 sec (147) for 10 Rage, identical to Classic Era. It is the only rank the sim casts. Beta logs add 2% of attack power to every tick, which the client row doesn't carry: 5 level 20 warriors, about 370 rank 3 ticks (9 each), land 0.018-0.020 of their attack power over the base, read at each tick. Fitted at level 20; whether rank 7's longer bleed keeps the same share per tick is not yet known.",
+		"source": "forever"
 	},
 	"11581": {
 		"ability": "Thunder Clap",
 		"file": "sim/warrior/thunder_clap.go",
-		"note": "Beta client 1.60.1.69893: 103 damage as in Classic, but the attack speed slow is 20% (Classic 10%), the cooldown 6 sec (Classic 4) and the spell is usable in Battle and Defensive Stance.",
+		"note": "Client 1.60.1.70009: 103 damage as in Classic, but the attack speed slow is 20% (Classic 10%, #404), the cooldown 6 sec (Classic 4) and the spell is usable in Battle and Defensive Stance. Threat is its damage (x1) before the stance modifier, measured in the level 20 beta on 2026-09-28: 17 damage for 14 threat in Battle Stance, ~21 in Defensive; the sim had 2.5x. Armor does not reduce it (the sim did): in the level 20 beta logs Chud and Skeefzy's white hits vary 2.3-3.6x from mob to mob while their claps stay within 1.1x (foreverlogs 2677, 2683).",
 		"source": "forever",
 		"tooltip": "20 Rage\nInstant\n6 sec cooldown\nRequires Battle Stance, Defensive Stance\nBlasts nearby enemies with thunder, increasing the time between their attacks by 20% for 30 sec and doing 103 damage to them. Will affect up to 4 targets."
 	},
 	"11585": {
 		"ability": "Overpower",
 		"file": "sim/warrior/overpower.go",
-		"note": "Beta client 1.60.1.69893: 35 bonus damage, 5 Rage and a 5 sec cooldown as in Classic Era. The client adds a second cost of 1 of power type 4, which nothing in the sim models.",
+		"note": "Client 1.60.1.70009: 35 bonus damage, 5 Rage and a 5 sec cooldown as in Classic Era. The client adds a second cost of 1 of power type 4, which nothing in the sim models.",
 		"source": "classic"
-	},
-	"11601": {
-		"ability": "Revenge",
-		"file": "sim/warrior/revenge.go",
-		"note": "Beta client 1.60.1.69893: every Revenge rank deals about 70% more than Classic, rank 5 109-133 (Classic 64-78) and rank 6 138-168 (Classic 81-99); 5 Rage and 5 sec cooldown unchanged.",
-		"source": "forever",
-		"tooltip": "5 Rage\nMelee Range\nInstant\n5 sec cooldown\nRequires Defensive Stance\nInstantly counterattack an enemy for 109 to 133 damage and a high amount of threat. Revenge must follow a block, dodge or parry."
 	},
 	"11605": {
 		"ability": "Slam",
 		"file": "sim/warrior/slam.go",
-		"note": "Beta client 1.60.1.69893: weapon damage plus 87 and a 1.5 sec cast as in Classic, but every rank now has a 15 sec cooldown.",
+		"note": "Client 1.60.1.70009: weapon damage plus 87 and a 1.5 sec cast as in Classic, but the spell has an 18 sec cooldown (15 in 69893; Classic has none).",
 		"source": "forever",
-		"tooltip": "15 Rage\nMelee Range\n1.5 sec cast\n15 sec cooldown\nSlams the opponent, causing weapon damage plus 87."
-	},
-	"12292": {
-		"ability": "Sweeping Strikes",
-		"file": "sim/warrior/sweeping_strikes.go",
-		"note": "Forever's demo tooltip reads word for word like Classic's (\"Your next 5 melee attacks strike an additional nearby opponent\") and the 30 Rage cost and 30 sec cooldown are unchanged; the sim's 10 sec aura is shorter than the 20 sec the Classic spell data carries, which is a sim question rather than a Forever one.",
-		"source": "classic"
+		"tooltip": "15 Rage\nMelee Range\n1.5 sec cast\n18 sec cooldown\nSlams the opponent, causing weapon damage plus 87."
 	},
 	"12296": {
 		"ability": "Anger Management",
-		"file": "sim/warrior/talents.go",
-		"note": "Forever's tooltip names the 1 Rage per 3 sec that this id actually pays out in the sim, where the Classic tooltip only mentions the out of combat Rage decay and never says the talent generates anything.",
+		"file": "sim/warrior/talents_arms.go",
+		"note": "Client 1.60.1.70009: 12296 carries 1 Rage every 3 sec, which the sim pays out in combat, and the 30% out of combat decay reduction; the Classic tooltip only mentions the decay and never says the talent generates anything.",
 		"source": "forever",
 		"tooltip": "Passive\nGenerates 1 Rage every 3 sec while in combat, and reduces Rage loss while out of combat by 30%."
 	},
 	"12319": {
 		"ability": "Flurry",
-		"file": "sim/warrior/talents.go",
-		"note": "Beta client 1.60.1.69893: Flurry's rank curve reads 5/10/15/20/25% attack speed for 3 swings, Classic's values; Forever folds the ranks into 12319, so the sim's rank 2-5 ids only label the aura.",
-		"source": "classic"
+		"file": "sim/warrior/talents_fury.go",
+		"note": "Client 1.60.1.70009: the talent 12319's curve reads 5/10/15/20/25% attack speed for 3 swings, Classic's values, but the buff it triggers (12966) now carries a flat 30%. The sim applies the curve; the proc trigger is 12319 and the buff 12966.",
+		"source": "assumed",
+		"tooltip": "Passive\nIncreases your attack speed by 5% per point for your next 3 swings after dealing a melee critical strike. Lasts 15 sec.",
+		"assumptions": [
+			"Flurry gives 5% attack speed per point, 25% at five, as the talent's curve reads, not the flat 30% its buff 12966 carries; one point settles it (the buff shows 5% or 30%)."
+		]
 	},
 	"12328": {
 		"ability": "Death Wish",
-		"file": "sim/warrior/talents.go",
-		"note": "Forever swaps the drawback: Classic lowers armor and all resistances by 20%, Forever takes 5% more damage of every kind, which is what the sim applies; the 10 Rage cost and 3 min cooldown are Classic's and were not shown.",
+		"file": "sim/warrior/talents_fury.go",
+		"note": "Client 1.60.1.70009: +20% Physical damage and fear immunity for 30 sec for 10 Rage on a 3 min cooldown, as in Classic, but the drawback is 5% more damage of every kind taken where Classic lowers armor and all resistances by 20%.",
 		"source": "forever",
 		"tooltip": "10 Rage\nInstant\n3 min cooldown\nWhen activated, increases your Physical damage done by 20% and makes you immune to Fear effects, but increases all damage you take by 5%. Lasts 30 sec."
 	},
 	"12723": {
-		"ability": "Sweeping Strikes (extra hit)",
-		"file": "sim/warrior/sweeping_strikes.go",
-		"note": "The internal spell that deals the copied damage for auto attacks and most abilities; untouched by Forever and never shown to a player.",
+		"ability": "Sweeping Strikes",
+		"file": "sim/warrior/talents_arms.go",
+		"note": "Sweeping Strikes registers under 12723: the 30 Rage cast on a 30 sec cooldown, its 20 sec aura with 5 charges (client 1.60.1.70009, 12292, as in Classic Era) and the copied hit for auto attacks and most abilities; the normalized Execute copy is 12723 tag 1 (26654 in the client).",
 		"source": "classic"
 	},
-	"12727": {
-		"ability": "Shield Specialization",
-		"file": "sim/warrior/talents.go",
-		"note": "Beta client 1.60.1.69893: Shield Specialization gives 1% block and a 20% chance per point at 5 Rage (1310318) when you block. The sim also borrows this id with tag 1 for Master of Defense (1310316), 50% / 100% chance at 5 Rage (23602) on a dodge or parry.",
-		"source": "forever",
-		"tooltip": "Passive\nIncreases your chance to Block attacks with your shield by 1% per point, and gives you a 20% chance per point to generate 5 Rage when you Block."
-	},
-	"12815": {
-		"ability": "Weaponmaster (extra attack)",
-		"file": "sim/warrior/talents.go",
-		"note": "Beta client 1.60.1.69893: Classic's 12815 is Sword Specialization rank 5; the sim reuses the id for the sword branch of Weaponmaster (12281), whose curves read 1% crit, 3% armor ignored and 1% extra attack chance per point.",
-		"source": "forever",
-		"tooltip": "Passive\nYour successful melee attacks with a sword have a 1% chance per point to trigger an extra attack on the target.\n(200ms cooldown)"
-	},
-	"12834": {
-		"ability": "Deep Wounds",
-		"file": "sim/warrior/deep_wounds.go",
-		"note": "Beta client 1.60.1.69893: Deep Wounds bleeds for 20/40/60% of average weapon damage over 12 sec in 4 ticks, Classic's values; Forever folds the ranks into 12834.",
-		"source": "classic"
-	},
-	"12849": {
-		"ability": "Deep Wounds",
-		"file": "sim/warrior/deep_wounds.go",
-		"note": "Beta client 1.60.1.69893: Deep Wounds bleeds for 20/40/60% of average weapon damage over 12 sec in 4 ticks, Classic's values; Forever folds the ranks into 12834.",
-		"source": "classic"
-	},
-	"12867": {
-		"ability": "Deep Wounds",
-		"file": "sim/warrior/deep_wounds.go",
-		"note": "Beta client 1.60.1.69893: Deep Wounds bleeds for 20/40/60% of average weapon damage over 12 sec in 4 ticks, Classic's values; Forever folds the ranks into 12834.",
-		"source": "classic"
-	},
-	"12964": {
-		"ability": "Unbridled Wrath",
-		"file": "sim/warrior/talents.go",
-		"note": "Beta client 1.60.1.69893: the rank curve reads 12/24/36/48/60% for 1 Rage, doubled with a two-handed weapon (Classic 8% per point, 1 Rage). The sim only procs it from white swings.",
-		"source": "forever",
-		"tooltip": "Passive\nGives you a 12% chance per point to generate 1 additional Rage when you deal melee damage with a weapon. This effect is increased to 2 Rage for two-handed weapons."
-	},
-	"12971": {
-		"ability": "Flurry",
-		"file": "sim/warrior/talents.go",
-		"note": "Beta client 1.60.1.69893: Flurry's rank curve reads 5/10/15/20/25% attack speed for 3 swings, Classic's values; Forever folds the ranks into 12319, so the sim's rank 2-5 ids only label the aura.",
-		"source": "classic"
-	},
-	"12972": {
-		"ability": "Flurry",
-		"file": "sim/warrior/talents.go",
-		"note": "Beta client 1.60.1.69893: Flurry's rank curve reads 5/10/15/20/25% attack speed for 3 swings, Classic's values; Forever folds the ranks into 12319, so the sim's rank 2-5 ids only label the aura.",
-		"source": "classic"
-	},
-	"12973": {
-		"ability": "Flurry",
-		"file": "sim/warrior/talents.go",
-		"note": "Beta client 1.60.1.69893: Flurry's rank curve reads 5/10/15/20/25% attack speed for 3 swings, Classic's values; Forever folds the ranks into 12319, so the sim's rank 2-5 ids only label the aura.",
-		"source": "classic"
-	},
-	"12974": {
-		"ability": "Flurry",
-		"file": "sim/warrior/talents.go",
-		"note": "Beta client 1.60.1.69893: Flurry's rank curve reads 5/10/15/20/25% attack speed for 3 swings, Classic's values; Forever folds the ranks into 12319, so the sim's rank 2-5 ids only label the aura.",
-		"source": "classic"
-	},
-	"12975": {
-		"ability": "Last Stand",
-		"file": "sim/warrior/talents.go",
-		"note": "Beta client 1.60.1.69893: 30% of maximum health for 20 sec as in Classic, on a 3 min cooldown (Classic 10 min).",
-		"source": "forever",
-		"tooltip": "Instant\n3 min cooldown\nWhen activated, this ability temporarily grants you 30% of your maximum health for 20 sec. After the effect expires, the health is lost."
-	},
-	"13048": {
+	"12880": {
 		"ability": "Enrage",
-		"file": "sim/warrior/talents.go",
-		"note": "Beta client 1.60.1.69893: the talent (12317) procs at a flat 30% from any damaging attack and its curve ranks the Physical damage bonus at 2/4/6/8/10% for 12 sec. Classic needs a critical strike and scales 5% to 25% for 12 swings.",
+		"file": "sim/warrior/talents_fury.go",
+		"note": "Client 1.60.1.70009: the talent (12317) procs at a flat 30% from any damaging attack taken and its curve ranks the Physical damage bonus at 2/4/6/8/10% for 12 sec, carried by the buff 12880. Classic needs a critical strike and scales 5% to 25% for 12 swings.",
 		"source": "forever",
 		"tooltip": "Passive\nGives you a 30% chance to deal 2% increased Physical damage per point for 12 sec after being the victim of any damaging attack."
 	},
+	"1289682": {
+		"ability": "Bloodthrill",
+		"file": "sim/warrior/talents_arms.go",
+		"note": "Forever's own id, client 1.60.1.70009: 1289682's curve reads 4/8/12/16/20% on main-hand melee hits against a target with your Rend, and the Overpower window it opens lasts 6 sec (1289681). The row used to carry a later expansion's id (56638) and 2% a point.",
+		"source": "forever",
+		"tooltip": "Passive\nYour main-hand melee attacks against targets afflicted by your Rend have a 4% chance per point to activate your Overpower ability for 1 attack. Lasts 6 sec."
+	},
+	"1290261": {
+		"ability": "Weaponmaster",
+		"file": "sim/warrior/talents_arms.go",
+		"note": "Forever's Arms talent, client 1.60.1.70009: 1290261's curve reads, per point, 1% crit with an axe or polearm, 3% armor ignored with a mace or staff and a 1% extra attack chance with a sword. The sim registers the three under 1290261 tags 1 to 3, where it used to borrow Classic's Sword Specialization id 12815.",
+		"source": "forever",
+		"tooltip": "Passive\nWith an axe or polearm, increases your critical strike chance by 1% per point. With a mace or staff, your attacks ignore 3% of the target's armor per point. With a sword, your melee attacks have a 1% chance per point to trigger an extra attack on the target."
+	},
+	"12964": {
+		"ability": "Unbridled Wrath",
+		"file": "sim/warrior/talents_fury.go",
+		"note": "Client 1.60.1.70009: the rank curve reads 12/24/36/48/60% for 1 Rage, doubled with a two-handed weapon (Classic 8% per point, 1 Rage). The sim only procs it from white swings.",
+		"source": "forever",
+		"tooltip": "Passive\nGives you a 12% chance per point to generate 1 additional Rage when you deal melee damage with a weapon. This effect is increased to 2 Rage for two-handed weapons."
+	},
+	"12966": {
+		"ability": "Flurry",
+		"file": "sim/warrior/talents_fury.go",
+		"note": "The buff, client 1.60.1.70009: 15 sec, 3 charges and a flat 30% attack speed where Era's rank 1 buff is 10%. The sim applies the talent's 5% a point instead (12319).",
+		"source": "assumed",
+		"tooltip": "Passive\nIncreases your attack speed by 5% per point for your next 3 swings after dealing a melee critical strike. Lasts 15 sec.",
+		"assumptions": [
+			"Flurry gives 5% attack speed per point, 25% at five, as the talent's curve reads, not the flat 30% its buff 12966 carries; one point settles it (the buff shows 5% or 30%)."
+		]
+	},
+	"12975": {
+		"ability": "Last Stand",
+		"file": "sim/warrior/talents_protection.go",
+		"note": "Client 1.60.1.70009: 30% of maximum health for 20 sec as in Classic, on a 3 min cooldown (Classic 10 min).",
+		"source": "forever",
+		"tooltip": "Instant\n3 min cooldown\nWhen activated, this ability temporarily grants you 30% of your maximum health for 20 sec. After the effect expires, the health is lost."
+	},
 	"1310222": {
 		"ability": "Spearing Strike",
-		"file": "sim/warrior/spearing_strike.go",
-		"note": "Beta client 1.60.1.69893: a new Arms talent with no Classic spell. 15 Rage, 20 sec cooldown, 40% normalized weapon damage and another 80% against Giants and Dragonkin.",
+		"file": "sim/warrior/talents_arms.go",
+		"note": "Client 1.60.1.70009: a new Arms talent with no Classic spell. 15 Rage, 20 sec cooldown, 40% normalized weapon damage and another 80% against Giants and Dragonkin.",
 		"source": "forever",
 		"tooltip": "15 Rage\nMelee Range\nInstant\n20 sec cooldown\nA brutal attack that deals 40% weapon damage. Deals an additional 80% weapon damage against Giants, Dragonkin, and mounted targets. Mounted targets are dismounted."
 	},
+	"1310318": {
+		"ability": "Shield Specialization",
+		"file": "sim/warrior/talents_protection.go",
+		"note": "Client 1.60.1.70009: the talent 12298's curve gives 1% block and a 20% chance per point to gain 5 Rage (1310318) on a block, and the sim books that Rage under 1310318. Master of Defense books its 5 Rage (50% / 100% on a dodge or parry with a shield) under 23602.",
+		"source": "forever",
+		"tooltip": "Passive\nIncreases your chance to Block attacks with your shield by 1% per point, and gives you a 20% chance per point to generate 5 Rage when you Block."
+	},
+	"1318070": {
+		"ability": "Diamond Flask",
+		"file": "sim/warrior/items.go",
+		"note": "Client 1.60.1.70009: Forever's flask (item 20130) is a 5 sec channel (363881) that heals and, if it runs to the end, grants 20 Strength for 1 min (1318070) on a 6 min cooldown; Classic's 24427 gave 75 Strength outright. The heal is left out of the sim.",
+		"source": "forever",
+		"tooltip": "5 sec channel\n6 min cooldown\nHeals you over 5 sec and, if the channel completes, increases your Strength by 20 for 1 min."
+	},
 	"16488": {
 		"ability": "Blood Craze",
-		"file": "sim/warrior/talents.go",
-		"note": "Beta client 1.60.1.69893: Forever widens the trigger to Bloodthirst damage and hits over 20% of maximum health, and the curve reads 1/2/3% of maximum health over 6 sec in 3 ticks. Classic heals over 6 sec only after a critical strike.",
+		"file": "sim/warrior/talents_fury.go",
+		"note": "Client 1.60.1.70009: Forever widens the trigger to Bloodthirst damage and hits over 20% of maximum health, and the curve (16487) reads 1/2/3% of maximum health over 6 sec in 3 ticks. Classic heals over 6 sec only after a critical strike.",
 		"source": "forever",
 		"tooltip": "Passive\nRegenerates 1% of your total Health per point over 6 sec after being the victim of a critical strike, dealing damage with Bloodthirst, or suffering more than 20% of your maximum Health from a single attack."
 	},
@@ -182,19 +137,19 @@
 	"1719": {
 		"ability": "Recklessness",
 		"file": "sim/warrior/recklessness.go",
-		"note": "The registration is Classic's exactly (15 sec, guaranteed crits, +20% damage taken, 30 min cooldown); the file's header comment claims a 50% crit / 12 sec / 5 min version that no Forever source mentions and that the code does not implement, and it predates the Forever fork.",
+		"note": "Client 1.60.1.70009: 15 sec of guaranteed crits, +20% damage taken and fear immunity on a 30 min cooldown, the same numbers as Classic Era; Forever's row states the crit as all crit and the cooldown on the spell itself.",
 		"source": "classic"
 	},
 	"18499": {
 		"ability": "Berserker Rage",
 		"file": "sim/warrior/berserker_rage.go",
-		"note": "The spell is Classic's (10 sec, 30 sec cooldown, extra Rage from damage taken); Forever's Improved Berserker Rage keeps Classic's 5 and 10 instant Rage and only adds a snare break, which the sim has nothing to apply.",
+		"note": "The spell is Classic's (10 sec, 30 sec cooldown, extra Rage from damage taken); Forever's Improved Berserker Rage keeps Classic's 5 and 10 instant Rage and only adds a snare break, which the sim has nothing to apply. The client states no amount for the extra Rage, so the sim doubles it as a stand-in.",
 		"source": "classic"
 	},
 	"20569": {
 		"ability": "Cleave",
 		"file": "sim/warrior/heroic_strike_cleave.go",
-		"note": "Beta client 1.60.1.69893: 50 bonus damage and 20 Rage as in Classic Era; the Rage discounts come from Forever's Improved Cleave and Raging Blows.",
+		"note": "Client 1.60.1.70009: 50 bonus damage and 20 Rage as in Classic Era; the Rage discounts come from Forever's Improved Cleave and Raging Blows.",
 		"source": "classic"
 	},
 	"20662": {
@@ -205,52 +160,46 @@
 	},
 	"21553": {
 		"ability": "Mortal Strike",
-		"file": "sim/warrior/mortal_strike.go",
-		"note": "Beta client 1.60.1.69893: rank 4 deals weapon damage plus 160 for 30 Rage on a 6 sec cooldown, identical to Classic Era. The talent tooltip's 85 is rank 1 (12294).",
+		"file": "sim/warrior/talents_arms.go",
+		"note": "Client 1.60.1.70009: rank 4 deals normalized weapon damage plus 160 for 30 Rage on a 6 sec cooldown, the Classic Era numbers. The talent tooltip's 85 is rank 1 (12294).",
 		"source": "classic"
 	},
 	"21838": {
 		"ability": "Battlegear of Might (5 piece Rage proc)",
-		"file": "sim/warrior/item_sets_pve.go",
+		"file": "sim/warrior/items.go",
 		"note": "Molten Core tier 1 set bonus, 20% chance at 1 Rage when damage is dealt to you, untouched by Forever.",
 		"source": "classic"
 	},
 	"21887": {
 		"ability": "Warrior's Wrath",
-		"file": "sim/warrior/item_sets_pve.go",
+		"file": "sim/warrior/items.go",
 		"note": "Battlegear of Wrath 5 piece bonus, 20% chance that the next offensive ability costs 5 less Rage; untouched by Forever.",
 		"source": "classic"
 	},
 	"23548": {
 		"ability": "Parry (Battlegear of Wrath 8 piece)",
-		"file": "sim/warrior/item_sets_pve.go",
+		"file": "sim/warrior/items.go",
 		"note": "The set proc, not the Parry skill: 4% chance to parry the next attack after a block, untouched by Forever.",
 		"source": "classic"
 	},
 	"23894": {
 		"ability": "Bloodthirst",
-		"file": "sim/warrior/bloodthirst.go",
-		"note": "Beta client 1.60.1.69893: rank 4 deals 48 plus 35% of attack power and grants 10% movement speed for 10 sec, for 30 Rage on a 6 sec cooldown. Classic is a flat 45% of attack power with a five stack heal. The talent tooltip's 30 is rank 1 (23881).",
+		"file": "sim/warrior/talents_fury.go",
+		"note": "Client 1.60.1.70009: rank 4 deals 48 plus 35% of attack power and grants 10% movement speed for 10 sec, for 30 Rage on a 6 sec cooldown. Classic is a flat 45% of attack power with a five stack heal. The talent tooltip's 30 is rank 1 (23881).",
 		"source": "forever",
 		"tooltip": "30 Rage\nMelee Range\nInstant\n6 sec cooldown\nInstantly attack the target causing damage equal to 35% of your Attack Power plus 48 and increasing your movement speed by 10% for 10 sec."
 	},
 	"23925": {
 		"ability": "Shield Slam",
-		"file": "sim/warrior/shield_slam.go",
-		"note": "Beta client 1.60.1.69893: rank 4 deals 640-670 plus Block Value once (Classic Era 342-358). The sim used to add Block Value twice and 15% of attack power, which was Season of Discovery's rune.",
+		"file": "sim/warrior/talents_protection.go",
+		"note": "Client 1.60.1.70009: rank 4 deals 640-670 plus Block Value once (Classic Era 342-358). The sim used to add Block Value twice and 15% of attack power, which was Season of Discovery's rune.",
 		"source": "forever",
 		"tooltip": "20 Rage\nMelee Range\nInstant\n6 sec cooldown\nRequires Shields\nSlam the target with your shield, causing 640 to 670 damage, increased by your Block Value, and has a 50% chance of dispelling 1 magic effect on the target. Causes a very high amount of threat."
-	},
-	"24427": {
-		"ability": "Diamond Flask",
-		"file": "sim/warrior/items.go",
-		"note": "Trinket effect, +75 Strength for 1 min on a 6 min cooldown; the sim leaves out the 9 health per 5 sec the Classic tooltip also grants, which is an upstream simplification rather than a Forever change.",
-		"source": "classic"
 	},
 	"2457": {
 		"ability": "Battle Stance",
 		"file": "sim/warrior/stances.go",
-		"note": "Beta client 1.60.1.69893: the stance is unchanged. Forever's baseline Tactical Mastery (1310185) keeps 10 Rage across a stance change, plus 3 per point of Improved Tactical Mastery, and the sim applies both.",
+		"note": "Client 1.60.1.70009: the stance is unchanged. Forever's baseline Tactical Mastery (1310185) keeps 10 Rage across a stance change, plus 3 per point of Improved Tactical Mastery, and the sim applies both.",
 		"source": "classic"
 	},
 	"2458": {
@@ -262,54 +211,35 @@
 	"25286": {
 		"ability": "Heroic Strike",
 		"file": "sim/warrior/heroic_strike_cleave.go",
-		"note": "Beta client 1.60.1.69893: 138 (rank 8) and 157 (rank 9) bonus damage for 15 Rage, identical to Classic Era.",
+		"note": "Client 1.60.1.70009: rank 9 adds 157 damage for 15 Rage, identical to Classic Era. It is the only rank the sim casts.",
 		"source": "classic"
 	},
 	"25288": {
 		"ability": "Revenge",
 		"file": "sim/warrior/revenge.go",
-		"note": "Beta client 1.60.1.69893: every Revenge rank deals about 70% more than Classic, rank 5 109-133 (Classic 64-78) and rank 6 138-168 (Classic 81-99); 5 Rage and 5 sec cooldown unchanged.",
+		"note": "Client 1.60.1.70009: rank 6 deals 138 to 168, about 70% more than Classic's 81 to 99; 5 Rage and a 5 sec cooldown unchanged. It is the only rank the sim casts. Beta logs add 25% of attack power on top, which the client row doesn't carry: 4 level 20 warriors, about 450 rank 1 hits, land 0.23-0.27 of their attack power over the base once armor is taken out. Threat is damage x1 plus a flat bonus, ~40 at rank 1 (46 damage for ~96 threat in Defensive Stance), measured in the level 20 beta on 2026-09-28; the sim had 2.25x damage plus 270. Rank 6's flat is carried as 2 per level (120), fitted to that one rank.",
 		"source": "forever",
 		"tooltip": "5 Rage\nMelee Range\nInstant\n5 sec cooldown\nRequires Defensive Stance\nInstantly counterattack an enemy for 138 to 168 damage and a high amount of threat. Revenge must follow a block, dodge or parry."
 	},
 	"2565": {
 		"ability": "Shield Block",
 		"file": "sim/warrior/shield_block.go",
-		"note": "Beta client 1.60.1.69893: +75% block chance for one attack on a 5 sec cooldown as in Classic, but the buff lasts 7 sec (Classic 5).",
+		"note": "Client 1.60.1.70009: +75% block chance on a 5 sec cooldown as in Classic, but the buff lasts 7 sec and blocks up to 2 attacks (Classic 5 sec, 1 attack).",
 		"source": "forever",
-		"tooltip": "10 Rage\nInstant\n5 sec cooldown\nRequires Shields\nRequires Defensive Stance\nIncreases chance to block by 75% for 7 sec, but will only block 1 attack."
-	},
-	"26654": {
-		"ability": "Sweeping Strikes (extra hit, normalized)",
-		"file": "sim/warrior/sweeping_strikes.go",
-		"note": "The internal spell that deals the copied damage for Whirlwind; untouched by Forever and never shown to a player.",
-		"source": "classic"
+		"tooltip": "10 Rage\nInstant\n5 sec cooldown\nRequires Shields\nRequires Defensive Stance\nIncreases chance to block by 75% for 7 sec, but will only block 2 attacks."
 	},
 	"2687": {
 		"ability": "Bloodrage",
 		"file": "sim/warrior/bloodrage.go",
-		"note": "Beta client 1.60.1.69893: 10 Rage plus 10 over 10 sec for 20% of base health on a 1 min cooldown, as in Classic; Improved Bloodrage's curve reads 25 / 50% of all the Rage.",
+		"note": "Client 1.60.1.70009: 10 Rage plus 10 over 10 sec for 20% of base health on a 1 min cooldown, as in Classic; Improved Bloodrage's curve reads 25 / 50% of all the Rage.",
 		"source": "forever",
 		"tooltip": "Instant\n1 min cooldown\nGenerates 10 Rage at the cost of health, and then generates an additional 10 Rage over 10 sec.\nImproved Bloodrage increases all of that Rage by 25% per point."
 	},
 	"412609": {
 		"ability": "Deep Wounds",
 		"file": "sim/warrior/talents_arms.go",
-		"note": "The bleed itself (Deep Wound), which the sim now carries as the action id. Beta client 1.60.1.69893 and Classic Era agree: 4 ticks over 12 sec. The share of average weapon damage, 20/40/60%, is the talent's (12834).",
-		"source": "classic"
-	},
-	"56638": {
-		"ability": "Bloodthrill",
-		"file": "sim/warrior/talents.go",
-		"note": "A new Forever Arms talent with no Classic spell, so 56638 resolves to nothing in the Classic database and the UI shows a blank tooltip today; the id is borrowed from a later expansion's version of the same mechanic and Forever's own id is unknown, while the 2/4/6/8/10% per rank scaling is corroborated by the post BlizzCon write-ups.",
-		"source": "forever",
-		"tooltip": "Passive\nYour melee attacks against targets afflicted by your Rend have a 2% chance per point to activate your Overpower ability for 1 attack on your current target. Lasts 6 sec."
-	},
-	"6547": {
-		"ability": "Rend",
-		"file": "sim/warrior/rend.go",
-		"note": "Beta client 1.60.1.69893: every Rend rank the sim uses has Classic Era's damage, tick count and 10 Rage cost.",
-		"source": "classic"
+		"note": "The bleed itself (Deep Wound), the only Deep Wounds id the sim registers; its 3 sec ticks land as 412613 in logs. Client 1.60.1.70009 and Classic Era agree: 4 ticks over 12 sec. The share of average weapon damage, 20/40/60%, is the talent 12834's curve. Beta logs (foreverlogs reports 33 and 35: Toro, Battle Slayer 38-58, and Peon, Forsaken Greataxe 49-74, both 11 Arms points so 1 point) put a lone bleed at 9 and 12-13 over 4 ticks, 20% of the weapon's average damage with no attack power (with it, 19 and 23). A crit on a running bleed adds what it still owed: Peon's 7/6/6/6 and 6/7/6/7 after two quick crits.",
+		"source": "forever"
 	},
 	"6554": {
 		"ability": "Pummel",
@@ -326,13 +256,13 @@
 	"7373": {
 		"ability": "Hamstring",
 		"file": "sim/warrior/hamstring.go",
-		"note": "Beta client 1.60.1.69893: 45 damage for 10 Rage, identical to Classic Era.",
+		"note": "Client 1.60.1.70009: 45 damage for 10 Rage, identical to Classic Era.",
 		"source": "classic"
 	},
 	"871": {
 		"ability": "Shield Wall",
 		"file": "sim/warrior/shield_wall.go",
-		"note": "Beta client 1.60.1.69893: 60% less damage taken for 12 sec on a 15 min cooldown (Classic 75%, 10 sec, 30 min). Improved Shield Wall's curve takes 5.5 / 11 min off.",
+		"note": "Client 1.60.1.70009: 60% less damage taken for 12 sec on a 15 min cooldown (Classic 75%, 10 sec, 30 min). Improved Shield Wall's curve takes 5.5 / 11 min off.",
 		"source": "forever",
 		"tooltip": "Instant\n15 min cooldown\nRequires Shields\nRequires Defensive Stance\nReduces the damage taken from all attacks by 60% for 12 sec.\nImproved Shield Wall reduces the cooldown by 5.5 min per point."
 	}

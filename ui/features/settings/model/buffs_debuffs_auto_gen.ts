@@ -43,7 +43,7 @@ export const ManaSpringTotem = makeTristatePartyBuffInput({
 	actionId: ActionId.fromSpellId(10494),
 	impId: ActionId.fromSpellId(16187),
 	fieldName: 'manaSpringTotem',
-	label: 'Mana Spring',
+	label: 'Mana Spring Totem',
 });
 
 export const ManaTideTotems = makeMultistatePartyBuffInput({
@@ -72,7 +72,7 @@ export const ConcentrationAura = makeBooleanPartyBuffInput({
 });
 
 export const TrueshotAura = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(20906),
+	actionId: ActionId.fromSpellId(20905),
 	fieldName: 'trueshotAura',
 	label: 'Trueshot Aura',
 });
@@ -94,13 +94,13 @@ export const AtieshWarlock = makeMultistatePartyBuffInput({
 export const StrengthOfEarthTotem = makeBooleanPartyBuffInput({
 	actionId: ActionId.fromSpellId(25362),
 	fieldName: 'strengthOfEarthTotem',
-	label: 'Strength of Earth',
+	label: 'Strength of Earth Totem',
 });
 
 export const GraceOfAirTotem = makeBooleanPartyBuffInput({
 	actionId: ActionId.fromSpellId(25360),
 	fieldName: 'graceOfAirTotem',
-	label: 'Grace of Air',
+	label: 'Grace of Air Totem',
 });
 
 export const WindfuryTotem = makeBooleanPartyBuffInput({
@@ -119,12 +119,6 @@ export const ArcaneBrilliance = makeBooleanRaidBuffInput({
 	actionId: ActionId.fromSpellId(23028),
 	fieldName: 'arcaneBrilliance',
 	label: 'Arcane Brilliance',
-});
-
-export const GreaterBlessingOfKings = makeBooleanIndividualBuffInput({
-	actionId: ActionId.fromSpellId(25898),
-	fieldName: 'greaterBlessingOfKings',
-	label: 'Greater Blessing of Kings',
 });
 
 export const PrayerOfSpirit = makeBooleanRaidBuffInput({
@@ -150,22 +144,6 @@ export const PrayerOfFortitude = makeBooleanRaidBuffInput({
 	fieldName: 'prayerOfFortitude',
 	label: 'Prayer of Fortitude',
 });
-
-export const GreaterBlessingOfMight = makeBooleanIndividualBuffInput({
-	actionId: ActionId.fromSpellId(25916),
-	fieldName: 'greaterBlessingOfMight',
-	label: 'Greater Blessing of Might',
-});
-
-export const GreaterBlessingOfWisdom = makeBooleanIndividualBuffInput({
-	actionId: ActionId.fromSpellId(25918),
-	fieldName: 'greaterBlessingOfWisdom',
-	label: 'Greater Blessing of Wisdom',
-});
-
-// greater_blessing_of_salvation: the hand-written input hides itself for tank and healing specs, a role gate no manifest row carries.
-
-// greater_blessing_of_light: the hand-written input shows itself for tank and healing specs only, a role gate no manifest row carries.
 
 export const PrayerOfShadowProtection = makeBooleanRaidBuffInput({
 	actionId: ActionId.fromSpellId(27683),
@@ -194,19 +172,19 @@ export const ShadowResistanceAura = makeBooleanRaidBuffInput({
 export const FireResistanceTotem = makeBooleanRaidBuffInput({
 	actionId: ActionId.fromSpellId(10535),
 	fieldName: 'fireResistanceTotem',
-	label: 'Fire Resistance',
+	label: 'Fire Resistance Totem',
 });
 
 export const FrostResistanceTotem = makeBooleanRaidBuffInput({
 	actionId: ActionId.fromSpellId(10477),
 	fieldName: 'frostResistanceTotem',
-	label: 'Frost Resistance',
+	label: 'Frost Resistance Totem',
 });
 
 export const NatureResistanceTotem = makeBooleanRaidBuffInput({
 	actionId: ActionId.fromSpellId(10599),
 	fieldName: 'natureResistanceTotem',
-	label: 'Nature Resistance',
+	label: 'Nature Resistance Totem',
 });
 
 export const AspectOfTheWild = makeBooleanRaidBuffInput({
@@ -214,6 +192,28 @@ export const AspectOfTheWild = makeBooleanRaidBuffInput({
 	fieldName: 'aspectOfTheWild',
 	label: 'Aspect of the Wild',
 });
+
+export const GreaterBlessingOfKings = makeBooleanIndividualBuffInput({
+	actionId: ActionId.fromSpellId(25898),
+	fieldName: 'greaterBlessingOfKings',
+	label: 'Greater Blessing of Kings',
+});
+
+export const GreaterBlessingOfMight = makeBooleanIndividualBuffInput({
+	actionId: ActionId.fromSpellId(25916),
+	fieldName: 'greaterBlessingOfMight',
+	label: 'Greater Blessing of Might',
+});
+
+export const GreaterBlessingOfWisdom = makeBooleanIndividualBuffInput({
+	actionId: ActionId.fromSpellId(25918),
+	fieldName: 'greaterBlessingOfWisdom',
+	label: 'Greater Blessing of Wisdom',
+});
+
+// greater_blessing_of_salvation: the hand-written input hides itself for tank and healing specs, a role gate no manifest row carries.
+
+// greater_blessing_of_light: the hand-written input shows itself for tank and healing specs only, a role gate no manifest row carries.
 
 export const Innervates = makeMultistateIndividualBuffInput({
 	actionId: ActionId.fromSpellId(29166),

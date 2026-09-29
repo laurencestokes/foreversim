@@ -40,12 +40,12 @@ func run() error {
 		path = filepath.Join(repoRoot, destPath)
 	}
 
-	rendered := buffmanifest.RenderProto(buffmanifest.Manifest)
+	rendered := buffmanifest.RenderProto()
 	if err := os.WriteFile(path, rendered, 0o644); err != nil {
 		return fmt.Errorf("writing %s: %w", path, err)
 	}
 
-	fmt.Printf("gen_buffs_proto: wrote %s (%d fields, %d bytes)\n", path, len(buffmanifest.Manifest), len(rendered))
+	fmt.Printf("gen_buffs_proto: wrote %s (%d fields, %d bytes)\n", path, len(buffmanifest.All()), len(rendered))
 	return nil
 }
 

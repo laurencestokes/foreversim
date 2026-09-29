@@ -6,6 +6,7 @@ import (
 	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -116,6 +117,40 @@ func init() {
 			},
 		})
 	})
+
+	// Fiery Weapon (13897: 40 Fire) and Lifestealing (20004: steals 30 Shadow; only the damage is
+	// simulated, not what it heals). The client states no rate for either and no beta log has them,
+	// so the rate is master's classic-legacy one, as for the weapon procs in items_weapons.go: 6 and
+	// 6.66 PPM.
+	for _, proc := range []struct {
+		enchantID int32
+		name      string
+		ppm       float64
+		spellID   int32
+	}{
+		{803, "Fiery Weapon", 6, 13897},
+		{1898, "Lifestealing", 6.66, 20004},
+	} {
+		core.NewEnchantEffect(proc.enchantID, func(agent core.Agent) {
+			character := agent.GetCharacter()
+			procSpell := character.GetOrRegisterSpell(shared.SpellDataProcDamageSpell(character, spelldata.MustFind(proc.spellID)))
+			procSpell.Flags |= core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagProc
+
+			aura := character.MakeProcTriggerAura(core.ProcTrigger{
+				Name:               "Enchant Weapon - " + proc.name,
+				Callback:           core.CallbackOnSpellHitDealt,
+				ActionID:           core.ActionID{SpellID: proc.spellID},
+				IsWeaponProc:       true,
+				DPM:                character.NewDynamicLegacyProcForEnchant(proc.enchantID, proc.ppm, 0),
+				Outcome:            core.OutcomeLanded,
+				TriggerImmediately: true,
+				Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+					procSpell.Cast(sim, result.Target)
+				},
+			})
+			character.ItemSwap.RegisterEnchantProc(proc.enchantID, aura)
+		})
+	}
 
 	// Deathfrost
 	// EffectID: 3273, Proc SpellID: 46579, Damage SpellID: 46579, Debuff SpellID: 46629

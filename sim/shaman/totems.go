@@ -7,14 +7,17 @@ import (
 	"github.com/wowsims/forever/sim/core/buffs"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
 // A totem's buff is a spell of its own; the value it gives lives on that spell, not on the totem.
 var windfuryTotemRank = spellData.WindfuryTotem.Highest()
+
 // Build 70009 renamed the totem's party aura (10612, which triggers 10610) to "Windfury Totem", so the
 // Triggered ladder now carries both; the attack power buff is the one the aura triggers.
 var windfuryTotemBuff = spellData.WindfuryTotemTriggered.ByID(10610)
+var windfuryTotemPartyAura = spellData.WindfuryTotemTriggered.ByID(10612)
 var strengthOfEarthTotemRank = spellData.StrengthOfEarthTotem.Highest()
 var strengthOfEarthTotemBuff = spellData.StrengthOfEarthTotemTriggered.Highest()
 var graceOfAirTotemRank = spellData.GraceOfAirTotem.Highest()
@@ -64,28 +67,24 @@ func (shaman *Shaman) registerWindfuryTotemSpell() {
 
 	config := shaman.newTotemSpellConfig(int32(windfuryTotemRank.Cost()), windfuryTotemRank.ID, SpellMaskBasicTotem, windfuryTotemRank.GCD())
 
+	// The party aura's own row (see buffs.driveWindfuryTotem): 20% on any melee auto or special, a
+	// 100 ms internal cooldown, and the extra attack is always a main-hand one.
 	var windfurySpell *core.Spell
-	wfProcTrigger := shaman.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Windfury Totem Trigger (Self)",
-		MetricsActionID:    core.ActionID{SpellID: windfuryTotemRank.ID},
-		IsWeaponProc:       true,
-		ProcChance:         0.2,
-		Duration:           core.NeverExpires,
-		Outcome:            core.OutcomeLanded,
-		Callback:           core.CallbackOnSpellHitDealt,
-		ProcMask:           core.ProcMaskMeleeMHAuto,
-		ICD:                time.Millisecond * 1500,
-		TriggerImmediately: true,
-		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			wfProcAura.Activate(sim)
-			if spell.ProcMask == core.ProcMaskMeleeMHAuto {
-				wfProcAura.SetStacks(sim, 1)
-			} else {
-				wfProcAura.SetStacks(sim, 2)
-			}
-			shaman.AutoAttacks.MaybeReplaceMHSwing(sim, windfurySpell).Cast(sim, result.Target)
-		},
+	trigger := spelldata.ProcTrigger(&shaman.Character, windfuryTotemPartyAura, func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+		wfProcAura.Activate(sim)
+		if spell.ProcMask.Matches(core.ProcMaskMeleeWhiteHit) {
+			wfProcAura.SetStacks(sim, 1)
+		} else {
+			wfProcAura.SetStacks(sim, 2)
+		}
+		shaman.AutoAttacks.MaybeReplaceMHSwing(sim, windfurySpell).Cast(sim, result.Target)
 	})
+	trigger.Name = "Windfury Totem Trigger (Self)"
+	trigger.ActionID = core.ActionID{}
+	trigger.MetricsActionID = core.ActionID{SpellID: windfuryTotemRank.ID}
+	trigger.Duration = core.NeverExpires
+	trigger.TriggerImmediately = true
+	wfProcTrigger := shaman.MakeProcTriggerAura(trigger)
 
 	wfIntermediateAuraForExclusitivity := shaman.RegisterAura(core.Aura{
 		Label:    "Windfury Dummy Aura (self)",

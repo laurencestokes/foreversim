@@ -9,7 +9,6 @@ import { SITE_BASE, SITE_REPO_URL } from '../ProductPage/site';
 
 const PRODUCT_LINKS: Array<{ href: string; title: string; status: string }> = [
 	{ href: 'bis/', title: 'Best in Slot', status: 'Launch - Alpha' },
-	{ href: 'dps_rankings/', title: 'Damage comparison', status: 'Every community build, one raid' },
 	{ href: 'stat_weights/', title: 'Stat Weights', status: 'Launch - Alpha' },
 	{ href: 'changelog/', title: 'What changed for Forever', status: 'Changelog and sources' },
 	{ href: 'arena/', title: 'The build arena', status: 'Every build, ranked' },
@@ -64,11 +63,12 @@ export const LandingForever = () => (
 			</a>
 			. The engine and most of the Forever modelling are their work.
 		</p>
+		<p className="m-0 text-sm opacity-60" data-testid="trademark-notice">
+			World of Warcraft and Warcraft are trademarks or registered trademarks of Blizzard Entertainment, Inc., in the U.S. and/or other countries. Game
+			icons &copy; Blizzard Entertainment, Inc.
+		</p>
 		<p className="m-0 flex flex-wrap gap-3">
-			<Cta href="arena/" icon="trophy">
-				The build arena
-			</Cta>
-			<Cta href="evidence/" icon="clipboard-check" quiet>
+			<Cta href="evidence/" icon="clipboard-check">
 				Where every number came from
 			</Cta>
 			<Cta href="evidence/#most-wanted" icon="hand-holding-heart" quiet>
@@ -77,29 +77,29 @@ export const LandingForever = () => (
 		</p>
 		<Panel summary="Where the numbers come from">
 			<p className="m-0">
-				Since the beta client was datamined on 17 September the numbers come from the client&apos;s own data tables rather than BlizzCon tooltips: build{' '}
-				<code>1.60.1.69913</code> on wago.tools, read against Classic Era and diffed spell by spell. Talent values come from the client&apos;s rank
-				curves, coefficients from <code>SpellEffect.EffectBonusCoefficient</code>, and each rank&apos;s damage is scaled to level 60 by the
-				client&apos;s own per-level points.
+				The numbers come from the beta client&apos;s own data tables rather than BlizzCon tooltips, read against Classic Era and diffed spell by spell,
+				and reviewed database updates bring in client builds from wago.tools. Talent values come from the client&apos;s rank curves, coefficients from{' '}
+				<code>SpellEffect.EffectBonusCoefficient</code>, and each rank&apos;s damage is scaled to level 60 by the client&apos;s own per-level points.
 			</p>
 			<p className="m-0">Most of it is settled from data, a little of it has been seen happen, and it is worth being plain about which is which:</p>
 			<ul className="m-0 flex flex-col gap-2 pl-5">
 				<li>
-					<strong>The client&apos;s tables, diffed against Classic Era.</strong> 656 abilities carry the client&apos;s numbers and 297 are confirmed
-					unchanged from Classic.
+					<strong>The client&apos;s tables, diffed against Classic Era.</strong> Most abilities carry the client&apos;s own numbers, and the rest are
+					confirmed unchanged from Classic.
 				</li>
 				<li>
-					<strong>Hotfixes, which the static data does not carry.</strong> The live client&apos;s own cache is read instead. Today it holds 11,800
-					changed rows, all item data, with a 4 byte stub for spells.
+					<strong>Hotfixes, which the static data does not carry.</strong> The live client&apos;s own hotfix cache is read instead, and reviewed
+					database updates apply it.
 				</li>
 				<li>
 					<strong>Wording, not just values.</strong> A rank curve says what a talent&apos;s numbers are, not what they apply to, which is how Improved
-					Seals passed a value check while scaling half of what it should. 231 talents read differently in Forever.
+					Seals passed a value check while scaling half of what it should.
 				</li>
 				<li>
-					<strong>Twelve abilities have now been watched happen on a running server</strong> &mdash; through the client&apos;s own damage meter, on
-					the beta &mdash; and every one landed where the client&apos;s tables said it would. Twelve out of 996, so the honest reading is that the
-					method works, not that the sim is verified. The other 984 are internally consistent and externally unconfirmed.
+					<strong>Twelve abilities have been watched happen on a running server</strong> &mdash; through the client&apos;s own damage meter, on the
+					beta &mdash; and every one landed where the client&apos;s tables said it would. A few more have been settled from the beta&apos;s public
+					combat logs. So the honest reading is that the method works, not that the sim is verified: the rest are internally consistent and externally
+					unconfirmed.
 				</li>
 			</ul>
 			<p className="m-0">
@@ -111,17 +111,8 @@ export const LandingForever = () => (
 			<p className="m-0">Every one of these can move a number, and some can move it a long way:</p>
 			<ul className="m-0 flex flex-col gap-2 pl-5">
 				<li>
-					43 abilities still carry a number the client does not settle &mdash; 25 of them hunter. Each is named on the{' '}
-					<a href={`${SITE_BASE}evidence/`}>evidence page</a>, in the spell manifest, and in the{' '}
-					<a href={`${SITE_REPO_URL}/blob/master/docs/forever_beta_checklist.md`} target="_blank" rel="noreferrer">
-						beta re-verification checklist
-					</a>
-					.
-				</li>
-				<li>
-					<strong>Downranking is unresolved, and it is the big one.</strong> The client carries the full coefficient on low ranks where Classic Era
-					carried a reduced one. Read as written, a rank 4 Lightning Bolt does most of a rank 10 for a quarter of the mana. Whether Forever removed
-					the penalty changes every caster here.
+					About twenty abilities still carry a number the client does not settle, most of them above the beta&apos;s level cap where nobody can check
+					them yet. Each is named, with what would settle it, on the <a href={`${SITE_BASE}evidence/`}>evidence page</a>.
 				</li>
 				<li>
 					The client stores what an ability does, not how the server runs it. Proc chances often read as unset, and rules like whether melee-table

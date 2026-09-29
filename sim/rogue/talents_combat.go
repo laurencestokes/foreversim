@@ -1,8 +1,6 @@
 package rogue
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
@@ -206,7 +204,7 @@ func (rogue *Rogue) registerBladeFlurry() {
 // effect from the weapons equipped: 1% extra attack per rank on axes and swords, 1% crit per
 // rank on daggers and fists, 3% of the target's armor ignored per rank on maces.
 //
-// The extra attack has a 200 ms internal cooldown, as on master.
+// The extra attack's 200 ms internal cooldown is the client's own (13960's ProcCategoryRecovery).
 func (rogue *Rogue) registerHackAndSlash() {
 	if rogue.Talents.HackAndSlash == 0 {
 		return
@@ -222,7 +220,7 @@ func (rogue *Rogue) registerHackAndSlash() {
 			ProcMask:           mask,
 			Outcome:            core.OutcomeLanded,
 			ProcChance:         spellData.HackAndSlash.EffectAt(1).ValueAt(points) / 100,
-			ICD:                time.Millisecond * 200,
+			ICD:                spellData.HackAndSlash.Highest().ICD(),
 			TriggerImmediately: true,
 			Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
 				rogue.AutoAttacks.ExtraMHAttack(sim)

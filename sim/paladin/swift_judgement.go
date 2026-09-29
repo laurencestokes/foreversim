@@ -1,12 +1,9 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 )
-
-var SwiftJudgementRankMap = spellData.SwiftJudgement
 
 // Swift Judgement (talent)
 // https://www.wowhead.com/forever/spell=1310994
@@ -14,8 +11,8 @@ var SwiftJudgementRankMap = spellData.SwiftJudgement
 // Finishes the remaining cooldown on your Judgement ability and reduces the Mana cost of your next
 // Judgement by 100%.
 func (paladin *Paladin) registerSwiftJudgement() {
-	row := SwiftJudgementRankMap.HighestRank()
-	actionID := core.ActionID{SpellID: row.SpellID}
+	rank := spellData.SwiftJudgement.Highest()
+	actionID := core.ActionID{SpellID: rank.ID}
 
 	var freeJudgement *core.Aura
 	freeJudgement = paladin.RegisterAura(core.Aura{
@@ -25,7 +22,7 @@ func (paladin *Paladin) registerSwiftJudgement() {
 	}).AttachSpellMod(core.SpellModConfig{
 		Kind:       core.SpellMod_PowerCost_Pct_Add,
 		ClassMask:  SpellMaskJudgement,
-		FloatValue: row.Effect(shared.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).Value / 100,
+		FloatValue: rank.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).Percent(),
 	}).AttachProcTrigger(core.ProcTrigger{
 		Callback:           core.CallbackOnCastComplete,
 		ClassSpellMask:     SpellMaskJudgement,
@@ -37,8 +34,8 @@ func (paladin *Paladin) registerSwiftJudgement() {
 
 	spell := paladin.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
-		SpellSchool:    row.SpellSchool,
-		DefenseType:    row.DefenseType,
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL | core.SpellFlagHelpful,
 		ClassSpellMask: SpellMaskSwiftJudgement,
@@ -49,7 +46,7 @@ func (paladin *Paladin) registerSwiftJudgement() {
 			},
 			CD: core.Cooldown{
 				Timer:    paladin.NewTimer(),
-				Duration: row.Cooldown,
+				Duration: cooldown(rank),
 			},
 		},
 

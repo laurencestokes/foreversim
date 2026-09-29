@@ -31,7 +31,7 @@ export const RestsCell = ({ rests }: { rests: Composition }) => {
 					<div key={tier} className={TIER_BG[tier]} style={{ width: `${rests[tier] * 100}%` }} />
 				))}
 			</div>
-			<span className={clsx('w-[5ch] shrink-0 text-right', unsettled >= 0.05 ? 'font-semibold text-brand' : 'text-gray-300')}>
+			<span className={clsx('w-[5ch] shrink-0 text-right', unsettled >= 0.05 ? 'font-semibold text-evidence-assumed' : 'text-gray-300')}>
 				{formatToPercent(unsettled * 100, { maximumFractionDigits: 1 })}
 			</span>
 		</div>

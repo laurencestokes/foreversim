@@ -1,14 +1,13 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/buffs"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// The mana each rank restores on a hit, and the mana its judgement grants attackers. Neither
-// carries the seal's rank subtext, so the pairing is by hand.
-var sealOfWisdomProcIDs = map[int32]int32{1: 20168, 2: 20350, 3: 20351}
+// The mana each rank's judgement grants attackers. It carries no rank subtext, so the pairing is
+// by hand; the restore the seal itself fires is the first spell its tooltip names.
 var judgementOfWisdomManaIDs = map[int32]int32{1: 20268, 2: 20352, 3: 20353}
 
 // Seal of Wisdom
@@ -20,14 +19,16 @@ var judgementOfWisdomManaIDs = map[int32]int32{1: 20268, 2: 20352, 3: 20353}
 // Unleashing this Seal's energy will judge an enemy for 40 sec, granting attacks and spells used
 // against the judged enemy a chance to restore mana to the attacker. Your melee strikes will
 // refresh the spell's duration. Only one Judgement per Paladin can be active at any one time.
-func (paladin *Paladin) registerSealOfWisdom(row shared.SpellData) {
-	judgementID := int32(effectAt(row, 2).Value)
-	manaRow := spellData.SealOfWisdomTriggered.BySpellID(judgementOfWisdomManaIDs[row.Rank])
+//
+// The seal's second effect names its judgement (the row has no effect at the client's index 1).
+func (paladin *Paladin) registerSealOfWisdom(_ int32, rank *spelldata.Spell) {
+	judgementID := int32(rank.EffectN(2).BaseValue())
+	manaRank := spellData.SealOfWisdomTriggered.ByID(judgementOfWisdomManaIDs[rank.RankNumber()])
 	judgementAuras := paladin.newJudgementAuras(func(target *core.Unit) *core.Aura {
 		return buffs.JudgementOfWisdomRankAura(target, buffs.JudgementRank{
 			SpellID: judgementID,
-			Rank:    row.Rank,
-			Value:   shared.SpellDataMin(manaRow.Energize),
+			Rank:    rank.RankNumber(),
+			Value:   manaRank.EnergizeEffect().Average(core.CharacterLevel),
 		})
 	})
 
@@ -51,8 +52,9 @@ func (paladin *Paladin) registerSealOfWisdom(row shared.SpellData) {
 		RelatedAuraArrays: judgementAuras.ToMap(),
 	})
 
-	mana := shared.SpellDataMin(row.Energize)
-	procID := core.ActionID{SpellID: sealOfWisdomProcIDs[row.Rank]}
+	procRank := rank.Refs()[0]
+	mana := procRank.EnergizeEffect().Average(core.CharacterLevel)
+	procID := core.ActionID{SpellID: procRank.ID}
 	manaMetrics := paladin.NewManaMetrics(procID)
 	procSpell := paladin.RegisterSpell(core.SpellConfig{
 		ActionID:       procID,
@@ -70,9 +72,9 @@ func (paladin *Paladin) registerSealOfWisdom(row shared.SpellData) {
 	})
 
 	aura := paladin.makeSealExclusive(paladin.MakeProcTriggerAura(core.ProcTrigger{
-		Name:            sealLabel("Seal of Wisdom", paladin, row),
-		ActionID:        core.ActionID{SpellID: row.SpellID},
-		MetricsActionID: core.ActionID{SpellID: row.SpellID},
+		Name:            sealLabel("Seal of Wisdom", paladin, rank),
+		ActionID:        core.ActionID{SpellID: rank.ID},
+		MetricsActionID: core.ActionID{SpellID: rank.ID},
 		Duration:        sealDuration,
 		Callback:        core.CallbackOnSpellHitDealt,
 		ProcMask:        core.ProcMaskMelee,
@@ -83,7 +85,7 @@ func (paladin *Paladin) registerSealOfWisdom(row shared.SpellData) {
 	}))
 
 	paladin.registerSealSpell(&sealConfig{
-		row:       row,
+		rank:      rank,
 		classMask: SpellMaskSealOfWisdom,
 		aura:      aura,
 		judgement: judgement,

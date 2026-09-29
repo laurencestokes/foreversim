@@ -3,10 +3,11 @@
 // requests that carried it and, where the change came from published Forever information,
 // the place it was read from.
 //
-// The first section is the break in the middle of this file's history. Everything under it
-// was read off BlizzCon 2026 demo tooltips, because that was all there was; since the beta
-// client was datamined on 17 September the numbers come from the client's own tables, and
-// the first section is largely a record of where the tooltips had it wrong.
+// The file has two breaks in its history. On 23 September the sim moved onto the official
+// WoWSims Forever engine; the first sections cover that and what has changed since. Before
+// that, on 17 September, the beta client was datamined: 'The beta client' is largely a record
+// of where the BlizzCon 2026 demo tooltips had it wrong, and everything after it was read off
+// those tooltips, because that was all there was.
 
 export type Source = {
 	label: string;
@@ -77,11 +78,173 @@ const betaClient: Source = {
 	label: 'wago.tools: the Forever beta client data tables, build 1.60.1.69913',
 	url: 'https://wago.tools/db2/SpellEffect?build=1.60.1.69913',
 };
+const wowsims: Source = {
+	label: 'WoWSims, whose open-source simulators this sim is built on, under their MIT licence',
+	url: 'https://github.com/wowsims',
+};
+const build70009: Source = {
+	label: 'wago.tools: what changed between beta builds 1.60.1.69977 and 1.60.1.70009',
+	url: 'https://wago.tools/builds-diff?to=1.60.1.70009&from=1.60.1.69977',
+};
+const wowheadGearPlanner: Source = {
+	label: "Wowhead's Forever gear planner data, which the watcher reads",
+	url: 'https://nether.wowhead.com/forever/data/gear-planner?dv=100',
+};
+const rageReport: Source = {
+	label: '#252: BrawnyBravo measures white-hit rage from public beta combat logs',
+	url: 'https://github.com/ElliotWood/Forever/issues/252',
+};
+const blizzardForever: Source = {
+	label: "Blizzard: World of Warcraft: Forever, the official page the site's art and colours come from",
+	url: 'https://worldofwarcraft.blizzard.com/en-us/forever',
+};
 
 export const sections: Array<Section> = [
 	{
+		title: 'The switch to the official engine',
+		intro: "On 23 September the sim moved off the Classic-based engine it had been forked from and onto the engine the WoWSims team was building for Forever, whose spell data is generated from the beta client's own tables. Every spec was ported across first, and the switch waited until each one simmed within a few percent of the old engine on equal stats. The old engine is kept on the classic-legacy branch.",
+		entries: [
+			{
+				title: 'The sim runs on the official WoWSims Forever engine',
+				prs: [264, 266, 272, 274, 275, 276, 277, 278, 279, 304, 305, 320, 323, 417],
+				changed:
+					"Each class was ported onto the official engine's skeleton one at a time, mage first as the pilot, then priest, warlock, shaman, rogue, druid, hunter, warrior and paladin. Values are read from the generated client tables wherever those agree with what this sim had already verified; where they disagree the client settles it, and where the generator drops a number (damage ranges stored as their average, percentage mana costs, per combo point damage, threat) this sim's value is kept and the gap logged. Our item data, gear presets, set bonuses and every page (landing, changelog, evidence, scrub, stat weights, arena, rankings, best in slot) came across with it, and the old addresses redirect to the new ones.",
+				effect: 'Every number on the site since 23 September comes from the new engine. Old share links, JSON exports and Wowhead Classic gear planner links still open, with their gear and talents. The raid sim page did not survive: the official engine has none, and its old address now lands on the homepage.',
+				sources: [wowsims, upstream],
+			},
+			{
+				title: 'The switch waited on a spec-by-spec parity check',
+				prs: [306, 307, 310, 325, 330, 336, 357, 369, 376, 395, 396],
+				changed:
+					'A repeatable check ran all fifteen arena specs on both engines with the same talents, rotation, weapons and stats, and every gap over a percent was traced to one side or the other. Where the client said the old engine was wrong, the old engine was fixed; where it said the new one was, the new one was. Retribution, for instance, started 8.1% apart: the old engine applied Two-Handed Weapon Specialization to the Holy seal hits and always landed Echo of Command, where the client makes the first Physical only and the second a chance.',
+				effect: 'Retribution finished 0.8% apart, the warrior 1.0% on equal stats and 2.5% in gear, the bear 1.2% and 0.4%, the Smite priest level. The old engine took about thirty fixes of its own in those two days, which is why the classic-legacy branch does not read quite like the site that ran on it.',
+			},
+			{
+				title: "Forever's rules, re-applied on the new core",
+				prs: [266, 280, 336, 377],
+				changed:
+					"The official engine had no ruleset setting, so the Forever rules apply unconditionally and Classic Era Rules are gone. Three of this sim's rules were already there from client data: which dots can crit is the spell row's own flag, bonus healing's damage half is written on the items, and the core has no Classic world buffs at all. Gear hit and crit paying into both pools, the professions and the rage rules were added. The core also moved from TBC's level 70 numbers to level 60's: armor, glancing blows, spirit regeneration, each class's base stats and base crit, and defense counting towards the chance to be missed.",
+				effect: 'Base crit alone was the warrior 1.14% higher and the hunter 1.53% lower than a level 60 character has. Casters no longer lose the hit on items the client writes as melee hit.',
+				sources: [upstream],
+			},
+			{
+				title: "The shared raid buffs and debuffs at the client's ranks",
+				prs: [307, 331, 341, 345, 370, 383, 404, 422, 469],
+				changed:
+					"The new engine's shared buffs and debuffs still held TBC's numbers. Each now reads the Forever client's rank: Faerie Fire and Curse of Recklessness 505 armor, Sunder Armor and Expose Armor 450 a stack or combo point, Battle Shout 139 attack power for 3 min, Hunter's Mark a flat 71 ranged attack power, Strength of Earth 53, Grace of Air 89, Mana Spring 25 mana per 5, Leader of the Pack 3% crit, Moonkin Aura 3%, Arcane Brilliance 31 Intellect, Divine Spirit 40 Spirit, Power Infusion 20% magic damage rather than haste, Thunder Clap's slow 20%. Trueshot Aura grants rank 4's 75 ranged attack power, because the client cut rank 5 to 50.",
+				effect: "The TBC Battle Shout alone was worth 3 to 9% to every melee spec. Hunter's Mark had been TBC's 440 ranged attack power, with melee attack power on top; correcting it and the totems took the hunters down 10.9%, the fury warrior 6.4% and retribution 4.9%, and frost mage 5.6% from Mana Spring halving.",
+			},
+			{
+				title: 'Items, sets and consumables on the new database',
+				prs: [320, 333, 334, 335, 340, 352, 354, 407, 421, 423, 440],
+				changed:
+					"Our Forever item data was merged into the official database, the client winning wherever it has the row: 1,489 items the beta client does not ship, all 1,147 random suffixes, the set bonuses and 29 item effects the old engine simulated. The client's item rows carry no armor, so 3,810 items had come across with none, the tank warrior's preset among them; shields took their block value from a TBC table; and 203 Classic PvP pieces were still in sets Forever moved onto new items. Classic consumables did nothing at all, because the client gives Classic elixirs no type, and they now work beside Juju, R.O.I.D.S., Rumsey Rum and Dragonbreath Chili slots.",
+				effect: "The tank warrior's preset had come to 511 armor against the old engine's 8,594, which doubled its damage taken. The consumables were most of why the new engine's pages first simmed 4 to 14% below the live site. Blade of Eternal Darkness, Highborne Research Tablet and Depleted Eye of Influence stopped proccing on every hit, since the client gives them no rate.",
+			},
+			{
+				title: "Upstream's work, merged while it was public",
+				prs: [308, 383, 389, 420, 427, 440, 459],
+				changed:
+					"Upstream's own commits were merged in rather than copied, so the shared history stayed intact: their warrior and paladin, a spell store that reads every spell straight off the client, generated buffs and debuffs, racials rebuilt from the client, spell interrupt flags and a database regenerated from each new beta build. Where their code and this sim's client-verified behaviour disagreed, the client decided.",
+				effect: "Upstream's Holy Shield added 0.3% block rather than 30%, a percent read twice; fixing it on the way in kept protection paladin from losing 9 to 14%. Old share links keep their gear and talents across the renumbered buff fields, and reset buffs to the spec's defaults with a notice.",
+				sources: [wowsims],
+			},
+			{
+				title: 'wowsims/forever went private, and the sim carries on',
+				prs: [428, 463, 471, 475],
+				changed:
+					'On 25 September the WoWSims team made their Forever repository private, over AI-made tier lists built from unfinished sims. The upstream merge now skips quietly and would resume on its own if the repository came back. The homepage no longer links the build arena or the damage comparison, and carries an acknowledgement of the announcement; both pages still exist at their addresses. Nothing on the site links back to the official project for money or support.',
+				effect: 'The engine is carried forward here on its own, and client data is pulled from Blizzard directly (see Update DB below), so a new beta build still reaches the sim the day it ships.',
+			},
+		],
+	},
+	{
+		title: 'Talents and rotations on the new engine',
+		intro: 'Since the switch: every talent re-audited against the client, the ones that were empty stubs filled in, lower spell ranks made castable, and the 24 September beta patch.',
+		entries: [
+			{
+				title: 'Every talent re-audited against the client',
+				prs: [429, 432],
+				changed:
+					"An audit read each talent's client data against what the sim applies and found 28 wrong, plus Omen of Clarity missing and Spirit Weapons incomplete; each claim was re-checked before changing code. Hot Streak is spent by the next Pyroblast, Arcane Blast's stacks leave out Arcane Missiles, Blizzard and Flamestrike, Stormstrike boosts only its caster's Lightning Bolt, Chain Lightning and Earth Shock, Murder is Humanoid and Giant only, and the rest are masks narrowed or widened to the client's spell lists. A second pass found 16 more: Life Tap is a plain mana gain that no damage talent scales, Demonic Brand is 65 to 68 plus 7.8% of shadow spell power rather than the BlizzCon 39 to 42, and Thorns is 22 a hit.",
+				effect: 'Fire mage fell 22.0% and shadow 4.1%; Beast Mastery gained 14.6%, balance 11.8% and feral cat 4.2 to 4.7%. Each move was traced to its fix by reverting the fixes one at a time.',
+			},
+			{
+				title: 'Talents that were empty stubs',
+				prs: [461, 465, 466, 467],
+				changed:
+					"A sweep for talents that did nothing found four. Improved Healing takes 15% off Penance's mana cost. Demonic Pact keeps the Demonic Sacrifice buff while a different demon is out, so a Pact warlock now sacrifices one before the pull, picked beside the pet. The talented Mana Tide Totem restores the party's mana, the shaman's included. Improved Cone of Cold and Improved Frost Nova apply their ladders.",
+				effect: 'Demonic Pact 411 to 456 with the Imp sacrificed (+10.9%); Elemental with Mana Tide +2.7% alone, +2.4% with full party buffs; the Smite build 561.6 to 566.7. No shipped rotation casts Cone of Cold or Frost Nova.',
+			},
+			{
+				title: 'Lower spell ranks, and rotations that cast them',
+				prs: [447, 448, 449, 450, 451, 452],
+				changed:
+					"Fireball, Frostbolt, Arcane Missiles, Shadow Bolt, Wrath and Starfire register every rank, so a rotation can cast a lower one; every talent reaches every rank. Each spec's best build was searched rank by rank and mana threshold by mana threshold, and a low-rank rotation was kept only where it cleared 1%. The sim gives a lower rank its full spell power, as the beta does at level 20; whether level 60 adds a penalty is unconfirmed, and the arena tags these rotations so.",
+				effect: "Smite +40.8% (rank 2 below 40% mana), balance +14.8% (Starfire rank 1 below 20%), fire +10.2%, elemental +3.6%. Most of fire's gain is dropping an over-cautious mana budget rather than the lower rank, and balance's launch rotation gains 3.2% the same way. No warlock rank wins: Life Tap means the warlock is short of cast time, not mana.",
+			},
+			{
+				title: 'Beta build 70009 and the 24 September patch notes',
+				prs: [438, 441, 476],
+				changed:
+					'Build 1.60.1.70009 changed 2,668 rows in the tables the sim reads. The spell data, items and talent trees were regenerated: Improved Holy Strike and Crusade left the paladin trees, Mangle became Primal Bite and Primal Fury became Blood Frenzy, and saved talent strings were re-encoded. The patch notes were implemented where the client states them: Holy Power masks, Vengeance at 3 stacks, Twist of Light cheapening the seal, Hot Streak at 20 sec, Bloodthrill on all main-hand melee, Improved Slam’s cooldown, Rage of the Farseer without cast speed, Gnome Eureka at 10%, Wizard Oil 24 and one air totem per party.',
+				effect: "The warrior's Bastion and Focused Rage swap, Thorns scaling with spell power and Furious Howl's cut are not simulated yet, because the client does not carry them.",
+				sources: [build70009],
+			},
+			{
+				title: 'Smaller fixes since the switch',
+				prs: [431, 456, 460, 464],
+				changed:
+					"Stat weights never calculated Intellect for the paladins, reported by AdamRC. A cap of 200 auras on one target stopped a full raid of casters from running at all. Druids drank potions in cat and bear form on cooldown and dropped out of form every two minutes. Penance's three bolts land on the cast and at 1 and 2 sec, as the client states, rather than spread evenly over the channel.",
+				effect: "With Champion of the Light, Intellect is retribution's best stat on the test build, 3.30 attack power a point against Strength's 2.50. The bear's arena number had fallen from 410 to 153 from the potion bug.",
+			},
+		],
+	},
+	{
+		title: 'Where the numbers come from now',
+		intro: 'How client data reaches the sim, how it is watched for change, and how each ability says what it rests on.',
+		entries: [
+			{
+				title: "Client data straight from Blizzard's CDN, daily",
+				prs: [389, 420, 427, 475, 476],
+				changed:
+					"The database, the spell store and everything generated from them are built from the beta build on Blizzard's CDN, with the client's hotfix cache applied on top. Update DB does this every day on its own: it regenerates the data, re-blesses the test results, runs the full tests, merges and deploys. A failure opens one issue rather than a broken site.",
+				effect: 'A new beta build or a hotfix reaches the sim the day it ships, without waiting on anyone else to regenerate it. Its first merged run brought in 70009 with the hotfixes as of 26 September.',
+			},
+			{
+				title: 'Watchers on Wowhead and the client build',
+				prs: [215, 267, 390, 391, 438],
+				changed:
+					"A scheduled job reads Wowhead's Forever gear planner data and opens a pull request listing every item and enchant that changed; a second watches the client build and reports what moved in the tables the sim reads. Both merge themselves, because they only change a snapshot and a report, never the sim's data or rules.",
+				effect: 'Nothing Wowhead or Blizzard changes goes unnoticed. The first run found 4,492 items Wowhead had added; 69977 changed nothing the sim reads, and 70009 changed 2,668 rows.',
+				sources: [wowheadGearPlanner],
+			},
+			{
+				title: 'Hotfixes checked, not assumed',
+				prs: [217, 219],
+				changed:
+					'Blizzard tunes values after a build ships, and those hotfixes never reach a datamining site. The client keeps one cache file per table it has hotfixed, and a table with nothing to cache gets a 4 byte stub, so the file sizes say which tables have changed.',
+				effect: 'On 19 September the client held 1.3 MB of item hotfixes and a 4 byte Spell stub: no spell value in the sim was stale. The daily Update DB now applies the hotfixes itself.',
+			},
+			{
+				title: 'Every ability says where its numbers came from',
+				prs: [221, 223, 244, 245, 250, 251, 432, 468],
+				changed:
+					"Every ability the sim registers is classified as read from the Forever client, confirmed unchanged from Classic, or still carrying an assumption that it names. On screen, an assumed ability's icon carries a small gold dot, and the evidence page lists all of them with the tooltip, the assumption and the file. An entry can also record a measurement from the game itself.",
+				effect: 'By 19 September the unreviewed count reached nought: 297 unchanged from Classic, 656 from the client, 43 assumed. Every damaging spell in an arena build now has an entry, which took the rogue’s unconfirmed share of damage from 40% to nought and enhancement’s from 24.5%.',
+			},
+			{
+				title: "Asking beta players for their client's files",
+				prs: [231, 232, 233, 234, 235, 236, 237, 238, 239, 246, 248, 249],
+				changed:
+					"The homepage asks beta players for two files. DBCache.bin holds the hotfixes their client downloaded and nothing about them. DamageMeter.bin is the client's own damage meter, the only measurement there is while Forever blocks addons from reading damage; it carries the names of everyone the player grouped with, so the scrub page takes the names out in the browser before anything is sent, and the upload refuses a file that has not been scrubbed. Neither needs a GitHub account. The Discord link inherited from upstream went, since it was never this project's.",
+				effect: "The first meter file was the first time anything in the sim was checked against a running game: Earth Shock rank 1's biggest hit was 20 where the client says 17 to 19 plus 0.5 a level, and Healing Wave rank 1's 46 against 34 to 44 plus 0.7. The client data held.",
+			},
+		],
+	},
+	{
 		title: 'The beta client',
-		intro: 'Everything above this point was read off BlizzCon 2026 demo tooltips. On 17 September the beta client was datamined, and the numbers came from its own data tables instead: build 1.60.1.69913 on wago.tools, read against Classic Era 1.15.9.69722 and diffed spell by spell. What it found is below, and most of it is the fork having been wrong.',
+		intro: 'Everything in the sections below this one was read off BlizzCon 2026 demo tooltips. On 17 September the beta client was datamined, and the numbers came from its own data tables instead: build 1.60.1.69913 on wago.tools, read against Classic Era 1.15.9.69722 and diffed spell by spell. What it found is below, and most of it is the fork having been wrong. This was all done on the old engine; the new one reads the same client tables directly, and the fixes it did not already have were carried across.',
 		entries: [
 			{
 				title: 'The client is the source now, not a screenshot',
@@ -93,10 +256,10 @@ export const sections: Array<Section> = [
 			},
 			{
 				title: 'The raid buffs were still Classic’s',
-				prs: [200],
+				prs: [200, 228, 241, 242],
 				changed:
 					"sim/core never got a beta pass while the nine class passes ran, so every raid buff kept Classic Era's numbers. Battle Shout gave 232 attack power against Forever's 139, Blessing of Might 185 against 133, and Trueshot Aura 100 melee attack power that Forever's version does not grant at all. Windfury Totem, Strength of Earth, Grace of Air, Mark of the Wild, Shadow Weaving, Curse of Recklessness and Hunter's Mark were all out too.",
-				effect: 'Roughly 300 attack power every melee build was carrying and should not have been, while casters got none of it. Fury fell 10.8%, the rogues 9 to 11%, enhancement 8.1%, retribution 4.4%; every mage, elemental, moonkin and shadow priest moved less than half a percent. The melee half of the damage comparison had been about 11% too high against the caster half.',
+				effect: 'Roughly 300 attack power every melee build was carrying and should not have been, while casters got none of it. Fury fell 10.8%, the rogues 9 to 11%, enhancement 8.1%, retribution 4.4%; every mage, elemental, moonkin and shadow priest moved less than half a percent. The melee half of the damage comparison had been about 11% too high against the caster half. Two days later the durations followed: Battle Shout lasts 3 min and the Strength of Earth and Grace of Air totems 5, where the code had Classic’s 2 (Battle Shout’s own comment already said 3), and Curse of Recklessness stopped handing the boss 90 attack power, a clause Forever’s tooltip deleted and a value check could not see.',
 				sources: [betaClient],
 			},
 			{
@@ -108,26 +271,26 @@ export const sections: Array<Section> = [
 			},
 			{
 				title: 'Boss debuffs, and a misread in the warrior pass',
-				prs: [202],
+				prs: [202, 230],
 				changed:
-					"Demoralizing Shout 146 to 204 attack power and 30 to 45 seconds, Demoralizing Roar 138 to 204, Curse of Weakness -31 to -37, Judgement of Wisdom 10 to 40 seconds. The warrior pass had asked for Demoralizing Shout to go the other way, to 140, reading the client's -196 as Classic's 140 plus the talent's 40%. That compares the client's untalented base points against the sim's level-adjusted value; Era settles it, and the talent still multiplies on top.",
-				effect: 'Damage taken falls about 2.8% on all three tanks. Following the pass as written would have made the debuff 30% weaker instead of 40% stronger.',
+					"Demoralizing Shout 146 to 204 attack power and 30 to 45 seconds, Demoralizing Roar 138 to 204, Curse of Weakness -31 to -37, Judgement of Wisdom 10 to 40 seconds. The warrior pass had asked for Demoralizing Shout to go the other way, to 140, reading the client's -196 as Classic's 140 plus the talent's 40%. That compares the client's untalented base points against the sim's level-adjusted value; Era settles it. The talent was then multiplied on top as well, and that was wrong: Forever folds Improved Demoralizing Shout and Roar into the base value, the ratios to Era are exactly the talent's 1.40 and 1.48, so the shout was taking 285 attack power off the boss rather than 204.",
+				effect: 'Damage taken fell about 2.8% on all three tanks, and #230 gave back about 2.7% of it when the double count came out. Following the pass as written would have made the debuff 30% weaker instead of 40% stronger.',
 				sources: [betaClient],
 			},
 			{
 				title: 'Every item set Forever changed',
-				prs: [203, 206, 207],
+				prs: [203, 206, 207, 333, 334, 335, 354],
 				changed:
 					"ItemSetSpell says 109 of 531 sets have different bonuses to Classic, and 38 of those are sets the sim implements. Dungeon sets 1 and 2 moved from 2/4/6/8 thresholds to 2/3/4/5/6, so a set pays out fully at six pieces instead of eight and the four piece is now a PvP break with nothing for a sim to do. Crusader's Wrath and The Furious Storm are 65 spell power where the sim had 95, and Rogue Armor Energize gives 20 energy where it had 35. The Scholomance and Stratholme sets, Imperial Plate, Ironweave, Spirit of Eskhandar and nine PvP sets moved with them.",
-				effect: "No Launch gear set completes any of them, so the damage comparison does not move; this is for people simming their own gear. Three things fell out along the way: Wildheart Raiment was declared twice and which copy applied depended on package registration order, The Five Thunders' six piece was repeating its own two piece instead of granting spell damage, and Cadaverous Garb's five piece was adding 2 hit rating where its comment said 2%.",
+				effect: "No Launch gear set completes any of them, so the damage comparison does not move; this is for people simming their own gear. Three things fell out along the way: Wildheart Raiment was declared twice and which copy applied depended on package registration order, The Five Thunders' six piece was repeating its own two piece instead of granting spell damage, and Cadaverous Garb's five piece was adding 2 hit rating where its comment said 2%. The sets came across to the new engine in the switch, and the Classic PvP pieces left their sets altogether: Forever moved its PvP sets onto new items, and a rogue's pre-raid Champion's Guard pair had still been paying 40 attack power.",
 				sources: [betaClient],
 			},
 			{
 				title: 'Hand of Justice procs at 1%',
-				prs: [204],
+				prs: [204, 349],
 				changed:
 					"Era's tooltip hardcodes a 2% chance and the client holds 2. Forever's reads “${$h/3}% chance on Melee hit” with the chance field at 3, and adds that attacks against Dwarves are three times as likely. The field is still a percent, so the division is the new part.",
-				effect: 'A warrior loses about 1%. It is the only item proc Forever changed that any shipped gear set equips; the other 38 sit on items no preset uses. This one is a reading of a tooltip formula rather than a value in a column, so it is the change here most worth a second opinion.',
+				effect: 'A warrior loses about 1%. It is the only item proc Forever changed that any shipped gear set equips; the other 38 sit on items no preset uses. This one is a reading of a tooltip formula rather than a value in a column, so it is the change here most worth a second opinion. The new engine had no extra attacks at all until the switch gave it a hook, so Hand of Justice and Hack and Slash did nothing there; both now pull the next swing forward, at the client’s 1% and a 2 sec cooldown for Hand of Justice.',
 				sources: [betaClient],
 			},
 			{
@@ -139,10 +302,10 @@ export const sections: Array<Section> = [
 			},
 			{
 				title: 'Abilities describe themselves again',
-				prs: [209, 210],
+				prs: [209, 210, 221, 223],
 				changed:
 					"ui/core/spells carries a name and a tooltip for every ability the sim registers, written from the implementation's own numbers, and a test keeps it true. Nothing read it at runtime. Now the damage tables take the name from it when Wowhead has none, and abilities Forever changed show the manifest's tooltip instead of Wowhead's Classic entry.",
-				effect: "Lava Burst was 17% of the elemental shaman's damage and arrived as a blank row, because Wowhead has never heard of Forever's spell id. Hovering Lightning Bolt quoted Classic's 265 mana and 3 second cast over a spell the sim runs at 220 and 2.5.",
+				effect: "Lava Burst was 17% of the elemental shaman's damage and arrived as a blank row, because Wowhead has never heard of Forever's spell id. Hovering Lightning Bolt quoted Classic's 265 mana and 3 second cast over a spell the sim runs at 220 and 2.5. The manifest was also filing damage and tick counts as spell ids, so Rend's `damage: 5` rendered as Death Touch; 14 such entries went.",
 			},
 			{
 				title: 'Paladin: Improved Seals and Judgement',
@@ -168,6 +331,44 @@ export const sections: Array<Section> = [
 				effect: 'Any warrior with a point in Blood Craze took the whole simulation down with a stack trace.',
 			},
 			{
+				title: 'Every item proc, read one at a time',
+				prs: [224, 225, 226, 227, 243, 244, 245],
+				changed:
+					"Every item proc the sim registers was diffed against the client. Most were retuned: Ragehammer's 20 flat damage is 102 attack power in Forever, its wording changed along with the number, and a straight swap would have given 102 damage a swing. Some were redesigned: Skullflame Shield steals 270 with no spell power coefficient where it stole 35 at a coefficient of 1.0, and The Cruel Hand of Timmy steals life instead of lowering stats. Frightalon and Smolderweb's Eye lost their damage for utility, and the Eye had been registered as a damage cooldown firing for nothing. Expose Armor is 450 a combo point, read from a field a base-points reader sees as nought, and Improved Expose Armor no longer touches armor. The Firestone is a spell crit and fire damage imbue with no proc.",
+				effect: "Only Rivenspike, halved from 200 armor a stack to 100, touched a shipped gear set: the warrior lost about 0.4%. The Hand of Antu'sul and the Emerald Dragon Whelp's Acid Spit hit about six times harder than they did. By the end every ability the sim registered said where its numbers came from.",
+				sources: [betaClient],
+			},
+			{
+				title: 'Shadow Weaving is the priest’s own buff',
+				prs: [222, 229],
+				changed:
+					'Forever turned Shadow Weaving from a shadow vulnerability on the target into a buff on the priest, and the priest code already applied it that way. The raid debuff panel still offered the Classic version under Forever, because the test fixture blanked it by hand rather than the engine refusing it, and a two or three point priest wore spell ids Forever had deleted.',
+				effect: 'Any shadow spec could switch on a free 10% shadow vulnerability that does not exist in Forever, on top of the priest’s own buff. The panel stopped offering it under Forever.',
+				sources: [betaClient],
+			},
+			{
+				title: 'Spearing Strike, which no rotation cast',
+				prs: [218],
+				changed:
+					'Spearing Strike is new in Forever, and the warrior pass implemented it and noted that no rotation cast it. The Arms 39/12/0 build spends a point on it. It goes in after Mortal Strike in both warrior rotations. An audit of every castable spell against the shipped rotations turned up the rest, most correctly absent.',
+				effect: 'Arms 625.8 to 632.4 DPS on its own gear (+1.05%). Nothing else moves; neither the Fury build nor the test build takes the talent.',
+			},
+			{
+				title: 'Every enchant checked against the client',
+				prs: [299, 366],
+				changed:
+					"All 173 enchants were read against the client's enchant table and 55 corrected. Health and mana enchants are stamina and intellect, most minor and lesser values went up, glove Greater Agility and Strength give 10, Weapon Spell Power is 30 spell power rather than damage only, and the two-handed Impact enchants did nothing at all before. Crusader is 100 Strength at level 60; the new engine had carried TBC's 60.",
+				effect: 'Imported gear resolves, because 20 enchant ids moved to Forever’s new ones. A rogue with Crusader on both weapons gained about 1% on the new engine.',
+				sources: [betaClient],
+			},
+			{
+				title: 'A second client check, against a combat log',
+				prs: [300, 301, 302],
+				changed:
+					"A local beta client and a beta combat log settled a batch the tables alone could not. Rip, Ferocious Bite, Eviscerate, Rupture and Expose Armor refund 80% of their Energy on a miss; the log shows 28 of 35 back on a missed Eviscerate. Judgement of Righteousness is a melee attack that crits for 200%, as the log's one crit shows. Shield Block blocks two attacks, Sweeping Strikes lasts 20 sec, and the hunter pet's top Bite is 81 to 99, where a typo had 81 to 91.",
+				effect: 'Retribution and protection gained 0.2 to 2.3% from the judgement crits alone, feral 0.8 to 2.5% and the rogues up to 2.6% from the refunds.',
+			},
+			{
 				title: 'Reading the client, written down',
 				prs: [186, 187, 213],
 				changed:
@@ -178,64 +379,74 @@ export const sections: Array<Section> = [
 	},
 	{
 		title: 'The rules of the game',
-		intro: 'Engine rules that apply whenever the sim runs under Forever Rules. Classic Era Rules are still there under Sim Options and leave every one of these off.',
+		intro: 'Engine rules Forever changes. Until the switch they were gated on a Forever Rules setting, with Classic Era Rules under Sim Options; the official engine is Forever-only, so since 23 September they simply apply.',
 		entries: [
 			{
 				title: 'A Forever ruleset, on by default',
-				prs: [1, 43],
-				changed: 'The sim carries a ruleset setting, Forever or Classic Era. New sessions start on Forever; the header says which one is running.',
-				effect: 'Every change below is gated on it. Flip to Classic Era Rules and the fork simulates the Classic sim it came from.',
+				prs: [1, 43, 266],
+				changed: 'The sim carried a ruleset setting, Forever or Classic Era. New sessions started on Forever; the header said which one was running.',
+				effect: 'Every change below was gated on it, and flipping to Classic Era Rules simulated the Classic sim the fork came from. The official engine has no such setting, so the toggle went with the switch; the classic-legacy branch still has it.',
 				sources: [upstream],
 			},
 			{
 				title: 'Periodic damage can crit',
-				prs: [1, 16],
+				prs: [1, 16, 266, 311, 313, 317, 318, 362, 364, 372, 394],
 				changed:
-					'Damage-over-time ticks and bleeds roll for critical strikes using the crit chance snapshotted when the effect was applied. Ignite is excluded, since it is already a share of a crit.',
-				effect: 'Every dot-heavy build gains; the warlock builds and the shadow priest most of all. Read from the wording of the new talents (Pandemic, and the "non-periodic" qualifiers on others).',
+					'Damage-over-time ticks and bleeds roll for critical strikes. It was a blanket rule read from the wording of the new talents (Pandemic, and the "non-periodic" qualifiers on others), with Ignite excluded since it is already a share of a crit. The client settles it per spell: each row carries a Periodic Can Crit flag, and the new engine reads it. Siphon Life, Deep Wounds, Devouring Plague and Lacerating Strikes do not carry it; Deadly Poison, Serpent Sting and Flame Shock do, and Serpent Sting rolls the ranged crit table because the client files it as a ranged attack.',
+				effect: 'Every dot-heavy build gained; the warlock builds and the shadow priest most of all. The four that lost their crits cost their specs a fraction of a percent on average, and up to 3% on the settings that lean on them.',
 				sources: [communityTalents, wowheadTalents],
 			},
 			{
 				title: 'Hit and crit from gear count for every kind of attack',
-				prs: [18],
-				changed: "An item's melee and spell hit are summed and paid into both pools, and the same for crit. Attribute conversions are untouched.",
-				effect: 'Hybrids and casters stop wasting the melee hit and crit on their gear, and hunters and enhancement stop wasting spell crit.',
+				prs: [18, 266, 325],
+				changed:
+					"An item's melee and spell hit are summed and paid into both pools, and the same for crit. Attribute conversions are untouched. The new engine got the same rule in the switch.",
+				effect: 'Hybrids and casters stop wasting the melee hit and crit on their gear, and hunters and enhancement stop wasting spell crit. On the old engine it had counted every rated item twice once the database paid the rating into both pools itself: Bloodvine Vest’s 2% spell hit came out as 4%, and fixing it cost the melee specs 4 to 9%.',
 				sources: [blizzardPanel],
 			},
 			{
 				title: 'Bonus healing carries a damage component',
-				prs: [19],
-				changed: 'A third of the healing power on gear is added to spell damage.',
+				prs: [19, 266],
+				changed:
+					'A third of the healing power on gear was added to spell damage. The client writes the damage half on the item itself (Hide of the Wild: 42 healing and 14 spell damage), so the new engine adds nothing, which would count it twice.',
 				effect: 'Healing gear becomes usable by damage casters; the smite priest and the paladins gain the most.',
 				sources: [blizzardPanel],
 			},
 			{
+				title: 'Rage from white hits is flat',
+				prs: [253, 266, 387, 389, 392, 395],
+				changed:
+					'Measured from public beta combat logs: a landed auto attack pays rage by weapon speed, not damage, and a miss, dodge or parry pays nothing. The rate is 3.46 times the weapon’s speed one-handed and 4.5 two-handed, off-hand swings pay half, and a hit taken pays its damage before armor times 10 over maximum health. Heroic Strike and Cleave replace the next swing, as the client flags them and 13 of 14 Heroic Strikes in the beta log land on it, where upstream had made them instant.',
+				effect: "Classic pays by damage, and a raid-geared warrior swings well past the roughly 280 damage where the two agree on a 2.6 sec one-hander, so the flat rule took the arena warrior's best build from 1002.2 to 885.2 DPS. The 3.46 rate and the halved off hand cost the dual-wield warrior another 10.6%, the new damage-taken rule the bear 19%. Upstream's instant Heroic Strike had run Cleave off the global cooldown on top of every swing.",
+				sources: [rageReport],
+			},
+			{
 				title: 'The old raid debuffs are personal now',
-				prs: [15, 65, 66, 69],
+				prs: [15, 65, 66, 69, 222, 272, 275],
 				changed:
 					"Improved Shadow Bolt, Shadow Weaving, Improved Scorch, Winter's Chill and Stormstrike's Nature vulnerability only raise the damage of the caster who applied them. Improved Shadow Bolt lasts a flat twelve seconds. The raid panel no longer offers them under Forever.",
-				effect: 'Stacking casters loses its Classic payoff: four warlocks no longer share one Improved Shadow Bolt, and a fire mage is not buffing the raid with Scorch. Each caster keeps their own bonus.',
+				effect: 'Stacking casters loses its Classic payoff: four warlocks no longer share one Improved Shadow Bolt, and a fire mage is not buffing the raid with Scorch. Each caster keeps their own bonus. Shadow Weaving had slipped through as a raid debuff until #222; on the new engine each class port applies its own to its caster alone.',
 				sources: [blizzardPanel],
 			},
 			{
 				title: 'World buffs do not work inside raids',
-				prs: [89, 91],
+				prs: [89, 91, 266],
 				changed:
 					"Rallying Cry, Songflower, Darkmoon Faire, Warchief's Blessing, the Dire Maul tribute buffs and Spirit of Zandalar are ignored under Forever Rules, off in every default, and the World Buffs section only shows under Classic Era Rules.",
-				effect: 'Every number on the site fell by a quarter to two fifths against the world-buffed Classic sims, and the gap between physical and caster specs narrowed from 30 to 21 points, because those buffs paid out in crit and attack power. Reported from the demo, not yet in patch notes.',
+				effect: 'Every number on the site fell by a quarter to two fifths against the world-buffed Classic sims, and the gap between physical and caster specs narrowed from 30 to 21 points, because those buffs paid out in crit and attack power. Reported from the demo, not yet in patch notes. The official engine has no Classic world buffs to switch off.',
 				sources: [worldBuffsReport, worldBuffsClip],
 			},
 			{
 				title: 'Racials reworked, the Skyborne, six new race and class pairings',
-				prs: [20, 21, 59],
+				prs: [20, 21, 59, 440],
 				changed:
 					"Every race has two actives and two passives. The resistance racials are gone; weapon skill racials became crit while the weapon is held; Blood Fury, Expansive Mind, Elune's Light, Big Game Hunter and the Skyborne racials are modelled. Dwarf shamans, Undead paladins and the rest of the new pairings can be simulated.",
-				effect: 'Race choice moves numbers by a few percent as before, but for different reasons; a Skyborne is available to Warrior, Hunter, Rogue, Druid, Horde Shaman and Alliance Mage.',
+				effect: 'Race choice moves numbers by a few percent as before, but for different reasons; a Skyborne is available to Warrior, Hunter, Rogue, Druid, Horde Shaman and Alliance Mage. On the new engine the racials were rebuilt from the client by upstream and merged in.',
 				sources: [wowheadRacials, blizzardAnnounce],
 			},
 			{
 				title: 'Profession passives with published numbers',
-				prs: [75],
+				prs: [75, 266],
 				changed: 'Skinning is +5% damage against Beasts and Dragonkin; Mining is +5% health.',
 				effect: 'Only shows against a target of those types; Molten Core bosses are not, so the presets are unaffected.',
 				sources: [blizzardPanel],
@@ -256,10 +467,10 @@ export const sections: Array<Section> = [
 		entries: [
 			{
 				title: 'Nine classes on the Forever trees',
-				prs: [2, 1, 3, 5, 6, 8, 10, 11, 12, 13],
+				prs: [2, 1, 3, 5, 6, 8, 10, 11, 12, 13, 261, 279, 441],
 				changed:
 					"The trees were imported from tooltip data extracted at BlizzCon, then each class converted: new talents implemented where the tooltip gave enough to go on (Mangle, Berserk, Eclipse, Lava Burst, Lightning Overload, Maelstrom Weapon, Mutilate, Arcane Blast, Hot Streak, Ice Lance, Sniper Shot, Lone Wolf, Weaponmaster, Bloodthrill, Penance, Holy Nova, the paladin's Holy Strike and its dependents, and more), and Classic talents that Forever removed taken out.",
-				effect: 'Every build on the site is a Forever build. Talent strings are positional, so a Classic talent string will not load.',
+				effect: "Every build on the site is a Forever build. Talent strings are positional, so a Classic talent string will not load. On the new engine the trees are generated from the client's own talent tables; the hunter's parked Improved Serpent Sting node is dropped so our strings load unchanged, and saved strings were re-encoded when build 70009 took two talents out of the paladin trees.",
 				sources: [communityTalents, wowheadTalents],
 			},
 			{
@@ -474,6 +685,13 @@ export const sections: Array<Section> = [
 				sources: [communityTalents],
 			},
 			{
+				title: 'Mage: Clearcasting was never spent',
+				prs: [273],
+				changed:
+					"Clearcasting skipped being consumed whenever the spell cost nothing, and Clearcasting is what makes a spell cost nothing, so every proc ran its full 15 seconds of free casting. It is now spent by the next spell with a mana cost. The shaman's and priest's equivalents were checked and never had the problem. Found while porting the mage onto the new engine.",
+				effect: 'Frost fell 13.9% and arcane 0.4% on average, far more with no buffs: frost 33.4% on a long fight. Fire does not take Arcane Concentration.',
+			},
+			{
 				title: 'Bear tank: Lacerate instead of Swipe',
 				prs: [116],
 				changed:
@@ -499,6 +717,33 @@ export const sections: Array<Section> = [
 		],
 	},
 	{
+		title: 'The build arena',
+		intro: 'The arena searches the talent trees for each spec and runs every build it finds in one fixed environment, so two numbers on it can be compared. It is a way to find bugs and good builds in this sim, not a balance claim, and since 26 September it is no longer linked from the homepage.',
+		entries: [
+			{
+				title: 'Every build brings the same consumables',
+				prs: [254, 458, 460],
+				changed:
+					"The arena claimed a fixed environment, but each spec brought its own test fixture's consumables: both paladins and the feral tank had no weapon imbue at all, four specs carried Windfury, and the warrior and rogue had no flask. There are now three lists, caster, ranged and melee, because Elemental Sharpening Stone gives melee crit and takes ranged crit; class imbues such as Windfury Weapon and the poisons still override them. Casters and the hunter get Demonic Rune and Mageblood beside their potion, and melee a Mighty Rage Potion. The mana potion on the caster list had never been drunk, because the arena never registered it.",
+				effect: 'The gap between the top two specs, warrior and retribution, went from 19.6% to 2.3%: the warrior was never a third over-modelled, it was this and the rage rule stacked. The potion actually drunk, the rune and Mageblood took Smite up 38.3%, elemental 5.8%, the warlock 4.9% and the hunter 4.6%.',
+			},
+			{
+				title: 'The talent search, rebuilt on the new engine',
+				prs: [253, 430, 445, 446, 454],
+				changed:
+					"The search runs every build on its own core, which took balance from 171.5 sec to 37.5 with identical numbers, and runs on a home machine because GitHub's six hour limit was already too tight. The switch left it on fifteen fixed builds until it was ported. It now also tries every two-tree split at 20/31, 21/30, 30/21 and 31/20, skips specs whose code has not changed, drops carried builds a new patch made illegal, and climbs each tree on that tree's own rotation.",
+				effect: "Builds published by MythicSim, a fork of this engine from before the switch, run here as comparison rows. Several beat our best for their tree, Marksmanship by 7% and Subtlety by 4.8%, because every climb had used the spec's single top rotation; that is fixed.",
+			},
+			{
+				title: 'One row per build, readable on a phone',
+				prs: [442, 451, 453, 455, 462],
+				changed:
+					"The page listed every talent build on every gear set, 3,454 rows with the same talents up to eight times. It now shows each build once on its spec's standard launch set, the best build per tree by default, with every build a toggle away. A row shows the spec, the tree split, the DPS and a link to the build in Wowhead's Forever talent calculator; tapping it opens the talent string, gear, rotation and consumables. Rotations built on lower ranks carry an unconfirmed tag.",
+				effect: '290 rows instead of 3,454, and nothing scrolls sideways on a 412 pixel phone, where the DPS column had been off screen.',
+			},
+		],
+	},
+	{
 		title: 'The site',
 		intro: 'Pages and tooling around the sim.',
 		entries: [
@@ -511,10 +756,17 @@ export const sections: Array<Section> = [
 			},
 			{
 				title: 'Rankings in launch gear',
-				prs: [106],
+				prs: [106, 455],
 				changed:
 					'Every ranked build wears a Launch set: the best pre-raid gear in the launch item pool by its own stat weights, built by one tool for all sixteen specs, raid drops and faction-locked items left out. Before, rogues ranked in Pre-BiS, casters in thin Classic sets and the cat in eight Wildheart pieces and nine empty slots.',
-				effect: 'The rankings compare specs rather than gear tiers; casters and the cat moved most.',
+				effect: 'The rankings compare specs rather than gear tiers; casters and the cat moved most. The sets had since drifted, built from different database snapshots and some carrying PvP rank or Ahn’Qiraj pieces, at item level 63.1 to 69.4. All seventeen were regenerated from one pre-raid pool with every raid and world boss left out, and sit at 60.4 to 63.6.',
+			},
+			{
+				title: 'Two bugs only a raid could show',
+				prs: [411, 412],
+				changed:
+					"A warlock that was not first in the raid never saw its own Curse of the Elements, because the curse was tagged with the caster's raid slot and the rotation looked for it untagged, so it recast the curse every global cooldown. Two hunters kept knocking each other's Serpent Sting off the target and recasting it. Single-player sims put everyone in the first slot alone, so no spec page or test could see either.",
+				effect: 'The rankings raid had all four warlock builds at 3.9 to 10 DPS; Demonic Pact came back to 478.8. Marksmanship went from 482 to 544 and Survival from 442 to 488, each now matching its number alone.',
 			},
 			{
 				title: 'The damage table says what it is',
@@ -528,21 +780,21 @@ export const sections: Array<Section> = [
 				prs: [121],
 				changed:
 					"The picker at the top of the raid tab offered one icon per spec, so the only way into a raid was a spec's own default build and the twenty-six community builds the damage table ranks could not be put in one. It now offers all twenty-six, grouped by class, each dropping a player with that build's talents and name. Both pages read the same list, so neither can drift from the other. The mage's three raid presets also all carried the same talents, which are Frost's, so dragging in a Fire or Arcane mage gave a Frost one and the three could not be told apart.",
-				effect: 'A raid can be built out of the community builds without editing talents by hand.',
+				effect: 'A raid could be built out of the community builds without editing talents by hand. The raid sim did not survive the switch, since the official engine has none.',
 			},
 			{
 				title: 'The damage table comes off the homepage',
-				prs: [124],
+				prs: [124, 471],
 				changed:
 					"The site called itself WoWSims - Forever in its title, its homepage and the label above every sim, which is a claim it has no right to make: it is one person's fork and the WoWSims team neither builds nor reviews it. It is Forever Sim (unofficial) now, the homepage says plainly that it is not WoWSims and not affiliated, and the Patreon link is labelled as theirs. The homepage also lists what the sim cannot do yet, which at the time included the one the sim team raised: that datamined and demo tooltips are wrong often enough that a value can be read correctly and still be wrong. The beta client answered that one, and the list now carries what the client itself does not settle. The damage table comes off the homepage with it and is marked not to be indexed, though it stays at its URL.",
-				effect: 'Nobody arrives thinking this is the official sim, and the limits are on the front page rather than buried.',
+				effect: 'Nobody arrives thinking this is the official sim, and the limits are on the front page rather than buried. After wowsims/forever went private, the build arena came off the homepage too.',
 			},
 			{
 				title: 'The upstream project\u2019s name and Patreon come off the site',
-				prs: [125],
+				prs: [125, 233, 263, 428],
 				changed:
 					"The Patreon button in every header pointed at the upstream project's page, and their name was still in the homepage copy, the toast titles, the exported stat weight labels and the default export filename. The Patreon link and its component are gone, nothing on the site solicits money for anyone, and the homepage introduces itself as an unofficial personal sim without borrowing a name to do it. The GitHub link also defaulted to the upstream repository in a local build, which is now this fork. The MIT licence keeps the original copyright, as it must.",
-				effect: 'Nothing on the site trades on a name or a donation page that is not its own.',
+				effect: "Nothing on the site trades on a name or a donation page that is not its own. The Discord link that came with the fork went the same way, and the homepage credits WoWSims' open-source simulators under their MIT licence instead. The switch brought the official engine's Patreon, Discord and GitHub links back in, and they came out again.",
 			},
 			{
 				title: 'Every talent describes itself, not its Classic ancestor',
@@ -554,8 +806,9 @@ export const sections: Array<Section> = [
 			},
 			{
 				title: 'Best in slot and stat weights',
-				prs: [55, 56, 72, 79],
-				changed: "A best in slot page from each spec's EP weights over the launch pool, and a page comparing stat weights across specs.",
+				prs: [55, 56, 72, 79, 413],
+				changed:
+					"A best in slot page from each spec's EP weights over the launch pool, and a page comparing stat weights across specs. On the new engine every spec carries the old engine's EP weights converted to rating, and the page ranks only launch items, since the client's database holds Blackwing Lair to Naxxramas rows too.",
 				effect: 'Reference pages; neither runs the sim.',
 			},
 			{
@@ -563,14 +816,22 @@ export const sections: Array<Section> = [
 				prs: [38, 41, 45, 39, 40, 32, 33, 51, 52, 53],
 				changed:
 					"Forever's spec list and lockup on the homepage, a dropdown per class, in-sim feedback that opens a GitHub issue with a screenshot, the raid sim reachable and working on touch screens.",
-				effect: 'Site plumbing.',
+				effect: 'Site plumbing. The raid sim is gone since the switch.',
+			},
+			{
+				title: 'Forever’s own look',
+				prs: [470, 473, 474],
+				changed:
+					"The landing page still looked like The Burning Crusade: Illidan over Outland behind everything, a fel-green subtitle and gold accents. It now carries Blizzard's Forever Skyborne key art, with a portrait crop on phones, and a light blue sampled from it replaces the gold as the site's accent. Gold stays where it means something: an assumed number. The homepage reads WoW Forever over Sim, and the WoWSims crossed swords gave way to the in-game Challenging Shout icon, with Blizzard's trademark line as their fan-site terms require.",
+				effect: "Looks only. Every text colour still passes WCAG AA over the art. The Forever logo is not used, because Blizzard's logo rules forbid use that implies endorsement.",
+				sources: [blizzardForever],
 			},
 			{
 				title: 'Publishing and checks',
-				prs: [34, 57, 76, 80, 85, 86],
+				prs: [34, 57, 76, 80, 85, 86, 270],
 				changed:
 					"Published to GitHub Pages from master; every page opened in a headless browser before deploy and on every pull request; the sim pages generated by vite like upstream's newer sims.",
-				effect: 'A build whose pages throw cannot go live; it has already stopped one.',
+				effect: 'A build whose pages throw cannot go live; it has already stopped one. Since 21 September a pull request merges and deploys itself once the tests pass.',
 				sources: [upstream],
 			},
 			{
@@ -583,9 +844,9 @@ export const sections: Array<Section> = [
 			},
 			{
 				title: 'Written down for the beta and for upstream',
-				prs: [70, 84, 90],
+				prs: [70, 84, 90, 264],
 				changed:
-					'A checklist of every demo-tooltip assumption the beta must confirm, a rules sheet of every Forever rule the sim models with its source, and a note on where upstream wowsims is heading.',
+					'A checklist of every demo-tooltip assumption the beta must confirm, a rules sheet of every Forever rule the sim models with its source, and a note on where upstream wowsims is heading. On the new engine the checklist lives in docs/beta-pass, one file per class; the rules sheet still describes the old engine.',
 				effect: 'The beta pass is a checklist rather than an audit, and the official fork can take the data.',
 				sources: [upstream],
 			},

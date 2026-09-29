@@ -2,7 +2,6 @@ package buffmanifest
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 )
 
@@ -37,9 +36,9 @@ var protoTypeNames = map[BuffProtoType]string{
 	ProtoDouble:   "double",
 }
 
-// RenderProto emits proto/buffs.proto for the given manifest rows. Field numbers come from
-// the manifest, which owns them, and fields are written in ascending number order.
-func RenderProto(manifest []BuffSpec) []byte {
+// RenderProto emits proto/buffs.proto from the manifest. A field's number is its position in its
+// scope's slice.
+func RenderProto() []byte {
 	var b strings.Builder
 	b.WriteString(header)
 
@@ -49,19 +48,12 @@ func RenderProto(manifest []BuffSpec) []byte {
 			fmt.Fprintf(&b, "// %s\n", msg.Description)
 		}
 
-		specs := scopeRows(manifest, msg.Scope)
-
-		next := int32(1)
-		for _, spec := range specs {
-			if spec.Number >= next {
-				next = spec.Number + 1
-			}
-		}
-		fmt.Fprintf(&b, "// Next index: %d\n", next)
+		specs := ByScope(msg.Scope)
+		fmt.Fprintf(&b, "// Next index: %d\n", len(specs)+1)
 
 		fmt.Fprintf(&b, "message %s {\n", msg.Name)
-		for _, spec := range specs {
-			fmt.Fprintf(&b, "\t%s %s = %d;\n", protoType(spec), spec.Field, spec.Number)
+		for i, spec := range specs {
+			fmt.Fprintf(&b, "\t%s %s = %d;\n", protoType(spec), spec.Field, i+1)
 		}
 		b.WriteString("}\n")
 	}
@@ -70,20 +62,9 @@ func RenderProto(manifest []BuffSpec) []byte {
 }
 
 func protoType(spec BuffSpec) string {
-	name, ok := protoTypeNames[spec.Proto]
+	name, ok := protoTypeNames[spec.ProtoType()]
 	if !ok {
-		panic(fmt.Sprintf("%s has no proto type for %s", spec.Field, spec.Proto))
+		panic(fmt.Sprintf("%s has no proto type for %s", spec.Field, spec.ProtoType()))
 	}
 	return name
-}
-
-func scopeRows(manifest []BuffSpec, scope BuffScope) []BuffSpec {
-	var rows []BuffSpec
-	for _, spec := range manifest {
-		if spec.Scope == scope {
-			rows = append(rows, spec)
-		}
-	}
-	sort.Slice(rows, func(i, j int) bool { return rows[i].Number < rows[j].Number })
-	return rows
 }

@@ -18,26 +18,26 @@ var HammerOfTheRighteousRankMap = spellData.HammerOfTheRighteous
 // cooldown. The weapon DPS multiple is the row's effect 2. The three extra targets are not
 // modelled.
 func (paladin *Paladin) registerHammerOfTheRighteous() {
-	row := HammerOfTheRighteousRankMap.HighestRank()
-	weaponDPS := effectAt(row, 2).Value
+	rank := HammerOfTheRighteousRankMap.Highest()
+	weaponDPS := rank.EffectN(3).BasePoints
 
 	paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: row.SpellID},
-		SpellSchool:    row.SpellSchool,
-		DefenseType:    row.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
 		ClassSpellMask: SpellMaskHammerOfTheRighteous,
 		MaxRange:       core.MaxMeleeRange,
 
-		ManaCost: manaCost(row),
+		ManaCost: manaCost(rank),
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: row.GCD,
+				GCD: rank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    paladin.sharedTimer(&paladin.holyStrikeTimer),
-				Duration: row.Cooldown,
+				Duration: cooldown(rank),
 			},
 		},
 

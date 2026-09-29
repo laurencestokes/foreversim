@@ -24,7 +24,8 @@
 
 	--background-image-skeleton: linear-gradient(90deg, --alpha(var(--color-white) / 8%) 25%, rgb(255 255 255 / 18%) 50%, --alpha(var(--color-white) / 8%) 75%);
 	--background-image-select-chevron: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
-	--background-image-landing: url('/forever/assets/img/tbc.jpg');
+	--background-image-landing: url('/forever/assets/img/forever_landing.webp');
+	--background-image-landing-sm: url('/forever/assets/img/forever_landing_sm.webp');
 
 	--background-image-cr-scene: radial-gradient(ellipse at 50% 80%, var(--color-cr-scene-glow) 0%, var(--color-background) 70%);
 	--background-image-cr-vignette: radial-gradient(ellipse at 50% 50%, transparent 40%, --alpha(var(--color-black) / 70%) 100%);

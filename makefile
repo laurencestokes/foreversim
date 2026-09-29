@@ -311,8 +311,10 @@ test: $(OUT_DIR)/lib.wasm.gz binary_dist/dist.go
 	GOARCH=amd64 go test --tags=with_db ./sim/...
 
 .PHONY: update-tests
+# Only replaces goldens a test run rewrote. A blanket delete lost the goldens of skipped tests
+# (TestProtoVersioning), and the deploy copies that one into .deployedprotoversion.
+# ponytail: goldens of deleted tests now linger; remove them by hand.
 update-tests:
-	find . -name "*.results" -type f -delete
 	find . -name "*.results.tmp" -exec bash -c 'cp "$$1" "$${1%.results.tmp}".results' _ {} \;
 
 # Names the generated spell data files that are not what tools/database/gen_spelldata writes

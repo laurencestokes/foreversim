@@ -285,8 +285,9 @@ func unsupportedProcFlags(mask [2]uint32) []string {
 		}
 	}
 
+	word1 := mask[1] &^ dbcenums.PROC_FLAG_2_MAIN_HAND_ONLY
 	for bit := 0; bit < 32; bit++ {
-		if mask[1]&^dbcenums.PROC_FLAG_2_MAIN_HAND_ONLY&(1<<bit) != 0 {
+		if word1&(1<<bit) != 0 {
 			names = append(names, fmt.Sprintf("bit %d", 32+bit))
 		}
 	}

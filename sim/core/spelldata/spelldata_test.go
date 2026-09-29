@@ -125,15 +125,14 @@ func TestEffectAverage(t *testing.T) {
 	}
 }
 
-// The rank tables read the base as an integer, so the store answers the same for the same effect:
-// -58.4697 is -58, not the -59 a floor over the whole value would give, and 19.7 gaining 0.5 over
-// three levels is 19 + 1.5 floored to 20.
-func TestEffectAverageTruncatesTheBase(t *testing.T) {
-	if got := Find(700).EffectN(1).Average(60); got != -58 {
-		t.Errorf("Average(60) of a fractional negative base = %v, want -58", got)
+// A fractional base keeps its fraction until the whole amount is floored: -58.4697 is -59, and 19.7
+// gaining 0.5 over three levels is 21.2 floored to 21, not 19 + 1.5 floored to 20.
+func TestEffectAverageKeepsTheFraction(t *testing.T) {
+	if got := Find(700).EffectN(1).Average(60); got != -59 {
+		t.Errorf("Average(60) of a fractional negative base = %v, want -59", got)
 	}
-	if got := Find(800).EffectN(1).Average(60); got != 20 {
-		t.Errorf("Average(60) of a fractional base gaining 1.5 = %v, want 20", got)
+	if got := Find(800).EffectN(1).Average(60); got != 21 {
+		t.Errorf("Average(60) of a fractional base gaining 1.5 = %v, want 21", got)
 	}
 	if got := Find(800).EffectN(1).Average(4); got != 19 {
 		t.Errorf("Average(4) at the spell's own level = %v, want 19", got)

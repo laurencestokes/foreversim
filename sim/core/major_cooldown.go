@@ -314,6 +314,21 @@ func (mcdm *majorCooldownManager) removeInitialMajorCooldown(actionID ActionID) 
 	}
 }
 
+// Adds a condition to the automatic use of a cooldown someone else registered - a druid holding
+// its potions in animal form. Explicit casts from a rotation are not affected.
+func (mcdm *majorCooldownManager) AddActivationCondition(actionID ActionID, condition CooldownActivationCondition) {
+	for i := range mcdm.initialMajorCooldowns {
+		mcd := &mcdm.initialMajorCooldowns[i]
+		if !mcd.Spell.SameAction(actionID) {
+			continue
+		}
+		should := mcd.ShouldActivate
+		mcd.ShouldActivate = func(sim *Simulation, character *Character) bool {
+			return condition(sim, character) && (should == nil || should(sim, character))
+		}
+	}
+}
+
 func (mcdm *majorCooldownManager) GetMajorCooldown(actionID ActionID) *MajorCooldown {
 	for _, mcd := range mcdm.majorCooldowns {
 		if mcd.Spell.SameAction(actionID) {

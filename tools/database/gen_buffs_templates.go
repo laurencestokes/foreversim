@@ -41,7 +41,7 @@ func {{.Go}}Aura(unit *core.Unit, isPlayer bool, talentPoints int32{{.ExtraParam
 }
 {{- else}}
 {{if .HasSpell}}// {{.Label}}
-{{end}}// func {{.Go}}Aura(unit *core.Unit, isPlayer bool, talentPoints int32{{.ExtraParams}}) *core.Aura // {{.Field}}, {{.Kind}}: {{.Reason}}
+{{end}}// func {{.Go}}Aura(unit *core.Unit, isPlayer bool, talentPoints int32{{.ExtraParams}}) *core.Aura // {{.Field}}{{with .Kind}}, {{.}}{{end}}: {{.Reason}}
 {{- end}}
 {{- end}}
 `

@@ -267,8 +267,7 @@ func applyCost(config *core.SpellConfig, s *Spell) {
 
 	powerType := s.Powers[0].Type
 
-	// Truncated rather than rounded, which is what the generated rank tables answer for the same
-	// row: Retaliation states one rage-tenth and so costs nothing.
+	// Truncated rather than rounded: Retaliation states one rage-tenth and so costs nothing.
 	cost := int32(s.PowerCost(powerType))
 	costPct := float64(s.Powers[0].CostPct)
 

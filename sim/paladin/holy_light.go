@@ -1,51 +1,54 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/buffs"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 var HolyLightRankMap = spellData.HolyLight
 
-// What Blessing of Light adds to a Holy Light or Flash of Light on a target that carries it.
-var blessingOfLightRow = spellData.GreaterBlessingOfLight.HighestRank()
-var blessingOfLightHolyLightBonus = effectAt(blessingOfLightRow, 0).Value
-var blessingOfLightFlashOfLightBonus = effectAt(blessingOfLightRow, 1).Value
+// What Blessing of Light adds to a Holy Light or Flash of Light on a target that carries it: its
+// first effect states the Holy Light bonus, its second the Flash of Light one.
+var blessingOfLightRank = spellData.GreaterBlessingOfLight.Highest()
+var blessingOfLightHolyLightBonus = blessingOfLightRank.EffectN(1).Average(core.CharacterLevel)
+var blessingOfLightFlashOfLightBonus = blessingOfLightRank.EffectN(2).Average(core.CharacterLevel)
 
 // Holy Light
 // https://www.wowhead.com/forever/spell=25292
 //
 // Heals a friendly target for 1580.
-func (paladin *Paladin) registerHolyLight(row shared.SpellData) {
+func (paladin *Paladin) registerHolyLight(_ int32, rank *spelldata.Spell) {
+	heal := rank.HealEffect()
+
 	paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: row.SpellID},
-		SpellSchool:    row.SpellSchool,
-		DefenseType:    row.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellHealing,
 		Flags:          core.SpellFlagAPL | core.SpellFlagHelpful,
 		ClassSpellMask: SpellMaskHolyLight,
-		Rank:           row.Rank,
-		MaxRange:       row.MaxRange,
+		Rank:           rank.RankNumber(),
+		MaxRange:       float64(rank.MaxRange),
 
-		ManaCost: manaCost(row),
+		ManaCost: manaCost(rank),
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD:      row.GCD,
-				CastTime: row.CastTime,
+				GCD:      rank.GCD(),
+				CastTime: rank.CastTime(),
 			},
 		},
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		BonusCoefficient: row.Heal.BonusCoefficient(),
+		BonusCoefficient: heal.Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			heal := row.Heal.Damage(sim)
+			amount := heal.Roll(sim, core.CharacterLevel)
 			if target.HasActiveAuraWithTag(buffs.GreaterBlessingOfLightCategory) {
-				heal += blessingOfLightHolyLightBonus
+				amount += blessingOfLightHolyLightBonus
 			}
-			spell.CalcAndDealHealing(sim, target, heal, spell.OutcomeHealingCrit)
+			spell.CalcAndDealHealing(sim, target, amount, spell.OutcomeHealingCrit)
 		},
 	})
 }

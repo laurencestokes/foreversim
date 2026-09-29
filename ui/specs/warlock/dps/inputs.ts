@@ -23,6 +23,20 @@ export const PetInput = <SpecType extends WarlockSpecs>() =>
 		storeField: 'player:*' as const,
 	});
 
+// Demonic Pact keeps the buff of a demon sacrificed before the pull while `summon` is out.
+export const PactSacrificeInput = <SpecType extends WarlockSpecs>() =>
+	InputHelpers.makeClassOptionsEnumIconInput<SpecType, Summon>({
+		fieldName: 'pactSacrifice',
+		values: [
+			{ value: Summon.NoSummon, tooltip: 'No sacrifice' },
+			{ actionId: ActionId.fromSpellId(18789), value: Summon.Imp },
+			{ actionId: ActionId.fromSpellId(18791), value: Summon.Succubus },
+			{ actionId: ActionId.fromSpellId(18792), value: Summon.Voidwalker },
+		],
+		showWhen: (player: Player<SpecType>) => player.getTalents().demonicPact && player.getTalents().demonicSacrifice,
+		storeField: ['specOptions', 'talentsString'] as const,
+	});
+
 export const ArmorInput = <SpecType extends WarlockSpecs>() =>
 	InputHelpers.makeClassOptionsEnumIconInput<SpecType, WarlockOptions_Armor>({
 		fieldName: 'armor',

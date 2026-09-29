@@ -89,14 +89,15 @@ func ApplyFixedShoutAura(char *Character, aura *Aura, category string) {
 //  Cooldowns
 ////////////////////////////
 
+// Client 1.60.1.70009: the talent 14892's rank curve reads 8/17/25% armor, the buff is 14893 for 15 sec.
 func InspirationAura(unit *Unit, points int32) *Aura {
-	multiplier := 1 + []float64{0, .08, .16, .25}[points]
+	multiplier := 1 + []float64{0, .08, .17, .25}[points]
 
 	armorDep := unit.NewDynamicMultiplyStat(stats.Armor, multiplier)
 
 	return unit.GetOrRegisterAura(Aura{
 		Label:    "Inspiration",
-		ActionID: ActionID{SpellID: 15363},
+		ActionID: ActionID{SpellID: 14893},
 		Duration: time.Second * 15,
 	}).AttachStatDependency(armorDep)
 }

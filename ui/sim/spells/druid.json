@@ -1,184 +1,59 @@
 {
-	"1079": {
-		"ability": "Rip",
-		"file": "sim/druid/rip.go",
-		"note": "Beta client 1.60.1.69893: less damage per combo point at every rank (rank 6 17 + 28 a point a tick -> 15 + 25.5). The client stores no attack power scaling, so the sim keeps its own.",
-		"source": "forever",
-		"tooltip": "30 Energy\nMelee Range\nInstant\nFinishing move that causes damage over time. Damage increases per combo point and by your Attack Power:\n1 point: 44.4 damage over 12 sec.\n2 points: 70.8 damage over 12 sec.\n3 points: 97.2 damage over 12 sec.\n4 points: 123.6 damage over 12 sec.\n5 points: 150 damage over 12 sec."
-	},
 	"1235827": {
 		"ability": "Lacerate",
 		"assumptions": ["The 3.33x threat is Season of Discovery's; the client tables do not carry threat."],
 		"file": "sim/druid/lacerate.go",
-		"note": "Rank 3, which the sim now carries for both the hit and the bleed. Beta client 1.60.1.69893: 15 Rage, 10% weapon damage per stack on the hit, 15 a tick per stack every 3 sec for 15 sec with no attack power scaling, 5 stacks.",
+		"note": "Rank 3, the only rank the sim registers, for both the hit and the bleed. Client 70009: 15 Rage, 10% weapon damage per stack on the hit, 15 a tick per stack every 3 sec for 15 sec with no attack power scaling, 5 stacks.",
 		"source": "assumed",
 		"tooltip": "15 Rage\nMelee Range\nInstant\nLacerates the enemy target, making them bleed for 75 damage over 15 sec plus 10% weapon damage per existing application of Lacerate on the target. Causes a high amount of threat. This effect stacks up to 5 times on the same target."
 	},
 	"1238073": {
-		"ability": "Mangle (Bear)",
+		"ability": "Primal Bite",
 		"assumptions": ["The 1.5x threat is Season of Discovery's; the client tables do not carry threat."],
-		"file": "sim/druid/mangle.go",
-		"note": "Rank 4, Forever's own id, which the sim now carries in place of the Burning Crusade 33878. Beta client 1.60.1.69893: 20 Rage, 6 sec cooldown, 100% weapon damage plus 77. While Berserk is up the cooldown is lifted and the strike hits 3 targets.",
+		"file": "sim/druid/primal_bite.go",
+		"note": "Rank 4, Forever's own id. Client 70009 renames Mangle to Primal Bite (#441): 20 Rage, 6 sec cooldown, 100% weapon damage plus 77 and no bleed debuff (#356). While Berserk is up the cooldown is lifted and the strike hits 3 targets.",
 		"source": "assumed",
-		"tooltip": "20 Rage\nMelee Range\nInstant\n6 sec cooldown\nMangle the target for 100% normal damage plus 77. Requires Bear Form."
-	},
-	"1495": {
-		"ability": "Mongoose Bite Rank 1",
-		"file": "sim/hunter/mongoose_bite.go",
-		"source": "forever",
-		"tooltip": "Counterattack the enemy for melee weapon damage plus 15. Can only be performed after you dodge.",
-		"note": "Beta client 1.60.1 (spell 1495). Forever changed it from a flat 25 damage to normalized weapon damage plus 15, effect type 121 where Era is 2. The sim already does this; the ranks are 15/22/37/57."
+		"tooltip": "20 Rage\nMelee Range\nInstant\n6 sec cooldown\nBite the target for 100% normal damage plus 77. Requires Bear Form."
 	},
 	"16886": {
 		"ability": "Nature's Grace",
-		"file": "sim/druid/talents.go",
-		"note": "Forever's talent text reads 10% spellcasting speed and global cooldown for 3 sec on any non-periodic spell crit, where Classic's 16886 is a flat cast time cut on the next cast; the id lends the right name and icon but the wrong words, and the global cooldown is shortened by hand because Classic never hastes it.",
+		"file": "sim/druid/talents_balance.go",
+		"note": "Client 70009: the buff (16886) is 10% cast speed and a 10% shorter global cooldown for 3 sec after any non-periodic spell crit, where Classic's 16886 is a flat cast time cut on the next cast, so the id lends the right name and icon but the wrong words. The sim's cast speed buff shortens the global cooldown with the cast.",
 		"source": "forever",
 		"tooltip": "3 sec\nAfter any of your spells lands a critical strike, your casting speed increases by 10% and your global cooldown shortens by the same 10%, for 3 sec."
 	},
-	"16914": {
-		"ability": "Hurricane",
-		"file": "sim/druid/hurricane.go",
-		"note": "Beta client 1.60.1.69893: the storm casts 1278965 each second, 2 less damage than Classic's tick with the same .03 coefficient, the slow is 20% (was 25%) and the 1 min cooldown is gone. The slow is not modelled.",
+	"16959": {
+		"ability": "Blood Frenzy",
+		"file": "sim/druid/talents_feral_combat.go",
+		"note": "Client 70009 renames Primal Fury to Blood Frenzy (talent 16958, #441): both curves are 50 / 100%, and 16959 grants 5 Rage. The sim now tags the Rage and the combo point with 16959, where it used the Burning Crusade 37117.",
 		"source": "forever",
-		"tooltip": "880 Mana\nChanneled\nCreates a violent storm in the target area causing 69 Nature damage to enemies every 1 sec, and increasing the time between attacks of enemies by 20%. Lasts 10 sec. Druid must channel to maintain the spell."
+		"tooltip": "Gives you a 50% chance per point to gain an additional 5 Rage any time you get a critical strike while in Bear Form or Dire Bear Form. In addition, your non-periodic critical strikes from Cat Form abilities that generate Combo Points have a 50% chance per point to add an additional Combo Point."
 	},
 	"17056": {
 		"ability": "Furor",
-		"file": "sim/druid/talents.go",
-		"note": "Beta client 1.60.1.69893: talent curve 20-100, and the text builds every number from it. Forever has one Furor spell (17056); the sim tags each rank with Classic's ids.",
+		"file": "sim/druid/talents_restoration.go",
+		"note": "Client 70009: one Furor spell (17056) for all five ranks, whose talent curve (20-100) builds every number in the text; the sim tags the talent with it at every rank (#347) and the tooltip is rank 1's. The 10 Rage is 17057.",
 		"source": "forever",
 		"tooltip": "Gives you a 20% chance to gain 10 Rage when you shapeshift into Bear Form or Dire Bear Form. When you shift into Cat Form, you will regain 20% of the Energy you had when you were last in Cat Form, plus 2 Energy for each second you spent not in Bear Form, Cat Form, or Dire Bear Form, up to a maximum of 20 Energy."
-	},
-	"17058": {
-		"ability": "Furor",
-		"file": "sim/druid/talents.go",
-		"note": "Beta client 1.60.1.69893: talent curve 20-100, and the text builds every number from it. Forever has one Furor spell (17056); the sim tags each rank with Classic's ids.",
-		"source": "forever",
-		"tooltip": "Gives you a 40% chance to gain 10 Rage when you shapeshift into Bear Form or Dire Bear Form. When you shift into Cat Form, you will regain 40% of the Energy you had when you were last in Cat Form, plus 4 Energy for each second you spent not in Bear Form, Cat Form, or Dire Bear Form, up to a maximum of 40 Energy."
-	},
-	"17059": {
-		"ability": "Furor",
-		"file": "sim/druid/talents.go",
-		"note": "Beta client 1.60.1.69893: talent curve 20-100, and the text builds every number from it. Forever has one Furor spell (17056); the sim tags each rank with Classic's ids.",
-		"source": "forever",
-		"tooltip": "Gives you a 60% chance to gain 10 Rage when you shapeshift into Bear Form or Dire Bear Form. When you shift into Cat Form, you will regain 60% of the Energy you had when you were last in Cat Form, plus 6 Energy for each second you spent not in Bear Form, Cat Form, or Dire Bear Form, up to a maximum of 60 Energy."
-	},
-	"17060": {
-		"ability": "Furor",
-		"file": "sim/druid/talents.go",
-		"note": "Beta client 1.60.1.69893: talent curve 20-100, and the text builds every number from it. Forever has one Furor spell (17056); the sim tags each rank with Classic's ids.",
-		"source": "forever",
-		"tooltip": "Gives you a 80% chance to gain 10 Rage when you shapeshift into Bear Form or Dire Bear Form. When you shift into Cat Form, you will regain 80% of the Energy you had when you were last in Cat Form, plus 8 Energy for each second you spent not in Bear Form, Cat Form, or Dire Bear Form, up to a maximum of 80 Energy."
-	},
-	"17061": {
-		"ability": "Furor",
-		"file": "sim/druid/talents.go",
-		"note": "Beta client 1.60.1.69893: talent curve 20-100, and the text builds every number from it. Forever has one Furor spell (17056); the sim tags each rank with Classic's ids.",
-		"source": "forever",
-		"tooltip": "Gives you a 100% chance to gain 10 Rage when you shapeshift into Bear Form or Dire Bear Form. When you shift into Cat Form, you will regain 100% of the Energy you had when you were last in Cat Form, plus 10 Energy for each second you spent not in Bear Form, Cat Form, or Dire Bear Form, up to a maximum of 100 Energy."
-	},
-	"1735": {
-		"ability": "Demoralizing Roar",
-		"file": "sim/druid/demoralizing_roar.go",
-		"note": "Beta client 1.60.1.69893: about half as strong again as Classic's at every rank (rank 5 138 -> 204 at 60), Feral Aggression folded in and more.",
-		"source": "forever",
-		"tooltip": "10 Rage\nInstant\nThe druid roars, decreasing nearby enemies' melee attack power by 88. Lasts 30 sec."
-	},
-	"17392": {
-		"ability": "Faerie Fire (Feral)",
-		"assumptions": [
-			"The beta client 1.60.1.69893 has no Faerie Fire (Feral): 16857 and 17390-17392 are gone from the spellbook and 17392 from the spell tables. The sim keeps it with Classic's numbers because the cat and bear rotations are built around it."
-		],
-		"file": "sim/druid/faerie_fire.go",
-		"note": "Also registered as a debuff in sim/core/debuffs.go, which is where the 505 armor lives.",
-		"source": "assumed",
-		"tooltip": "Melee Range\nInstant\n6 sec cooldown\nDecreases the armor of the target by 505 for 40 sec and stops it stealthing or turning invisible. Usable in Cat Form and Bear Form, and costs no mana."
-	},
-	"17401": {
-		"ability": "Hurricane",
-		"file": "sim/druid/hurricane.go",
-		"note": "Beta client 1.60.1.69893: the storm casts 1278968 each second, 2 less damage than Classic's tick with the same .03 coefficient, the slow is 20% (was 25%) and the 1 min cooldown is gone. The slow is not modelled.",
-		"source": "forever",
-		"tooltip": "1180 Mana\nChanneled\nCreates a violent storm in the target area causing 99 Nature damage to enemies every 1 sec, and increasing the time between attacks of enemies by 20%. Lasts 10 sec. Druid must channel to maintain the spell."
 	},
 	"17402": {
 		"ability": "Hurricane",
 		"file": "sim/druid/hurricane.go",
-		"note": "Beta client 1.60.1.69893: the storm casts 1278759 each second, 2 less damage than Classic's tick with the same .03 coefficient, the slow is 20% (was 25%) and the 1 min cooldown is gone. The slow is not modelled.",
+		"note": "Client 70009: the storm casts 1278759 each second for 132, 2 less than Classic's tick with the same .03 coefficient; the slow is 20% (was 25%) and the 1 min cooldown is gone. The slow is not modelled, and the damage lands under 1278759.",
 		"source": "forever",
 		"tooltip": "1495 Mana\nChanneled\nCreates a violent storm in the target area causing 132 Nature damage to enemies every 1 sec, and increasing the time between attacks of enemies by 20%. Lasts 10 sec. Druid must channel to maintain the spell."
-	},
-	"1822": {
-		"ability": "Rake",
-		"file": "sim/druid/rake.go",
-		"note": "Beta client 1.60.1.69893: a little more damage at every rank (rank 4 58 plus 96 -> 61 plus 102).",
-		"source": "forever",
-		"tooltip": "40 Energy\nMelee Range\nInstant\nRake the target for 23 damage and an additional 48 damage over 9 sec. Awards 1 combo point."
-	},
-	"1823": {
-		"ability": "Rake",
-		"file": "sim/druid/rake.go",
-		"note": "Beta client 1.60.1.69893: a little more damage at every rank (rank 4 58 plus 96 -> 61 plus 102).",
-		"source": "forever",
-		"tooltip": "40 Energy\nMelee Range\nInstant\nRake the target for 31 damage and an additional 63 damage over 9 sec. Awards 1 combo point."
-	},
-	"1824": {
-		"ability": "Rake",
-		"file": "sim/druid/rake.go",
-		"note": "Beta client 1.60.1.69893: a little more damage at every rank (rank 4 58 plus 96 -> 61 plus 102).",
-		"source": "forever",
-		"tooltip": "40 Energy\nMelee Range\nInstant\nRake the target for 45 damage and an additional 78 damage over 9 sec. Awards 1 combo point."
-	},
-	"22568": {
-		"ability": "Ferocious Bite",
-		"file": "sim/druid/ferocious_bite.go",
-		"note": "Beta client 1.60.1.69893: damage, the energy conversion and the 35 Energy are Classic's.",
-		"source": "classic"
 	},
 	"22812": {
 		"ability": "Barkskin",
 		"file": "sim/druid/barkskin.go",
-		"note": "Beta client 1.60.1.69893: Physical damage only, 15 sec, no mana cost and no cast time or attack speed penalty. The sim had 20% of all damage for 12 sec.",
+		"note": "Client 70009: Physical damage only, 20% for 15 sec on a 1 min cooldown, with no mana cost and no cast time or attack speed penalty.",
 		"source": "forever",
 		"tooltip": "Instant\n1 min cooldown\nYour skin becomes as tough as bark. Physical damage taken is reduced by 20%. While you are protected, damaging attacks will not cause spellcasting delays. Lasts 15 sec."
-	},
-	"22827": {
-		"ability": "Ferocious Bite",
-		"file": "sim/druid/ferocious_bite.go",
-		"note": "Beta client 1.60.1.69893: damage, the energy conversion and the 35 Energy are Classic's.",
-		"source": "classic"
-	},
-	"22828": {
-		"ability": "Ferocious Bite",
-		"file": "sim/druid/ferocious_bite.go",
-		"note": "Beta client 1.60.1.69893: damage, the energy conversion and the 35 Energy are Classic's.",
-		"source": "classic"
-	},
-	"22829": {
-		"ability": "Ferocious Bite",
-		"file": "sim/druid/ferocious_bite.go",
-		"note": "Beta client 1.60.1.69893: damage, the energy conversion and the 35 Energy are Classic's.",
-		"source": "classic"
 	},
 	"22842": {
 		"ability": "Frenzied Regeneration",
 		"file": "sim/druid/frenzied_regeneration.go",
-		"note": "Beta client 1.60.1.69893: one rank, and a point of Rage heals 1% of maximum health instead of 10 / 15 / 20.",
-		"source": "forever",
-		"tooltip": "Instant\n3 min cooldown\nConverts up to 10 Rage per second into health for 10 sec. Each point of Rage is converted into 1% of maximum health."
-	},
-	"22895": {
-		"ability": "Frenzied Regeneration",
-		"file": "sim/druid/frenzied_regeneration.go",
-		"note": "Beta client 1.60.1.69893: gone from the Forever spellbook, which keeps only 22842. The sim casts 22842 at every level under the Forever ruleset and this rank only under Classic.",
-		"source": "forever",
-		"tooltip": "Instant\n3 min cooldown\nConverts up to 10 Rage per second into health for 10 sec. Each point of Rage is converted into 1% of maximum health."
-	},
-	"22896": {
-		"ability": "Frenzied Regeneration",
-		"file": "sim/druid/frenzied_regeneration.go",
-		"note": "Beta client 1.60.1.69893: gone from the Forever spellbook, which keeps only 22842. The sim casts 22842 at every level under the Forever ruleset and this rank only under Classic.",
+		"note": "Client 70009: one rank, and a point of Rage heals 1% of maximum health instead of 10 / 15 / 20.",
 		"source": "forever",
 		"tooltip": "Instant\n3 min cooldown\nConverts up to 10 Rage per second into health for 10 sec. Each point of Rage is converted into 1% of maximum health."
 	},
@@ -189,509 +64,227 @@
 		"source": "forever",
 		"tooltip": "35% of base mana\nInstant\nShapeshift into Moonkin Form, increasing your armor contribution from items by 360% and giving every party member within 45 yards 3% more critical strike chance, exclusive with Leader of the Pack. The form grants no spell damage and no Moonfire bonus."
 	},
-	"24974": {
-		"ability": "Insect Swarm",
-		"file": "sim/druid/insect_swarm.go",
-		"note": "Beta client 1.60.1.69893: about 40% less damage (rank 5 324 -> 186 over 12 sec); the .158 per tick coefficient and the costs are Classic's.",
-		"source": "forever",
-		"tooltip": "85 Mana\nInstant\nThe enemy target is swarmed by insects, decreasing their chance to hit with attacks by 2% and causing 90 Nature damage over 12 sec."
-	},
-	"24975": {
-		"ability": "Insect Swarm",
-		"file": "sim/druid/insect_swarm.go",
-		"note": "Beta client 1.60.1.69893: about 40% less damage (rank 5 324 -> 186 over 12 sec); the .158 per tick coefficient and the costs are Classic's.",
-		"source": "forever",
-		"tooltip": "100 Mana\nInstant\nThe enemy target is swarmed by insects, decreasing their chance to hit with attacks by 2% and causing 120 Nature damage over 12 sec."
-	},
-	"24976": {
-		"ability": "Insect Swarm",
-		"file": "sim/druid/insect_swarm.go",
-		"note": "Beta client 1.60.1.69893: about 40% less damage (rank 5 324 -> 186 over 12 sec); the .158 per tick coefficient and the costs are Classic's.",
-		"source": "forever",
-		"tooltip": "140 Mana\nInstant\nThe enemy target is swarmed by insects, decreasing their chance to hit with attacks by 2% and causing 150 Nature damage over 12 sec."
-	},
 	"25298": {
 		"ability": "Starfire",
 		"file": "sim/druid/starfire.go",
-		"note": "Beta client 1.60.1.69893: about 30% less damage from rank 2 up (rank 7 496-584 -> 350-412). Cost, cast time and the 1.0 coefficient are Classic's.",
+		"note": "Client 70009: about 30% less damage from rank 2 up (rank 7 496-584 -> 350-412). Cost, cast time and the 1.0 coefficient are Classic's; #450 registers every rank.",
 		"source": "forever",
 		"tooltip": "340 Mana\n3.5 sec cast\nCauses 350 to 412 Arcane damage to the target."
 	},
 	"26107": {
 		"ability": "Symbols of Unending Life Finisher Bonus",
-		"file": "sim/druid/item_sets_pve.go",
-		"note": "Untouched since the fork - the 3 piece refunds 30 Energy when Ferocious Bite or Rip fails to land.",
+		"file": "sim/druid/item_sets.go",
+		"note": "Client 70009: the 3 piece refunds 30 Energy (26976) when Ferocious Bite or Rip fails to land, as in Classic.",
 		"source": "classic"
 	},
 	"2912": {
 		"ability": "Starfire",
 		"file": "sim/druid/starfire.go",
-		"note": "Beta client 1.60.1.69893: about 30% less damage from rank 2 up (rank 7 496-584 -> 350-412). Cost, cast time and the 1.0 coefficient are Classic's.",
+		"note": "Client 70009: about 30% less damage from rank 2 up (rank 7 496-584 -> 350-412). Cost, cast time and the 1.0 coefficient are Classic's; #450 registers every rank.",
 		"source": "forever",
-		"tooltip": "95 Mana\n3.5 sec cast\nCauses 79 to 96 Arcane damage to the target."
+		"tooltip": "95 Mana\n3.5 sec cast\nCauses 78 to 96 Arcane damage to the target."
 	},
 	"31018": {
 		"ability": "Ferocious Bite",
 		"file": "sim/druid/ferocious_bite.go",
-		"note": "Beta client 1.60.1.69893: damage, the energy conversion and the 35 Energy are Classic's.",
+		"note": "Client 70009: damage, the energy conversion and the 35 Energy are Classic's.",
 		"source": "classic"
 	},
-	"33876": {
-		"ability": "Mangle (Cat)",
-		"assumptions": [
-			"The beta client 1.60.1.69893 has no cat Mangle: the Mangle talent teaches only the Bear ability (407995 and its ranks). The cat keeps this one, at the Classic Mangle (Cat) cost, because the feral rotation is built around it."
-		],
-		"file": "sim/druid/mangle.go",
-		"note": "Carries the Burning Crusade Mangle (Cat) id, which the Classic database does not hold. Berserk widens the strike to 3 targets.",
-		"source": "assumed",
-		"tooltip": "45 Energy\nMelee Range\nInstant\nMangle the target for 100% weapon damage plus 26, and award 1 combo point. Requires Cat Form."
-	},
-	"33878": {
-		"ability": "Mangle (Bear)",
-		"assumptions": ["The 1.5x threat is Season of Discovery's; the client tables do not carry threat."],
-		"file": "sim/druid/mangle.go",
-		"note": "Beta client 1.60.1.69893: 20 Rage, 6 sec cooldown, 100% weapon damage plus 26 / 38 / 59 / 77 at ranks learned at 25 / 36 / 48 / 60 (407995, 1238069, 1238070, 1238073). The sim carries the Burning Crusade 33878, which the Classic database does not hold. While Berserk is up the cooldown is lifted and the strike hits 3 targets.",
-		"source": "assumed",
-		"tooltip": "20 Rage\nMelee Range\nInstant\n6 sec cooldown\nMangle the target for 100% normal damage plus 77. Requires Bear Form."
-	},
-	"37117": {
-		"ability": "Primal Fury",
-		"file": "sim/druid/talents.go",
-		"foreverId": 16958,
-		"note": "Beta client 1.60.1.69893: both curves are 50 / 100%, and 16959 grants 5 Rage. The sim tags the proc with the Burning Crusade 37117, which the Classic database does not hold, so the gains arrive unnamed in the metrics.",
-		"source": "forever",
-		"tooltip": "Gives you a 50% chance per point to gain an additional 5 Rage any time you get a critical strike while in Bear Form or Dire Bear Form. In addition, your non-periodic critical strikes from Cat Form abilities that generate Combo Points have a 50% chance per point to add an additional Combo Point."
-	},
-	"414644": {
-		"ability": "Lacerate",
-		"assumptions": ["The 3.33x threat is Season of Discovery's; the client tables do not carry threat."],
-		"file": "sim/druid/lacerate.go",
-		"note": "Beta client 1.60.1.69893: Lacerate is trained at 42, 50 and 58 (414644, 1235826, 1235827), 15 Rage, 10% weapon damage per stack, 5 stacks. The sim keeps rank 1's id at every level; the bleed it applies is 414647.",
-		"source": "assumed",
-		"tooltip": "15 Rage\nMelee Range\nInstant\nLacerates the enemy target, making them bleed for 75 damage over 15 sec plus 10% weapon damage per existing application of Lacerate on the target. Causes a high amount of threat. This effect stacks up to 5 times on the same target."
-	},
-	"414647": {
-		"ability": "Lacerate",
-		"file": "sim/druid/lacerate.go",
-		"note": "Beta client 1.60.1.69893: 10 / 12 / 15 a tick per stack at ranks 1-3, with no attack power scaling. The sim uses this id for the bleed; in the client it is the weapon damage half.",
-		"source": "forever",
-		"tooltip": "Bleeds the target for 15 damage every 3 sec for each stack of Lacerate on it, over 15 sec."
-	},
-	"48518": {
+	"408255": {
 		"ability": "Eclipse",
-		"file": "sim/druid/talents.go",
-		"foreverId": 408248,
-		"note": "Beta client 1.60.1.69893: the talent curve is 0.17 / 0.33 / 0.5 sec and the charge aura (408255) holds 4 for 15 sec. The sim carries Wrath of the Lich King's 48518, which the Classic database does not hold, so the buff renders without a name or an icon.",
+		"file": "sim/druid/talents_balance.go",
+		"note": "Client 70009: the talent (408248) curve is 0.17 / 0.33 / 0.5 sec and the charge aura (408255) holds 4 for 15 sec. The sim now carries 408255, where it used Wrath of the Lich King's 48518.",
 		"source": "forever",
 		"tooltip": "15 sec\nYour Wrath spell reduces the cast time of your next 2 Starfire spells by 0.17 / 0.33 / 0.5 sec. Stores up to 4 charges."
 	},
-	"50334": {
-		"ability": "Berserk",
-		"file": "sim/druid/berserk.go",
-		"foreverId": 417141,
-		"note": "Beta client 1.60.1.69893: Berserk is 417141, 3 min cooldown, 15 sec, no cost. The sim carries Wrath of the Lich King's 50334, which the Classic database does not hold. The Fear clear and immunity are not modelled.",
+	"417053": {
+		"ability": "Natural Reaction",
+		"file": "sim/druid/talents_feral_combat.go",
+		"note": "Client 70009: the talent (417051) curves are 1-5% and 20-100%, and 417053 grants 5 Rage. The sim now tags the Rage with 417053, where it used Wrath of the Lich King's 57878; the Rage half fires only in Bear Form.",
 		"source": "forever",
-		"tooltip": "Instant\n3 min cooldown\nCauses your Mangle ability to strike up to 3 targets, removes its cooldown, and increases the critical strike chance of your Combo Point-generating abilities by 100%. Clears and grants immunity to Fear effects for the duration. Lasts 15 sec."
+		"tooltip": "Increases your dodge chance by 1% per point, and gives you a 20% chance per point to gain 5 Rage each time you dodge."
+	},
+	"417141": {
+		"ability": "Berserk",
+		"file": "sim/druid/talents_feral_combat.go",
+		"note": "Client 70009: Berserk is 417141, 3 min cooldown, 15 sec, no cost (#347). The sim now carries 417141, where it used Wrath of the Lich King's 50334. The Fear clear and immunity are not modelled.",
+		"source": "forever",
+		"tooltip": "Instant\n3 min cooldown\nCauses your Primal Bite ability to strike up to 3 targets, removes its cooldown, and increases the critical strike chance of your Combo Point-generating abilities by 100%. Clears and grants immunity to Fear effects for the duration. Lasts 15 sec."
 	},
 	"5176": {
 		"ability": "Wrath",
 		"file": "sim/druid/wrath.go",
-		"note": "Beta client 1.60.1.69893: about a quarter of Classic's damage from rank 3 up (rank 8 248-277 -> 62-69), a third less mana (rank 8 180 -> 120), and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's.",
+		"note": "Client 70009 raised Wrath by about half over 69893, still well under Classic's from rank 3 up (rank 8 248-277 -> 92-102, 62-69 in 69893), with a third less mana (rank 8 180 -> 120) and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's; #450 registers every rank.",
 		"source": "forever",
-		"tooltip": "10 Mana\n1.5 sec cast\nCauses 10 to 13 Nature damage to the target."
+		"tooltip": "10 Mana\n1.5 sec cast\nCauses 15 to 17 Nature damage to the target."
 	},
 	"5177": {
 		"ability": "Wrath",
 		"file": "sim/druid/wrath.go",
-		"note": "Beta client 1.60.1.69893: about a quarter of Classic's damage from rank 3 up (rank 8 248-277 -> 62-69), a third less mana (rank 8 180 -> 120), and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's.",
+		"note": "Client 70009 raised Wrath by about half over 69893, still well under Classic's from rank 3 up (rank 8 248-277 -> 92-102, 62-69 in 69893), with a third less mana (rank 8 180 -> 120) and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's; #450 registers every rank.",
 		"source": "forever",
-		"tooltip": "20 Mana\n1.7 sec cast\nCauses 16 to 19 Nature damage to the target."
+		"tooltip": "20 Mana\n1.7 sec cast\nCauses 24 to 28 Nature damage to the target."
 	},
 	"5178": {
 		"ability": "Wrath",
 		"file": "sim/druid/wrath.go",
-		"note": "Beta client 1.60.1.69893: about a quarter of Classic's damage from rank 3 up (rank 8 248-277 -> 62-69), a third less mana (rank 8 180 -> 120), and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's.",
+		"note": "Client 70009 raised Wrath by about half over 69893, still well under Classic's from rank 3 up (rank 8 248-277 -> 92-102, 62-69 in 69893), with a third less mana (rank 8 180 -> 120) and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's; #450 registers every rank.",
 		"source": "forever",
-		"tooltip": "40 Mana\n2 sec cast\nCauses 21 to 25 Nature damage to the target."
+		"tooltip": "40 Mana\n2 sec cast\nCauses 31 to 37 Nature damage to the target."
 	},
 	"5179": {
 		"ability": "Wrath",
 		"file": "sim/druid/wrath.go",
-		"note": "Beta client 1.60.1.69893: about a quarter of Classic's damage from rank 3 up (rank 8 248-277 -> 62-69), a third less mana (rank 8 180 -> 120), and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's.",
+		"note": "Client 70009 raised Wrath by about half over 69893, still well under Classic's from rank 3 up (rank 8 248-277 -> 92-102, 62-69 in 69893), with a third less mana (rank 8 180 -> 120) and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's; #450 registers every rank.",
 		"source": "forever",
-		"tooltip": "50 Mana\n2 sec cast\nCauses 26 to 31 Nature damage to the target."
+		"tooltip": "50 Mana\n2 sec cast\nCauses 40 to 46 Nature damage to the target."
 	},
 	"5180": {
 		"ability": "Wrath",
 		"file": "sim/druid/wrath.go",
-		"note": "Beta client 1.60.1.69893: about a quarter of Classic's damage from rank 3 up (rank 8 248-277 -> 62-69), a third less mana (rank 8 180 -> 120), and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's.",
+		"note": "Client 70009 raised Wrath by about half over 69893, still well under Classic's from rank 3 up (rank 8 248-277 -> 92-102, 62-69 in 69893), with a third less mana (rank 8 180 -> 120) and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's; #450 registers every rank.",
 		"source": "forever",
-		"tooltip": "70 Mana\n2 sec cast\nCauses 31 to 36 Nature damage to the target."
+		"tooltip": "70 Mana\n2 sec cast\nCauses 47 to 53 Nature damage to the target."
 	},
 	"5217": {
 		"ability": "Tiger's Fury",
 		"file": "sim/druid/tigers_fury.go",
-		"note": "Beta client 1.60.1.69893: Tiger's Fury is one spell (5217), learned at 24, 15% Physical damage for 6 sec on a 30 sec cooldown with no cost; 6793, 9845 and 9846 no longer exist. The sim keeps Classic's per level ids, so the APLs that name 9846 still work.",
+		"note": "Client 70009: Tiger's Fury is one spell (5217), learned at 24, 15% Physical damage for 6 sec on a 30 sec cooldown with no cost; 6793, 9845 and 9846 no longer exist, and the sim registers only 5217.",
 		"source": "forever",
 		"tooltip": "Instant\n30 sec cooldown\nRequires Cat Form\nIncreases Physical damage done by 15% for 6 sec."
-	},
-	"5221": {
-		"ability": "Shred",
-		"file": "sim/druid/shred.go",
-		"note": "Beta client 1.60.1.69893: 155% weapon damage, down from 225%, on the same flat 24. The client's own text still prints Classic's 54.",
-		"source": "forever",
-		"tooltip": "60 Energy\nMelee Range\nInstant\nShred the target, causing 155% weapon damage plus 37 to the target. Must be behind the target. Awards 1 combo point."
 	},
 	"5229": {
 		"ability": "Enrage",
 		"file": "sim/druid/enrage.go",
-		"note": "Beta client 1.60.1.69893: Forever adds the 10 Rage up front. The sim takes 27% armor off Dire Bear Form, where the text says 16%, as it did before.",
+		"note": "Client 70009: Forever adds the 10 Rage up front (#396). The sim also takes 27% armor off Dire Bear Form, where the text says 16%; the client tables carry neither.",
 		"source": "forever",
 		"tooltip": "Instant\n1 min cooldown\nInstantly generates 10 Rage and another 20 Rage over 10 sec, but reduces base armor by 27% in Bear Form and 16% in Dire Bear Form. The druid is considered in combat for the duration."
-	},
-	"5570": {
-		"ability": "Insect Swarm",
-		"file": "sim/druid/insect_swarm.go",
-		"note": "Beta client 1.60.1.69893: about 40% less damage (rank 5 324 -> 186 over 12 sec); the .158 per tick coefficient and the costs are Classic's.",
-		"source": "forever",
-		"tooltip": "45 Mana\nInstant\nThe enemy target is swarmed by insects, decreasing their chance to hit with attacks by 2% and causing 48 Nature damage over 12 sec."
-	},
-	"57878": {
-		"ability": "Natural Reaction",
-		"file": "sim/druid/talents.go",
-		"foreverId": 417051,
-		"note": "Beta client 1.60.1.69893: curves 1-5% and 20-100%, and 417053 grants 5 Rage. The sim tags the Rage with Wrath of the Lich King's 57878, which the Classic database does not hold, so the gain shows up unnamed; the Rage half fires only in Bear Form.",
-		"source": "forever",
-		"tooltip": "Increases your dodge chance by 1% per point, and gives you a 20% chance per point to gain 5 Rage each time you dodge."
 	},
 	"6780": {
 		"ability": "Wrath",
 		"file": "sim/druid/wrath.go",
-		"note": "Beta client 1.60.1.69893: about a quarter of Classic's damage from rank 3 up (rank 8 248-277 -> 62-69), a third less mana (rank 8 180 -> 120), and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's.",
+		"note": "Client 70009 raised Wrath by about half over 69893, still well under Classic's from rank 3 up (rank 8 248-277 -> 92-102, 62-69 in 69893), with a third less mana (rank 8 180 -> 120) and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's; #450 registers every rank.",
 		"source": "forever",
-		"tooltip": "80 Mana\n2 sec cast\nCauses 37 to 42 Nature damage to the target."
-	},
-	"6793": {
-		"ability": "Tiger's Fury",
-		"file": "sim/druid/tigers_fury.go",
-		"note": "Beta client 1.60.1.69893: Tiger's Fury is one spell (5217), learned at 24, 15% Physical damage for 6 sec on a 30 sec cooldown with no cost; 6793, 9845 and 9846 no longer exist. The sim keeps Classic's per level ids, so the APLs that name 9846 still work.",
-		"source": "forever",
-		"tooltip": "Instant\n30 sec cooldown\nRequires Cat Form\nIncreases Physical damage done by 15% for 6 sec."
-	},
-	"6807": {
-		"ability": "Maul",
-		"file": "sim/druid/maul.go",
-		"note": "Beta client 1.60.1.69893: damage and the 15 Rage are Classic's.",
-		"source": "classic"
-	},
-	"6808": {
-		"ability": "Maul",
-		"file": "sim/druid/maul.go",
-		"note": "Beta client 1.60.1.69893: damage and the 15 Rage are Classic's.",
-		"source": "classic"
-	},
-	"6809": {
-		"ability": "Maul",
-		"file": "sim/druid/maul.go",
-		"note": "Beta client 1.60.1.69893: damage and the 15 Rage are Classic's.",
-		"source": "classic"
+		"tooltip": "80 Mana\n2 sec cast\nCauses 55 to 63 Nature damage to the target."
 	},
 	"768": {
 		"ability": "Cat Form",
 		"file": "sim/druid/forms.go",
-		"note": "The form's own numbers are Classic's - 2 attack power per level, 0.71x threat, 55% of base mana less 10% per point of Natural Shapeshifter; the Energy a shift grants is Furor's, and Forever reworked the talent, not the form.",
-		"source": "classic"
-	},
-	"769": {
-		"ability": "Swipe",
-		"file": "sim/druid/swipe.go",
-		"note": "Beta client 1.60.1.69893: damage, 3 targets and the 20 Rage are Classic's.",
-		"source": "classic"
-	},
-	"779": {
-		"ability": "Swipe",
-		"file": "sim/druid/swipe.go",
-		"note": "Beta client 1.60.1.69893: damage, 3 targets and the 20 Rage are Classic's.",
-		"source": "classic"
-	},
-	"780": {
-		"ability": "Swipe",
-		"file": "sim/druid/swipe.go",
-		"note": "Beta client 1.60.1.69893: damage, 3 targets and the 20 Rage are Classic's.",
+		"note": "The form's own numbers are Classic's - 2 attack power per level, 0.71x threat, 55% of base mana less 10% per point of Natural Shapeshifter; the Energy a shift grants is Furor's, and Forever reworked the talent. The one change to the form is Faerie Fire: Cat Form (Passive) 3025 in client 70009 makes it free, with a 6 sec cooldown and a 1 sec global cooldown.",
 		"source": "classic"
 	},
 	"8905": {
 		"ability": "Wrath",
 		"file": "sim/druid/wrath.go",
-		"note": "Beta client 1.60.1.69893: about a quarter of Classic's damage from rank 3 up (rank 8 248-277 -> 62-69), a third less mana (rank 8 180 -> 120), and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's.",
+		"note": "Client 70009 raised Wrath by about half over 69893, still well under Classic's from rank 3 up (rank 8 248-277 -> 92-102, 62-69 in 69893), with a third less mana (rank 8 180 -> 120) and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's; #450 registers every rank.",
 		"source": "forever",
-		"tooltip": "100 Mana\n2 sec cast\nCauses 46 to 51 Nature damage to the target."
-	},
-	"8921": {
-		"ability": "Moonfire",
-		"file": "sim/druid/moonfire.go",
-		"note": "Beta client 1.60.1.69893: less damage from rank 2 up (rank 10 195-228 plus 384 -> 128-151 plus 240) and every rank carries the full .15 direct and .13 per tick coefficients (rank 1 was .06 / .052). Costs are Classic's.",
-		"source": "forever",
-		"tooltip": "25 Mana\nInstant\nBurns the enemy for 9 to 12 Arcane damage and then an additional 12 Arcane damage over 9 sec."
-	},
-	"8924": {
-		"ability": "Moonfire",
-		"file": "sim/druid/moonfire.go",
-		"note": "Beta client 1.60.1.69893: less damage from rank 2 up (rank 10 195-228 plus 384 -> 128-151 plus 240) and every rank carries the full .15 direct and .13 per tick coefficients (rank 1 was .06 / .052). Costs are Classic's.",
-		"source": "forever",
-		"tooltip": "50 Mana\nInstant\nBurns the enemy for 15 to 19 Arcane damage and then an additional 24 Arcane damage over 12 sec."
-	},
-	"8925": {
-		"ability": "Moonfire",
-		"file": "sim/druid/moonfire.go",
-		"note": "Beta client 1.60.1.69893: less damage from rank 2 up (rank 10 195-228 plus 384 -> 128-151 plus 240) and every rank carries the full .15 direct and .13 per tick coefficients (rank 1 was .06 / .052). Costs are Classic's.",
-		"source": "forever",
-		"tooltip": "75 Mana\nInstant\nBurns the enemy for 25 to 29 Arcane damage and then an additional 36 Arcane damage over 12 sec."
-	},
-	"8926": {
-		"ability": "Moonfire",
-		"file": "sim/druid/moonfire.go",
-		"note": "Beta client 1.60.1.69893: less damage from rank 2 up (rank 10 195-228 plus 384 -> 128-151 plus 240) and every rank carries the full .15 direct and .13 per tick coefficients (rank 1 was .06 / .052). Costs are Classic's.",
-		"source": "forever",
-		"tooltip": "105 Mana\nInstant\nBurns the enemy for 36 to 43 Arcane damage and then an additional 52 Arcane damage over 12 sec."
-	},
-	"8927": {
-		"ability": "Moonfire",
-		"file": "sim/druid/moonfire.go",
-		"note": "Beta client 1.60.1.69893: less damage from rank 2 up (rank 10 195-228 plus 384 -> 128-151 plus 240) and every rank carries the full .15 direct and .13 per tick coefficients (rank 1 was .06 / .052). Costs are Classic's.",
-		"source": "forever",
-		"tooltip": "150 Mana\nInstant\nBurns the enemy for 50 to 59 Arcane damage and then an additional 76 Arcane damage over 12 sec."
-	},
-	"8928": {
-		"ability": "Moonfire",
-		"file": "sim/druid/moonfire.go",
-		"note": "Beta client 1.60.1.69893: less damage from rank 2 up (rank 10 195-228 plus 384 -> 128-151 plus 240) and every rank carries the full .15 direct and .13 per tick coefficients (rank 1 was .06 / .052). Costs are Classic's.",
-		"source": "forever",
-		"tooltip": "190 Mana\nInstant\nBurns the enemy for 62 to 72 Arcane damage and then an additional 92 Arcane damage over 12 sec."
-	},
-	"8929": {
-		"ability": "Moonfire",
-		"file": "sim/druid/moonfire.go",
-		"note": "Beta client 1.60.1.69893: less damage from rank 2 up (rank 10 195-228 plus 384 -> 128-151 plus 240) and every rank carries the full .15 direct and .13 per tick coefficients (rank 1 was .06 / .052). Costs are Classic's.",
-		"source": "forever",
-		"tooltip": "235 Mana\nInstant\nBurns the enemy for 75 to 88 Arcane damage and then an additional 124 Arcane damage over 12 sec."
+		"tooltip": "100 Mana\n2 sec cast\nCauses 69 to 77 Nature damage to the target."
 	},
 	"8949": {
 		"ability": "Starfire",
 		"file": "sim/druid/starfire.go",
-		"note": "Beta client 1.60.1.69893: about 30% less damage from rank 2 up (rank 7 496-584 -> 350-412). Cost, cast time and the 1.0 coefficient are Classic's.",
+		"note": "Client 70009: about 30% less damage from rank 2 up (rank 7 496-584 -> 350-412). Cost, cast time and the 1.0 coefficient are Classic's; #450 registers every rank.",
 		"source": "forever",
-		"tooltip": "135 Mana\n3.5 sec cast\nCauses 108 to 130 Arcane damage to the target."
+		"tooltip": "135 Mana\n3.5 sec cast\nCauses 107 to 131 Arcane damage to the target."
 	},
 	"8950": {
 		"ability": "Starfire",
 		"file": "sim/druid/starfire.go",
-		"note": "Beta client 1.60.1.69893: about 30% less damage from rank 2 up (rank 7 496-584 -> 350-412). Cost, cast time and the 1.0 coefficient are Classic's.",
+		"note": "Client 70009: about 30% less damage from rank 2 up (rank 7 496-584 -> 350-412). Cost, cast time and the 1.0 coefficient are Classic's; #450 registers every rank.",
 		"source": "forever",
-		"tooltip": "180 Mana\n3.5 sec cast\nCauses 140 to 167 Arcane damage to the target."
+		"tooltip": "180 Mana\n3.5 sec cast\nCauses 139 to 167 Arcane damage to the target."
 	},
 	"8951": {
 		"ability": "Starfire",
 		"file": "sim/druid/starfire.go",
-		"note": "Beta client 1.60.1.69893: about 30% less damage from rank 2 up (rank 7 496-584 -> 350-412). Cost, cast time and the 1.0 coefficient are Classic's.",
+		"note": "Client 70009: about 30% less damage from rank 2 up (rank 7 496-584 -> 350-412). Cost, cast time and the 1.0 coefficient are Classic's; #450 registers every rank.",
 		"source": "forever",
-		"tooltip": "230 Mana\n3.5 sec cast\nCauses 191 to 226 Arcane damage to the target."
-	},
-	"8972": {
-		"ability": "Maul",
-		"file": "sim/druid/maul.go",
-		"note": "Beta client 1.60.1.69893: damage and the 15 Rage are Classic's.",
-		"source": "classic"
-	},
-	"8992": {
-		"ability": "Shred",
-		"file": "sim/druid/shred.go",
-		"note": "Beta client 1.60.1.69893: 155% weapon damage, down from 225%, on the same flat 44. The client's own text still prints Classic's 99.",
-		"source": "forever",
-		"tooltip": "60 Energy\nMelee Range\nInstant\nShred the target, causing 155% weapon damage plus 68 to the target. Must be behind the target. Awards 1 combo point."
-	},
-	"9490": {
-		"ability": "Demoralizing Roar",
-		"file": "sim/druid/demoralizing_roar.go",
-		"note": "Beta client 1.60.1.69893: about half as strong again as Classic's at every rank (rank 5 138 -> 204 at 60), Feral Aggression folded in and more.",
-		"source": "forever",
-		"tooltip": "10 Rage\nInstant\nThe druid roars, decreasing nearby enemies' melee attack power by 105. Lasts 30 sec."
-	},
-	"9492": {
-		"ability": "Rip",
-		"file": "sim/druid/rip.go",
-		"note": "Beta client 1.60.1.69893: less damage per combo point at every rank (rank 6 17 + 28 a point a tick -> 15 + 25.5). The client stores no attack power scaling, so the sim keeps its own.",
-		"source": "forever",
-		"tooltip": "30 Energy\nMelee Range\nInstant\nFinishing move that causes damage over time. Damage increases per combo point and by your Attack Power:\n1 point: 67.2 damage over 12 sec.\n2 points: 110.4 damage over 12 sec.\n3 points: 153.6 damage over 12 sec.\n4 points: 196.8 damage over 12 sec.\n5 points: 240 damage over 12 sec."
-	},
-	"9493": {
-		"ability": "Rip",
-		"file": "sim/druid/rip.go",
-		"note": "Beta client 1.60.1.69893: less damage per combo point at every rank (rank 6 17 + 28 a point a tick -> 15 + 25.5). The client stores no attack power scaling, so the sim keeps its own.",
-		"source": "forever",
-		"tooltip": "30 Energy\nMelee Range\nInstant\nFinishing move that causes damage over time. Damage increases per combo point and by your Attack Power:\n1 point: 87 damage over 12 sec.\n2 points: 138 damage over 12 sec.\n3 points: 189 damage over 12 sec.\n4 points: 240 damage over 12 sec.\n5 points: 291 damage over 12 sec."
+		"tooltip": "230 Mana\n3.5 sec cast\nCauses 190 to 226 Arcane damage to the target."
 	},
 	"9634": {
 		"ability": "Dire Bear Form",
-		"assumptions": ["The 1.3x threat is Classic's; the client tables do not carry threat."],
 		"file": "sim/druid/forms.go",
-		"note": "Beta client 1.60.1.69893: the passive (9635) gives 360% item armor, 600 health plus 32 a level and 120 attack power plus 3 a level, 1240 and 180 at 60, as the sim has; Furor's Bear half is 20% a point at 10 Rage. Forever moves Feral Instinct onto Swipe, so the form's threat is the flat 1.3x it carries here.",
-		"source": "assumed",
+		"note": "Client 70009: the passive (9635) gives 360% item armor, 600 health plus 32 a level and 120 attack power plus 3 a level, 1240 and 180 at 60, as the sim has; Wowhead's 1560 and 210 are the same passive at its max level of 70. The 1.3x threat is Bear Form (Passive2) (21178), which the client still carries: +30% threat from every school, taught with Feral Combat at level 10, as in Classic. Furor's Bear half is 20% a point at 10 Rage. Forever moves Feral Instinct onto Swipe, so the form's threat is the flat 1.3x it carries here.",
+		"source": "forever",
 		"tooltip": "55% of base mana\nInstant\nShapeshift into dire bear form, increasing melee attack power by 180, health by 1240, armor contribution from items by 360% and threat caused by 30%. Rage replaces mana while the form lasts."
-	},
-	"9745": {
-		"ability": "Maul",
-		"file": "sim/druid/maul.go",
-		"note": "Beta client 1.60.1.69893: damage and the 15 Rage are Classic's.",
-		"source": "classic"
-	},
-	"9747": {
-		"ability": "Demoralizing Roar",
-		"file": "sim/druid/demoralizing_roar.go",
-		"note": "Beta client 1.60.1.69893: about half as strong again as Classic's at every rank (rank 5 138 -> 204 at 60), Feral Aggression folded in and more.",
-		"source": "forever",
-		"tooltip": "10 Rage\nInstant\nThe druid roars, decreasing nearby enemies' melee attack power by 158. Lasts 30 sec."
-	},
-	"9752": {
-		"ability": "Rip",
-		"file": "sim/druid/rip.go",
-		"note": "Beta client 1.60.1.69893: less damage per combo point at every rank (rank 6 17 + 28 a point a tick -> 15 + 25.5). The client stores no attack power scaling, so the sim keeps its own.",
-		"source": "forever",
-		"tooltip": "30 Energy\nMelee Range\nInstant\nFinishing move that causes damage over time. Damage increases per combo point and by your Attack Power:\n1 point: 124.2 damage over 12 sec.\n2 points: 200.4 damage over 12 sec.\n3 points: 276.6 damage over 12 sec.\n4 points: 352.8 damage over 12 sec.\n5 points: 429 damage over 12 sec."
-	},
-	"9754": {
-		"ability": "Swipe",
-		"file": "sim/druid/swipe.go",
-		"note": "Beta client 1.60.1.69893: damage, 3 targets and the 20 Rage are Classic's.",
-		"source": "classic"
-	},
-	"9829": {
-		"ability": "Shred",
-		"file": "sim/druid/shred.go",
-		"note": "Beta client 1.60.1.69893: 155% weapon damage, down from 225%, on the same flat 64. The client's own text still prints Classic's 144.",
-		"source": "forever",
-		"tooltip": "60 Energy\nMelee Range\nInstant\nShred the target, causing 155% weapon damage plus 99 to the target. Must be behind the target. Awards 1 combo point."
 	},
 	"9830": {
 		"ability": "Shred",
 		"file": "sim/druid/shred.go",
-		"note": "Beta client 1.60.1.69893: 155% weapon damage, down from 225%, on the same flat 80. The client's own text still prints Classic's 180.",
+		"note": "Client 70009: 155% weapon damage, down from 225%, on the same flat 80. The client's own text still prints Classic's 180.",
 		"source": "forever",
 		"tooltip": "60 Energy\nMelee Range\nInstant\nShred the target, causing 155% weapon damage plus 124 to the target. Must be behind the target. Awards 1 combo point."
-	},
-	"9833": {
-		"ability": "Moonfire",
-		"file": "sim/druid/moonfire.go",
-		"note": "Beta client 1.60.1.69893: less damage from rank 2 up (rank 10 195-228 plus 384 -> 128-151 plus 240) and every rank carries the full .15 direct and .13 per tick coefficients (rank 1 was .06 / .052). Costs are Classic's.",
-		"source": "forever",
-		"tooltip": "280 Mana\nInstant\nBurns the enemy for 96 to 113 Arcane damage and then an additional 156 Arcane damage over 12 sec."
-	},
-	"9834": {
-		"ability": "Moonfire",
-		"file": "sim/druid/moonfire.go",
-		"note": "Beta client 1.60.1.69893: less damage from rank 2 up (rank 10 195-228 plus 384 -> 128-151 plus 240) and every rank carries the full .15 direct and .13 per tick coefficients (rank 1 was .06 / .052). Costs are Classic's.",
-		"source": "forever",
-		"tooltip": "325 Mana\nInstant\nBurns the enemy for 112 to 131 Arcane damage and then an additional 196 Arcane damage over 12 sec."
 	},
 	"9835": {
 		"ability": "Moonfire",
 		"file": "sim/druid/moonfire.go",
-		"note": "Beta client 1.60.1.69893: less damage from rank 2 up (rank 10 195-228 plus 384 -> 128-151 plus 240) and every rank carries the full .15 direct and .13 per tick coefficients (rank 1 was .06 / .052). Costs are Classic's.",
+		"note": "Client 70009: less damage from rank 2 up (rank 10 195-228 plus 384 -> 128-150 plus 240) and every rank carries the full .15 direct and .13 per tick coefficients (rank 1 was .06 / .052). Costs are Classic's.",
 		"source": "forever",
-		"tooltip": "375 Mana\nInstant\nBurns the enemy for 128 to 151 Arcane damage and then an additional 240 Arcane damage over 12 sec."
+		"tooltip": "375 Mana\nInstant\nBurns the enemy for 128 to 150 Arcane damage and then an additional 240 Arcane damage over 12 sec."
 	},
-	"9845": {
-		"ability": "Tiger's Fury",
-		"file": "sim/druid/tigers_fury.go",
-		"note": "Beta client 1.60.1.69893: Tiger's Fury is one spell (5217), learned at 24, 15% Physical damage for 6 sec on a 30 sec cooldown with no cost; 6793, 9845 and 9846 no longer exist. The sim keeps Classic's per level ids, so the APLs that name 9846 still work.",
-		"source": "forever",
-		"tooltip": "Instant\n30 sec cooldown\nRequires Cat Form\nIncreases Physical damage done by 15% for 6 sec."
-	},
-	"9846": {
-		"ability": "Tiger's Fury",
-		"file": "sim/druid/tigers_fury.go",
-		"note": "Beta client 1.60.1.69893: Tiger's Fury is one spell (5217), learned at 24, 15% Physical damage for 6 sec on a 30 sec cooldown with no cost; 6793, 9845 and 9846 no longer exist. The sim keeps Classic's per level ids, so the APLs that name 9846 still work.",
-		"source": "forever",
-		"tooltip": "Instant\n30 sec cooldown\nRequires Cat Form\nIncreases Physical damage done by 15% for 6 sec."
-	},
-	"9850": {
-		"ability": "Claw",
-		"file": "sim/druid/claw.go",
-		"note": "Beta client 1.60.1.69893: Claw gained a 110% weapon damage effect; the 115 and the 45 Energy less 1 per point of Ferocity are Classic's.",
-		"source": "forever",
-		"tooltip": "45 Energy\nMelee Range\nInstant\nClaw the enemy for 110% normal damage plus 115. Awards 1 combo point."
+	"9867": {
+		"ability": "Ravage",
+		"file": "sim/druid/ravage.go",
+		"note": "Client 70009: rank 4 deals 350% weapon damage plus 98 (343 after the multiplier) for 60 Energy, from Prowl and behind the target, as in Classic Era. Berserk's crit bonus names it; Savage Fury does not.",
+		"source": "classic"
 	},
 	"9875": {
 		"ability": "Starfire",
 		"file": "sim/druid/starfire.go",
-		"note": "Beta client 1.60.1.69893: about 30% less damage from rank 2 up (rank 7 496-584 -> 350-412). Cost, cast time and the 1.0 coefficient are Classic's.",
+		"note": "Client 70009: about 30% less damage from rank 2 up (rank 7 496-584 -> 350-412). Cost, cast time and the 1.0 coefficient are Classic's; #450 registers every rank.",
 		"source": "forever",
-		"tooltip": "275 Mana\n3.5 sec cast\nCauses 257 to 302 Arcane damage to the target."
+		"tooltip": "275 Mana\n3.5 sec cast\nCauses 256 to 302 Arcane damage to the target."
 	},
 	"9876": {
 		"ability": "Starfire",
 		"file": "sim/druid/starfire.go",
-		"note": "Beta client 1.60.1.69893: about 30% less damage from rank 2 up (rank 7 496-584 -> 350-412). Cost, cast time and the 1.0 coefficient are Classic's.",
+		"note": "Client 70009: about 30% less damage from rank 2 up (rank 7 496-584 -> 350-412). Cost, cast time and the 1.0 coefficient are Classic's; #450 registers every rank.",
 		"source": "forever",
-		"tooltip": "315 Mana\n3.5 sec cast\nCauses 313 to 370 Arcane damage to the target."
-	},
-	"9880": {
-		"ability": "Maul",
-		"file": "sim/druid/maul.go",
-		"note": "Beta client 1.60.1.69893: damage and the 15 Rage are Classic's.",
-		"source": "classic"
+		"tooltip": "315 Mana\n3.5 sec cast\nCauses 313 to 369 Arcane damage to the target."
 	},
 	"9881": {
 		"ability": "Maul",
 		"file": "sim/druid/maul.go",
-		"note": "Beta client 1.60.1.69893: damage and the 15 Rage are Classic's.",
+		"note": "Client 70009: damage and the 15 Rage are Classic's.",
 		"source": "classic"
-	},
-	"9894": {
-		"ability": "Rip",
-		"file": "sim/druid/rip.go",
-		"note": "Beta client 1.60.1.69893: less damage per combo point at every rank (rank 6 17 + 28 a point a tick -> 15 + 25.5). The client stores no attack power scaling, so the sim keeps its own.",
-		"source": "forever",
-		"tooltip": "30 Energy\nMelee Range\nInstant\nFinishing move that causes damage over time. Damage increases per combo point and by your Attack Power:\n1 point: 175.2 damage over 12 sec.\n2 points: 284.4 damage over 12 sec.\n3 points: 393.6 damage over 12 sec.\n4 points: 502.8 damage over 12 sec.\n5 points: 612 damage over 12 sec."
 	},
 	"9896": {
 		"ability": "Rip",
 		"file": "sim/druid/rip.go",
-		"note": "Beta client 1.60.1.69893: less damage per combo point at every rank (rank 6 17 + 28 a point a tick -> 15 + 25.5). The client stores no attack power scaling, so the sim keeps its own.",
+		"note": "Client 70009: less damage per combo point at every rank (rank 6 17 + 28 a point a tick -> 15 + 25.5). The client stores no attack power scaling, so the sim keeps its own: 1% of attack power a tick per combo point, capped at 4 points. The beta's combat logs agree: a level 20 cat (Feet, foreverlogs 2673, 178 non-crit rank 1 ticks) goes up about 6.3 a tick per point from 1 to 4 points (4.4 from the client plus about 1.9 from attack power) but only 4.4 from 4 to 5, landing 8.9 / 15.4 / 21.6 / 27.7 / 32.2 against 9.3 / 15.5 / 21.8 / 28.1 / 32.5 predicted; without the cap, 5 points would land 34.3.",
 		"source": "forever",
 		"tooltip": "30 Energy\nMelee Range\nInstant\nFinishing move that causes damage over time. Damage increases per combo point and by your Attack Power:\n1 point: 243 damage over 12 sec.\n2 points: 396 damage over 12 sec.\n3 points: 549 damage over 12 sec.\n4 points: 702 damage over 12 sec.\n5 points: 855 damage over 12 sec."
-	},
-	"99": {
-		"ability": "Demoralizing Roar",
-		"file": "sim/druid/demoralizing_roar.go",
-		"note": "Beta client 1.60.1.69893: about half as strong again as Classic's at every rank (rank 5 138 -> 204 at 60), Feral Aggression folded in and more.",
-		"source": "forever",
-		"tooltip": "10 Rage\nInstant\nThe druid roars, decreasing nearby enemies' melee attack power by 56. Lasts 30 sec."
 	},
 	"9904": {
 		"ability": "Rake",
 		"file": "sim/druid/rake.go",
-		"note": "Beta client 1.60.1.69893: a little more damage at every rank (rank 4 58 plus 96 -> 61 plus 102).",
+		"note": "Client 70009: a little more damage at every rank (rank 4 58 plus 96 -> 61 plus 102).",
 		"source": "forever",
 		"tooltip": "40 Energy\nMelee Range\nInstant\nRake the target for 61 damage and an additional 102 damage over 9 sec. Awards 1 combo point."
 	},
 	"9907": {
 		"ability": "Faerie Fire",
 		"file": "sim/druid/faerie_fire.go",
-		"note": "115 mana, 505 armor for 40 sec, all Classic's; the feral version on 17392 is the half Forever touched, by dropping its talent.",
+		"note": "115 mana, 505 armor for 40 sec, all Classic's (client 70009). Forever has no Faerie Fire (Feral), so cat and bear cast this one too (#315); their form passives (3025, 1178, 9635) make it free with a 6 sec cooldown, and Cat Form cuts its global cooldown to 1 sec. The sim leaves the cooldown out, since the debuff lasts 40 sec.",
 		"source": "classic"
 	},
 	"9908": {
 		"ability": "Swipe",
 		"file": "sim/druid/swipe.go",
-		"note": "Beta client 1.60.1.69893: damage, 3 targets and the 20 Rage are Classic's.",
+		"note": "Client 70009: damage, 3 targets and the 20 Rage are Classic's.",
 		"source": "classic"
 	},
 	"9912": {
 		"ability": "Wrath",
 		"file": "sim/druid/wrath.go",
-		"note": "Beta client 1.60.1.69893: about a quarter of Classic's damage from rank 3 up (rank 8 248-277 -> 62-69), a third less mana (rank 8 180 -> 120), and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's.",
+		"note": "Client 70009 raised Wrath by about half over 69893, still well under Classic's from rank 3 up (rank 8 248-277 -> 92-102, 62-69 in 69893), with a third less mana (rank 8 180 -> 120) and no downranking penalty (ranks 1-3 .123/.231/.443 -> .429/.486/.571). Cast times are Classic's; #450 registers every rank.",
 		"source": "forever",
-		"tooltip": "120 Mana\n2 sec cast\nCauses 62 to 69 Nature damage to the target."
+		"tooltip": "120 Mana\n2 sec cast\nCauses 92 to 102 Nature damage to the target."
+	},
+	"9913": {
+		"ability": "Prowl",
+		"file": "sim/druid/prowl.go",
+		"note": "Client 70009: rank 3, 30% slower, as in Classic Era. Cast before the pull only. The first hit or spell ends it; the rotation gets to open before a white swing would.",
+		"source": "classic"
 	}
 }

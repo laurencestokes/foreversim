@@ -3,13 +3,9 @@ package paladin
 import (
 	"fmt"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
-
-// The damage spell each rank fires on a hit. They sit in SealOfFuryTriggered in the order the
-// client lists them, not by rank, so the pairing is by hand.
-var sealOfFuryProcIDs = map[int32]int32{1: 1311647, 2: 1311654, 3: 20231, 4: 20415, 5: 20416, 6: 20417, 7: 20418}
 
 // Seal of Fury
 // https://www.wowhead.com/forever/spell=20423
@@ -21,38 +17,41 @@ var sealOfFuryProcIDs = map[int32]int32{1: 1311647, 2: 1311654, 3: 20231, 4: 204
 // Unleashing this Seal's energy causes Holy damage to an enemy and taunts the target to attack
 // you for 4 sec.
 //
-// The row's Direct is the proc spell the tooltip renders the per-hit damage from: a flat number
-// with a 10% coefficient, read as the tooltip says. The seal also carries a weapon-speed dummy in
-// Seal of Righteousness's shape that the tooltip never references, and it is left alone. The
-// taunt has no place in the sim.
-func (paladin *Paladin) registerSealOfFury(row shared.SpellData) {
-	judgementRow := spellData.SealOfFuryTriggered.BySpellID(int32(effectAt(row, 2).Value))
+// The per-hit damage is the spell the tooltip names first, a flat number with a 10% coefficient,
+// read as the tooltip says; the seal's third effect names its judgement. The seal also carries a
+// weapon-speed dummy in Seal of Righteousness's shape that the tooltip never references, and it
+// is left alone. The taunt has no place in the sim.
+func (paladin *Paladin) registerSealOfFury(_ int32, rank *spelldata.Spell) {
+	judgementRank := spellData.SealOfFuryTriggered.ByID(int32(rank.EffectN(3).BaseValue()))
+	judgementDamage := judgementRank.DamageEffect()
+	procRank := rank.Refs()[0]
+	procDamage := procRank.DamageEffect()
 
 	// Melee in SpellCategories with No Active Defense: hit and crit on the melee table, never
 	// dodged, parried or blocked.
 	judgement := paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: judgementRow.SpellID},
-		SpellSchool:    judgementRow.SpellSchool,
-		DefenseType:    judgementRow.DefenseType,
+		ActionID:       core.ActionID{SpellID: judgementRank.ID},
+		SpellSchool:    judgementRank.SpellSchool(),
+		DefenseType:    judgementRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
 		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagBinary,
 		ClassSpellMask: SpellMaskJudgementOfFury,
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		BonusCoefficient: judgementRow.Direct.BonusCoefficient(),
+		BonusCoefficient: judgementDamage.Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, judgementRow.Direct.Damage(sim), spell.OutcomeMeleeSpecialNoBlockDodgeParry)
+			spell.CalcAndDealDamage(sim, target, judgementDamage.Roll(sim, core.CharacterLevel), spell.OutcomeMeleeSpecialNoBlockDodgeParry)
 		},
 	})
 
-	shieldShare := effectAt(row, 1).Value / 100
+	shieldShare := rank.EffectN(2).Percent()
 	var pendingShield float64
 	shield := paladin.NewDamageAbsorptionAura(core.AbsorptionAuraConfig{
 		Aura: core.Aura{
-			Label:    fmt.Sprintf("Seal of Fury Shield%s Rank %d", paladin.Label, row.Rank),
-			ActionID: core.ActionID{SpellID: row.SpellID}.WithTag(1),
+			Label:    fmt.Sprintf("Seal of Fury Shield%s Rank %d", paladin.Label, rank.RankNumber()),
+			ActionID: core.ActionID{SpellID: rank.ID}.WithTag(1),
 			Duration: sealDuration,
 		},
 		ShieldStrengthCalculator: func(_ *core.Unit) float64 {
@@ -61,9 +60,9 @@ func (paladin *Paladin) registerSealOfFury(row shared.SpellData) {
 	})
 	paladin.applyImprovedSealOfFury(shield)
 
-	damage := shared.SpellDataMin(row.Direct)
+	damage := procDamage.Average(core.CharacterLevel)
 	procSpell := paladin.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: sealOfFuryProcIDs[row.Rank]},
+		ActionID:    core.ActionID{SpellID: procRank.ID},
 		SpellSchool: core.SpellSchoolHoly,
 		DefenseType: core.DefenseTypeMelee,
 		ProcMask:    core.ProcMaskMeleeMHSpecial,
@@ -74,7 +73,7 @@ func (paladin *Paladin) registerSealOfFury(row shared.SpellData) {
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		BonusCoefficient: shared.SpellDataCoef(row.Direct),
+		BonusCoefficient: procDamage.Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			result := spell.CalcDamage(sim, target, damage, spell.OutcomeMeleeSpecialCritOnly)
@@ -93,9 +92,9 @@ func (paladin *Paladin) registerSealOfFury(row shared.SpellData) {
 	})
 
 	aura := paladin.makeSealExclusive(paladin.MakeProcTriggerAura(core.ProcTrigger{
-		Name:            sealLabel("Seal of Fury", paladin, row),
-		ActionID:        core.ActionID{SpellID: row.SpellID},
-		MetricsActionID: core.ActionID{SpellID: row.SpellID},
+		Name:            sealLabel("Seal of Fury", paladin, rank),
+		ActionID:        core.ActionID{SpellID: rank.ID},
+		MetricsActionID: core.ActionID{SpellID: rank.ID},
 		Duration:        sealDuration,
 		Callback:        core.CallbackOnSpellHitDealt,
 		ProcMask:        core.ProcMaskMeleeWhiteHit,
@@ -106,7 +105,7 @@ func (paladin *Paladin) registerSealOfFury(row shared.SpellData) {
 	}))
 
 	paladin.registerSealSpell(&sealConfig{
-		row:       row,
+		rank:      rank,
 		classMask: SpellMaskSealOfFury,
 		aura:      aura,
 		judgement: judgement,

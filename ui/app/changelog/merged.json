@@ -1,5 +1,593 @@
 [
 	{
+		"number": 555,
+		"title": "talents: mage and druid stub notes read the client instead of \"to be implemented\"",
+		"mergedAt": "2026-09-29",
+		"url": "https://github.com/ElliotWood/Forever/pull/555"
+	},
+	{
+		"number": 554,
+		"title": "druid: Innervate's mana is regen, not a gain, so it makes no threat",
+		"mergedAt": "2026-09-29",
+		"url": "https://github.com/ElliotWood/Forever/pull/554"
+	},
+	{
+		"number": 553,
+		"title": "stats: dodge from agility for rogues, hunters and shamans follows Classic",
+		"mergedAt": "2026-09-29",
+		"url": "https://github.com/ElliotWood/Forever/pull/553"
+	},
+	{
+		"number": 552,
+		"title": "Forever client build 1.60.1.70094",
+		"mergedAt": "2026-09-29",
+		"url": "https://github.com/ElliotWood/Forever/pull/552"
+	},
+	{
+		"number": 551,
+		"title": "Wowhead Forever data changed (2026-09-29)",
+		"mergedAt": "2026-09-29",
+		"url": "https://github.com/ElliotWood/Forever/pull/551"
+	},
+	{
+		"number": 550,
+		"title": "Windfury Totem procs as the client's party aura (10612), not Era's weapon enchant",
+		"mergedAt": "2026-09-29",
+		"url": "https://github.com/ElliotWood/Forever/pull/550"
+	},
+	{
+		"number": 549,
+		"title": "[DB] Update to 1.60.1.70009 with hotfixes as of 2026-09-29",
+		"mergedAt": "2026-09-29",
+		"url": "https://github.com/ElliotWood/Forever/pull/549"
+	},
+	{
+		"number": 548,
+		"title": "shaman: Windfury Weapon grants 2 real extra swings (client rows)",
+		"mergedAt": "2026-09-29",
+		"url": "https://github.com/ElliotWood/Forever/pull/548"
+	},
+	{
+		"number": 547,
+		"title": "talents: replace five stale \"to be implemented\" notes with the client's reading",
+		"mergedAt": "2026-09-29",
+		"url": "https://github.com/ElliotWood/Forever/pull/547"
+	},
+	{
+		"number": 546,
+		"title": "rogue: Kidney Shot castable, Improved Kidney Shot applied (client rows)",
+		"mergedAt": "2026-09-29",
+		"url": "https://github.com/ElliotWood/Forever/pull/546"
+	},
+	{
+		"number": 545,
+		"title": "priest: Dark Sacrifice simulated (client row + beta log)",
+		"mergedAt": "2026-09-29",
+		"url": "https://github.com/ElliotWood/Forever/pull/545"
+	},
+	{
+		"number": 544,
+		"title": "priest: Chastise simulated from the client rows",
+		"mergedAt": "2026-09-29",
+		"url": "https://github.com/ElliotWood/Forever/pull/544"
+	},
+	{
+		"number": 543,
+		"title": "warlock: Bane of Havoc copies 15% of damage to the baned target (client row)",
+		"mergedAt": "2026-09-29",
+		"url": "https://github.com/ElliotWood/Forever/pull/543"
+	},
+	{
+		"number": 542,
+		"title": "hunter: Bears cast Swipe on 3+ enemies (client row)",
+		"mergedAt": "2026-09-29",
+		"url": "https://github.com/ElliotWood/Forever/pull/542"
+	},
+	{
+		"number": 541,
+		"title": "hunter: Gorillas cast Thunderstomp (client rows)",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/541"
+	},
+	{
+		"number": 540,
+		"title": "hunter: Tallstriders cast Dust Cloud (client rows)",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/540"
+	},
+	{
+		"number": 539,
+		"title": "hunter: Owls cast Mine!, Hyenas Tendon Rip (client rows)",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/539"
+	},
+	{
+		"number": 538,
+		"title": "hunter: Crab pets cast Pinch, Crocolisks Dismember (client rows)",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/538"
+	},
+	{
+		"number": 537,
+		"title": "rogue: beta logs confirm Garrote's 3% attack power a tick",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/537"
+	},
+	{
+		"number": 536,
+		"title": "warlock: beta logs confirm Bane of Agony ramp and low-rank DoT coefficients",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/536"
+	},
+	{
+		"number": 535,
+		"title": "warlock: Demonic Brand hit is Fire for the Imp, and pet spells spend it",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/535"
+	},
+	{
+		"number": 534,
+		"title": "warrior: Thunder Clap ignores armor (beta logs)",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/534"
+	},
+	{
+		"number": 533,
+		"title": "rogue: Rupture's attack power share checked against beta logs",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/533"
+	},
+	{
+		"number": 532,
+		"title": "evidence: Rip's attack power share checked against beta logs",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/532"
+	},
+	{
+		"number": 531,
+		"title": "[DB] Update to 1.60.1.70009 with hotfixes as of 2026-09-28",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/531"
+	},
+	{
+		"number": 530,
+		"title": "Eviscerate's attack power share checked against beta logs (evidence text only)",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/530"
+	},
+	{
+		"number": 529,
+		"title": "warrior: Thunder Clap and Revenge threat measured in the beta",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/529"
+	},
+	{
+		"number": 528,
+		"title": "Thunder Clap threat is its damage, not Classic's 2.5x (in-game measurement)",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/528"
+	},
+	{
+		"number": 527,
+		"title": "Frostbrand Weapon procs 8 times a minute, not Classic's 9 (beta combat log)",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/527"
+	},
+	{
+		"number": 526,
+		"title": "ui: talents and spells Forever renamed show their Forever names",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/526"
+	},
+	{
+		"number": 525,
+		"title": "ui: Master of Defense's rage shows under its own name",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/525"
+	},
+	{
+		"number": 524,
+		"title": "Rend adds 2% of attack power to every tick (beta combat logs)",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/524"
+	},
+	{
+		"number": 523,
+		"title": "Ravage and Prowl simulated; the cat rotation opens with Ravage",
+		"mergedAt": "2026-09-28",
+		"url": "https://github.com/ElliotWood/Forever/pull/523"
+	},
+	{
+		"number": 522,
+		"title": "Revenge adds 25% of attack power (beta combat logs)",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/522"
+	},
+	{
+		"number": 521,
+		"title": "Frostfire Bolt simulated from the client rows",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/521"
+	},
+	{
+		"number": 520,
+		"title": "Seal of Righteousness per-hit damage checked against beta combat logs",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/520"
+	},
+	{
+		"number": 519,
+		"title": "Omen of Clarity: spells under 1.5 s roll on their own cast time",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/519"
+	},
+	{
+		"number": 518,
+		"title": "Omen of Clarity: specials proc off the paw's swing, not the weapon's",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/518"
+	},
+	{
+		"number": 517,
+		"title": "Flurry Axe and Electrified Dagger procs simulated",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/517"
+	},
+	{
+		"number": 516,
+		"title": "Fiery Weapon and Lifestealing weapon enchants simulated",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/516"
+	},
+	{
+		"number": 515,
+		"title": "Sword of Zeal and Argent Avenger procs simulated from their client rows",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/515"
+	},
+	{
+		"number": 514,
+		"title": "Three life-drain weapon procs simulated: Shadowstrike, Cruel Hand of Timmy, Skullforge Reaver",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/514"
+	},
+	{
+		"number": 513,
+		"title": "Eight Classic weapon procs simulated at Armaments Discord rates",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/513"
+	},
+	{
+		"number": 512,
+		"title": "Stinging Viper's Poison proc simulated, rate measured in beta logs",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/512"
+	},
+	{
+		"number": 511,
+		"title": "[DB] Update to 1.60.1.70009 with hotfixes as of 2026-09-27",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/511"
+	},
+	{
+		"number": 510,
+		"title": "SAF-T / EZ-Thro bombs in the explosives slot, for everyone",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/510"
+	},
+	{
+		"number": 509,
+		"title": "Ez-Thro Dynamite II and Crystal Charge no longer need Engineering",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/509"
+	},
+	{
+		"number": 508,
+		"title": "feat(arena): filter pill per external sim",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/508"
+	},
+	{
+		"number": 507,
+		"title": "Scroll of Cryoblast: mages can use it from the explosives slot",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/507"
+	},
+	{
+		"number": 506,
+		"title": "Deep Wounds: weapon damage without attack power, refresh keeps what was owed (beta logs)",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/506"
+	},
+	{
+		"number": 505,
+		"title": "Raptor pets cast Savage Rend, Forever's new Raptor bleed",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/505"
+	},
+	{
+		"number": 504,
+		"title": "Venomstrike's Venom Shot proc simulated, rate measured in beta logs",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/504"
+	},
+	{
+		"number": 503,
+		"title": "Wolfsbane's Blazewind Blast proc simulated, rate measured in beta logs",
+		"mergedAt": "2026-09-27",
+		"url": "https://github.com/ElliotWood/Forever/pull/503"
+	},
+	{
+		"number": 502,
+		"title": "Barbaric Crossbow and Plaguefang procs, rates measured in beta logs",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/502"
+	},
+	{
+		"number": 501,
+		"title": "Defias Leather set bonuses simulated, including the 4 piece bleed",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/501"
+	},
+	{
+		"number": 500,
+		"title": "Seal of Command's 7 procs a minute checked against beta combat logs",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/500"
+	},
+	{
+		"number": 499,
+		"title": "Items below item level 50 get their procs and on-use effects simulated",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/499"
+	},
+	{
+		"number": 498,
+		"title": "[DB] Update to 1.60.1.70009 with hotfixes as of 2026-09-26",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/498"
+	},
+	{
+		"number": 497,
+		"title": "Stormshroud Armor and Volcanic Armor procs roll the client's doubled chance",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/497"
+	},
+	{
+		"number": 496,
+		"title": "spelldata: every evidence tooltip's numbers must come from the client store",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/496"
+	},
+	{
+		"number": 495,
+		"title": "Druid: Faerie Fire is free in Cat and Bear Form, with a 1 sec global cooldown in Cat Form",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/495"
+	},
+	{
+		"number": 494,
+		"title": "Hunter: Lightning Breath drops the spell power coefficient the client removed; four Classic rows sourced",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/494"
+	},
+	{
+		"number": 493,
+		"title": "site: the combat log is a measurement too; changelog points at the evidence page",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/493"
+	},
+	{
+		"number": 492,
+		"title": "site: drop stale provenance text from the rankings page and the homepage",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/492"
+	},
+	{
+		"number": 491,
+		"title": "Inspiration: read the client's 8/17/25% curve and buff 14893",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/491"
+	},
+	{
+		"number": 490,
+		"title": "evidence: beta logs side with Ice Lance's .143; Flurry takes its place in the asks",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/490"
+	},
+	{
+		"number": 489,
+		"title": "Hunter: Arcane Shot and Serpent Sting scale with ranged attack power",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/489"
+	},
+	{
+		"number": 488,
+		"title": "Fire Nova: hit through 408428, the spell the game casts, not 11307",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/488"
+	},
+	{
+		"number": 487,
+		"title": "Flametongue Weapon: read the client's damage, not TBC's 35 a second",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/487"
+	},
+	{
+		"number": 486,
+		"title": "[DB] Update to 1.60.1.70009 with hotfixes as of 2026-09-26",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/486"
+	},
+	{
+		"number": 485,
+		"title": "evidence: beta combat logs show Arcane Shot and Serpent Sting outgrow their base damage",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/485"
+	},
+	{
+		"number": 484,
+		"title": "rogue: Hack and Slash reads its 200 ms proc cooldown from the client",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/484"
+	},
+	{
+		"number": 483,
+		"title": "Evidence: Dire Bear Form threat is in the client; Wowhead's bigger numbers are max-level",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/483"
+	},
+	{
+		"number": 482,
+		"title": "data-watch: ignore list reordering in the Wowhead diff",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/482"
+	},
+	{
+		"number": 481,
+		"title": "arena: Wowhead talent links use hash version v2",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/481"
+	},
+	{
+		"number": 480,
+		"title": "site: beta checklist links point at docs/beta-pass",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/480"
+	},
+	{
+		"number": 479,
+		"title": "evidence: re-audit the spell manifest against the official engine and client 70009",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/479"
+	},
+	{
+		"number": 478,
+		"title": "changelog: catch the hand-written entries up from #215 to #476",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/478"
+	},
+	{
+		"number": 477,
+		"title": "ci: restore TestProtoVersioning.results; update-tests keeps skipped tests' goldens",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/477"
+	},
+	{
+		"number": 476,
+		"title": "[DB] Update to 1.60.1.70009 with hotfixes as of 2026-09-26",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/476"
+	},
+	{
+		"number": 475,
+		"title": "ci(update-db): daily, fully automatic client data updates",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/475"
+	},
+	{
+		"number": 474,
+		"title": "site: replace the WoWSims logo with Blizzard game art",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/474"
+	},
+	{
+		"number": 473,
+		"title": "site: homepage title reads WoW Forever / Sim",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/473"
+	},
+	{
+		"number": 472,
+		"title": "Wowhead Forever data changed (2026-09-26)",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/472"
+	},
+	{
+		"number": 471,
+		"title": "site: hide the build arena and damage comparison from the homepage",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/471"
+	},
+	{
+		"number": 470,
+		"title": "landing: Forever key art and light-blue palette instead of TBC's Illidan and fel green",
+		"mergedAt": "2026-09-26",
+		"url": "https://github.com/ElliotWood/Forever/pull/470"
+	},
+	{
+		"number": 469,
+		"title": "buffs: Trueshot Aura grants rank 4's 75 ranged attack power",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/469"
+	},
+	{
+		"number": 468,
+		"title": "evidence: settle Eye for an Eye, drop stale guesses, record new leads",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/468"
+	},
+	{
+		"number": 467,
+		"title": "mage: Improved Cone of Cold and Improved Frost Nova",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/467"
+	},
+	{
+		"number": 466,
+		"title": "shaman: the talented Mana Tide Totem restores the party's mana",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/466"
+	},
+	{
+		"number": 465,
+		"title": "warlock: Demonic Pact keeps a pre-pull sacrifice",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/465"
+	},
+	{
+		"number": 464,
+		"title": "priest: Penance bolts land on cast and at 1 and 2 sec",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/464"
+	},
+	{
+		"number": 463,
+		"title": "ci(upstream): skip quietly while wowsims/forever is unreachable",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/463"
+	},
+	{
+		"number": 462,
+		"title": "arena: declutter the page for phones",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/462"
+	},
+	{
+		"number": 461,
+		"title": "priest: Improved Healing discounts Penance",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/461"
+	},
+	{
+		"number": 460,
+		"title": "consumables: rage potion for the melee list; fix rogue/enh panic and druids potting out of form",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/460"
+	},
+	{
+		"number": 459,
+		"title": "Merge wowsims/forever master (7d9f1559e) into master",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/459"
+	},
+	{
+		"number": 458,
+		"title": "arena: raider's consumables for every role (mana for casters/hunter, rage potion for melee) + two potion bugs",
+		"mergedAt": "2026-09-25",
+		"url": "https://github.com/ElliotWood/Forever/pull/458"
+	},
+	{
 		"number": 456,
 		"title": "core: drop the 200 aura cap that broke full-raid sims",
 		"mergedAt": "2026-09-25",

@@ -38,14 +38,14 @@
 	--color-cancel-hover: #ea937d;
 	--color-cancel-active: #eb9985;
 
-	--color-brand: #e0a335;
-	--color-expansion: #23c88c;
+	--color-brand: #a9cfe7;
+	--color-expansion: #f3eee2;
 
 	--color-evidence-measured: #6dbf6d;
 	--color-evidence-forever: #4a7fb5;
 	--color-evidence-classic: var(--color-gray-600);
 	--color-evidence-core: #8a7f6d;
-	--color-evidence-assumed: var(--color-brand);
+	--color-evidence-assumed: #e0a335;
 
 	--color-muted: #212529bf;
 	--color-link: #a5b1d6;

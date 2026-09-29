@@ -202,7 +202,7 @@ func SynthPowerInfusionsAura(unit *core.Unit, isPlayer bool, talentPoints int32)
 	return newBuff(unit, synthPowerInfusionsMeta, isPlayer, talentPoints)
 }
 
-// func SynthAbsentAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura // totem_twisting, KindAbsent: the client has no row for it
+// func SynthAbsentAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura // totem_twisting, KindFlag: the client has no row for it
 
 // Atiesh - Mage
 var synthAtieshMageSpell = spelldata.MustFind(28142)

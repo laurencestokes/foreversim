@@ -10,7 +10,9 @@ import (
 // on a 12 second cooldown. Only the level 60 rank is registered, the one the rotation casts.
 //
 // The client's rank 3 bolt (180) is larger than rank 4's (131); the table is taken as it is. The
-// bolts land at 0/1/2 sec in game, the sim spreads them evenly over the channel.
+// bolts land "instantly and every 1 sec for 2 sec" (1316995's tooltip): the channel 1316994 lasts
+// 2000 ms, fires 1316993 every 1000 ms and ticks on application (attribute 5, 0x200). So one bolt on
+// cast and two channel ticks.
 const PenanceTicks = 3
 
 func (priest *Priest) registerPenanceSpell() {
@@ -47,8 +49,8 @@ func (priest *Priest) registerPenanceSpell() {
 			Aura: core.Aura{
 				Label: "Penance",
 			},
-			NumberOfTicks:       PenanceTicks,
-			TickLength:          time.Second * 2 / PenanceTicks,
+			NumberOfTicks:       PenanceTicks - 1,
+			TickLength:          time.Second,
 			AffectedByCastSpeed: false,
 			BonusCoefficient:    bolt.DamageEffect().Coeff(),
 
@@ -64,7 +66,9 @@ func (priest *Priest) registerPenanceSpell() {
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			result := spell.CalcOutcome(sim, target, spell.OutcomeMagicHitNoHitCounter)
 			if result.Landed() {
-				spell.Dot(target).Apply(sim)
+				dot := spell.Dot(target)
+				dot.Apply(sim)
+				dot.TickOnce(sim)
 			}
 			spell.DealOutcome(sim, result)
 		},

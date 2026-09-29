@@ -37,12 +37,12 @@ func TestBuffFilesRegenerateFromTheCommittedInputs(t *testing.T) {
 
 func TestResolvedBuffInvariants(t *testing.T) {
 	rows := resolveCommittedBuffs(t)
-	if len(rows) != len(buffmanifest.Manifest) {
-		t.Fatalf("resolved %d rows for a manifest of %d", len(rows), len(buffmanifest.Manifest))
+	if len(rows) != len(buffmanifest.All()) {
+		t.Fatalf("resolved %d rows for a manifest of %d", len(rows), len(buffmanifest.All()))
 	}
 
 	for _, row := range rows {
-		if row.Kind == buffmanifest.KindAbsent || row.Kind == buffmanifest.KindFlag {
+		if row.Kind == buffmanifest.KindFlag {
 			if row.SpellID != 0 {
 				t.Errorf("%s: %s resolved to spell %d", row.Field, row.Kind, row.SpellID)
 			}
@@ -122,7 +122,7 @@ func scopeComplaint(row ResolvedBuff) string {
 // point, and the raid config's debuff is the five-point finisher.
 //
 // The paladin auras state a healing-taken row of 0 beside the aura, which the
-// manifest's SkipAuras leaves out.
+// parse leaves out.
 var pinnedAmounts = map[string]map[string]float64{
 	"leader_of_the_pack": {"stat PhysicalCritPercent+SpellCritPercent": 3},
 	"moonkin_aura":       {"stat PhysicalCritPercent+SpellCritPercent": 3},

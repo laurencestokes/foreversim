@@ -1,7 +1,6 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/buffs"
 )
@@ -16,25 +15,27 @@ import (
 // Your melee strikes will refresh the spell's duration. Only one Judgement per Paladin can be
 // active at any one time.
 //
+// The seal's second effect names its judgement (the row has no effect at the client's index 1).
 // Raid bosses are immune to the stun and never flee, so the seal is the aura and the judgement
 // is the debuff, nothing more. Twist of Light still names it, so replacing it leaves an Echo of
 // Justice with nothing to replay.
-func (paladin *Paladin) registerSealOfJustice(row shared.SpellData) {
-	judgementRow := spellData.SealOfJusticeTriggered.BySpellID(int32(effectAt(row, 2).Value))
+func (paladin *Paladin) registerSealOfJustice() {
+	rank := spellData.SealOfJustice.Highest()
+	judgementRank := spellData.SealOfJusticeTriggered.ByID(int32(rank.EffectN(2).BaseValue()))
 	judgementAuras := paladin.newJudgementAuras(func(target *core.Unit) *core.Aura {
 		return target.GetOrRegisterAura(core.Aura{
 			Label:    "Judgement of Justice",
-			ActionID: core.ActionID{SpellID: judgementRow.SpellID},
+			ActionID: core.ActionID{SpellID: judgementRank.ID},
 			Tag:      buffs.JudgementAuraTag,
-			Duration: judgementRow.Duration,
+			Duration: judgementRank.Duration(),
 		})
 	})
 
 	// Melee in SpellCategories and Always Hit: the debuff lands without a roll.
 	judgement := paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: judgementRow.SpellID},
-		SpellSchool:    judgementRow.SpellSchool,
-		DefenseType:    judgementRow.DefenseType,
+		ActionID:       core.ActionID{SpellID: judgementRank.ID},
+		SpellSchool:    judgementRank.SpellSchool(),
+		DefenseType:    judgementRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagMeleeMetrics,
 		ClassSpellMask: SpellMaskJudgementOfJustice,
@@ -51,13 +52,13 @@ func (paladin *Paladin) registerSealOfJustice(row shared.SpellData) {
 	})
 
 	aura := paladin.makeSealExclusive(paladin.RegisterAura(core.Aura{
-		Label:    sealLabel("Seal of Justice", paladin, row),
-		ActionID: core.ActionID{SpellID: row.SpellID},
+		Label:    sealLabel("Seal of Justice", paladin, rank),
+		ActionID: core.ActionID{SpellID: rank.ID},
 		Duration: sealDuration,
 	}))
 
 	paladin.registerSealSpell(&sealConfig{
-		row:       row,
+		rank:      rank,
 		classMask: SpellMaskSealOfJustice,
 		aura:      aura,
 		judgement: judgement,

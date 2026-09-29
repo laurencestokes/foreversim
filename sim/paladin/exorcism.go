@@ -1,9 +1,9 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 var ExorcismRankMap = spellData.Exorcism
@@ -16,38 +16,40 @@ var ExorcismRankMap = spellData.Exorcism
 // spellData.Exorcism holds the six trainer ranks, 879 to 10314. The client carries a second ladder,
 // 415068 to 415073, that the Season of Discovery passive Exorcist (415076) swaps onto the action
 // bar so the spell can hit any target; nothing in Forever teaches Exorcist.
-func (paladin *Paladin) registerExorcism(row shared.SpellData) {
+func (paladin *Paladin) registerExorcism(_ int32, rank *spelldata.Spell) {
+	damage := rank.DamageEffect()
+
 	paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: row.SpellID},
-		SpellSchool:    row.SpellSchool,
-		DefenseType:    row.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: SpellMaskExorcism,
-		Rank:           row.Rank,
-		MaxRange:       row.MaxRange,
+		Rank:           rank.RankNumber(),
+		MaxRange:       float64(rank.MaxRange),
 
-		ManaCost: manaCost(row),
+		ManaCost: manaCost(rank),
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
-				GCD: row.GCD,
+				GCD: rank.GCD(),
 			},
 			CD: core.Cooldown{
 				Timer:    paladin.sharedTimer(&paladin.exorcismTimer),
-				Duration: row.Cooldown,
+				Duration: cooldown(rank),
 			},
 		},
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		BonusCoefficient: row.Direct.BonusCoefficient(),
+		BonusCoefficient: damage.Coeff(),
 
 		ExtraCastCondition: func(_ *core.Simulation, target *core.Unit) bool {
 			return target.MobType == proto.MobType_MobTypeUndead || target.MobType == proto.MobType_MobTypeDemon
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, directDamage(sim, row), spell.OutcomeMagicHitAndCrit)
+			spell.CalcAndDealDamage(sim, target, damage.Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 		},
 	})
 }

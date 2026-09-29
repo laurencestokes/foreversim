@@ -27,7 +27,7 @@ test_spelldata() {
     test -f tools/database/wowsims.db || return 0
     hash go 2>&- || return 0
     git diff --cached --name-only --diff-filter=ACM |
-        grep -qE '^(tools/database/|sim/core/spelldata/|assets/db_inputs/spell_store_inputs\.json|sim/common/shared/spell_data_enums_auto_gen\.go|sim/[a-z]+/spell_data_auto_gen\.go|sim/core/buffs/[a-z]+_auto_gen\.go|ui/features/settings/model/buffs_debuffs_auto_gen\.ts|proto/buffs\.proto)' || return 0
+        grep -qE '^(tools/database/|sim/core/spelldata/|assets/db_inputs/spell_store_inputs\.json|sim/[a-z]+/spell_data_auto_gen\.go|sim/core/buffs/[a-z]+_auto_gen\.go|ui/features/settings/model/buffs_debuffs_auto_gen\.ts|proto/buffs\.proto)' || return 0
 
     if ! go run ./tools/database/gen_spelldata -check
     then

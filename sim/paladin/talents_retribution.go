@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/buffs"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
-	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -115,24 +113,24 @@ func (paladin *Paladin) applyVindication() {
 		return
 	}
 
-	row := spellData.VindicationTriggered.HighestRank()
-	points := spellData.Vindication.EffectAt(0).ValueAt(paladin.Talents.Vindication)
+	rank := spellData.VindicationTriggered.Highest()
+	points := spellData.Vindication.EffectAt(1).ValueAt(paladin.Talents.Vindication)
 	// The tooltip's ${$m1/-3*$440667m1}: the trigger's -201 scaled by the points over three.
-	targetAttackPower := row.Effect(shared.A_MOD_ATTACK_POWER, 0).Value * points / 3
+	targetAttackPower := rank.Effect(dbcenums.A_MOD_ATTACK_POWER, 0).Average(core.CharacterLevel) * points / 3
 
 	targetAuras := paladin.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		return target.GetOrRegisterAura(core.Aura{
 			Label:    "Vindication" + paladin.Label,
-			ActionID: core.ActionID{SpellID: row.SpellID},
-			Duration: row.Duration,
+			ActionID: core.ActionID{SpellID: rank.ID},
+			Duration: rank.Duration(),
 		}).AttachStatBuff(stats.AttackPower, targetAttackPower)
 	})
 
 	attackPowerDep := paladin.NewDynamicMultiplyStat(stats.AttackPower, 1+points/100)
 	selfAura := paladin.RegisterAura(core.Aura{
 		Label:    "Vindication" + paladin.Label,
-		ActionID: core.ActionID{SpellID: row.SpellID}.WithTag(1),
-		Duration: row.Duration,
+		ActionID: core.ActionID{SpellID: rank.ID}.WithTag(1),
+		Duration: rank.Duration(),
 	}).AttachStatDependency(attackPowerDep)
 
 	paladin.MakeProcTriggerAura(core.ProcTrigger{
@@ -149,20 +147,20 @@ func (paladin *Paladin) applyVindication() {
 }
 
 // Sanctified Judgement - Gives your Judgement ability a 33/66/100% chance to return 20/40/60% of
-// the Mana cost of the judged seal.
+// the Mana cost of the judged seal. The chance is the first effect, the refund the second.
 func (paladin *Paladin) applySanctifiedJudgement() {
 	if paladin.Talents.SanctifiedJudgement == 0 {
 		return
 	}
 
-	manaMetrics := paladin.NewManaMetrics(core.ActionID{SpellID: spellData.SanctifiedJudgement.HighestRank().SpellID})
-	refund := spellData.SanctifiedJudgement.EffectAt(1).FractionAt(paladin.Talents.SanctifiedJudgement)
+	manaMetrics := paladin.NewManaMetrics(core.ActionID{SpellID: spellData.SanctifiedJudgement.Highest().ID})
+	refund := spellData.SanctifiedJudgement.EffectAt(2).FractionAt(paladin.Talents.SanctifiedJudgement)
 
 	paladin.MakeProcTriggerAura(core.ProcTrigger{
 		Name:               "Sanctified Judgement" + paladin.Label,
 		Callback:           core.CallbackOnCastComplete,
 		ClassSpellMask:     SpellMaskJudgement,
-		ProcChance:         spellData.SanctifiedJudgement.EffectAt(0).FractionAt(paladin.Talents.SanctifiedJudgement),
+		ProcChance:         spellData.SanctifiedJudgement.EffectAt(1).FractionAt(paladin.Talents.SanctifiedJudgement),
 		TriggerImmediately: true,
 		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
 			if seal := paladin.activeSeal(); seal != nil {
@@ -179,12 +177,12 @@ func (paladin *Paladin) applyEyeForAnEye() {
 		return
 	}
 
-	row := spellData.EyeForAnEye.HighestRank()
+	rank := spellData.EyeForAnEye.Highest()
 	share := spellData.EyeForAnEye.FractionAt(paladin.Talents.EyeForAnEye)
 
 	var reflected float64
 	reflect := paladin.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: row.SpellID},
+		ActionID:    core.ActionID{SpellID: rank.ID},
 		SpellSchool: core.SpellSchoolHoly,
 		ProcMask:    core.ProcMaskEmpty,
 		Flags:       core.SpellFlagBinary | core.SpellFlagPassiveSpell | core.SpellFlagIgnoreModifiers,
@@ -216,11 +214,11 @@ func (paladin *Paladin) applyPursuitOfJustice() {
 		return
 	}
 
-	row := spellData.PursuitOfJustice.HighestRank()
+	rank := spellData.PursuitOfJustice.Highest()
 	paladin.NewPassiveMovementSpeedAura(
 		"Pursuit of Justice",
-		core.ActionID{SpellID: row.SpellID},
-		spellData.PursuitOfJustice.Effect(shared.A_MOD_INCREASE_SPEED, 0).FractionAt(paladin.Talents.PursuitOfJustice),
+		core.ActionID{SpellID: rank.ID},
+		spellData.PursuitOfJustice.Effect(dbcenums.A_MOD_INCREASE_SPEED, 0).FractionAt(paladin.Talents.PursuitOfJustice),
 	)
 }
 
@@ -278,7 +276,7 @@ func (paladin *Paladin) applyVengeance() {
 		return
 	}
 
-	row := spellData.VengeanceTriggered.HighestRank()
+	rank := spellData.VengeanceTriggered.Highest()
 	perStack := spellData.Vengeance.FractionAt(paladin.Talents.Vengeance)
 
 	// 20050 is damage done (A79), which never raises a heal.
@@ -291,9 +289,9 @@ func (paladin *Paladin) applyVengeance() {
 
 	vengeance := paladin.RegisterAura(core.Aura{
 		Label:     "Vengeance" + paladin.Label,
-		ActionID:  core.ActionID{SpellID: row.SpellID},
-		Duration:  row.Duration,
-		MaxStacks: int32(spelldata.MustFind(row.SpellID).MaxStack),
+		ActionID:  core.ActionID{SpellID: rank.ID},
+		Duration:  rank.Duration(),
+		MaxStacks: int32(rank.MaxStack),
 		OnGain: func(_ *core.Aura, _ *core.Simulation) {
 			damageMod.Activate()
 		},
@@ -324,7 +322,7 @@ func (paladin *Paladin) applyChampionOfTheLight() {
 		return
 	}
 
-	share := spellData.ChampionOfTheLight.Effect(shared.A_MOD_SPELL_DAMAGE_OF_STAT_PERCENT, 126).FractionAt(paladin.Talents.ChampionOfTheLight)
+	share := spellData.ChampionOfTheLight.Effect(dbcenums.A_MOD_SPELL_DAMAGE_OF_STAT_PERCENT, 126).FractionAt(paladin.Talents.ChampionOfTheLight)
 	paladin.AddStatDependency(stats.Intellect, stats.SpellDamage, share)
 	paladin.AddStatDependency(stats.Intellect, stats.HealingPower, share)
 }
@@ -336,21 +334,21 @@ func (paladin *Paladin) applyInstrumentOfLaw() {
 		return
 	}
 
-	row := spellData.InstrumentOfLaw.HighestRank()
+	rank := spellData.InstrumentOfLaw.Highest()
 
 	paladin.AddStaticMod(core.SpellModConfig{
 		ClassMask: SpellMaskHammerOfWrath,
 		Kind:      core.SpellMod_CastTime_Flat,
-		TimeValue: time.Duration(spellData.InstrumentOfLaw.EffectAt(0).ValueAt(paladin.Talents.InstrumentOfLaw)) * time.Millisecond,
+		TimeValue: time.Duration(spellData.InstrumentOfLaw.EffectAt(1).ValueAt(paladin.Talents.InstrumentOfLaw)) * time.Millisecond,
 	})
 
 	// The client states the threat reduction as a positive number Righteous Fury zeroes.
 	threat := core.MakePermanent(paladin.RegisterAura(core.Aura{
 		Label:    "Instrument of Law" + paladin.Label,
-		ActionID: core.ActionID{SpellID: row.SpellID},
+		ActionID: core.ActionID{SpellID: rank.ID},
 	}).AttachMultiplicativePseudoStatBuff(
 		&paladin.PseudoStats.ThreatMultiplier,
-		1-spellData.InstrumentOfLaw.Effect(shared.A_MOD_THREAT, 127).FractionAt(paladin.Talents.InstrumentOfLaw),
+		1-spellData.InstrumentOfLaw.Effect(dbcenums.A_MOD_THREAT, 127).FractionAt(paladin.Talents.InstrumentOfLaw),
 	))
 
 	paladin.OnSpellRegistered(func(spell *core.Spell) {
@@ -364,7 +362,7 @@ func (paladin *Paladin) applyInstrumentOfLaw() {
 	})
 }
 
-// Twist of Light - Reduces the Mana cost of your Seal spells by 20%. When you replace your Seal of
+// Twist of Light - Reduces the mana cost of your Seal spells by 20%. When you replace your Seal of
 // Command, Seal of Righteousness, Seal of Fury, or Seal of Justice with a different Seal, gain an
 // Echo. Your next melee attack applies the replaced Seal's effects, consuming the Echo.
 //
@@ -375,11 +373,12 @@ func (paladin *Paladin) applyTwistOfLight() {
 		return
 	}
 
-	// 1310735's cost modifier names every seal, plus seal procs and a judgement that cost nothing.
+	// The discount is an A_ADD_PCT_MODIFIER on the cost, so it joins the additive bucket the way
+	// Swift Judgement's does.
 	paladin.AddStaticMod(core.SpellModConfig{
 		ClassMask:  SpellMaskAllSeals,
 		Kind:       core.SpellMod_PowerCost_Pct_Add,
-		FloatValue: spellData.TwistOfLight.Effect(shared.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(1),
+		FloatValue: spellData.TwistOfLight.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(1),
 	})
 
 	paladin.echoes = map[int32]*sealEcho{}

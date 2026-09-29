@@ -44,9 +44,14 @@ export const AfflictionOptions = WarlockOptions.create({
 	},
 });
 
-// Demonic Pact keeps the Succubus out for Master Demonologist and Soul Link. Master also
-// sacrifices a Voidwalker beside it; one demon is all this engine models.
-export const DemonicPactOptions = AfflictionOptions;
+// Demonic Pact keeps the Succubus out for Master Demonologist and Soul Link, and keeps the buff of
+// an Imp sacrificed before the pull (+15% Shadow), which beats Master's Voidwalker (mana) by ~7%.
+export const DemonicPactOptions = WarlockOptions.create({
+	classOptions: {
+		...AfflictionOptions.classOptions!,
+		pactSacrifice: WarlockOptions_Summon.Imp,
+	},
+});
 
 export const DefaultConsumables = ConsumesSpec.create({
 	flaskId: 13512, // Flask of Supreme Power

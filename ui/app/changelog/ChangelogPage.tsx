@@ -1,4 +1,4 @@
-import { PageSection, ProductPage, SITE_REPO_URL } from '../ProductPage';
+import { PageSection, ProductPage, SITE_BASE, SITE_REPO_URL } from '../ProductPage';
 import { type Entry, sections, type Source } from './entries';
 // Every pull request merged into master, kept current by the Update Changelog workflow.
 import merged from './merged.json';
@@ -59,14 +59,12 @@ export const ChangelogPage = () => (
 		subtitle="Every way this simulator differs from the Classic Era sim it was forked from, what each change does to the numbers, and where the Forever information came from.">
 		<PageSection title="Read this first">
 			<p className="m-0">
-				<strong className="text-brand">Sources.</strong> Forever is not out. What is modelled here was read from Blizzard&apos;s BlizzCon 2026
-				announcements and panel, Wowhead&apos;s Forever guides, the community talent calculators rebuilt from the demo&apos;s tooltips, and reports from
-				people who played the demo. Each entry below links the source it came from; where the source was a demo tooltip the sim carries a{' '}
-				<code>TODO</code> for the beta pass, all of them listed in{' '}
-				<a href={`${SITE_REPO_URL}/blob/master/docs/forever_beta_checklist.md`} target="_blank" rel="noreferrer">
-					the beta checklist
-				</a>
-				. The beta opens on 17 September; expect numbers to move.
+				<strong className="text-brand">Sources.</strong> Forever is not out. Until the beta, what was modelled here was read from Blizzard&apos;s
+				BlizzCon 2026 announcements and panel, Wowhead&apos;s Forever guides, the community talent calculators rebuilt from the demo&apos;s tooltips,
+				and reports from people who played the demo. Since 17 September the numbers come from the beta client&apos;s own data, now pulled from
+				Blizzard&apos;s CDN every day with its hotfixes. Each entry below links the source it came from; what the client still does not settle is
+				listed, with what would settle it, on the <a href={`${SITE_BASE}evidence/`}>evidence page</a>. The beta is still changing; expect numbers to
+				move.
 			</p>
 			<p className="m-0">
 				<strong className="text-brand">Where to read more.</strong> Each change links its pull request, which carries the full reasoning and the before
@@ -74,7 +72,7 @@ export const ChangelogPage = () => (
 				<a href={`${SITE_REPO_URL}/blob/master/docs/forever_rules.md`} target="_blank" rel="noreferrer">
 					the rules sheet
 				</a>
-				.
+				, written for the engine this sim ran on before the September switch.
 			</p>
 		</PageSection>
 		{sections.map(section => (

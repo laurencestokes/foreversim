@@ -1,8 +1,8 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core/buffs"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 var ShadowResistanceAuraRankMap = spellData.ShadowResistanceAura
@@ -13,8 +13,8 @@ var ShadowResistanceAuraRankMap = spellData.ShadowResistanceAura
 // Gives 60 additional Shadow resistance to all party and raid members within 30 yards. Players
 // may only have one Aura on them per Paladin at any one time.
 func (paladin *Paladin) registerShadowResistanceAura() {
-	ShadowResistanceAuraRankMap.RegisterAll(func(row shared.SpellData) {
-		aura := buffs.ShadowResistanceAura(&paladin.Character, true, auraRank(row))
-		paladin.registerAuraSpell(row, aura, SpellMaskShadowResistanceAura)
+	ShadowResistanceAuraRankMap.Each(func(_ int32, rank *spelldata.Spell) {
+		aura := buffs.ShadowResistanceAura(&paladin.Character, true, auraRank(rank))
+		paladin.registerAuraSpell(rank, aura, SpellMaskShadowResistanceAura)
 	})
 }

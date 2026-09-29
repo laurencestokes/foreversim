@@ -1,8 +1,8 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 var HammerOfWrathRankMap = spellData.HammerOfWrath
@@ -12,30 +12,32 @@ var HammerOfWrathRankMap = spellData.HammerOfWrath
 //
 // Hurls a hammer that strikes an enemy for 498 Holy damage. Only usable on enemies that have 20%
 // or less health.
-func (paladin *Paladin) registerHammerOfWrath(row shared.SpellData) {
+func (paladin *Paladin) registerHammerOfWrath(_ int32, rank *spelldata.Spell) {
+	damage := rank.DamageEffect()
+
 	paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: row.SpellID},
-		SpellSchool:    row.SpellSchool,
-		DefenseType:    row.DefenseType,
+		ActionID:       core.ActionID{SpellID: rank.ID},
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskRangedSpecial,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: SpellMaskHammerOfWrath,
-		Rank:           row.Rank,
-		MaxRange:       row.MaxRange,
-		MissileSpeed:   row.MissileSpeed,
+		Rank:           rank.RankNumber(),
+		MaxRange:       float64(rank.MaxRange),
+		MissileSpeed:   float64(rank.Speed),
 
-		ManaCost: manaCost(row),
+		ManaCost: manaCost(rank),
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
 				// The client's 1s GCD sits at core's floor, so it is named as the floor too or
 				// GCDTime clamps it.
-				GCDMin:   row.GCD,
-				GCD:      row.GCD,
-				CastTime: row.CastTime,
+				GCDMin:   rank.GCD(),
+				GCD:      rank.GCD(),
+				CastTime: rank.CastTime(),
 			},
 			CD: core.Cooldown{
 				Timer:    paladin.sharedTimer(&paladin.hammerOfWrathTimer),
-				Duration: row.Cooldown,
+				Duration: cooldown(rank),
 			},
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
 				// Only a cast pauses the swing; once Instrument of Law makes it instant, stopping
@@ -48,14 +50,14 @@ func (paladin *Paladin) registerHammerOfWrath(row shared.SpellData) {
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
-		BonusCoefficient: row.Direct.BonusCoefficient(),
+		BonusCoefficient: damage.Coeff(),
 
 		ExtraCastCondition: func(sim *core.Simulation, _ *core.Unit) bool {
 			return sim.IsExecutePhase20()
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, directDamage(sim, row), spell.OutcomeRangedHitAndCrit)
+			result := spell.CalcDamage(sim, target, damage.Roll(sim, core.CharacterLevel), spell.OutcomeRangedHitAndCrit)
 			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
 				spell.DealDamage(sim, result)
 			})

@@ -10,14 +10,14 @@ import { CURRENT_API_VERSION } from '@sim/constants/other';
 import type { PlayerSpec } from '@sim/player/player_spec';
 import { PlayerSpecs } from '@sim/player/specs';
 import { textClassNameForSpec } from '@sim/proto/utils';
-import type { Composition } from '@sim/spells/rests';
+import { type Composition, unsettledShare } from '@sim/spells/rests';
 import { classTalentsConfig } from '@sim/talents/factory';
 import { formatToNumber, formatToPercent } from '@sim/utils/format';
 import clsx from 'clsx';
 import pako from 'pako';
-import { useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 
-import { PageSection, ProductPage, SITE_BASE, SITE_REPO_URL } from '../ProductPage';
+import { ProductPage, SITE_BASE, SITE_REPO_URL } from '../ProductPage';
 import { RestsCell } from '../RestsCell';
 import results from './results.json';
 
@@ -84,6 +84,11 @@ export const talentLink = (spec: PlayerSpec<any>, talents: string) => {
 	return `${spec.simLink}?i=t#${btoa(String.fromCharCode(...bytes))}`;
 };
 
+// The same talents on Wowhead's Forever calculator, which reads the same digits in the same order. The v2 is
+// Wowhead's hash version: it bumps it when the trees change and silently drops links on the old one.
+export const wowheadLink = (spec: PlayerSpec<any>, talents: string) =>
+	`https://www.wowhead.com/forever/talent-calc/${PlayerSpecs.getPlayerClass(spec).friendlyName.toLowerCase()}/v2${talents}`;
+
 // The tree a build puts most points in, which is what "a Fury build" means. A tie goes to the
 // earlier tree.
 const mainTree = (build: Build) => {
@@ -137,177 +142,202 @@ const displayName = (build: Build) => (build.optimised ? build.build.replace(/\s
 const specName = (spec: string) => SPECS[spec]?.name ?? spec;
 const consumablesName = (list: string) => (list || 'unknown consumables').replace('Arena-', '').replace('+class', ' + class imbues').toLowerCase();
 
+// External sims whose published builds the arena runs. Their builds are named after them, so the
+// first word says where a row came from; add a sim here and it gets its own flag and filter pill.
+const EXTERNAL_SIMS = ['MythicSim'];
+export const sourceOf = (build: Pick<Build, 'build'>) => EXTERNAL_SIMS.find(sim => build.build.startsWith(sim)) ?? '';
+const ALL_SOURCES = EXTERNAL_SIMS.filter(sim => builds.some(b => sourceOf(b) === sim));
+
 const ALL_SPECS = [...new Set(builds.map(b => b.spec))].sort((a, b) => specName(a).localeCompare(specName(b)));
 
 const PILL = 'inline-flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-1 text-sm';
-const TAG = 'mt-0.5 cursor-help self-start rounded-full border px-1.5 text-xs';
-const CELL = 'px-2 py-1 text-left align-middle whitespace-nowrap';
 const SELECT = 'rounded-sm border border-white/18 bg-black px-2 py-1 text-sm text-gray-300';
+const LINK = 'text-brand hover:underline';
 
-const Row = ({ build, rank, top }: { build: Build; rank: number; top: number }) => {
+// The few things worth knowing about a row before opening it. Everything else waits behind the tap.
+export const flags = (build: Build) => {
+	const guessed = build.rests ? unsettledShare(build.rests) : 0;
+	return [
+		!!sourceOf(build) && {
+			label: sourceOf(build),
+			title: `A build from ${sourceOf(build)}, run here as written or searched on from there.`,
+			className: 'border-white/30 text-white/70',
+		},
+		build.rotation.endsWith('_lowrank') && {
+			label: 'low ranks, unconfirmed',
+			title: 'Casts lower spell ranks to save mana. Nobody has confirmed Forever allows that at level 60.',
+			className: 'border-brand text-brand',
+		},
+		guessed >= 0.05 && {
+			label: `${formatToPercent(guessed * 100, { maximumFractionDigits: 0 })} guessed`,
+			title: "This much of the build's damage comes from abilities whose numbers are not confirmed yet.",
+			className: 'border-transparent text-white/50',
+		},
+	].filter(flag => !!flag);
+};
+
+const Detail = ({ label, children }: { label: string; children: ReactNode }) => (
+	<>
+		<dt className="text-white/50">{label}</dt>
+		<dd className="m-0 min-w-0">{children}</dd>
+	</>
+);
+
+const Row = ({ build, rank }: { build: Build; rank: number }) => {
 	const spec = SPECS[build.spec]?.spec;
 	const color = spec ? textClassNameForSpec(spec) : 'text-white';
-	const share = (build.dps / top) * 100;
 	const gain = gains.get(`${key(build)}|${build.talents}`);
 
 	return (
-		<tr className="even:bg-white/3" data-testid="arena-row">
-			<td className={clsx(CELL, 'w-[3ch] text-right text-white/50 tabular-nums')}>{rank}</td>
-			<td className={CELL}>
-				{spec && <img className="mr-2 inline-block size-8 align-middle" src={spec.getIcon('medium')} alt="" />}
-				<span className="inline-flex flex-col align-middle">
-					<span className="text-xs text-white/60">{specName(build.spec)}</span>
-					<span className={clsx('font-semibold', color)}>{displayName(build)}</span>
-					<span className="text-xs text-white/50 tabular-nums">
-						{split(build.talents)} {treeName(build)}
+		<li className="border-b border-surface-border" data-testid="arena-row">
+			<details className="group">
+				<summary className="flex cursor-pointer list-none items-center gap-3 px-2 py-2 hover:bg-white/3">
+					<span className="w-[2ch] shrink-0 text-right text-sm text-white/40 tabular-nums">{rank}</span>
+					{spec && <img className="size-8 shrink-0" src={spec.getIcon('medium')} alt="" />}
+					<span className="flex min-w-0 flex-1 flex-col">
+						<span className={clsx('truncate font-semibold', color)}>{specName(build.spec)}</span>
+						<span className="text-sm text-white/60 tabular-nums">
+							{treeName(build)} {split(build.talents)}
+						</span>
+						{flags(build).length > 0 && (
+							<span className="mt-0.5 flex flex-wrap gap-1">
+								{flags(build).map(flag => (
+									<span key={flag.label} className={clsx('rounded-full border px-1.5 text-xs', flag.className)} title={flag.title}>
+										{flag.label}
+									</span>
+								))}
+							</span>
+						)}
+					</span>
+					<span className="flex shrink-0 flex-col items-end">
+						<span className="text-lg font-semibold tabular-nums">
+							{formatToNumber(build.dps, { maximumFractionDigits: 0 })} <span className="text-xs font-normal text-white/50">DPS</span>
+						</span>
+						{spec && (
+							<a
+								className={clsx(LINK, 'text-sm')}
+								href={wowheadLink(spec, build.talents)}
+								target="_blank"
+								rel="noreferrer"
+								title="Open on Wowhead's Forever talent calculator"
+								data-testid="arena-wowhead-link">
+								Talents ↗
+							</a>
+						)}
+					</span>
+					<span className="shrink-0 text-white/40 transition-transform group-open:rotate-90" aria-hidden>
+						›
+					</span>
+				</summary>
+				<dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 px-2 py-3 text-sm sm:pl-17">
+					<Detail label="Build">
+						{displayName(build)}
+						{build.optimised &&
+							` - found by talent search${gain !== undefined ? `, ${formatToPercent(gain * 100, { maximumFractionDigits: 1, signDisplay: 'always' })} on the best written build` : ''}`}
+					</Detail>
+					<Detail label="Talents">
+						<code className="break-all">{build.talents}</code>
+						{!!build.points && <span className="text-danger"> ({build.points} of 51 points)</span>}
 						{spec && (
 							<>
 								{' · '}
-								<a
-									className="text-brand hover:underline"
-									href={talentLink(spec, build.talents)}
-									target="_blank"
-									rel="noreferrer"
-									title={`${build.talents}
-
-Opens the sim with these talents. Your gear and other settings are kept.`}
-									data-testid="arena-talents-link">
-									open talents in the sim
-								</a>
+								<a className={LINK} href={talentLink(spec, build.talents)} target="_blank" rel="noreferrer" data-testid="arena-talents-link">
+									open in the sim
+								</a>{' '}
+								<span className="text-white/50">(keeps your gear)</span>
 							</>
 						)}
-					</span>
-					{build.optimised && (
-						<span
-							className={clsx(TAG, 'border-brand text-brand')}
-							title={`${build.talents}\n\nClimbed from every distinct build this spec has on file for this gear and rotation.`}>
-							found by search
-							{gain !== undefined && ` ${formatToPercent(gain * 100, { maximumFractionDigits: 1, signDisplay: 'always' })}`}
-						</span>
-					)}
-					{!!build.points && (
-						<span className={clsx(TAG, 'border-danger text-danger')} title="This build does not spend every talent point a level 60 character has.">
-							{build.points} of 51 points
-						</span>
-					)}
-				</span>
-			</td>
-			<td className={clsx(CELL, 'text-sm')}>
-				<span className="block text-gray-300">{build.gear}</span>
-				<span className="block text-white/50">{build.rotation || 'default rotation'}</span>
-				{build.rotation.endsWith('_lowrank') && (
-					<span
-						className={clsx(TAG, 'block border-brand text-brand')}
-						title="Casts lower spell ranks to save mana. The sim gives lower ranks full spell-power scaling, as the beta does at level 20; whether Forever penalises them at level 60 is not yet known.">
-						low ranks, unconfirmed at 60
-					</span>
-				)}
-				<span
-					className="block text-white/50"
-					title="The consumable list this build drank. Every spec in a role drinks the same one; it is set by the arena, not by the spec.">
-					{consumablesName(build.consumables)}
-				</span>
-			</td>
-			<td className={clsx(CELL, 'text-right tabular-nums')}>
-				<span className="block">{build.ilvl ? build.ilvl.toFixed(1) : '?'}</span>
-				{!!build.slots && build.slots < 15 && (
-					<span className="block cursor-help text-xs text-danger" title="This gear set leaves slots empty, so the character is not fully equipped.">
-						{build.slots} slots
-					</span>
-				)}
-			</td>
-			<td className={clsx(CELL, 'text-right tabular-nums')}>{formatToNumber(build.dps, { maximumFractionDigits: 1, minimumFractionDigits: 1 })}</td>
-			<td className={clsx(CELL, 'w-full min-w-40')}>
-				<div className="flex items-center gap-2">
-					<div className="relative h-3 min-w-10 flex-1 bg-white/5">
-						<div className={clsx('absolute inset-y-0 left-0 bg-current', color)} style={{ width: `${share}%` }} />
-					</div>
-					<span className="w-[5ch] shrink-0 text-right tabular-nums">{formatToPercent(share, { maximumFractionDigits: 1 })}</span>
-				</div>
-			</td>
-			<td className={CELL}>
-				<RestsCell rests={build.rests} />
-			</td>
-		</tr>
+					</Detail>
+					<Detail label="Gear">
+						{build.gear}, item level {build.ilvl ? build.ilvl.toFixed(1) : '?'}
+						{!!build.slots && build.slots < 15 && <span className="text-danger"> ({build.slots} slots filled)</span>}
+					</Detail>
+					<Detail label="Rotation">
+						{build.rotation || 'default'}
+						{build.rotation.endsWith('_lowrank') && (
+							<span className="block text-white/60">
+								Drops to lower spell ranks to save mana. The sim scores them at full strength, as the level 20 beta does; nobody has confirmed
+								level 60 does too.
+							</span>
+						)}
+					</Detail>
+					<Detail label="Consumables">{consumablesName(build.consumables)}</Detail>
+					<Detail label="Guessed">
+						<RestsCell rests={build.rests} />
+						<span className="block text-white/60">of the damage rests on unconfirmed numbers</span>
+					</Detail>
+				</dl>
+			</details>
+		</li>
 	);
 };
-
-const Controls = ({
-	showAll,
-	setShowAll,
-	spec,
-	setSpec,
-}: {
-	showAll: boolean;
-	setShowAll: (value: boolean) => void;
-	spec: string;
-	setSpec: (value: string) => void;
-}) => (
-	<div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-		<button className={clsx(PILL, 'border-brand text-white hover:bg-brand/15')} type="button" onClick={() => setShowAll(!showAll)}>
-			{showAll ? 'Show the best build in each tree' : 'Show every talent build'}
-		</button>
-		<select className={SELECT} value={spec} onChange={event => setSpec(event.target.value)} aria-label="Spec">
-			<option value="">Every spec</option>
-			{ALL_SPECS.map(s => (
-				<option key={s} value={s}>
-					{specName(s)}
-				</option>
-			))}
-		</select>
-	</div>
-);
 
 const Leaderboard = () => {
 	const [showAll, setShowAll] = useState(false);
 	const [spec, setSpec] = useState('');
+	// undefined is every source, '' is builds written for this sim, anything else is that external sim.
+	const [source, setSource] = useState<string | undefined>();
 
 	const shown = useMemo(() => {
-		const kept = builds.filter(b => !spec || b.spec === spec);
+		const kept = builds.filter(b => (!spec || b.spec === spec) && (source === undefined || sourceOf(b) === source));
 		return showAll ? kept : bestPerTree(kept);
-	}, [showAll, spec]);
-	const top = shown[0]?.dps || 1;
-	const specCount = new Set(shown.map(b => b.spec)).size;
+	}, [showAll, spec, source]);
 
-	// The one thing a ranking table has to admit when it is not true: that the rows are not
-	// wearing comparable gear. Three item levels is about a fifth of a tier.
+	// Admit it when the rows are not wearing comparable gear. Three item levels is about a fifth of a tier.
 	const levels = shown.map(b => b.ilvl).filter(ilvl => ilvl > 0);
 	const low = Math.min(...levels);
 	const high = Math.max(...levels);
 	const wide = levels.length > 1 && high - low > 3;
 
 	return (
-		<div className="flex flex-col gap-3">
-			<Controls {...{ showAll, setShowAll, spec, setSpec }} />
-			<p className="m-0 text-white/50" data-testid="arena-count">
-				{showAll
-					? `All ${shown.length} talent builds, best first. Each spec wears one gear set throughout, so within a spec only the talents differ.`
-					: `The best build in each talent tree of ${specCount} spec${specCount === 1 ? '' : 's'}: ${shown.length} builds, best first.`}
-			</p>
-			{levels.length > 0 && (
-				<p className={clsx('m-0 text-sm', wide ? 'text-brand' : 'text-white/50')} data-wide={wide || undefined}>
-					These rows span item level {low.toFixed(1)} to {high.toFixed(1)}
-					{wide ? ', so some of the gap between them is gear rather than spec.' : '.'}
-				</p>
-			)}
-			<table className="block w-full border-collapse overflow-x-auto">
-				<thead>
-					<tr className="border-b border-surface-border">
-						<th className={clsx(CELL, 'text-right')}>#</th>
-						<th className={CELL}>Build</th>
-						<th className={CELL}>Gear and rotation</th>
-						<th className={clsx(CELL, 'text-right')}>ilvl</th>
-						<th className={clsx(CELL, 'text-right')}>DPS</th>
-						<th className={CELL}>Share of top</th>
-						<th className={CELL}>Rests on a guess</th>
-					</tr>
-				</thead>
-				<tbody>
-					{shown.map((build, index) => (
-						<Row key={`${key(build)}|${build.talents}|${build.consumables}|${build.build}`} build={build} rank={index + 1} top={top} />
+		<div className="flex w-full max-w-modal-lg flex-col gap-2">
+			<div className="flex flex-wrap items-center gap-2">
+				<select className={SELECT} value={spec} onChange={event => setSpec(event.target.value)} aria-label="Spec">
+					<option value="">Every spec</option>
+					{ALL_SPECS.map(s => (
+						<option key={s} value={s}>
+							{specName(s)}
+						</option>
 					))}
-				</tbody>
-			</table>
+				</select>
+				<button
+					className={clsx(PILL, showAll ? 'border-brand bg-brand/15 text-white' : 'border-white/30 text-gray-300 hover:bg-white/5')}
+					type="button"
+					aria-pressed={showAll}
+					onClick={() => setShowAll(!showAll)}>
+					Show all builds
+				</button>
+				{ALL_SOURCES.length > 0 &&
+					[{ label: 'Written here', value: '' }, ...ALL_SOURCES.map(sim => ({ label: sim, value: sim }))].map(pill => (
+						<button
+							key={pill.label}
+							className={clsx(
+								PILL,
+								source === pill.value ? 'border-brand bg-brand/15 text-white' : 'border-white/30 text-gray-300 hover:bg-white/5',
+							)}
+							type="button"
+							aria-pressed={source === pill.value}
+							data-testid="arena-source-pill"
+							onClick={() => setSource(source === pill.value ? undefined : pill.value)}>
+							{pill.label}
+						</button>
+					))}
+			</div>
+			<p className="m-0 text-sm text-white/50" data-testid="arena-count">
+				{showAll ? `All ${shown.length} builds` : `${shown.length} builds, best per tree`}
+				{levels.length > 0 && (
+					<span className={clsx(wide && 'text-brand')} data-wide={wide || undefined}>
+						{' '}
+						· item level {low.toFixed(0) === high.toFixed(0) ? low.toFixed(0) : `${low.toFixed(0)}-${high.toFixed(0)}`}
+						{wide && ' (some gaps are gear)'}
+					</span>
+				)}
+			</p>
+			<ol className="m-0 list-none border-t border-surface-border p-0">
+				{shown.map((build, index) => (
+					<Row key={`${key(build)}|${build.talents}|${build.consumables}|${build.build}`} build={build} rank={index + 1} />
+				))}
+			</ol>
 		</div>
 	);
 };
@@ -341,113 +371,122 @@ const SimSource = () => {
 	);
 };
 
+// The landing page's collapsed panel: the reading is all here, just not in the way.
+const Panel = ({ summary, children }: { summary: string; children: ReactNode }) => (
+	<details className="w-full max-w-modal-lg border border-surface-border bg-black/50 px-4 py-3">
+		<summary className="cursor-pointer text-lg font-bold">{summary}</summary>
+		<div className="flex flex-col gap-3 pt-3 text-white/80">{children}</div>
+	</details>
+);
+
 export const ArenaPage = () => (
 	<ProductPage
 		title="The build arena"
-		subtitle={`Every talent build this sim has on file, each on its spec's launch gear: ${builds.length} talent builds across ${new Set(builds.map(b => b.spec)).size} specs, each run on its own at ${formatToNumber(data.iterations)} iterations against the same target, with the same buffs and the same consumables, plus the builds a talent search found on top of those. Nothing is simulated in your browser.`}>
-		<div className="grid grid-cols-[repeat(auto-fit,minmax(min(26rem,100%),1fr))] gap-4">
-			<PageSection title="How a number gets onto this page">
-				<p className="m-0">
-					Every build here was simulated: a character is assembled, given a talent build, a gear set and a rotation, and run against the same target
-					for {formatToNumber(data.iterations)} iterations. What comes out is the average damage per second of those runs. Nothing is estimated,
-					interpolated or predicted - each row is the outcome of that build being played out {formatToNumber(data.iterations)} times.
-				</p>
-				<p className="m-0">
-					The gear sets and rotations are files in the repository, written by people. The talent builds are the community ones from each spec&apos;s
-					own page, plus whatever a search found on top of them. All of it runs headless when the sim changes, and the site ships the results, which
-					is why the table is instant and why nothing is simulated in your browser.
-				</p>
-			</PageSection>
-			<PageSection title="Where AI comes into it, and where it does not">
-				<p className="m-0">
-					<strong>Not into any number on this page.</strong> The damage figures come from a simulator - an open-source engine, forked and adjusted for
-					Forever. It is ordinary code doing arithmetic on the client&apos;s own data tables. No language model produces, adjusts or estimates a DPS
-					figure, and the talent search is a hill climb that measures builds rather than reasons about them.
-				</p>
-				<p className="m-0">
-					<strong>Into the code, heavily.</strong> This sim&apos;s Forever changes, the talent search, this page and most of what surrounds them were
-					written by an AI assistant working to one person&apos;s direction. That is worth saying plainly, because it is exactly the situation where
-					confident-sounding output is cheap and being wrong is easy.
-				</p>
-				<p className="m-0">
-					So the checking is the point rather than an afterthought. <a href={`${SITE_BASE}evidence/`}>Every ability the sim registers</a> records
-					where its numbers came from, and a test refuses to let one be added without that. The <strong>rests on a guess</strong> column carries it
-					through to here: it is how much of a build&apos;s damage depends on something nobody has confirmed.
-				</p>
-			</PageSection>
-		</div>
-
+		subtitle="The best DPS talent build for every spec, one per talent tree, all on the same standard of pre-raid gear. Tap a row for details.">
 		<Leaderboard />
 
-		<ul className="m-0 flex max-w-landing-lg flex-col gap-2 pl-6 text-sm text-white/60">
-			<li>
+		<Panel summary="How these numbers are made">
+			<p className="m-0">
 				<SimSource />
-			</li>
-			<li>
-				<strong>Every build meets the same conditions.</strong> One target, one encounter length, one buff set, one consumable list for its role. That
-				is what makes two numbers comparable - the live <a href={`${SITE_BASE}dps_rankings/`}>rankings page</a> achieves the same thing by putting
-				everyone in one raid, which stops being possible at this count.
-			</li>
-			<li>
-				<strong>The consumables are the arena&apos;s, and they did not used to be.</strong> Every spec brought its own list from its own test file, and
-				the gaps were not small ones: both paladins and the feral tank had their weapon imbue commented out entirely, while warrior, hunter, rogue and
-				tank warrior carried Windfury. Stripping the warrior&apos;s imbues costs it 14.2% - so this table was reporting a 19.6% gap between warrior and
-				retribution while handing one of them a weapon buff and the other a bare weapon. It is 2.3% now, and the difference was never about the specs.
-				Each row says which list it drank.
-			</li>
-			<li>
-				<strong>Three lists, not one.</strong> Elemental Sharpening Stone is +2% melee crit and -2% <em>ranged</em> crit, so a single list for all
-				fifteen would equalise the shopping and quietly tax the only spec that shoots. Within a role the list is identical - the same shopping list, not
-				the same benefit, which is why Mighty Rage Potion stays in the melee list even though only warriors can spend it. What a class grants itself is
-				not a consumable and is left alone: an enhancement shaman keeps Windfury Weapon and a rogue keeps its poisons. Equalising those took 23.6% off
-				the shaman, which is not a shaman measured fairly, it is a shaman disarmed.
-			</li>
-			<li>
-				<strong>Every spec wears the same standard of gear.</strong> Each row uses its spec&apos;s launch set: the best pre-raid gear from one shared
-				item pool (dungeons, crafting, quests and world drops, with every raid and world boss left out), picked by the same rule for every spec. They
-				land within about three item levels of each other, and the line under the filter says exactly how far apart the rows you are looking at are. The
-				arena sims the spec&apos;s other gear sets too; they are not shown, because they would compare gear rather than specs.
-			</li>
-			<li>
-				<strong>Rests on a guess</strong> is what the build&apos;s damage is made of, not a verdict on it. Each ability is weighted by its share of that
-				build&apos;s damage and looked up in the <a href={`${SITE_BASE}evidence/`}>evidence manifest</a>. A build ten DPS ahead means something
-				different if a quarter of it is unconfirmed. Hover the bar for the breakdown.
-			</li>
-			<li>
-				<strong>Rotations tagged low ranks</strong> drop to cheaper spell ranks as mana runs down. The sim gives every rank full spell-power scaling,
-				which is what beta players see at level 20; nobody has confirmed whether Forever penalises low ranks at level 60, and if it does those rows will
-				overstate the spec. The spec&apos;s normal rotation is always ranked beside them.
-			</li>
-			<li>
-				<strong>Gear and rotations come from what is already here</strong> - the sets and priority lists on each spec&apos;s page. Nothing invents a
-				better rotation than the ones people have written down, so a spec with one rotation on file gets one rotation ranked. That is a gap in the data,
-				not a finding about the spec.
-			</li>
-			<li>
-				<strong>Talents are searched, because they cannot be enumerated.</strong> A warrior has <strong>89,776,730,783,606,094</strong> builds it could
-				actually spend - counted from the trees, enforcing rank caps, row gates and the prerequisite arrows. Count only the all-or-nothing ones, every
-				talent maxed or untouched, and a warrior still has 57,341,667 and a mage 1,261,940,421 - eighteen months and forty years at a second a build. So
-				each spec&apos;s best known build is improved one point at a time instead: price every point that could come out, price every point that could
-				go in, make the best trade, repeat until no single move helps. Rows marked{' '}
-				<span className="rounded-full border border-brand px-1.5 text-xs text-brand">found by search</span> came out of that, and hovering one shows its
-				talent string.
-			</li>
-			<li>
-				<strong>What that does and does not promise.</strong> It climbs from every distinct build the spec has on file rather than only its best one,
-				because a climb goes to the nearest peak. Several starts agreeing is the cheapest evidence available that the peak is not merely nearby - it is
-				still not proof that nothing higher exists. It also only knows what this sim models: a talent flagged as unimplemented is worth zero here, so
-				the search will happily empty it, and that is a fact about the sim rather than advice. Every build it reaches is checked against rank caps, row
-				gates and prerequisites first.
-			</li>
-			<li>
-				<strong>A build that does not spend 51 points says so.</strong> The mage Frost community build spends 49. It is left as written rather than
-				quietly corrected - it is somebody else&apos;s build - but the searched row beside it shows what those two points are worth.
-			</li>
-			<li>
-				Tank specs are measured on damage alone and healing specs are absent, because damage is the only axis this table has. A protection paladin at
-				the bottom is not a bad tank - and a searched tank build is a tank build with the mitigation optimised out of it, so read those rows as what the
-				spec can do to a target dummy and nothing else.
-			</li>
-		</ul>
+			</p>
+			<p className="m-0">
+				{builds.length} talent builds across {new Set(builds.map(b => b.spec)).size} specs. Every one was simulated: a character is assembled, given a
+				talent build, a gear set and a rotation, and run against the same target for {formatToNumber(data.iterations)} iterations. What comes out is the
+				average damage per second of those runs. Nothing is estimated, interpolated or predicted, and nothing is simulated in your browser.
+			</p>
+			<p className="m-0">
+				The gear sets and rotations are files in the repository, written by people. The talent builds are the community ones from each spec&apos;s own
+				page, plus whatever a search found on top of them. All of it runs headless when the sim changes, and the site ships the results, which is why
+				the list is instant.
+			</p>
+			<ul className="m-0 flex flex-col gap-2 pl-6 text-sm">
+				<li>
+					<strong>Every build meets the same conditions.</strong> One target, one encounter length, one buff set, one consumable list for its role.
+					That is what makes two numbers comparable - the live <a href={`${SITE_BASE}dps_rankings/`}>rankings page</a> achieves the same thing by
+					putting everyone in one raid, which stops being possible at this count.
+				</li>
+				<li>
+					<strong>The consumables are the arena&apos;s, and they did not used to be.</strong> Every spec brought its own list from its own test file,
+					and the gaps were not small ones: both paladins and the feral tank had their weapon imbue commented out entirely, while warrior, hunter,
+					rogue and tank warrior carried Windfury. Stripping the warrior&apos;s imbues costs it 14.2% - so this table was reporting a 19.6% gap
+					between warrior and retribution while handing one of them a weapon buff and the other a bare weapon. It is 2.3% now, and the difference was
+					never about the specs. Each row&apos;s details say which list it drank.
+				</li>
+				<li>
+					<strong>Three lists, not one.</strong> Elemental Sharpening Stone is +2% melee crit and -2% <em>ranged</em> crit, so a single list for all
+					fifteen would equalise the shopping and quietly tax the only spec that shoots. Within a role the list is identical - the same shopping list,
+					not the same benefit, which is why Mighty Rage Potion stays in the melee list even though only warriors and bears get its rage; everyone
+					gets its Strength. Casters and the hunter get a raider&apos;s mana: Major Mana Potion, Demonic Rune and Mageblood. What a class grants
+					itself is not a consumable and is left alone: an enhancement shaman keeps Windfury Weapon and a rogue keeps its poisons. Equalising those
+					took 23.6% off the shaman, which is not a shaman measured fairly, it is a shaman disarmed.
+				</li>
+				<li>
+					<strong>Every spec wears the same standard of gear.</strong> Each row uses its spec&apos;s launch set: the best pre-raid gear from one
+					shared item pool (dungeons, crafting, quests and world drops, with every raid and world boss left out), picked by the same rule for every
+					spec. They land within about three item levels of each other, and the line above the list says exactly how far apart the rows you are
+					looking at are. The arena sims the spec&apos;s other gear sets too; they are not shown, because they would compare gear rather than specs.
+				</li>
+				<li>
+					<strong>Guessed</strong> is what the build&apos;s damage is made of, not a verdict on it. Each ability is weighted by its share of that
+					build&apos;s damage and looked up in the <a href={`${SITE_BASE}evidence/`}>evidence manifest</a>. A build ten DPS ahead means something
+					different if a quarter of it is unconfirmed. A row shows the figure once it passes 5%; every row&apos;s details have the bar.
+				</li>
+				<li>
+					<strong>Rotations tagged low ranks</strong> drop to cheaper spell ranks as mana runs down. The sim gives every rank full spell-power
+					scaling, which is what beta players see at level 20; nobody has confirmed whether Forever penalises low ranks at level 60, and if it does
+					those rows will overstate the spec. The spec&apos;s normal rotation is always ranked beside them.
+				</li>
+				<li>
+					<strong>Gear and rotations come from what is already here</strong> - the sets and priority lists on each spec&apos;s page. Nothing invents a
+					better rotation than the ones people have written down, so a spec with one rotation on file gets one rotation ranked. That is a gap in the
+					data, not a finding about the spec.
+				</li>
+				<li>
+					<strong>Talents are searched, because they cannot be enumerated.</strong> A warrior has <strong>89,776,730,783,606,094</strong> builds it
+					could actually spend - counted from the trees, enforcing rank caps, row gates and the prerequisite arrows. Count only the all-or-nothing
+					ones, every talent maxed or untouched, and a warrior still has 57,341,667 and a mage 1,261,940,421 - eighteen months and forty years at a
+					second a build. So each spec&apos;s best known build is improved one point at a time instead: price every point that could come out, price
+					every point that could go in, make the best trade, repeat until no single move helps. A row&apos;s details say when it came out of that, and
+					by how much it beat the best written build.
+				</li>
+				<li>
+					<strong>What that does and does not promise.</strong> It climbs from every distinct build the spec has on file rather than only its best
+					one, because a climb goes to the nearest peak. Several starts agreeing is the cheapest evidence available that the peak is not merely nearby
+					- it is still not proof that nothing higher exists. It also only knows what this sim models: a talent flagged as unimplemented is worth zero
+					here, so the search will happily empty it, and that is a fact about the sim rather than advice. Every build it reaches is checked against
+					rank caps, row gates and prerequisites first.
+				</li>
+				<li>
+					<strong>MythicSim</strong> rows start from builds published by MythicSim rather than ones written for this sim.
+				</li>
+				<li>
+					<strong>A build that does not spend 51 points says so.</strong> The mage Frost community build spends 49. It is left as written rather than
+					quietly corrected - it is somebody else&apos;s build - but the searched row beside it shows what those two points are worth.
+				</li>
+				<li>
+					Tank specs are measured on damage alone and healing specs are absent, because damage is the only axis this table has. A protection paladin
+					at the bottom is not a bad tank - and a searched tank build is a tank build with the mitigation optimised out of it, so read those rows as
+					what the spec can do to a target dummy and nothing else.
+				</li>
+			</ul>
+		</Panel>
+
+		<Panel summary="Where AI comes into it, and where it does not">
+			<p className="m-0">
+				<strong>Not into any number on this page.</strong> The damage figures come from a simulator - an open-source engine, forked and adjusted for
+				Forever. It is ordinary code doing arithmetic on the client&apos;s own data tables. No language model produces, adjusts or estimates a DPS
+				figure, and the talent search is a hill climb that measures builds rather than reasons about them.
+			</p>
+			<p className="m-0">
+				<strong>Into the code, heavily.</strong> This sim&apos;s Forever changes, the talent search, this page and most of what surrounds them were
+				written by an AI assistant working to one person&apos;s direction. That is worth saying plainly, because it is exactly the situation where
+				confident-sounding output is cheap and being wrong is easy.
+			</p>
+			<p className="m-0">
+				So the checking is the point rather than an afterthought. <a href={`${SITE_BASE}evidence/`}>Every ability the sim registers</a> records where
+				its numbers came from, and a test refuses to let one be added without that. The <strong>guessed</strong> figure carries it through to here: it
+				is how much of a build&apos;s damage depends on something nobody has confirmed.
+			</p>
+		</Panel>
 	</ProductPage>
 );

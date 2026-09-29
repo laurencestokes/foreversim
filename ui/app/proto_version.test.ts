@@ -69,8 +69,25 @@ describe('updateIndividualProtoVersion', () => {
 		expect(defaults.raidBuffs.arcaneBrilliance).toBe(true);
 	});
 
-	it('leaves a version-17 payload alone', () => {
+	it('resets a version-17 payload’s buffs and debuffs only, with one toast', () => {
 		const proto = settings(17);
+
+		updateIndividualProtoVersion(proto, defaults);
+
+		expect(proto.raidBuffs).toEqual(defaults.raidBuffs);
+		expect(proto.partyBuffs).toEqual(defaults.partyBuffs);
+		expect(proto.debuffs).toEqual(defaults.debuffs);
+		expect(proto.player?.buffs).toEqual(defaults.individualBuffs);
+		expect(proto.player?.consumables).toEqual(ConsumesSpec.create({ potId: 99 }));
+		const spec = proto.player?.spec;
+		const classOptions = spec?.oneofKind === 'dpsWarrior' ? spec.dpsWarrior.options?.classOptions : undefined;
+		expect(classOptions).toMatchObject({ useBattleShout: false, queueDelay: 1 });
+		expect(added).toHaveBeenCalledTimes(1);
+		expect(proto.apiVersion).toBe(CURRENT_API_VERSION);
+	});
+
+	it('leaves a current payload alone', () => {
+		const proto = settings(CURRENT_API_VERSION);
 		const before = IndividualSimSettings.clone(proto);
 
 		updateIndividualProtoVersion(proto, defaults);

@@ -6,7 +6,6 @@ import (
 
 	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
-	_ "github.com/wowsims/forever/sim/common"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/simsignals"
@@ -148,6 +147,46 @@ func TestEurekaGnome(t *testing.T) {
 	}
 	if got := aura.GetStacks(); got != 2 {
 		t.Errorf("Eureka! has %d charges after a covered cast, want 2", got)
+	}
+}
+
+// Frostfire Bolt (1237313) casts, lands its bolt and dot, and takes Improved Fireball's cast time cut
+// exactly as Fireball does: the client's mask on 11069 names both.
+func TestFrostfireBolt(t *testing.T) {
+	sim := core.NewSim(&proto.RaidSimRequest{
+		SimOptions: &proto.SimOptions{RandomSeed: 1},
+		Raid: &proto.Raid{Parties: []*proto.Party{{Buffs: &proto.PartyBuffs{}, Players: []*proto.Player{{
+			Name: "Mage", Class: proto.Class_ClassMage, Race: proto.Race_RaceGnome, TalentsString: FireTalents,
+			Equipment: &proto.EquipmentSpec{}, Buffs: &proto.IndividualBuffs{},
+			Spec:     &proto.Player_Mage{Mage: &proto.Mage{Options: &proto.Mage_Options{ClassOptions: &proto.MageOptions{}}}},
+			Rotation: &proto.APLRotation{Type: proto.APLRotation_TypeAPL},
+		}}}}},
+		Encounter: core.MakeSingleTargetEncounter(0),
+	}, simsignals.CreateSignals())
+	sim.Reset()
+
+	mage := sim.Raid.Parties[0].Players[0].(MageAgent).GetMage()
+	if mage.Talents.ImprovedFireball == 0 {
+		t.Fatal("FireTalents no longer take Improved Fireball; pick a build that does")
+	}
+	fireball := mage.GetSpell(core.ActionID{SpellID: spellData.Fireball.Highest().ID})
+	ffbRank := spellData.FrostfireBolt.Highest()
+	ffb := mage.GetSpell(core.ActionID{SpellID: ffbRank.ID})
+	if ffb == nil {
+		t.Fatal("Frostfire Bolt is not registered")
+	}
+	if want := ffbRank.CastTime() - (spellData.Fireball.Highest().CastTime() - fireball.DefaultCast.CastTime); ffb.DefaultCast.CastTime != want {
+		t.Errorf("Frostfire Bolt casts in %v, want %v (Improved Fireball's cut)", ffb.DefaultCast.CastTime, want)
+	}
+
+	if !ffb.Cast(sim, mage.CurrentTarget) {
+		t.Fatal("Frostfire Bolt did not cast")
+	}
+	for sim.CurrentTime < 8*time.Second {
+		sim.Step()
+	}
+	if ffb.SpellMetrics[0].TotalDamage <= 0 || !ffb.Dot(mage.CurrentTarget).IsActive() {
+		t.Errorf("Frostfire Bolt dealt %v and its dot is up: %v", ffb.SpellMetrics[0].TotalDamage, ffb.Dot(mage.CurrentTarget).IsActive())
 	}
 }
 

@@ -1,11 +1,9 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 )
-
-var TemplarsBulwarkRankMap = spellData.TemplarsBulwark
 
 // Templar's Bulwark (talent)
 // https://www.wowhead.com/forever/spell=1311015
@@ -13,15 +11,15 @@ var TemplarsBulwarkRankMap = spellData.TemplarsBulwark
 // When activated, this ability grants you an absorb shield equal to 100% of your maximum health
 // for 8 sec. Applies Forbearance for 1 min. Cannot be cast while Forbearance is active.
 func (paladin *Paladin) registerTemplarsBulwark() {
-	row := TemplarsBulwarkRankMap.HighestRank()
-	actionID := core.ActionID{SpellID: row.SpellID}
-	healthShare := row.Effect(shared.A_SCHOOL_ABSORB, 127).Value / 100
+	rank := spellData.TemplarsBulwark.Highest()
+	actionID := core.ActionID{SpellID: rank.ID}
+	healthShare := rank.Effect(dbcenums.A_SCHOOL_ABSORB, 127).Percent()
 
 	shield := paladin.NewDamageAbsorptionAura(core.AbsorptionAuraConfig{
 		Aura: core.Aura{
 			Label:    "Templar's Bulwark" + paladin.Label,
 			ActionID: actionID,
-			Duration: row.Duration,
+			Duration: rank.Duration(),
 		},
 		ShieldStrengthCalculator: func(unit *core.Unit) float64 {
 			return unit.MaxHealth() * healthShare
@@ -30,20 +28,20 @@ func (paladin *Paladin) registerTemplarsBulwark() {
 
 	spell := paladin.RegisterSpell(core.SpellConfig{
 		ActionID:       actionID,
-		SpellSchool:    row.SpellSchool,
-		DefenseType:    row.DefenseType,
+		SpellSchool:    rank.SpellSchool(),
+		DefenseType:    rank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskEmpty,
 		Flags:          core.SpellFlagAPL | core.SpellFlagHelpful,
 		ClassSpellMask: SpellMaskTemplarsBulwark,
 
-		ManaCost: manaCost(row),
+		ManaCost: manaCost(rank),
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
 				NonEmpty: true,
 			},
 			CD: core.Cooldown{
 				Timer:    paladin.NewTimer(),
-				Duration: row.Cooldown,
+				Duration: cooldown(rank),
 			},
 		},
 

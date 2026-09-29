@@ -29,14 +29,14 @@ const CHIP: Record<Tier, string> = {
 	measured: 'border-evidence-measured text-evidence-measured',
 	forever: 'border-white/20',
 	classic: 'border-white/20',
-	assumed: 'border-brand text-brand',
+	assumed: 'border-evidence-assumed text-evidence-assumed',
 };
 
 // What would actually move a number, worst first, with what to send for each.
 //
 // Hand-written on purpose. The manifest knows which abilities are unsettled, but not which
-// unsettled thing matters - downranking is one line in no JSON file and moves every caster
-// on the site, while a hunter pet's attack speed is a rounding error. A list generated from
+// unsettled thing matters - Ice Lance's coefficient moves every frost mage on the site, while
+// a hunter pet's attack speed is a rounding error. A list generated from
 // the manifest would rank those the same and quietly waste the first person who offers to
 // help. The counts inside it come from the manifest, so those cannot go stale.
 type Need = {
@@ -48,28 +48,21 @@ type Need = {
 	find?: string;
 };
 
+// How many rows still carry a guess, across the game or under one directory of sim/.
+const guesses = (dir = 'sim/') => allSpellSources().filter(([, s]) => s.source === 'assumed' && s.file.startsWith(dir)).length;
+
 const NEEDS: Array<Need> = [
 	{
-		title: 'Downranking: does a low rank still hit for full?',
-		why: 'The client carries the full coefficient on low ranks where Classic Era carried a reduced one. Read as written, a rank 4 Lightning Bolt does most of a rank 10 for a quarter of the mana, which would rewrite every caster rotation on this site. No table anywhere says whether Forever kept the penalty.',
-		send: 'A DamageMeter.bin from a session where you deliberately spammed a low rank of a direct damage spell - rank 1-4 Lightning Bolt, Fireball, Shadow Bolt. Twenty casts is plenty. The meter records the biggest hit, and that alone settles it.',
-		find: 'Lightning Bolt',
-	},
-	{
-		title: 'Hunter, nearly everything',
-		why: 'Hunter carries more guesses than the rest of the game put together. Volley, Serpent Sting, Arcane Shot and the pet abilities all run on numbers the client does not settle, and Summon Hawk models one hawk where the tooltip can be read as allowing two.',
-		send: 'A DamageMeter.bin from any hunter at any level, or screenshots of those tooltips out of your spellbook. Either one. The tooltips are worth as much as the damage here, because half of what is wrong is about what a number applies to rather than what it is.',
+		title: 'Hunter: do Arcane Shot and Serpent Sting scale with attack power?',
+		why: `${guesses('sim/hunter/')} of the ${guesses()} abilities that still carry a guess are hunter ones. The client gives Arcane Shot and Serpent Sting no attack power scaling, but the beta's public combat logs show both hitting for 1.4 to 2.1 times their base damage at every rank, so the sim now adds 0.11 of ranged attack power to Arcane Shot and 0.035 to each Serpent Sting tick, fitted to four level 20 hunters. A clean measurement would pin it down. Volley keeps Classic's coefficient for the same reason, and the hawk from Summon Hawk swings in a way the client does not describe.`,
+		send: 'A DamageMeter.bin from any hunter: ten Arcane Shots and two full Serpent Stings with Aspect of the Hawk up, then the same with it down. If the biggest hit moves, they scale with attack power. Screenshots of those tooltips out of your spellbook help too.',
 		find: 'hunter',
 	},
 	{
-		title: 'Sky Elf abilities that appear in no file at all',
-		why: 'Three spell ids turn up in the beta client with no home: 1259231 Infusion of Wind, 1259652 Shock, 1248802 Wind Spike. They are not registered anywhere in this sim because nobody knows whether they are racials, a quest reward or cut content.',
-		send: 'A screenshot of a Sky Elf spellbook, or of the racials pane on the character screen. One picture ends this.',
-	},
-	{
-		title: 'Hotfixes, from anyone, any day',
-		why: 'Blizzard tunes after the build ships and none of it reaches a datamining site. It exists only in the cache your own client downloads it into, so a number here can go stale with nothing to indicate it has.',
-		send: 'DBCache.bin, as it is. It carries no character name, account, realm or Battle.net tag, so there is nothing to strip. Sending the same file again next week is useful - it is the change that matters.',
+		title: 'Warrior: is Flurry 25% at five points, or a flat 30%?',
+		why: "The talent's rank curve reads 5% attack speed a point, Classic's values, but the buff it triggers now carries a flat 30%. The sim applies the curve. If the buff wins, every Fury warrior on the site swings faster than shown. Flurry sits at level 35, above the beta's level cap, so no public beta log has it yet.",
+		send: 'Once the cap allows it: a screenshot of the Flurry buff tooltip with one point in the talent. It shows 5% or 30%, and that settles it.',
+		find: 'Flurry',
 	},
 	{
 		title: 'Any tooltip that disagrees with this sim',
@@ -83,8 +76,8 @@ const tierOf = (s: SpellSource): Tier => s.source as Tier;
 /** A row's searchable text, so filtering never has to walk the DOM. */
 const haystack = (id: number, s: SpellSource) => `${id} ${s.ability} ${s.file} ${s.note ?? ''} ${(s.assumptions ?? []).join(' ')}`.toLowerCase();
 
-// 996 rows means 996 icon lookups, and an icon the bundled database has never heard of goes
-// out to Wowhead for it. Firing those on load would be a thousand requests for the forty
+// Every row is an icon lookup, and an icon the bundled database has never heard of goes
+// out to Wowhead for it. Firing those on load would be hundreds of requests for the forty
 // rows anyone can actually see, so a row resolves its ActionId (icon and href both) only
 // once it scrolls into view. One observer for every row; a hidden row intersects nothing,
 // so filtering down to it is what brings it into view.
@@ -228,7 +221,7 @@ export const EvidencePage = () => {
 				<section className="rounded-sm border border-brand/35 bg-brand/6 px-6 py-4" id="most-wanted">
 					<h2 className="m-0 text-xl text-white">Most wanted</h2>
 					<p className="m-0 mt-2 max-w-208">
-						Worst first. Each of these can be closed by one person with the game open, and the top one moves every caster on the site.{' '}
+						Worst first. Each of these can be closed by one person with the game open.{' '}
 						<a className="font-semibold text-brand" href={`${SITE_REPO_URL}/issues`} target="_blank" rel="noreferrer">
 							Open an issue with a log or a screenshot
 						</a>

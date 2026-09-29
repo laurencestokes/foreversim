@@ -31,12 +31,22 @@ def parse(text):
     return out
 
 
+def canon(v):
+    # Wowhead reshuffles list order between otherwise identical payloads (on 2026-09-26 twelve
+    # talents "changed" only because their effect rows swapped places), so lists compare as multisets.
+    if isinstance(v, dict):
+        return {k: canon(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return sorted((canon(x) for x in v), key=lambda x: json.dumps(x, sort_keys=True))
+    return v
+
+
 def diff_section(old, new):
     if not isinstance(old, dict) or not isinstance(new, dict):
-        return None if old == new else ([], [], ["(whole section)"])
+        return None if canon(old) == canon(new) else ([], [], ["(whole section)"])
     added = sorted(set(new) - set(old))
     removed = sorted(set(old) - set(new))
-    changed = sorted(k for k in set(old) & set(new) if old[k] != new[k])
+    changed = sorted(k for k in set(old) & set(new) if canon(old[k]) != canon(new[k]))
     return added, removed, changed
 
 
@@ -75,6 +85,9 @@ def _selftest():
     assert "+1 added, -1 removed, ~1 changed" in r, r
     assert "3 C" in r and "2 B" in r and "1 A2" in r, r
     assert report(a, a).startswith("No data differences"), report(a, a)
+    t1 = 'WH.setPageData("wow.gearPlanner.classicplus.talent", {"9":{"ranks":[{"spell":1},{"spell":2}]}});\n'
+    t2 = 'WH.setPageData("wow.gearPlanner.classicplus.talent", {"9":{"ranks":[{"spell":2},{"spell":1}]}});\n'
+    assert report(t1, t2).startswith("No data differences"), report(t1, t2)
 
 
 if __name__ == "__main__":

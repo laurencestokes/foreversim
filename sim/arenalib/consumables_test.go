@@ -1,6 +1,7 @@
 package arenalib
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/wowsims/forever/sim/core"
@@ -61,10 +62,26 @@ func TestConsumablesAreInTheDatabase(t *testing.T) {
 			"flask": c.FlaskId, "battle elixir": c.BattleElixirId, "food": c.FoodId, "potion": c.PotId,
 			"strength": c.StrengthBuffId, "attack power": c.AttackPowerBuffId,
 			"spell power": c.SpellPowerElixirId, "school elixir": c.SchoolElixirId,
+			"guardian elixir": c.GuardianElixirId, "rune": c.ConjuredId,
 		} {
 			if id != 0 && core.GetConsumableByID(id).Id != id {
 				t.Errorf("role %d: %s %d is not in the database", role, name, id)
 			}
+		}
+	}
+}
+
+// The sim only registers a potion or a rune that is also in Potions or ConjuredItems. Naming one
+// without the other is silent: the Major Mana Potion sat on the caster list undrunk that way.
+// Melee is left out, see its rage potion.
+func TestPotionsAndRunesAreRegistered(t *testing.T) {
+	for _, role := range []Role{Ranged, Caster} {
+		c := consumesFor(role, ClassImbues{}).Consumables
+		if c.PotId != 0 && !slices.Contains(c.Potions, c.PotId) {
+			t.Errorf("role %d: potion %d is not in Potions", role, c.PotId)
+		}
+		if c.ConjuredId != 0 && !slices.Contains(c.ConjuredItems, c.ConjuredId) {
+			t.Errorf("role %d: rune %d is not in ConjuredItems", role, c.ConjuredId)
 		}
 	}
 }

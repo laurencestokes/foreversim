@@ -61,7 +61,7 @@ var devotionAuraMeta = &Meta{
 	Category:       DevotionAuraCategory,
 	SharedCategory: PaladinAuraCategory,
 	SingleAura:     true,
-	SkipAuras:      []dbcenums.EffectAuraType{dbcenums.A_MOD_HEALING_PCT, dbcenums.A_MECHANIC_DURATION_MOD},
+	SkipAuras:      []dbcenums.EffectAuraType{dbcenums.A_MOD_HEALING_PCT},
 }
 
 func DevotionAuraValue(talentPoints int32) float64 {
@@ -167,7 +167,7 @@ var retributionAuraMeta = &Meta{
 	Category:       RetributionAuraCategory,
 	SharedCategory: PaladinAuraCategory,
 	SingleAura:     true,
-	SkipAuras:      []dbcenums.EffectAuraType{dbcenums.A_MOD_HEALING_PCT, dbcenums.A_MECHANIC_DURATION_MOD},
+	SkipAuras:      []dbcenums.EffectAuraType{dbcenums.A_MOD_HEALING_PCT},
 }
 
 func RetributionAuraValue(talentPoints int32) float64 {
@@ -183,6 +183,8 @@ func RetributionAuraAura(unit *core.Unit, isPlayer bool, talentPoints int32) *co
 // func RetributionAuraSpellPowerAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura // retribution_aura_spell_power, KindFlag: the Holy spell power of the paladin providing Retribution Aura, which driveRetributionAura scales the damage with; a sim input with no spell source, rendered under Other Inputs.
 
 // Concentration Aura
+// Left out: effect 3 A_MECHANIC_DURATION_MOD(232) misc 26
+// Left out: effect 4 A_MECHANIC_DURATION_MOD(232) misc 9
 var ConcentrationAuraCategory = "ConcentrationAura"
 var concentrationAuraSpell = spelldata.MustFind(19746)
 var concentrationAuraMeta = &Meta{
@@ -191,7 +193,7 @@ var concentrationAuraMeta = &Meta{
 	Category:       ConcentrationAuraCategory,
 	SharedCategory: PaladinAuraCategory,
 	SingleAura:     true,
-	SkipAuras:      []dbcenums.EffectAuraType{dbcenums.A_MOD_HEALING_PCT, dbcenums.A_MECHANIC_DURATION_MOD},
+	SkipAuras:      []dbcenums.EffectAuraType{dbcenums.A_MOD_HEALING_PCT},
 }
 
 func ConcentrationAuraValue(talentPoints int32) float64 {
@@ -205,7 +207,7 @@ func ConcentrationAuraAura(unit *core.Unit, isPlayer bool, talentPoints int32) *
 }
 
 // Trueshot Aura
-var trueshotAuraSpell = spelldata.MustFind(20906)
+var trueshotAuraSpell = spelldata.MustFind(20905)
 var trueshotAuraMeta = &Meta{
 	Label: "Trueshot Aura",
 	Spell: trueshotAuraSpell,
@@ -367,23 +369,6 @@ func ArcaneBrillianceAura(unit *core.Unit, isPlayer bool, talentPoints int32) *c
 	return newBuff(unit, arcaneBrillianceMeta, isPlayer, talentPoints)
 }
 
-// Greater Blessing of Kings
-var greaterBlessingOfKingsSpell = spelldata.MustFind(25898)
-var greaterBlessingOfKingsMeta = &Meta{
-	Label: "Greater Blessing of Kings",
-	Spell: greaterBlessingOfKingsSpell,
-}
-
-func GreaterBlessingOfKingsValue(talentPoints int32) float64 {
-	return greaterBlessingOfKingsMeta.Value(talentPoints)
-}
-func GreaterBlessingOfKingsDuration(talentPoints int32) time.Duration {
-	return greaterBlessingOfKingsMeta.Duration(talentPoints)
-}
-func GreaterBlessingOfKingsAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
-	return newBuff(unit, greaterBlessingOfKingsMeta, isPlayer, talentPoints)
-}
-
 // Prayer of Spirit
 var PrayerOfSpiritCategory = "StatBuff"
 var prayerOfSpiritSpell = spelldata.MustFind(27681)
@@ -458,75 +443,6 @@ func PrayerOfFortitudeAura(unit *core.Unit, isPlayer bool, talentPoints int32) *
 	return newBuff(unit, prayerOfFortitudeMeta, isPlayer, talentPoints)
 }
 
-// Greater Blessing of Might
-var greaterBlessingOfMightSpell = spelldata.MustFind(25916)
-var greaterBlessingOfMightMeta = &Meta{
-	Label: "Greater Blessing of Might",
-	Spell: greaterBlessingOfMightSpell,
-}
-
-func GreaterBlessingOfMightValue(talentPoints int32) float64 {
-	return greaterBlessingOfMightMeta.Value(talentPoints)
-}
-func GreaterBlessingOfMightDuration(talentPoints int32) time.Duration {
-	return greaterBlessingOfMightMeta.Duration(talentPoints)
-}
-func GreaterBlessingOfMightAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
-	return newBuff(unit, greaterBlessingOfMightMeta, isPlayer, talentPoints)
-}
-
-// Greater Blessing of Wisdom
-var greaterBlessingOfWisdomSpell = spelldata.MustFind(25918)
-var greaterBlessingOfWisdomMeta = &Meta{
-	Label: "Greater Blessing of Wisdom",
-	Spell: greaterBlessingOfWisdomSpell,
-}
-
-func GreaterBlessingOfWisdomValue(talentPoints int32) float64 {
-	return greaterBlessingOfWisdomMeta.Value(talentPoints)
-}
-func GreaterBlessingOfWisdomDuration(talentPoints int32) time.Duration {
-	return greaterBlessingOfWisdomMeta.Duration(talentPoints)
-}
-func GreaterBlessingOfWisdomAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
-	return newBuff(unit, greaterBlessingOfWisdomMeta, isPlayer, talentPoints)
-}
-
-// Greater Blessing of Salvation
-var greaterBlessingOfSalvationSpell = spelldata.MustFind(25895)
-var greaterBlessingOfSalvationMeta = &Meta{
-	Label: "Greater Blessing of Salvation",
-	Spell: greaterBlessingOfSalvationSpell,
-}
-
-func GreaterBlessingOfSalvationValue(talentPoints int32) float64 {
-	return greaterBlessingOfSalvationMeta.Value(talentPoints)
-}
-func GreaterBlessingOfSalvationDuration(talentPoints int32) time.Duration {
-	return greaterBlessingOfSalvationMeta.Duration(talentPoints)
-}
-func GreaterBlessingOfSalvationAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
-	return newBuff(unit, greaterBlessingOfSalvationMeta, isPlayer, talentPoints)
-}
-
-// Greater Blessing of Light
-// Left out: effect 1 A_DUMMY(4) misc 0
-// Left out: effect 2 A_DUMMY(4) misc 0
-var GreaterBlessingOfLightCategory = "BlessingOfLight"
-var greaterBlessingOfLightSpell = spelldata.MustFind(25890)
-var greaterBlessingOfLightMeta = &Meta{
-	Label:    "Greater Blessing of Light",
-	Spell:    greaterBlessingOfLightSpell,
-	Category: GreaterBlessingOfLightCategory,
-}
-
-func GreaterBlessingOfLightDuration(talentPoints int32) time.Duration {
-	return greaterBlessingOfLightMeta.Duration(talentPoints)
-}
-func GreaterBlessingOfLightAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
-	return newBuff(unit, greaterBlessingOfLightMeta, isPlayer, talentPoints)
-}
-
 // Prayer of Shadow Protection
 var prayerOfShadowProtectionSpell = spelldata.MustFind(27683)
 var prayerOfShadowProtectionMeta = &Meta{
@@ -553,7 +469,7 @@ var fireResistanceAuraMeta = &Meta{
 	Category:       FireResistanceAuraCategory,
 	SharedCategory: PaladinAuraCategory,
 	SingleAura:     true,
-	SkipAuras:      []dbcenums.EffectAuraType{dbcenums.A_MOD_HEALING_PCT, dbcenums.A_MECHANIC_DURATION_MOD},
+	SkipAuras:      []dbcenums.EffectAuraType{dbcenums.A_MOD_HEALING_PCT},
 }
 
 func FireResistanceAuraValue(talentPoints int32) float64 {
@@ -575,7 +491,7 @@ var frostResistanceAuraMeta = &Meta{
 	Category:       FrostResistanceAuraCategory,
 	SharedCategory: PaladinAuraCategory,
 	SingleAura:     true,
-	SkipAuras:      []dbcenums.EffectAuraType{dbcenums.A_MOD_HEALING_PCT, dbcenums.A_MECHANIC_DURATION_MOD},
+	SkipAuras:      []dbcenums.EffectAuraType{dbcenums.A_MOD_HEALING_PCT},
 }
 
 func FrostResistanceAuraValue(talentPoints int32) float64 {
@@ -597,7 +513,7 @@ var shadowResistanceAuraMeta = &Meta{
 	Category:       ShadowResistanceAuraCategory,
 	SharedCategory: PaladinAuraCategory,
 	SingleAura:     true,
-	SkipAuras:      []dbcenums.EffectAuraType{dbcenums.A_MOD_HEALING_PCT, dbcenums.A_MECHANIC_DURATION_MOD},
+	SkipAuras:      []dbcenums.EffectAuraType{dbcenums.A_MOD_HEALING_PCT},
 }
 
 func ShadowResistanceAuraValue(talentPoints int32) float64 {
@@ -676,6 +592,92 @@ func AspectOfTheWildDuration(talentPoints int32) time.Duration {
 }
 func AspectOfTheWildAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newBuff(unit, aspectOfTheWildMeta, isPlayer, talentPoints)
+}
+
+// Greater Blessing of Kings
+var greaterBlessingOfKingsSpell = spelldata.MustFind(25898)
+var greaterBlessingOfKingsMeta = &Meta{
+	Label: "Greater Blessing of Kings",
+	Spell: greaterBlessingOfKingsSpell,
+}
+
+func GreaterBlessingOfKingsValue(talentPoints int32) float64 {
+	return greaterBlessingOfKingsMeta.Value(talentPoints)
+}
+func GreaterBlessingOfKingsDuration(talentPoints int32) time.Duration {
+	return greaterBlessingOfKingsMeta.Duration(talentPoints)
+}
+func GreaterBlessingOfKingsAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+	return newBuff(unit, greaterBlessingOfKingsMeta, isPlayer, talentPoints)
+}
+
+// Greater Blessing of Might
+var greaterBlessingOfMightSpell = spelldata.MustFind(25916)
+var greaterBlessingOfMightMeta = &Meta{
+	Label: "Greater Blessing of Might",
+	Spell: greaterBlessingOfMightSpell,
+}
+
+func GreaterBlessingOfMightValue(talentPoints int32) float64 {
+	return greaterBlessingOfMightMeta.Value(talentPoints)
+}
+func GreaterBlessingOfMightDuration(talentPoints int32) time.Duration {
+	return greaterBlessingOfMightMeta.Duration(talentPoints)
+}
+func GreaterBlessingOfMightAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+	return newBuff(unit, greaterBlessingOfMightMeta, isPlayer, talentPoints)
+}
+
+// Greater Blessing of Wisdom
+var greaterBlessingOfWisdomSpell = spelldata.MustFind(25918)
+var greaterBlessingOfWisdomMeta = &Meta{
+	Label: "Greater Blessing of Wisdom",
+	Spell: greaterBlessingOfWisdomSpell,
+}
+
+func GreaterBlessingOfWisdomValue(talentPoints int32) float64 {
+	return greaterBlessingOfWisdomMeta.Value(talentPoints)
+}
+func GreaterBlessingOfWisdomDuration(talentPoints int32) time.Duration {
+	return greaterBlessingOfWisdomMeta.Duration(talentPoints)
+}
+func GreaterBlessingOfWisdomAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+	return newBuff(unit, greaterBlessingOfWisdomMeta, isPlayer, talentPoints)
+}
+
+// Greater Blessing of Salvation
+var greaterBlessingOfSalvationSpell = spelldata.MustFind(25895)
+var greaterBlessingOfSalvationMeta = &Meta{
+	Label: "Greater Blessing of Salvation",
+	Spell: greaterBlessingOfSalvationSpell,
+}
+
+func GreaterBlessingOfSalvationValue(talentPoints int32) float64 {
+	return greaterBlessingOfSalvationMeta.Value(talentPoints)
+}
+func GreaterBlessingOfSalvationDuration(talentPoints int32) time.Duration {
+	return greaterBlessingOfSalvationMeta.Duration(talentPoints)
+}
+func GreaterBlessingOfSalvationAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+	return newBuff(unit, greaterBlessingOfSalvationMeta, isPlayer, talentPoints)
+}
+
+// Greater Blessing of Light
+// Left out: effect 1 A_DUMMY(4) misc 0
+// Left out: effect 2 A_DUMMY(4) misc 0
+var GreaterBlessingOfLightCategory = "BlessingOfLight"
+var greaterBlessingOfLightSpell = spelldata.MustFind(25890)
+var greaterBlessingOfLightMeta = &Meta{
+	Label:    "Greater Blessing of Light",
+	Spell:    greaterBlessingOfLightSpell,
+	Category: GreaterBlessingOfLightCategory,
+}
+
+func GreaterBlessingOfLightDuration(talentPoints int32) time.Duration {
+	return greaterBlessingOfLightMeta.Duration(talentPoints)
+}
+func GreaterBlessingOfLightAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+	return newBuff(unit, greaterBlessingOfLightMeta, isPlayer, talentPoints)
 }
 
 // Innervates
@@ -776,9 +778,6 @@ func applyGeneratedBuffs(char *core.Character, raid *proto.RaidBuffs, party *pro
 	if raid.ArcaneBrilliance {
 		core.MakePermanent(ArcaneBrillianceAura(&char.Unit, false, 0))
 	}
-	if individual.GreaterBlessingOfKings {
-		core.MakePermanent(GreaterBlessingOfKingsAura(&char.Unit, false, 0))
-	}
 	if raid.PrayerOfSpirit {
 		core.MakePermanent(PrayerOfSpiritAura(&char.Unit, false, 0))
 	}
@@ -790,18 +789,6 @@ func applyGeneratedBuffs(char *core.Character, raid *proto.RaidBuffs, party *pro
 	}
 	if raid.PrayerOfFortitude {
 		core.MakePermanent(PrayerOfFortitudeAura(&char.Unit, false, 0))
-	}
-	if individual.GreaterBlessingOfMight {
-		core.MakePermanent(GreaterBlessingOfMightAura(&char.Unit, false, 0))
-	}
-	if individual.GreaterBlessingOfWisdom {
-		core.MakePermanent(GreaterBlessingOfWisdomAura(&char.Unit, false, 0))
-	}
-	if individual.GreaterBlessingOfSalvation {
-		core.MakePermanent(GreaterBlessingOfSalvationAura(&char.Unit, false, 0))
-	}
-	if individual.GreaterBlessingOfLight {
-		driveGreaterBlessingOfLight(char, individual)
 	}
 	if raid.PrayerOfShadowProtection {
 		core.MakePermanent(PrayerOfShadowProtectionAura(&char.Unit, false, 0))
@@ -826,6 +813,21 @@ func applyGeneratedBuffs(char *core.Character, raid *proto.RaidBuffs, party *pro
 	}
 	if raid.AspectOfTheWild {
 		core.MakePermanent(AspectOfTheWildAura(&char.Unit, false, 0))
+	}
+	if individual.GreaterBlessingOfKings {
+		core.MakePermanent(GreaterBlessingOfKingsAura(&char.Unit, false, 0))
+	}
+	if individual.GreaterBlessingOfMight {
+		core.MakePermanent(GreaterBlessingOfMightAura(&char.Unit, false, 0))
+	}
+	if individual.GreaterBlessingOfWisdom {
+		core.MakePermanent(GreaterBlessingOfWisdomAura(&char.Unit, false, 0))
+	}
+	if individual.GreaterBlessingOfSalvation {
+		core.MakePermanent(GreaterBlessingOfSalvationAura(&char.Unit, false, 0))
+	}
+	if individual.GreaterBlessingOfLight {
+		driveGreaterBlessingOfLight(char, individual)
 	}
 	if individual.Innervates > 0 {
 		driveInnervates(char, individual)

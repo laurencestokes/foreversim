@@ -14,7 +14,9 @@ var magmaTotemPulse = spellData.MagmaTotemTriggered.ByID(10581)
 // Forever has no Fire Nova Totem: the totem's ids are gone and the Fire Nova the spellbook teaches in
 // its place is the caster-centred nova, on a 10 sec cooldown.
 var fireNovaRank = spellData.FireNova.Highest()
-var fireNovaDamage = spellData.FireNovaTriggered.Highest()
+// The nova's damage is 408428 (403 base, 0.214 coefficient), which the scripted dummy casts, not the Era
+// row 11307 its tooltip cites: beta logs record every Fire Nova hit under the rank 1 sibling 408423.
+var fireNovaDamage = spellData.FireNovaTriggered.ByID(408428)
 
 func (shaman *Shaman) registerSearingTotemSpell() {
 	attack := shaman.RegisterSpell(core.SpellConfig{

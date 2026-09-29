@@ -1,6 +1,6 @@
 ---
 name: wowsims-spells
-description: 'Use when working on WoWSims Forever spell data: registering a spell, talent, aura, dot or proc from the client rows, porting a class to the sim/core/spelldata store, reading a row by hand off the store or through the resolvers, reading the generated family table paladin still uses, regenerating either from the client database, or reconciling a sim number against what the DBC says.'
+description: 'Use when working on WoWSims Forever spell data: registering a spell, talent, aura, dot or proc from the client rows, porting a class to the sim/core/spelldata store, reading a row by hand off the store or through the resolvers, regenerating it from the client database, or reconciling a sim number against what the DBC says.'
 argument-hint: 'Describe the spell, talent, proc or generated-data task to work on.'
 ---
 
@@ -8,9 +8,8 @@ argument-hint: 'Describe the spell, talent, proc or generated-data task to work 
 
 ## Scope
 
-- The spell store, `sim/core/spelldata`: one generated row per spell id, and the resolvers that turn a row into a spell config, an aura, a dot, a talent's modifiers or a proc listener. The warrior reads it through the resolvers; rogue, warlock, mage, druid, priest, shaman and hunter read its rows by hand instead, with no resolver in between.
-- The generated family table in `sim/paladin/spell_data_auto_gen.go`, read through `sim/common/shared`. Paladin reads it, and it retires when paladin ports.
-- Regenerating both: `tools/database/gen_spelldata`, `tools/database/gen_spell_data.go`, `tools/database/gen_spell_store.go`, `tools/database/spelldata.go`.
+- The spell store, `sim/core/spelldata`: one generated row per spell id, and the resolvers that turn a row into a spell config, an aura, a dot, a talent's modifiers or a proc listener. The warrior reads it through the resolvers; the other eight classes read its rows by hand instead, with no resolver in between.
+- Regenerating it: `tools/database/gen_spelldata`, `tools/database/gen_spell_data.go`, `tools/database/gen_spell_store.go`, `tools/database/spelldata.go`.
 - Reconciling a sim number that disagrees with the client data.
 
 Not in scope: item and enchant data (`gen_db` proper), and talent _trees_ — the JSON, protos and TS configs under `ui/sim/talents` are generated from the Talent table by `tools/database/gen_protos.go`.
@@ -21,9 +20,7 @@ The full guide is `docs/spell_data.md`; this is the map.
 
 - `sim/core/spelldata/spells_auto_gen.go` — generated, checked in: every spell the sim can reach, in the client's own units. 7035 rows, 9636 effects, pinned by `snapshot_test.go`.
 - `sim/core/spelldata/*.go` — hand-written: the accessors (`store.go`, `spell.go`, `effect.go`, `attributes.go`, `ladder.go`) and the resolvers (`resolve_spell.go`, `resolve_aura.go`, `resolve_proc.go`, `parse_effects.go`, `item_proc.go`). `sim/core` must not import this package: the store imports core, and the import back would be a cycle.
-- `sim/<class>/spell_data_auto_gen.go` — generated. A `spelldata.Ladder` per family for a store-backed class, a `shared.SpellDataTable` of rows for paladin. `storeBackedClasses` in `tools/database/gen_spell_data.go` decides which.
-- `sim/common/shared/spell_data.go`, `spell_data_talents.go` — hand-written, the family tables' accessors.
-- `sim/common/shared/spell_data_enums_auto_gen.go` — generated: the `A_` and `E_` names the family tables reference, parsed out of `sim/core/dbcenums` and emitted into `shared` because that is the package the tables read. It retires with them.
+- `sim/<class>/spell_data_auto_gen.go` — generated: a `spelldata.Ladder` per family, and no numbers of its own.
 - `tools/database/overrides/spell_overrides.go` — the numbers the client does not state, each with a reason, a source and a rule that makes the generator refuse it once the client catches up.
 - `assets/db_inputs/spell_store_inputs.json` — the client rows the store was built from. Gzipped despite the name; `zcat` to read it. It is what lets the store be regenerated and checked with no client database.
 
@@ -83,16 +80,15 @@ Where a spell can be cast is the row's too: `SpellConfig` fills `CastRequirement
 
 ## Porting a class
 
-`docs/spell_data.md` has the checklist under "Porting a class to the store". The short form: flip the class in `storeBackedClasses` and regenerate, dump the rows before touching a call site (the effects, the class masks each modifier names, the whole decoded `ProcTrigger`), keep the parity test green, and move goldens only for a cause you isolated by reverting one change.
+`docs/spell_data.md` has the checklist under "Porting a class onto the resolvers". The short form: every class file is already ladders, so dump the rows before touching a call site (the effects, the class masks each modifier names, the whole decoded `ProcTrigger`), and move goldens only for a cause you isolated by reverting one change.
 
 ## Traps
 
 - **`--tags=with_db` is required** on any sim test run, or it panics with `No DB data for enchant with id: 2613`. That panic is the missing tag, not a broken fixture.
-- **The data carries ranks the game never grants.** Fireball 38692 and Frostbolt 38697 are rank 14 entries at level 70 the generator cannot tell from the real rank 13s. Name the rank by spell id — `BySpellID` on a table, `ByID` on a ladder — rather than reaching for the top one.
-- **`HighestRank()` is not the last element** of a family table. Flamestrike is declared rank 7 then rank 6, and declaration order is registration order: it decides which spell `GetSpell` returns where two share an ActionID.
+- **The data carries ranks the game never grants.** Fireball 38692 and Frostbolt 38697 are rank 14 entries at level 70 the generator cannot tell from the real rank 13s. Name the rank by spell id — `ByID` on a ladder — rather than reaching for the top one.
 - **Rage is stored in tenths.** The client tracks a 0-1000 bar where the UI shows 0-100, so Heroic Strike reads 150 against the sim's 15. `PowerCost` and `Tenths()` divide it through; mana, energy and focus need no conversion.
 - **DBC array columns are 0-based, `EffectN` is 1-based.** `EffectMiscValue_0` is the first element in the database; `EffectN(1)` is the first effect in the store, and `Effect.Index` keeps the client's number, which has gaps on 46 rows.
-- **`Average` truncates the base before scaling it.** The client resolves an amount to a whole number, so an effect with a fractional base and per-level gain answers something `BaseValue()` arithmetic in float64 does not.
+- **`Average` floors the whole amount, in float32.** The client resolves an amount to a whole number, so an effect with a fractional base and per-level gain answers something `BaseValue()` arithmetic in float64 does not.
 - **A proc chance of 100 is not a roll.** 100 and 101 are the client's "fires on its own condition" sentinel. Read `ProcChanceSource`, never the `ProcChance` column.
 - **`RequireDamageDealt` defaults true.** A listener that fires on a dodge, a parry, a miss or a block needs it false. The decoder has done that already where the tooltip named the outcome and the row carries `ProcHintOutcomeTaken`; hand-clear it only on a row whose wording yielded no hint (23547). The outcome itself is always the caller's — no `ProcTypeMask` has a bit for one.
 - **A sub-second GCD must be named twice.** `core.Cast.GCDMin` overrides the global one-second floor, so Hammer of Wrath and Shadowfury set both `GCD` and `GCDMin` or `GCDTime` clamps them back up.
@@ -125,11 +121,11 @@ go run ./tools/spelldata -expr 'spellData.Execute.Highest().EffectN(1).Average(c
 go run ./tools/spelldata -config 'spelldata.SpellConfig(&warrior.Unit, executeRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))' -package warrior   # the config the resolver builds, each field with the step that filled it
 go run ./tools/spelldata -hover sim/warrior/execute.go 12:40   # the markdown an editor hover shows at line:column (1-based); the trace on stderr
 go run ./tools/spelldata -lsp                    # the same hovers as a language server on stdio
-go run ./tools/database/gen_spelldata            # rewrite the store, the enums and every class file
+go run ./tools/database/gen_spelldata            # rewrite the store, the forms and every class file
 go run ./tools/database/gen_spelldata -check     # name what is stale, write nothing (make spelldata-check)
 go test ./sim/core/spelldata/ -count=1           # the store's own tests, no database needed
 go test ./tools/database/ -count=1               # the regeneration from the committed inputs
-go test --tags=with_db ./sim/<class>/ -count=1   # a class; paladin's run includes its parity test
+go test --tags=with_db ./sim/<class>/ -count=1   # a class
 git status --porcelain -- '*.results'            # empty unless a number was meant to move
 ```
 

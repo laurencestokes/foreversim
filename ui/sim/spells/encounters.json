@@ -1,22 +1,8 @@
 {
 	"23513": {
 		"ability": "Essence of the Red",
-		"file": "sim/encounters/blackwing_lair.go",
+		"file": "sim/encounters/forever_raids.go",
 		"source": "classic",
-		"note": "Identical in the Forever beta client and Classic Era - duration, cooldown, cast time, cost and every effect value, coefficient, period and per-level - so Wowhead's Classic tooltip describes it. Checked with tools/data_watch/spell_diff.py."
-	},
-	"28131": {
-		"ability": "Enrage (Patchwerk)",
-		"file": "sim/encounters/naxxramas/patchwerk10_ai.go",
-		"source": "classic",
-		"note": "Checked against the beta client (spell 28131) and unchanged from Classic Era: 25% damage and 40% attack speed. Forever renumbered the haste aura from 138 to 319 and changed no value."
-	},
-	"59192": {
-		"ability": "Hateful Strike (Patchwerk)",
-		"file": "sim/encounters/naxxramas/patchwerk10_ai.go",
-		"source": "assumed",
-		"assumptions": ["Damage of 27750 to 32250 carried over from the upstream Classic sim; the id is not in either client."],
-		"note": "Spell 59192 is in neither the Forever beta client nor Classic Era - it is a Wrath era id the upstream sim used for Naxxramas. Nothing here can be checked against client data.",
-		"tooltip": "A heavy melee strike on the highest health target in melee range, every 2 sec."
+		"note": "Identical in the Forever beta client and Classic Era - duration, cooldown, cast time, cost and every effect value, coefficient, period and per-level - so Wowhead's Classic tooltip describes it. The 70009 spell store carries no boss spells, so it was not re-checked; the sim gives 500 mana, 50 Energy or 20 Rage a second for 4 minutes on Vaelastrasz."
 	}
 }

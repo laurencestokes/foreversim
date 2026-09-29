@@ -32,7 +32,7 @@ func HuntersMarkAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.A
 }
 
 // Judgement of the Crusader
-// func JudgementOfTheCrusaderAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura // judgement_of_the_crusader, KindDebuffStat: spell 20303 states no aura effect the parse attaches: effect 1 A_MOD_DAMAGE_TAKEN(14) misc 2
+// func JudgementOfTheCrusaderAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura // judgement_of_the_crusader: spell 20303 states no aura effect the parse attaches: effect 1 A_MOD_DAMAGE_TAKEN(14) misc 2
 
 // Judgement of Light
 // Left out: effect 1 A_PROC_TRIGGER_SPELL(42) misc 0

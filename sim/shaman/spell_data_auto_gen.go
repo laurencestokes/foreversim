@@ -200,7 +200,7 @@ var spellData = generatedSpellData{
 	EyeOfTheStorm:                  spelldata.Talent(29062, 3),
 	FarSight:                       spelldata.Ranked(6196),
 	FireNova:                       spelldata.Ranked(408341, 408342, 408343, 408344, 408345),
-	FireNovaTriggered:              spelldata.Ranked(8349, 8502, 8503, 11306, 11307),
+	FireNovaTriggered:              spelldata.Ranked(8349, 8502, 8503, 11306, 11307, 408423, 408424, 408426, 408427, 408428),
 	FireResistanceTotem:            spelldata.Ranked(8184, 10537, 10538),
 	FireResistanceTotemTriggered:   spelldata.Ranked(8185, 10534, 10535),
 	FlameShock:                     spelldata.Ranked(8050, 8052, 8053, 10447, 10448, 29228),

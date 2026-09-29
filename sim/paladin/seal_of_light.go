@@ -1,14 +1,13 @@
 package paladin
 
 import (
-	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/buffs"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// The heal each rank fires on a hit, and the heal its judgement grants attackers. Neither carries
-// the seal's rank subtext, so the pairing is by hand.
-var sealOfLightProcIDs = map[int32]int32{1: 20167, 2: 20333, 3: 20334, 4: 20340}
+// The heal each rank's judgement grants attackers. It carries no rank subtext, so the pairing is
+// by hand; the heal the seal itself fires is the first spell its tooltip names.
 var judgementOfLightHealIDs = map[int32]int32{1: 20267, 2: 20341, 3: 20342, 4: 20343}
 
 // Seal of Light
@@ -20,14 +19,16 @@ var judgementOfLightHealIDs = map[int32]int32{1: 20267, 2: 20341, 3: 20342, 4: 2
 // Unleashing this Seal's energy will judge an enemy for 40 sec, granting melee attacks made
 // against the judged enemy a chance of healing the attacker. Your melee strikes will refresh the
 // spell's duration. Only one Judgement per Paladin can be active at any one time.
-func (paladin *Paladin) registerSealOfLight(row shared.SpellData) {
-	judgementID := int32(effectAt(row, 2).Value)
-	healRow := spellData.SealOfLightTriggered.BySpellID(judgementOfLightHealIDs[row.Rank])
+//
+// The seal's second effect names its judgement (the row has no effect at the client's index 1).
+func (paladin *Paladin) registerSealOfLight(_ int32, rank *spelldata.Spell) {
+	judgementID := int32(rank.EffectN(2).BaseValue())
+	healRank := spellData.SealOfLightTriggered.ByID(judgementOfLightHealIDs[rank.RankNumber()])
 	judgementAuras := paladin.newJudgementAuras(func(target *core.Unit) *core.Aura {
 		return buffs.JudgementOfLightRankAura(target, buffs.JudgementRank{
 			SpellID: judgementID,
-			Rank:    row.Rank,
-			Value:   shared.SpellDataMin(healRow.Heal),
+			Rank:    rank.RankNumber(),
+			Value:   healRank.HealEffect().Average(core.CharacterLevel),
 		})
 	})
 
@@ -51,9 +52,10 @@ func (paladin *Paladin) registerSealOfLight(row shared.SpellData) {
 		RelatedAuraArrays: judgementAuras.ToMap(),
 	})
 
-	heal := shared.SpellDataMin(row.Heal)
+	procRank := rank.Refs()[0]
+	heal := procRank.HealEffect().Average(core.CharacterLevel)
 	procSpell := paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: sealOfLightProcIDs[row.Rank]},
+		ActionID:       core.ActionID{SpellID: procRank.ID},
 		SpellSchool:    core.SpellSchoolHoly,
 		ProcMask:       core.ProcMaskSpellHealing,
 		Flags:          core.SpellFlagHelpful | core.SpellFlagPassiveSpell | core.SpellFlagProc, // The heals lack Not a Proc.
@@ -68,9 +70,9 @@ func (paladin *Paladin) registerSealOfLight(row shared.SpellData) {
 	})
 
 	aura := paladin.makeSealExclusive(paladin.MakeProcTriggerAura(core.ProcTrigger{
-		Name:            sealLabel("Seal of Light", paladin, row),
-		ActionID:        core.ActionID{SpellID: row.SpellID},
-		MetricsActionID: core.ActionID{SpellID: row.SpellID},
+		Name:            sealLabel("Seal of Light", paladin, rank),
+		ActionID:        core.ActionID{SpellID: rank.ID},
+		MetricsActionID: core.ActionID{SpellID: rank.ID},
 		Duration:        sealDuration,
 		Callback:        core.CallbackOnSpellHitDealt,
 		ProcMask:        core.ProcMaskMelee,
@@ -81,7 +83,7 @@ func (paladin *Paladin) registerSealOfLight(row shared.SpellData) {
 	}))
 
 	paladin.registerSealSpell(&sealConfig{
-		row:       row,
+		rank:      rank,
 		classMask: SpellMaskSealOfLight,
 		aura:      aura,
 		judgement: judgement,

@@ -130,6 +130,67 @@ func TestClearcastingSpentByNextCostedAbility(t *testing.T) {
 	}
 }
 
+// Omen of Clarity rolls its 2 procs a minute off the paw's 1.0 s swing in Cat Form, for specials too, not
+// off the equipped weapon: beta logs gave 36 procs off 542 Maul, Swipe and Claw hits where the weapon's
+// speed predicts 59 (sim/druid/omen_of_clarity.go).
+func TestOmenOfClarityIgnoresWeaponSpeed(t *testing.T) {
+	items := make([]*proto.ItemSpec, proto.ItemSlot_ItemSlotRanged+1)
+	for i := range items {
+		items[i] = &proto.ItemSpec{}
+	}
+	items[proto.ItemSlot_ItemSlotMainHand] = &proto.ItemSpec{Id: 7230} // Smite's Mighty Hammer, 3.5 s
+
+	sim := core.NewSim(&proto.RaidSimRequest{
+		SimOptions: &proto.SimOptions{RandomSeed: 1},
+		Raid: &proto.Raid{Parties: []*proto.Party{{Buffs: &proto.PartyBuffs{}, Players: []*proto.Player{{
+			Name: "Cat", Class: proto.Class_ClassDruid, Race: proto.Race_RaceNightElf, TalentsString: DefaultTalents,
+			Equipment: &proto.EquipmentSpec{Items: items}, Buffs: &proto.IndividualBuffs{}, Spec: DefaultSpecOptions,
+			Rotation: &proto.APLRotation{Type: proto.APLRotation_TypeAPL},
+		}}}}},
+		Encounter: core.MakeSingleTargetEncounter(0),
+	}, simsignals.CreateSignals())
+	sim.Reset()
+
+	cat := sim.Raid.Parties[0].Players[0].(druid.DruidAgent).GetDruid()
+	if weapon := cat.GetMHWeapon(); weapon == nil || weapon.SwingSpeed != 3.5 {
+		t.Fatalf("want the 3.5 s Smite's Mighty Hammer in the main hand, got %v", weapon)
+	}
+	omen := cat.GetAura("Omen of Clarity")
+	if omen == nil {
+		t.Fatal("Omen of Clarity is not registered")
+	}
+
+	const casts = 4000
+	procs := 0
+	for range casts {
+		cat.ClearcastingAura.Deactivate(sim)
+		omen.Icd.Reset()
+		cat.GCD.Reset()
+		cat.AddEnergy(sim, 100, cat.EnergyRefundMetrics)
+		if !cat.Shred.Cast(sim, cat.CurrentTarget) {
+			t.Fatal("Shred did not cast")
+		}
+		// Procs land one spell batch window after the hit.
+		settled := false
+		sim.AddPendingAction(core.NewDelayedAction(core.DelayedActionOptions{
+			DoAt:     sim.CurrentTime + core.SpellBatchWindow,
+			Priority: core.ActionPriorityLow,
+			OnAction: func(*core.Simulation) { settled = true },
+		}))
+		for !settled {
+			sim.Step()
+		}
+		if cat.ClearcastingAura.IsActive() {
+			procs++
+		}
+	}
+
+	// 2 a minute is 3.3% a landed hit on the paw's 1.0 s and 11.7% on the hammer's 3.5 s.
+	if rate := float64(procs) / casts; rate < 0.02 || rate > 0.05 {
+		t.Errorf("Shred procced Clearcasting %.1f%% of casts, want about 3%%", rate*100)
+	}
+}
+
 // The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
 func TestArena(t *testing.T) {
 	arenalib.Run(t, arenaSpec)
@@ -153,4 +214,33 @@ var arenaSpec = arenalib.Spec{
 	RaceBuilds: map[string]arenalib.RaceBuild{
 		"Feral Cat 9/35/7": {Gear: "launch", Rotation: "default"},
 	},
+}
+
+// The default rotation Prowls before the pull and opens with Ravage (9867), once a fight: Prowl
+// only casts before combat and the opener breaks it.
+func TestRavageOpensFromProwl(t *testing.T) {
+	result := core.RunRaidSim(&proto.RaidSimRequest{
+		SimOptions: &proto.SimOptions{RandomSeed: 1, Iterations: 100},
+		Raid: &proto.Raid{Parties: []*proto.Party{{Buffs: &proto.PartyBuffs{}, Players: []*proto.Player{{
+			Name: "Cat", Class: proto.Class_ClassDruid, Race: proto.Race_RaceNightElf, TalentsString: FeralCatTalents,
+			Equipment: &proto.EquipmentSpec{}, Buffs: &proto.IndividualBuffs{}, Spec: DefaultSpecOptions,
+			Rotation: core.GetAplRotation("../../../ui/specs/druid/feralcat/apls", "default").Rotation,
+		}}}}},
+		Encounter: core.MakeSingleTargetEncounter(0),
+	})
+	if result.Error != nil {
+		t.Fatal(result.Error.Message)
+	}
+
+	casts := int32(0)
+	for _, action := range result.RaidMetrics.Parties[0].Players[0].Actions {
+		if action.Id.GetSpellId() == 9867 {
+			for _, target := range action.Targets {
+				casts += target.Casts
+			}
+		}
+	}
+	if casts != 100 {
+		t.Errorf("Ravage cast %d times over 100 fights, want 100", casts)
+	}
 }

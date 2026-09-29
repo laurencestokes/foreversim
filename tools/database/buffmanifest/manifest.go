@@ -1,4 +1,4 @@
-// Package buffmanifest is the checked-in census of every raid, party, individual
+// Package buffmanifest is the checked-in manifest of every raid, party, individual
 // and enemy-debuff proto field the sim knows about. It is a leaf package: it may
 // import the standard library and sim/core/proto and nothing else, so the buff
 // generator and the proto emitter can both read it while the generated proto and
@@ -36,8 +36,9 @@ func (s BuffScope) String() string {
 
 type BuffProtoType int
 
+// The zero BuffProtoType is no override: the row's type is derived, see ProtoType.
 const (
-	ProtoBool BuffProtoType = iota
+	ProtoBool BuffProtoType = iota + 1
 	ProtoTristate
 	ProtoInt32
 	ProtoDouble
@@ -57,49 +58,26 @@ func (t BuffProtoType) String() string {
 	return "BuffProtoType(unknown)"
 }
 
+// BuffKind names a row whose behaviour is not simply the aura its spell states. A plain row states
+// none, and a damage shield is read off the spell.
 type BuffKind int
 
 const (
-	KindStatFlat BuffKind = iota
-	KindStatPct
-	KindResistance
-	KindPseudoMult
+	KindPlain BuffKind = iota
 	KindDamageShield
-	KindDebuffStat
-	KindDebuffStacking
-	KindDebuffDamageTaken
-	KindDebuffAtkSpeed
-	KindDebuffUptime
 	KindExternalCD
 	KindProc
 	KindItemCount
 	KindManual
 	KindFlag
-	KindAbsent
 )
 
 func (k BuffKind) String() string {
 	switch k {
-	case KindStatFlat:
-		return "KindStatFlat"
-	case KindStatPct:
-		return "KindStatPct"
-	case KindResistance:
-		return "KindResistance"
-	case KindPseudoMult:
-		return "KindPseudoMult"
+	case KindPlain:
+		return "KindPlain"
 	case KindDamageShield:
 		return "KindDamageShield"
-	case KindDebuffStat:
-		return "KindDebuffStat"
-	case KindDebuffStacking:
-		return "KindDebuffStacking"
-	case KindDebuffDamageTaken:
-		return "KindDebuffDamageTaken"
-	case KindDebuffAtkSpeed:
-		return "KindDebuffAtkSpeed"
-	case KindDebuffUptime:
-		return "KindDebuffUptime"
 	case KindExternalCD:
 		return "KindExternalCD"
 	case KindProc:
@@ -110,40 +88,8 @@ func (k BuffKind) String() string {
 		return "KindManual"
 	case KindFlag:
 		return "KindFlag"
-	case KindAbsent:
-		return "KindAbsent"
 	}
 	return "BuffKind(unknown)"
-}
-
-type TalentApplies int
-
-const (
-	TalentScalesValue TalentApplies = iota
-	TalentScalesDuration
-	TalentAddsStat
-)
-
-func (a TalentApplies) String() string {
-	switch a {
-	case TalentScalesValue:
-		return "TalentScalesValue"
-	case TalentScalesDuration:
-		return "TalentScalesDuration"
-	case TalentAddsStat:
-		return "TalentAddsStat"
-	}
-	return "TalentApplies(unknown)"
-}
-
-type TalentMod struct {
-	// SpellID is the spell of the trait node that prices the improvement, which the store carries as
-	// a talent ladder.
-	SpellID int32
-	Name    string
-	// Effect is the index of the modifying effect inside the talent spell.
-	Effect  int32
-	Applies TalentApplies
 }
 
 type ActionRef struct {
@@ -151,38 +97,56 @@ type ActionRef struct {
 	ItemID  int32
 }
 
+// BuffSpec is what the client cannot state about a proto field. Its scope is the slice it sits in,
+// its number its position there, and its names, owner and left-out auras are read off its spell.
 type BuffSpec struct {
-	Field  string // proto field name, snake_case, owns the number
-	Number int32  // proto field number
-	Scope  BuffScope
-	Proto  BuffProtoType // bool when nothing prices an improved state
-	Kind   BuffKind
-	Go     string // identifier stem: "BattleShout"
+	Field string // proto field name, snake_case
 	// SpellID is the spell the aura's numbers are read from: the top rank of the castable family, or
-	// the aura that family's cast applies when the cast is a summon or a dummy. CastID is the cast
-	// itself, for a row whose timing only the cast states. Both are roots of the spell store.
-	SpellID        int32
-	CastID         int32
-	Name           string      // SpellName.Name_lang of the castable family ("" for rows with no spell)
-	AuraName       string      // aura family when the cast is a summon or dummy (totems: "Strength of Earth")
-	Owner          proto.Class // class that casts it; ClassUnknown for none
-	Talent         *TalentMod  // improving talent family, nil when none
-	Category       string      // exclusive-effect category value, "" = none
-	SharedCategory string      // second exclusive category the aura also joins, "" = none
+	// the aura that family's cast applies when the cast is a summon or a dummy. CastID is that cast,
+	// the spell the player learns, which names the buff and times an external cooldown. Both are
+	// roots of the spell store.
+	SpellID int32
+	CastID  int32
+	// Talent is the spell of the trait node that prices the improved state, 0 when none does.
+	Talent         int32
+	Category       string // exclusive-effect category value, "" = none
+	SharedCategory string // second exclusive category the aura also joins, "" = none
 	SingleAura     bool
-	Driver         bool // apply block hands the field to drive<Go>; the aura is not simply always up
-	// SkipAuras names auras of the spell the buff leaves out, spelled the way
-	// sim/core/dbcenums spells them, for a row the client states beside the
-	// buff that the raid's copy does not apply. The names are checked while the
-	// row is resolved.
-	SkipAuras []string
-	Stats     []proto.Stat // UI relevance tags
+	Driver         bool         // apply block hands the field to drive<Go>; the aura is not simply always up
+	Stats          []proto.Stat // UI relevance tags
 	// ImpAction names the improved state's source when it is not a talent: an
 	// item, or the spell an item set grants at a piece threshold. It is the icon
-	// the improved state shows, and a tristate row states it or a Talent.
+	// the improved state shows.
 	ImpAction *ActionRef
-	Label     string // UI label override, "" = DB name
-	Notes     string // reason for manual/absent rows; emitted as a comment
+	Label     string // UI label override, "" = the spell's name
+	// Owner is the class that provides a buff whose spell names no class family.
+	Owner proto.Class
+	Kind  BuffKind
+	Proto BuffProtoType // override of the derived type
+	// Reason says what a Flag row is, since no spell does; the shell it renders as carries it.
+	Reason string
+	// LowerRank marks a SpellID pinned below the family's top rank on purpose (the top rank grants
+	// less), so the client anchor check leaves it alone.
+	LowerRank bool
+}
+
+// GoStem is the identifier stem the generated code names the row by: GoField without underscores.
+func (s BuffSpec) GoStem() string {
+	return strings.ReplaceAll(s.GoField(), "_", "")
+}
+
+// ProtoType is the field's proto type: a tristate when a talent or an action prices an improved
+// state, a count for an external cooldown or an item, and a bool otherwise.
+func (s BuffSpec) ProtoType() BuffProtoType {
+	switch {
+	case s.Proto != 0:
+		return s.Proto
+	case s.Talent != 0 || s.ImpAction != nil:
+		return ProtoTristate
+	case s.Kind == KindExternalCD || s.Kind == KindItemCount:
+		return ProtoInt32
+	}
+	return ProtoBool
 }
 
 // GoField is the field name protoc-gen-go generates for Field. It ports
@@ -241,14 +205,41 @@ func (s BuffSpec) TSField() string {
 	return b.String()
 }
 
+// Scopes is the order the rows are resolved, rendered and applied in. The apply order is the order
+// the auras register in, which the sim's results follow.
+var Scopes = []BuffScope{ScopeParty, ScopeRaid, ScopeIndividual, ScopeDebuff}
+
+// ByScope is the rows of one message, in proto number order.
 func ByScope(scope BuffScope) []BuffSpec {
-	var out []BuffSpec
-	for _, spec := range Manifest {
-		if spec.Scope == scope {
-			out = append(out, spec)
+	switch scope {
+	case ScopeRaid:
+		return Raid
+	case ScopeParty:
+		return Party
+	case ScopeIndividual:
+		return Individual
+	case ScopeDebuff:
+		return Debuffs
+	}
+	return nil
+}
+
+// Row is a manifest row with the scope and the proto number its place in the manifest gives it.
+type Row struct {
+	BuffSpec
+	Scope  BuffScope
+	Number int32
+}
+
+// All is every row, scope by scope in Scopes order.
+func All() []Row {
+	var rows []Row
+	for _, scope := range Scopes {
+		for i, spec := range ByScope(scope) {
+			rows = append(rows, Row{BuffSpec: spec, Scope: scope, Number: int32(i + 1)})
 		}
 	}
-	return out
+	return rows
 }
 
 func isASCIILower(c byte) bool { return c >= 'a' && c <= 'z' }

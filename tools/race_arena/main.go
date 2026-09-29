@@ -21,10 +21,9 @@ import (
 	"time"
 )
 
-// The client build the racials were read from (sim/core/racials.go, docs/forever_rules.md). A
-// constant rather than something the sim reports, because the sim does not know it either: it is
-// where a person read the numbers.
-const clientBuild = "1.60.1.70009"
+// The reviewed client build. Build 70094 leaves the sim's 70009 client tables,
+// including the racial rows, unchanged (docs/data-changes/2026-09-29-client-1.60.1.70094.md).
+const clientBuild = "1.60.1.70094"
 
 // The fight every list is run in: the leaderboard's one target (core.MakeSingleTargetEncounter).
 const (
