@@ -62,6 +62,13 @@
 		"source": "forever",
 		"tooltip": "50 Focus\nMelee Range\nInstant\n1 min cooldown\nSlash an enemy with razor talons, causing the target to Bleed for 156 damage over 18 sec."
 	},
+	"1265883": {
+		"ability": "Web",
+		"file": "sim/hunter/pet_abilities.go",
+		"note": "New in Forever, Spider only (client SkillLineAbility, skill line 203). Client 70094: rank 5 (level 60) deals 13 Nature every sec for 4 sec, 20 Focus, 40 sec cooldown, ranged defense, ticks can crit; the spider casts it whenever it is ready, then Bites. Same bleed code as Savage Rend. Beta logs (Consumer's spider, foreverlogs 2682/2683): rank 1's 3 a tick lands as 4, four ticks a cast, one crit in 28, so the pet's damage multipliers and no attack power share. The root is left out: bosses are immune. Wowhead Forever (env 16) agrees: 52 over 4 sec.",
+		"source": "forever",
+		"tooltip": "20 Focus\n20 yd range\nInstant\n40 sec cooldown\nEntangles an enemy in a corrosive web, immobilizing them and dealing 52 Nature damage over 4 sec."
+	},
 	"1265904": {
 		"ability": "Dust Cloud",
 		"file": "sim/hunter/pet_abilities.go",

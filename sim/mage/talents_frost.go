@@ -186,14 +186,14 @@ func (mage *Mage) registerImprovedConeOfCold() {
 
 // Raid bosses cannot be chilled or frozen, so Fingers of Frost is the only thing that gets Shatter
 // and the Ice Lance bonus going on one; Shatter is folded in here because the two only ever fire
-// together. A chill effect has a 15% chance (beta tooltip; the talent row states only the charge
-// count) to treat the next spells, one per point, as if the target were frozen.
+// together. A chill effect has a 15% chance (the talent row's second effect, flat at both ranks) to
+// treat the next spells, one per point, as if the target were frozen.
 func (mage *Mage) registerFingersOfFrost() {
 	if mage.Talents.FingersOfFrost == 0 {
 		return
 	}
 
-	procChance := 0.15
+	procChance := spellData.FingersOfFrost.EffectAt(2).FractionAt(mage.Talents.FingersOfFrost)
 	fofRank := spellData.FingersOfFrostTriggered.Highest()
 	shatterCrit := spellData.Shatter.ValueAt(mage.Talents.Shatter)
 

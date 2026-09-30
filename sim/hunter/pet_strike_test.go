@@ -7,8 +7,8 @@ import (
 	"github.com/wowsims/forever/sim/core/proto"
 )
 
-// The Crab casts Pinch, the Crocolisk Dismember, the Owl Mine! and the Hyena Tendon Rip (client rows
-// 1264742 / 1264933 / 1265058 / 1265042), the Gorilla Thunderstomp (1264455) and, with 3 enemies up, the Bear
+// The Crab casts Pinch, the Crocolisk Dismember, the Owl Mine!, the Hyena Tendon Rip and the Spider Web (client
+// rows 1264742 / 1264933 / 1265058 / 1265042 / 1265883), the Gorilla Thunderstomp (1264455) and, with 3 enemies up, the Bear
 // Swipe (1264502), each landing inside its rank 5 range.
 func TestPetStrikes(t *testing.T) {
 	for _, c := range []struct {
@@ -22,6 +22,8 @@ func TestPetStrikes(t *testing.T) {
 		{proto.HunterOptions_Owl, spellData.MineTriggered.Highest().ID, 41, 47, 0},
 		// The whole bleed, 3 ticks of 20.
 		{proto.HunterOptions_Hyena, spellData.TendonRipTriggered.Highest().ID, 60, 60, 0},
+		// 4 ticks of 13, Nature.
+		{proto.HunterOptions_Spider, spellData.WebTriggered.Highest().ID, 52, 52, 0},
 		{proto.HunterOptions_Gorilla, spellData.ThunderstompTriggered.Highest().ID, 122, 142, 0},
 		{proto.HunterOptions_Bear, spellData.SwipeTriggered.Highest().ID, 20, 22, 3},
 	} {

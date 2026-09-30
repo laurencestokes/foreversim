@@ -28,6 +28,7 @@ const (
 	DustCloud
 	Thunderstomp
 	Swipe
+	Web
 )
 
 func (hp *HunterPet) NewPetAbility(abilityType PetAbilityType) *core.Spell {
@@ -46,6 +47,8 @@ func (hp *HunterPet) NewPetAbility(abilityType PetAbilityType) *core.Spell {
 		return hp.newPetBleed(spellData.SavageRendTriggered.Highest())
 	case TendonRip:
 		return hp.newPetBleed(spellData.TendonRipTriggered.Highest())
+	case Web:
+		return hp.newPetBleed(spellData.WebTriggered.Highest())
 	case Pinch:
 		return hp.newPetStrike(spellData.PinchTriggered.Highest())
 	case Dismember:
@@ -289,6 +292,11 @@ func (hp *HunterPet) newScorpidPoison() *core.Spell {
 // Consumer's raptors, foreverlogs 2650/2669/2673/2674) put a Savage Rend tick at 6.4-7.0 at rank 1,
 // which is the 5 base times the pet's happiness and Raptor damage scalars, so no attack power share.
 // The 5% more bleed damage Savage Rend adds and Tendon Rip's snare are left out.
+//
+// Web (Spider, skill line 203) is new in Forever too and rides the same code: Nature damage every sec
+// for 4 sec off a ranged-defense hit (rank 5: 13 a tick, 20 focus, 40 sec cooldown); the root is left
+// out, bosses are immune. Beta logs (Consumer's spider, foreverlogs 2682/2683) tick rank 1's 3 at 4,
+// four ticks a cast, one crit in 28: the base times the pet's happiness and Spider damage scalars.
 func (hp *HunterPet) newPetBleed(rank *spelldata.Spell) *core.Spell {
 	tick := rank.PeriodicEffect()
 	tickLength := tick.Period()
@@ -339,8 +347,11 @@ func (hp *HunterPet) newPetBleed(rank *spelldata.Spell) *core.Spell {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcAndDealOutcome(sim, target, spell.OutcomeMeleeSpecialHit)
-			if result.Landed() {
+			outcome := spell.OutcomeMeleeSpecialHit
+			if spell.DefenseType == core.DefenseTypeRanged {
+				outcome = spell.OutcomeRangedHit
+			}
+			if spell.CalcAndDealOutcome(sim, target, outcome).Landed() {
 				spell.Dot(target).Apply(sim)
 			}
 		},

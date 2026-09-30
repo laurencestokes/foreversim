@@ -78,8 +78,8 @@ func applySkyborneSharedRacials(character *Character) {
 	applyMobTypeDamageBonus(character, proto.MobType_MobTypeElemental, 1.05)
 }
 
-// Read Ley Line 1259705: +100% health and mana regeneration (Energized, 1270842) for 15 sec away
-// from a ley line, 2 min cooldown. Left to the APL. The client lists it and Skysight on the shared
+// Read Ley Line 1259705: a 2 sec cast (client 1.60.1.70058) for +100% health and mana regeneration
+// (Energized, 1270842) for 15 sec away from a ley line, 2 min cooldown. Left to the APL. The client lists it and Skysight on the shared
 // Skyborne skill line; the High Order take this one and the Windshapers Skysight, as wowsims reads it.
 func registerReadLeyLine(character *Character) {
 	aura := character.RegisterAura(Aura{
@@ -103,7 +103,8 @@ func registerReadLeyLine(character *Character) {
 		Flags:    SpellFlagAPL | SpellFlagNoOnCastComplete,
 		Cast: CastConfig{
 			DefaultCast: Cast{
-				GCD: GCDDefault,
+				GCD:      GCDDefault,
+				CastTime: time.Second * 2,
 			},
 			CD: Cooldown{
 				Timer:    character.NewTimer(),
@@ -117,8 +118,8 @@ func registerReadLeyLine(character *Character) {
 	})
 }
 
-// Skysight 1259686: +10% movement speed (Elemental Blessing, 1259688) for 30 sec away from an
-// elemental convergence, 2 min cooldown. Left to the APL.
+// Skysight 1259686: a 0.5 sec cast (client 1.60.1.70058) for +10% movement speed (Elemental
+// Blessing, 1259688) for 30 sec away from an elemental convergence, 2 min cooldown. Left to the APL.
 func registerSkysight(character *Character) {
 	aura := character.RegisterAura(Aura{
 		Label:    "Elemental Blessing",
@@ -137,7 +138,8 @@ func registerSkysight(character *Character) {
 		Flags:    SpellFlagAPL | SpellFlagNoOnCastComplete,
 		Cast: CastConfig{
 			DefaultCast: Cast{
-				GCD: GCDDefault,
+				GCD:      GCDDefault,
+				CastTime: time.Millisecond * 500,
 			},
 			CD: Cooldown{
 				Timer:    character.NewTimer(),
@@ -186,14 +188,15 @@ func applyWeaponCritSpecialization(character *Character, label string, spellID i
 	})
 }
 
-// "Increased damage against <creature type>" racials. In Vanilla and TBC these also raise the
-// crit multiplier (see AttackTable.CritMultiplier).
+// "Increased damage against <creature type>" racials: Beast Slaying (troll 20557), Big Game Hunter
+// (dwarf 1259721) and Elemental Insight (Skyborne 1259707) are one A_MOD_DAMAGE_DONE_VERSUS each,
+// with no crit damage effect; the hunter's Humanoid/Monster Slaying carry that as a second aura
+// (547), these don't.
 func applyMobTypeDamageBonus(character *Character, mobType proto.MobType, multiplier float64) {
 	character.Env.RegisterPostFinalizeEffect(func() {
 		for _, at := range character.AttackTables {
 			if at.Defender.MobType == mobType {
 				at.DamageDealtMultiplier *= multiplier
-				at.CritMultiplier *= multiplier
 			}
 		}
 	})

@@ -225,7 +225,7 @@
 	"26363": {
 		"ability": "Lightning Shield",
 		"file": "sim/shaman/shields.go",
-		"note": "Rank 7 orb, the only orb the sim fires. Beta client 1.60.1.70009 (sim/core/spelldata), damage scaled to level 60 by the client's per-level points. Coefficient 0.267.",
+		"note": "Rank 7 orb, the only orb the sim fires. Beta client 1.60.1.70009 (sim/core/spelldata), damage scaled to level 60 by the client's per-level points. Coefficient 0.267. Cannot crit (client attribute on every orb rank; 0 crits in ~200 beta log hits).",
 		"source": "forever",
 		"tooltip": "Strikes the attacker for 178 Nature damage."
 	},

@@ -64,7 +64,7 @@
 	"11763": {
 		"ability": "Firebolt",
 		"file": "sim/warlock/pets.go",
-		"note": "Forever halved the damage. The pet spells are not in the sim's spell store, so pets.go carries rank 7 by hand (43 to 48, 0.571 coefficient, 115 mana) and no lower rank is registered. Values from the beta client 1.60.1.69893.",
+		"note": "Forever halved the damage. The pet spells are not in the sim's spell store, so pets.go carries rank 7's client row by hand (44 + 0.6 a level from 58, capped at 63, +-11.4%: 42 to 48 at 60, was a hand-typed 43 to 48; 0.571 coefficient, 115 mana) and no lower rank is registered. Values from the beta client 1.60.1.70094.",
 		"source": "forever",
 		"tooltip": "115 Mana\n2 sec cast\nDeals 43 to 48 Fire damage to a target."
 	},

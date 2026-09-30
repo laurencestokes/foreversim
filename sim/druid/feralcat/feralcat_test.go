@@ -244,3 +244,43 @@ func TestRavageOpensFromProwl(t *testing.T) {
 		t.Errorf("Ravage cast %d times over 100 fights, want 100", casts)
 	}
 }
+
+// Claw (9850) is the builder that works from the front, where Shred cannot: 45 Energy less Ferocity's
+// one a rank, one combo point when it lands.
+func TestClawFromTheFront(t *testing.T) {
+	sim := core.NewSim(&proto.RaidSimRequest{
+		SimOptions: &proto.SimOptions{RandomSeed: 1},
+		Raid: &proto.Raid{Parties: []*proto.Party{{Buffs: &proto.PartyBuffs{}, Players: []*proto.Player{{
+			Name: "Cat", Class: proto.Class_ClassDruid, Race: proto.Race_RaceNightElf, TalentsString: DefaultTalents,
+			Equipment: &proto.EquipmentSpec{}, Buffs: &proto.IndividualBuffs{}, Spec: DefaultSpecOptions,
+			Rotation: &proto.APLRotation{Type: proto.APLRotation_TypeAPL}, InFrontOfTarget: true,
+		}}}}},
+		Encounter: core.MakeSingleTargetEncounter(0),
+	}, simsignals.CreateSignals())
+	sim.Reset()
+
+	cat := sim.Raid.Parties[0].Players[0].(druid.DruidAgent).GetDruid()
+	if cat.Shred.Cast(sim, cat.CurrentTarget) {
+		t.Fatal("Shred cast from the front")
+	}
+
+	landed := 0
+	for range 20 {
+		cat.GCD.Reset()
+		cat.AddEnergy(sim, 100, cat.EnergyRefundMetrics)
+		energy, cp := cat.CurrentEnergy(), cat.ComboPoints()
+		if !cat.Claw.Cast(sim, cat.CurrentTarget) {
+			t.Fatal("Claw did not cast from the front")
+		}
+		if cat.ComboPoints() > cp {
+			landed++
+			if spent, want := energy-cat.CurrentEnergy(), float64(45-cat.Talents.Ferocity); spent != want && !cat.ClearcastingAura.IsActive() {
+				t.Errorf("Claw cost %v Energy, want %v", spent, want)
+			}
+		}
+		cat.SpendComboPoints(sim, cat.Rip.ComboPointMetrics())
+	}
+	if landed < 10 {
+		t.Errorf("Claw awarded a combo point %d times in 20 casts", landed)
+	}
+}

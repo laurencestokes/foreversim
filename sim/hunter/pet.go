@@ -266,7 +266,7 @@ var DefaultPetConfigs = [...]PetConfig{
 		},
 	},
 	proto.HunterOptions_Spider: {
-		Name: "Spider", FocusDump: Bite,
+		Name: "Spider", FocusDump: Bite, ExtraAbility: Web,
 		Health: 1.00, Armor: 1.00, Damage: 1.07,
 	},
 	proto.HunterOptions_Tallstrider: {
