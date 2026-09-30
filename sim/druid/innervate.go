@@ -26,6 +26,7 @@ func (druid *Druid) registerInnervateCD() {
 		Flags:          core.SpellFlagAPL | core.SpellFlagHelpful,
 		MaxRange:       float64(innervateRank.MaxRange),
 
+		ManaCost: innervateRank.ManaCost(),
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
 				GCD: innervateRank.GCD(),

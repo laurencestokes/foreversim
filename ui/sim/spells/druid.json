@@ -87,7 +87,7 @@
 	"31018": {
 		"ability": "Ferocious Bite",
 		"file": "sim/druid/ferocious_bite.go",
-		"note": "Client 70009: damage, the energy conversion and the 35 Energy are Classic's.",
+		"note": "Client 70009: damage, the energy conversion and the 35 Energy are Classic's. The sim reads 147 per combo point and 2.7 per extra Energy from the client row and rolls its 82 +-30 range each bite (it used the average); the Forever tooltip's 199-259 at one point and 787-847 at five match.",
 		"source": "classic"
 	},
 	"408255": {
@@ -214,6 +214,13 @@
 		"note": "Client 70009: 155% weapon damage, down from 225%, on the same flat 80. The client's own text still prints Classic's 180.",
 		"source": "forever",
 		"tooltip": "60 Energy\nMelee Range\nInstant\nShred the target, causing 155% weapon damage plus 124 to the target. Must be behind the target. Awards 1 combo point."
+	},
+	"9850": {
+		"ability": "Claw",
+		"file": "sim/druid/claw.go",
+		"note": "Client 70009 (9850, rank 5): 45 Energy, (weapon damage + 115) x 110%, up from Classic's 100%; the flat part is scaled with the weapon, as Shred's (the Forever tooltip prints Shred's 80 as 124). The builder that works from the front, where Shred cannot; the default rotation uses it only there. Beta cats use it most (foreverlogs 2686: 165 Claws from one level 20 druid).",
+		"source": "forever",
+		"tooltip": "45 Energy\nMelee Range\nInstant\nClaw the enemy for 110% normal damage plus 115. Awards 1 combo point."
 	},
 	"9835": {
 		"ability": "Moonfire",

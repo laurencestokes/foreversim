@@ -68,11 +68,10 @@ func (warrior *Warrior) registerRevenge() {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			// Rank 6 rolls 138-168; the generator stores the centre of the range (153), so the range
-			// stays ours. Forever adds 25% of attack power, which the client row doesn't carry: 4 level
-			// 20 warriors in beta logs (rank 1, 20-24) land 0.23-0.27 AP over the base once armor
-			// is taken out, on 1H and 2H alike, with Battle Shout up or not.
-			baseDamage := sim.Roll(138, 168) + 0.25*spell.MeleeAttackPower(target)
+			// Rank 6 rolls 153 +-10% (138-168) off the row. Forever adds 25% of attack power, which the
+			// client row doesn't carry: 4 level 20 warriors in beta logs (rank 1, 20-24) land 0.23-0.27
+			// AP over the base once armor is taken out, on 1H and 2H alike, with Battle Shout up or not.
+			baseDamage := revengeRank.DamageEffect().Roll(sim, core.CharacterLevel) + 0.25*spell.MeleeAttackPower(target)
 			result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
 			aura.Deactivate(sim)
 

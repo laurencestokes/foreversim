@@ -23,7 +23,7 @@ import (
 
 // The reviewed client build. Build 70094 leaves the sim's 70009 client tables,
 // including the racial rows, unchanged (docs/data-changes/2026-09-29-client-1.60.1.70094.md).
-const clientBuild = "1.60.1.70094"
+const clientBuild = "1.60.1.70124"
 
 // The fight every list is run in: the leaderboard's one target (core.MakeSingleTargetEncounter).
 const (

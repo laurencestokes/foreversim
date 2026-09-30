@@ -82,17 +82,17 @@ worktree). The manual **Build Race Arena** workflow does the same run and commit
 
 ## Keeping up with upstream
 
-Upstream changes are merged by hand, after review and a test run:
+Upstream changes are merged by hand, on a branch, after review and a test run:
 
 ```sh
 git remote add elliot https://github.com/ElliotWood/Forever.git
-git remote add wowsims https://github.com/wowsims/forever.git
-git fetch elliot wowsims
-git merge elliot/master      # or wowsims/master
+git fetch elliot
+git merge elliot/master
 ```
 
-Engine fixes that belong upstream are offered to [wowsims/forever](https://github.com/wowsims/forever) as
-pull requests of their own.
+wowsims/forever, the engine's original home, is no longer public (it has returned 404 since late
+September 2026); Elliot's fork is the upstream until it comes back. Engine fixes that belong upstream
+are offered to [ElliotWood/Forever](https://github.com/ElliotWood/Forever) as pull requests of their own.
 
 ## Deploying
 

@@ -50,20 +50,14 @@ func (shaman *Shaman) registerWindfuryTotemSpell() {
 
 	wfProcAura := shaman.NewTemporaryStatsAura("Windfury Totem Proc (Self)", core.ActionID{SpellID: windfuryTotemBuff.ID}, stats.Stats{stats.AttackPower: value}, windfuryTotemBuff.Duration())
 	wfProcAura.MaxStacks = int32(windfuryTotemBuff.ProcCharges)
-	wfProcAura.AttachProcTrigger(core.ProcTrigger{
-		Name:     "Windfury Attack (Self)",
-		Callback: core.CallbackOnSpellHitDealt,
-		ProcMask: core.ProcMaskMeleeMHAuto | core.ProcMaskMeleeOHAuto,
-		// TriggerImmediately ommited for improved UI clarity (the timeline tick would be near invisible for MHAuto procs)
-		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if wfProcAura.IsActive() && !spell.ProcMask.Matches(core.ProcMaskMeleeSpecial) {
-				wfProcAura.RemoveStack(sim)
-				if wfProcAura.GetStacks() == 0 {
-					wfProcAura.Deactivate(sim)
-				}
-			}
-		},
-	})
+	// The buff row's proc flags say what spends a charge, as for the party's (buffs.driveWindfuryTotem):
+	// a melee auto that lands, so a missed, dodged or parried swing keeps it.
+	spender := spelldata.ProcTrigger(&shaman.Character, windfuryTotemBuff, func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+		wfProcAura.RemoveStack(sim)
+	}, spelldata.Chance(1))
+	spender.Name = "Windfury Attack (Self)"
+	spender.TriggerImmediately = true
+	wfProcAura.AttachProcTrigger(spender)
 
 	config := shaman.newTotemSpellConfig(int32(windfuryTotemRank.Cost()), windfuryTotemRank.ID, SpellMaskBasicTotem, windfuryTotemRank.GCD())
 
@@ -72,11 +66,12 @@ func (shaman *Shaman) registerWindfuryTotemSpell() {
 	var windfurySpell *core.Spell
 	trigger := spelldata.ProcTrigger(&shaman.Character, windfuryTotemPartyAura, func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 		wfProcAura.Activate(sim)
+		// An auto that procs it has spent the first charge itself; a special leaves both.
+		charges := wfProcAura.MaxStacks
 		if spell.ProcMask.Matches(core.ProcMaskMeleeWhiteHit) {
-			wfProcAura.SetStacks(sim, 1)
-		} else {
-			wfProcAura.SetStacks(sim, 2)
+			charges--
 		}
+		wfProcAura.SetStacks(sim, charges)
 		shaman.AutoAttacks.MaybeReplaceMHSwing(sim, windfurySpell).Cast(sim, result.Target)
 	})
 	trigger.Name = "Windfury Totem Trigger (Self)"

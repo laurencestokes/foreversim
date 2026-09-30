@@ -349,7 +349,8 @@ const (
 	HunterSpellSummonHawk
 	HunterSpellWingClip
 
-	// TODO: Forever pet abilities the sim does not model yet; see the stub file named for each.
+	// Forever's new pet abilities. The pets cast them under HunterPetDamage (pet_abilities.go), so these
+	// masks stay unused; Enchanted Flare is the one left unmodelled, see enchanted_flare.go.
 	HunterSpellDismember
 	HunterSpellDustCloud
 	HunterSpellEnchantedFlare

@@ -1,12 +1,12 @@
 name: Update Changelog
 
 # Records every pull request merged into master in ui/app/changelog/merged.json, which the
-# changelog page lists under its hand-written sections. Runs after each merge and commits the
-# result to master; that push deploys the site like any other.
+# changelog page lists under its hand-written sections.
+#
+# ForeverSim: manual only. The list is Elliot's pull requests, which arrive with each merge from
+# ElliotWood/Forever; run here it rebuilds the list from this repository's pull requests alone and
+# drops his.
 on:
-    pull_request:
-        types: [closed]
-        branches: [master]
     workflow_dispatch:
 
 # Several pull requests can close at once, and each run commits to master. Without a queue they

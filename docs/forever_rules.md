@@ -44,7 +44,7 @@ All in `sim/core/racials.go` unless noted.
 | Troll: Beast Slaying +5% vs Beasts (20557). Berserking is a flat +10% attack and casting speed for 10 s, 3 min, no cost (20554). No ranged weapon specializations. | Client | |
 | Undead: Touch of the Grave, 5% (melee classes, 1260189) or 10% (casters, 1260201) chance on a landed hit, 1 s proc cooldown, drains 5% of the caster's maximum health as Shadow damage (1260198), which cannot crit and, with no flag telling it otherwise, takes the caster's damage bonuses. Applying a damage-over-time spell can proc it; its ticks cannot (beta testing, and the client's proc flags leave out periodic damage). | Client | `registerTouchOfTheGrave` |
 | Skyborne (both halves, skill line 2980): Wind Blessed +1% melee, ranged and cast haste (1259710); Elemental Insight +5% vs Elementals (1259707). On-use, 2 min each: Read Ley Line (1259705) doubles health and mana regeneration for 15 s, Skysight (1259686) is +10% movement speed for 30 s. Both are on the shared skill line; the High Order get Read Ley Line and the Windshapers Skysight, as wowsims reads it. No rotation uses either. | Client | |
-| Damage-vs-creature racials also raise the crit multiplier, as every such aura did in Vanilla and TBC. | Engine convention | `applyMobTypeDamageBonus` |
+| Damage-vs-creature racials are +5% damage only: each is one `A_MOD_DAMAGE_DONE_VERSUS` with no crit damage effect (the hunter's Humanoid/Monster Slaying carry crit damage as a second aura; the racials don't). | Client | `applyMobTypeDamageBonus` |
 
 ## Warrior
 
