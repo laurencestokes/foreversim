@@ -50,6 +50,7 @@ All in `sim/core/racials.go` unless noted.
 
 | Rule | Source | Here |
 |---|---|---|
+| Rage from dealing damage is normalised to weapon speed: an auto attack that lands pays 3.46 Rage per second of swing time (4.5 two-handed, half for the off hand), whatever it dealt. A critical swing pays 75% more; the beta launched without it and Blizzard re-added it on 2026-09-30 ("Critical strike will now give 75% more Rage than non-critical strikes"). | Blizzard, beta forum | `sim/core/rage.go` |
 | Slam no longer resets the swing timer. | Panel | `sim/warrior/slam.go` |
 | Thunder Clap usable in Defensive Stance. | Panel | `sim/warrior/thunder_clap.go` |
 | Improved Shield Wall shortens the cooldown instead of extending the duration. | Tooltip | `sim/warrior/shield_wall.go` |

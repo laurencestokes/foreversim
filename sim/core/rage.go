@@ -14,6 +14,11 @@ const (
 	BaseRageHitFactor     = 3.46
 	TwoHandRageHitFactor  = 4.5
 	TwoHandRageMultiplier = TwoHandRageHitFactor / BaseRageHitFactor
+
+	// A critical auto attack pays 75% more rage than one that does not crit. Forever's beta
+	// launched with none (the rage was fully normalised to weapon speed); Blizzard re-added it on
+	// 2026-09-30: "Critical strike will now give 75% more Rage than non-critical strikes."
+	CritRageMultiplier = 1.75
 )
 
 type rageBar struct {
@@ -76,6 +81,9 @@ func (unit *Unit) EnableRageBar(options RageBarOptions) {
 
 			// rage is normalized so it only depends on weapon swing speed and some multipliers
 			generatedRage := hitFactor * weapon.SwingSpeed * options.BaseRageMultiplier * handMultiplier
+			if result.DidCrit() {
+				generatedRage *= CritRageMultiplier
+			}
 
 			var metrics *ResourceMetrics
 			if spell.Cost != nil {

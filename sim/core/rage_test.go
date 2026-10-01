@@ -117,7 +117,7 @@ func rageFromAutoAttack(sim *Simulation, fw *FakeRageWarrior, spell *Spell, outc
 }
 
 func TestAutoAttackRageGeneration(t *testing.T) {
-	// A one-hand MH swing at 2.6 speed: 2.6 * 3.46 = 8.996, whatever it dealt.
+	// A one-hand MH swing at 2.6 speed: 2.6 * 3.46 = 8.996, whatever it dealt, and 75% more on a crit.
 	const swingDamage = 500.0
 
 	tests := []struct {
@@ -133,7 +133,7 @@ func TestAutoAttackRageGeneration(t *testing.T) {
 		{
 			name:     "crit",
 			outcome:  OutcomeCrit,
-			wantRage: 8.996,
+			wantRage: 8.996 * 1.75,
 		},
 		{
 			name:     "glance",
@@ -196,6 +196,11 @@ func TestOffHandAutoAttackRageGeneration(t *testing.T) {
 	hitRage := rageFromAutoAttack(sim, fw, ohAuto, OutcomeHit, swingDamage)
 	if !WithinToleranceFloat64(3.114, hitRage, 0.01) {
 		t.Fatalf("Incorrect Rage generated on OH hit: Expected: %0.3f, Actual: %0.3f", 3.114, hitRage)
+	}
+
+	critRage := rageFromAutoAttack(sim, fw, ohAuto, OutcomeCrit, swingDamage)
+	if !WithinToleranceFloat64(3.114*1.75, critRage, 0.01) {
+		t.Fatalf("Incorrect Rage generated on OH crit: Expected: %0.3f, Actual: %0.3f", 3.114*1.75, critRage)
 	}
 
 	dodgeRage := rageFromAutoAttack(sim, fw, ohAuto, OutcomeDodge, swingDamage)
