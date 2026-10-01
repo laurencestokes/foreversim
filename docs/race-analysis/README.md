@@ -1,7 +1,8 @@
 # Race analysis
 
 Tables from the opt-in race tests (see the main README). Each was produced on client build
-1.60.1.69977 and has not been re-run since.
+1.60.1.69977 and has not been re-run since, except `crit_rage_warrior.md` (build 1.60.1.70124), which
+measures what the 2026-09-30 crit rage bonus does to the warrior racials.
 
 Build 1.60.1.70009 cut Eureka!'s cost reduction to 10% for every class (it was 40% for warriors,
 20% for rogues, 50% for mages and warlocks, 15% for priests), so every Gnome figure here, and the
