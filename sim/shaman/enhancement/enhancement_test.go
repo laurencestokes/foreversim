@@ -137,4 +137,8 @@ var arenaSpec = arenalib.Spec{
 	Role: arenalib.Melee,
 	// Windfury Weapon is the shaman casting on their own weapons, not a totem somebody drops.
 	ClassImbues: arenalib.ClassImbues{Windfury: true},
+	// The page plays forever.apl.json; the Flame Shock rotation is a build arena comparison.
+	RaceBuilds: map[string]arenalib.RaceBuild{
+		"Enhancement 16/35/0": {Rotation: "forever"},
+	},
 }
