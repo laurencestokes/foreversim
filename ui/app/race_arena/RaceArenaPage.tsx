@@ -225,20 +225,15 @@ const Method = ({ data }: { data: RaceArenaResults }) => (
 			the same random seed, so they meet the same rolls, and a race&apos;s result includes its base attributes as well as its racials.
 		</p>
 		<p className="m-0">
-			<strong>Identical gear, weapon type aside.</strong> Human sword, Orc axe and Dwarf mace racials pay crit only while that weapon type is held, so
-			ranking races on the gear as shipped would rank the gear set&apos;s weapons. So those three races are run twice: on the gear as shipped, and with
-			the racial&apos;s weapon type laid over the same main-hand and off-hand weapons through the sim&apos;s weapon type override, which changes what the
-			weapon counts as and nothing else - its stats, procs and item are unchanged. The better run counts, and a chip marked{' '}
-			<span className="rounded-full border border-brand px-1.5 text-xs text-brand">as Sword</span> is one where the relabel won. Held off-hands, shields
-			and ranged weapons are never relabelled; a weapon is only relabelled to a type the class can wield in that hand (a two-hander only to a type the
-			class uses two-handed); and a build whose rotation needs its weapon type keeps it (the Mutilate rogue keeps its daggers). A relabel also changes
-			what weapon type talents see, such as the rogue&apos;s Hack and Slash, and that counts toward the race&apos;s result as it would in game.
+			<strong>Identical gear.</strong> Since the 16 Oct beta build no racial depends on the weapon held: Human and Orc crit and Dwarf crit damage apply to
+			any weapon. Every race wears exactly the same set. (Earlier builds tied them to swords, axes and maces, and this page then also ran those races with
+			their weapons relabelled through the sim&apos;s weapon type override; a chip marked{' '}
+			<span className="rounded-full border border-brand px-1.5 text-xs text-brand">as Sword</span> would show where that won.)
 		</p>
 		<p className="m-0">
 			<strong>One exception to the gear as shipped.</strong> The Arms warrior takes Weaponmaster, which pays very differently by weapon type, and its
-			set&apos;s two-hander is an axe. Left as an axe, only the Human&apos;s relabel would reach Weaponmaster&apos;s sword bonus, and the Human would be
-			credited with a talent any race can have. A sword is the best type for that build for every race measured (about 3.5% over the axe for a race with
-			no weapon racial), so its two-hander is run as a sword for every race, and the Orc and Dwarf try their own types on top.
+			set&apos;s two-hander is an axe. A sword is the best type for that build (about 3.5% over the axe), so its two-hander is run as a sword for every
+			race.
 		</p>
 		<p className="m-0">
 			<strong>{formatToNumber(data.iterations)} iterations per race.</strong> One standard error on a race&apos;s mean is at most{' '}
@@ -263,16 +258,13 @@ const Caveats = () => (
 		<ul className="m-0 flex list-disc flex-col gap-2 pl-5">
 			<li>The racials come from a beta client. Blizzard can change any of them, and a new client build can move any list here.</li>
 			<li>
-				Touch of the Grave (Undead) is modelled as a drain of 5% of the caster&apos;s maximum health as Shadow damage. It can be resisted, cannot crit,
-				and procs from hits and from applying a damage over time spell, not from its ticks: a 5% chance for warriors, paladins and rogues, 10% for
-				priests, mages and warlocks, at most once a second. Its damage follows maximum health, so the environment&apos;s health buffs (Fortitude, Kings,
-				and Flask of the Titans on the melee list) raise it. The client&apos;s tooltip says &ldquo;up to 5%&rdquo;, so the real drain may be smaller or
-				vary; this is the least certain number on the page, and it is why Undead tops so many lists.
+				Touch of the Grave (Undead) is modelled as a drain of 5% of the caster&apos;s maximum health as Shadow damage, with a 30% chance for priests,
+				mages and warlocks and 20% for warriors, paladins and rogues on a landed hit, at most once every 25 seconds. Its damage follows maximum health,
+				so the environment&apos;s health buffs raise it.
 			</li>
 			<li>
-				Eureka! (Gnome) is modelled for warriors, rogues, warlocks, mages and priests. A rogue&apos;s Eureka! is assumed not to spend a charge on Blade
-				Flurry, which deals no damage itself, and a priest&apos;s is assumed not to spend one on heals, since the tooltip reads &ldquo;damaging
-				abilities&rdquo;.
+				Eureka! (Gnome) is an 8 second buff: the class&apos;s abilities on the client&apos;s class masks cost 10% less and deal 10% more, for warriors,
+				rogues, warlocks, mages and priests.
 			</li>
 			<li>
 				Cooldown racials - Blood Fury, Berserking, Elune&apos;s Light, Eureka! - fire when each page&apos;s rotation fires its cooldowns, not at an
@@ -291,8 +283,8 @@ const Caveats = () => (
 				<RulesLink>docs/forever_rules.md</RulesLink>). A short racial cooldown therefore raises only the ticks that land while it is up.
 			</li>
 			<li>
-				One gear set per list. A set with more or less hit or crit can reorder races whose racials are hit (Tauren) or crit (the weapon racials,
-				Elune&apos;s Light).
+				One gear set per list. A set with more or less crit can reorder races whose racials are crit (Human, Orc, Elune&apos;s Light) or crit damage
+				(Dwarf, Tauren).
 			</li>
 			<li>
 				Healers and tanks are not ranked. This page measures damage, and neither role is valued by its damage; the build arena shows tank specs on

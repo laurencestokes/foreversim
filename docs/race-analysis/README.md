@@ -10,3 +10,6 @@ cost-cut column of the Eureka! splits most of all, overstates Eureka! for the cu
 other races' racials are unchanged in 70009. The live
 [race tier list](https://laurencestokes.github.io/foreversim/forever/race_arena/) is regenerated for
 the current build.
+
+The 16 Oct beta build reworked the racials (no weapon-gated racials; Eureka! an 8 s buff with no charges;
+Touch of the Grave 30%/20% with a 25 s cooldown), so every table here describes an earlier kit.

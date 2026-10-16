@@ -267,9 +267,11 @@ func racials(raceName string, class string, target string, weaponRacial bool) st
 	manaUser := class != "Warrior" && class != "Rogue"
 	switch raceName {
 	case "Human":
+		add(true, "Ruthless (+2% crit)")
 		add(weaponRacial, "sword crit")
 		add(manaUser, "+5% Spirit")
 	case "Dwarf":
+		add(true, "Earth Fury (+2% crit damage)")
 		add(weaponRacial, "mace crit")
 		add(target == "Beast", "Big Game Hunter")
 	case "Night Elf":
@@ -280,16 +282,17 @@ func racials(raceName string, class string, target string, weaponRacial bool) st
 		add(true, "Expansive Mind")
 	case "Orc":
 		add(true, "Blood Fury")
+		add(true, "Savage (+1% crit)")
 		add(weaponRacial, "axe crit")
 	case "Undead":
 		add(true, "Touch of the Grave")
 	case "Tauren":
-		add(true, "Endurance (+1% hit)")
+		add(true, "Endurance (+2% crit damage)")
 	case "Troll":
 		add(true, "Berserking")
 		add(target == "Beast", "Beast Slaying")
 	case "Skyborne":
-		add(true, "Wind Blessed (+1% haste)")
+		add(true, "Wind Blessed (+3% haste)")
 		add(target == "Elemental", "Elemental Insight")
 	}
 	if len(parts) == 0 {

@@ -20,7 +20,7 @@ software keeps a user-visible link back to the original project; the site's land
 What this repository adds so far:
 
 - **Forever racials** from the beta client's own data (build 1.60.1.70009): the reworked racials, the
-  Skyborne, Forever's race and class pairings, and Eureka! for warriors, rogues, warlocks, mages and priests. Every value
+  Skyborne, Forever's race and class pairings, and Eureka! for warriors, rogues, warlocks, mages and priests (the 16 Oct rework is Elliot's). Every value
   is listed with its spell id in [docs/forever_rules.md](docs/forever_rules.md#racials).
 - **Race analysis** tests that take each race's DPS apart, piece by piece, on identical gear
   ([results](docs/race-analysis/)).
@@ -43,7 +43,7 @@ and [docs/commands.md](docs/commands.md).
 
 Every equipped main-hand or off-hand weapon has a "Weapon type (debug override)" selector in its gear
 picker. Choosing a type (say, a sword relabelled as an axe) changes only what the weapon counts as for
-effects that key on weapon type: racials such as Human Sword, Orc Axe and Dwarf Mace Specialization,
+effects that key on weapon type: racials (none since the 16 Oct beta build, which made every racial weapon-agnostic),
 talents such as the rogue's Hack and Slash, and ability requirements such as Backstab and Mutilate
 needing a dagger. Its stats, procs and every other effect are unchanged. An overridden weapon shows an
 "as <type>" badge in the gear list. It exists to compare races fairly on otherwise identical gear; it
@@ -58,10 +58,9 @@ Opt-in Go tests, skipped unless their variable is set. With Go, protoc and the g
 RACE_BREAKDOWN=1 go test --tags=with_db ./sim/warrior/dps/ -run TestRaceBreakdown -v
 RACE_BREAKDOWN=1 go test --tags=with_db ./sim/warlock/ -run TestRaceBreakdown -v
 RACE_BREAKDOWN=1 go test --tags=with_db ./sim/rogue/ -run TestRaceBreakdown -v
-EUREKA_SPLIT=1 go test --tags=with_db ./sim/rogue/ -run TestEurekaSplit -v
 ```
 
-`RACE_BREAKDOWN_OUT` / `EUREKA_SPLIT_OUT` write the tables to a file. See `core.RacialBreakdown` in
+`RACE_BREAKDOWN_OUT` writes the table to a file. See `core.RacialBreakdown` in
 [sim/core/racial_breakdown.go](sim/core/racial_breakdown.go) for how each column is measured.
 
 ## The race tier list

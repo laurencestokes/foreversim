@@ -60,13 +60,11 @@ const raceIterationsEnv = "RACE_ARENA_ITERATIONS"
 // are there for anyone whose raid is fighting one.
 var raceTargets = []proto.MobType{proto.MobType_MobTypeMechanical, proto.MobType_MobTypeElemental, proto.MobType_MobTypeBeast}
 
-// The weapon skill racials, as sim/core/racials.go applies them: crit while a weapon of the type
-// is in either hand.
-var weaponRacials = map[proto.Race]proto.WeaponType{
-	proto.Race_RaceHuman: proto.WeaponType_WeaponTypeSword,
-	proto.Race_RaceOrc:   proto.WeaponType_WeaponTypeAxe,
-	proto.Race_RaceDwarf: proto.WeaponType_WeaponTypeMace,
-}
+// The weapon skill racials: races whose racial pays only while a weapon of a type is held, so the
+// arena also runs them with their list's weapons relabelled to that type. None since the 16 Oct
+// beta build, which made Human and Orc crit and Dwarf crit damage hold for any weapon; the
+// relabelling stays for a racial that keys on weapon type again.
+var weaponRacials = map[proto.Race]proto.WeaponType{}
 
 // How the race arena plays one community build, where that is not the page's default gear set
 // with the spec's one rotation. See Spec.RaceBuilds.

@@ -69,7 +69,7 @@ describe('RaceArenaPage', () => {
 		expect(method.textContent).toContain('D more than 2.5% behind');
 		const caveats = getByRole('heading', { name: 'Caveats' }).closest('section')!;
 		expect(caveats.textContent).toContain('Touch of the Grave');
-		expect(caveats.textContent).toContain('Blade Flurry');
+		expect(caveats.textContent).toContain('8 second buff');
 		expect(caveats.textContent).toContain('Healers and tanks are not ranked');
 		expect(getByTestId('tier-legend').querySelectorAll('li')).toHaveLength(5);
 	});
