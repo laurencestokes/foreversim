@@ -122,11 +122,25 @@ func (warlock *Warlock) applyShadowburn() {
 	warlock.registerShadowBurn()
 }
 
-// The range half only; the threat half Classic carried is gone from 17917.
+// Destructive Reach: 17917 adds 10/20% to the range of every warlock spell its class mask reaches,
+// Affliction ones too, but not Curse of Recklessness. The threat half Classic carried is gone; its
+// radius half reaches no spell the sim registers. The sim's range mod is flat yards, so the share is
+// taken of each spell's own range as it registers. A spell with no range (0) keeps none.
 func (warlock *Warlock) applyDestructiveReach() {
 	if warlock.Talents.DestructiveReach == 0 {
 		return
 	}
+
+	share := spellData.DestructiveReach.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_RANGE)).FractionAt(warlock.Talents.DestructiveReach)
+	warlock.OnSpellRegistered(func(spell *core.Spell) {
+		if spell.Matches(WarlockSpellShadowBolt | WarlockSpellImmolate | WarlockSpellIncinerate | WarlockSpellSoulFire |
+			WarlockSpellShadowBurn | WarlockSpellConflagrate | WarlockSpellSearingPain | WarlockSpellRainOfFire |
+			WarlockSpellCorruption | WarlockSpellCurseOfAgony | WarlockSpellCurseOfDoom | WarlockSpellCurseOfElements |
+			WarlockSpellCurseOfWeakness | WarlockSpellSiphonLife | WarlockSpellDrainLife | WarlockSpellDrainSoul |
+			WarlockSpellDeathCoil | WarlockSpellWrack) {
+			spell.MaxRange *= 1 + share
+		}
+	})
 }
 
 // Forever grows Ruin from one rank to five: 20% more critical damage a point (17959).

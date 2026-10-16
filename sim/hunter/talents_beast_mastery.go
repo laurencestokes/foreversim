@@ -81,7 +81,7 @@ func (hunter *Hunter) registerUnleashedFury() {
 	}
 }
 
-// 19598's mask names the pet passive and Summon Hawk, so the hawks take it too.
+// 19598's mask names the pet passive and Summon Hawk; only the dive bomb rolls crit (the swings don't).
 func (hunter *Hunter) registerFerocity() {
 	if hunter.Talents.Ferocity == 0 {
 		return
@@ -146,8 +146,9 @@ func (hunter *Hunter) registerFrenzy() {
 	})
 }
 
-// Bosses are immune to the stun, but the pet's next attack still gets the crit bonus, so
-// Intimidation is worth pressing on cooldown.
+// Bosses are immune to the stun; the pet's next attack still gets the crit bonus. Not an
+// auto-cast cooldown: one pet crit is worth less than the hunter GCD and 8% base mana it costs
+// (BM default build +0.8% DPS without it), so it's only cast if a rotation names it.
 func (hunter *Hunter) registerIntimidation() {
 	if hunter.Pet == nil || !hunter.Talents.Intimidation {
 		return
@@ -174,7 +175,7 @@ func (hunter *Hunter) registerIntimidation() {
 		},
 	})
 
-	intimidation := hunter.RegisterSpell(core.SpellConfig{
+	hunter.RegisterSpell(core.SpellConfig{
 		ActionID: actionID,
 		ProcMask: core.ProcMaskEmpty,
 		Flags:    core.SpellFlagAPL,
@@ -194,11 +195,6 @@ func (hunter *Hunter) registerIntimidation() {
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
 			petAura.Activate(sim)
 		},
-	})
-
-	hunter.AddMajorCooldown(core.MajorCooldown{
-		Spell: intimidation,
-		Type:  core.CooldownTypeDPS,
 	})
 }
 

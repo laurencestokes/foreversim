@@ -11,7 +11,8 @@ import P0BisGear from './gear_sets/p0.bis.gear.json';
 import P1BisGear from './gear_sets/p1.bis.gear.json';
 import P2BisGear from './gear_sets/p2.bis.gear.json';
 
-export const StandardRotation = PresetUtils.makePresetAPLRotation('Default Balance', DefaultAPL);
+// Starfire only: better than Launch for builds without Eclipse and Improved Wrath, worse (8-27%) with them.
+export const StandardRotation = PresetUtils.makePresetAPLRotation('Starfire (no Eclipse)', DefaultAPL);
 // Master's Launch rotation (Wrath-led, Starfire on Eclipse), the one its arena ranks.
 export const LaunchRotation = PresetUtils.makePresetAPLRotation('Launch', LaunchAPL);
 

@@ -33,7 +33,7 @@ func TestAffliction(t *testing.T) {
 
 func TestDestruction(t *testing.T) {
 	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator([]core.CharacterSuiteConfig{
-		warlockSuite("destruction", DestructionTalents, &proto.WarlockOptions{
+		warlockSuite("destruction_conflag", DestructionTalents, &proto.WarlockOptions{
 			Summon:          proto.WarlockOptions_Succubus,
 			SacrificeSummon: true,
 			Armor:           proto.WarlockOptions_DemonArmor,
@@ -101,21 +101,32 @@ var arenaSpec = arenalib.Spec{
 	}}},
 	Role:               arenalib.Caster,
 	DistanceFromTarget: 30,
+	// Demonic Sacrifice only applies when the demon is sacrificed before the pull, which is a
+	// class option, so builds with the talent get the rotations again with the Imp sacrificed (Shadow
+	// damage). The Succubus (Fire) lost on every build when measured, so it is not offered.
+	Variants: map[string]arenalib.Variant{
+		"affliction_sacrifice_imp":  {Rotation: "affliction", SpecOptions: arenaSacrifice(proto.WarlockOptions_Imp)},
+		"ds_ruin_sacrifice_imp":     {Rotation: "ds_ruin", SpecOptions: arenaSacrifice(proto.WarlockOptions_Imp)},
+		"destruction_sacrifice_imp": {Rotation: "destruction", SpecOptions: arenaSacrifice(proto.WarlockOptions_Imp)},
+	},
 	// The page's build presets (ui/specs/warlock/dps/presets.ts): each community build's rotation,
 	// and its demon where that is not the Succubus above - the DS/Ruin builds sacrifice an Imp.
 	RaceBuilds: map[string]arenalib.RaceBuild{
 		"Demonic Pact 2/31/18":      {Rotation: "demonic_pact"},
 		"Deep Affliction 35/0/16":   {Rotation: "affliction"},
-		"DS/Ruin Pandemic 24/11/16": {Rotation: "ds_ruin", SpecOptions: arenaSacrificedImp},
-		"Shadow and Flame 13/11/27": {Rotation: "destruction", SpecOptions: arenaSacrificedImp},
+		"DS/Ruin Pandemic 24/11/16": {Rotation: "ds_ruin", SpecOptions: arenaSacrifice(proto.WarlockOptions_Imp)},
+		"Shadow and Flame 13/11/27": {Rotation: "destruction", SpecOptions: arenaSacrifice(proto.WarlockOptions_Imp)},
 	},
 }
 
-var arenaSacrificedImp = &proto.Player_Warlock{Warlock: &proto.Warlock{Options: &proto.Warlock_Options{
-	ClassOptions: &proto.WarlockOptions{
-		Summon:          proto.WarlockOptions_Imp,
-		SacrificeSummon: true,
-		Armor:           proto.WarlockOptions_DemonArmor,
-		CurseOptions:    proto.WarlockOptions_Elements,
-	},
-}}}
+// The arena's warlock options with the given demon summoned and sacrificed before the pull.
+func arenaSacrifice(demon proto.WarlockOptions_Summon) *proto.Player_Warlock {
+	return &proto.Player_Warlock{Warlock: &proto.Warlock{Options: &proto.Warlock_Options{
+		ClassOptions: &proto.WarlockOptions{
+			Summon:          demon,
+			SacrificeSummon: true,
+			Armor:           proto.WarlockOptions_DemonArmor,
+			CurseOptions:    proto.WarlockOptions_Elements,
+		},
+	}}}
+}

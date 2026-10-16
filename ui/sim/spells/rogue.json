@@ -27,21 +27,21 @@
 	"11340": {
 		"ability": "Instant Poison VI",
 		"file": "sim/rogue/poisons.go",
-		"note": "Beta client 1.60.1.70009: Instant Poison VI (enchant 625, proc 11337) hits for 76-100 where Classic hit for 112-148, 20% chance, and carries 175 charges, which the sim does not model. Every lower rank is about a third weaker too.",
+		"note": "Beta client 1.60.1.70009: Instant Poison VI (enchant 625, proc 11337) hits for 76-100 where Classic hit for 112-148, 20% chance, and carries 175 charges, which the sim does not model. Every lower rank is about a third weaker too. Plus 0.5% of attack power (devs, forever-bugs #100; beta logs: untalented rogues' rank 1, 13-17, tops out at 19).",
 		"source": "forever",
 		"tooltip": "3 sec cast\nCoats a weapon with poison that lasts for 30 minutes. Each strike has a 20% chance of poisoning the enemy which instantly inflicts 76 to 100 Nature damage. 175 charges."
 	},
 	"1241584": {
 		"ability": "Mutilate",
 		"file": "sim/rogue/talents_assassination.go",
-		"note": "Beta client 1.60.1.70009: four ranks (1310707, 399956, 1241582, 1241584) adding 23/33/48/67 to each hand's weapon damage before the 75%, and the sim casts rank 4, which strikes for 75% of weapon damage plus 50. 60 Energy, 20% against poisoned targets and a dagger in both hands are confirmed. The demo's flat 13 is gone.",
+		"note": "Beta client 1.60.1.70009: four ranks (1310707, 399956, 1241582, 1241584) adding 23/33/48/67 to each hand's weapon damage before the 75%, and the sim casts rank 4, which strikes for 75% of weapon damage plus 50. 60 Energy, 20% against poisoned targets and a dagger in both hands are confirmed. The demo's flat 13 is gone. Only the cast rolls miss, dodge and parry: the hand strikes carry the client's No Attack Miss/Dodge/Parry attributes, and beta logs agree (foreverlogs 2701/2702, Salty, level 30: the cast was missed, dodged or parried 16 times in 162, the strikes 0 times in 280, the off-hand strike averaging 0.59 of the main hand's, as the sim's 0.60).",
 		"source": "forever",
 		"tooltip": "60 Energy\nMelee Range\nInstant\nInstantly attacks with both weapons for 75% weapon damage plus an additional 50 with each weapon. Damage increased by 20% against Poisoned targets. Awards 2 combo points.\nRequires Daggers"
 	},
 	"1310703": {
 		"ability": "Venom",
 		"assumptions": [
-			"Venom's 30% reaches a Deadly Poison already ticking only when the next stack lands, because the sim snapshots the dot on each application (the client stores a percent modifier and cannot say when it is read)"
+			"Venom's 30% reaches a Deadly Poison already ticking from its next tick, because the sim reads the caster's current modifiers at every tick, as for every Forever dot (#668: logs show dots ticking on current spell power); the client stores a percent modifier and cannot say whether a modifier, rather than spell power, is read per tick"
 		],
 		"file": "sim/rogue/talents_assassination.go",
 		"note": "Beta client 1.60.1.70009: Venom is spell 1310703, 25 Energy plus combo points, 30% poison damage and 10% poison chance, 6 sec plus 3 sec a combo point.",
@@ -76,10 +76,9 @@
 	},
 	"13960": {
 		"ability": "Hack and Slash",
-		"assumptions": ["A rogue holding two qualifying weapon types gets both halves of the talent"],
 		"file": "sim/rogue/talents_combat.go",
-		"note": "Hack and Slash folds Classic's four weapon specialization talents into one. The sim reads its three curves from the beta client (13960: 1-5% extra attack, 3-15% armor ignored, 1-5% crit), and the extra attack's 200 ms internal cooldown from the same row (its proc cooldown). The extra attack is a plain main-hand swing.",
-		"source": "assumed",
+		"note": "Hack and Slash folds Classic's four weapon specialization talents into one. The sim reads its three curves from the beta client (13960: 1-5% extra attack, 3-15% armor ignored, 1-5% crit), and the extra attack's 200 ms internal cooldown from the same row (its proc cooldown). The extra attack is a plain main-hand swing. Two qualifying weapons get both halves, each on its own hand, as a beta log shows (foreverlogs 2710, Apoc, level 30 Combat, sword main hand and fist off hand): off-hand autos crit 30.5% (223 of 731) against the main hand's 25.1% (125 of 499), the fist's 5% on the off hand alone, and 33 of the 36 extra attacks land at the same millisecond as a main-hand hit (autos, Sinister Strike, Eviscerate, Kick); the other 3 sit next to swings of both hands. Had off-hand hits triggered it at the main hand's rate (33 from about 990 landed hits), there would be about 24 more.",
+		"source": "forever",
 		"tooltip": "Talent, 5 ranks\nGives your melee weapon attacks a benefit depending on the weapon.\nAxe/Sword: your successful melee attacks have a 1% chance per rank to trigger an extra attack on the target.\nDagger/Fist: increases your critical strike chance by 1% per rank.\nMace: your attacks ignore 3% of your target's armor per rank."
 	},
 	"13976": {
@@ -105,7 +104,7 @@
 	"14177": {
 		"ability": "Cold Blood",
 		"file": "sim/rogue/talents_assassination.go",
-		"note": "Client 14177: +100% crit on the next Sinister Strike, Backstab, Ambush, Eviscerate or Mutilate, 3 min cooldown; its class mask adds Mutilate's two hits to Classic's list, and the sim reads the mask and the numbers from it.",
+		"note": "Client 14177: +100% crit on the next Sinister Strike, Backstab, Ambush, Eviscerate or Mutilate, 3 min cooldown; its class mask adds Mutilate's two hits to Classic's list, and the sim reads the mask and the numbers from it. The hand strikes are triggered spells and the parent cast is not in the mask, so Mutilate takes the crit on both hands without spending the buff: in beta logs one rogue's Mutilates crit with both hands 191 of 192 times under Cold Blood (the other was blocked) and the buff dropped on the next Eviscerate (foreverlogs.gg reports 2701, 2702).",
 		"source": "forever",
 		"tooltip": "Instant\n3 min cooldown\nWhen activated, increases the critical strike chance of your next Sinister Strike, Backstab, Ambush, Eviscerate, or Mutilate by 100%."
 	},
@@ -205,7 +204,7 @@
 	"25347": {
 		"ability": "Deadly Poison V",
 		"file": "sim/rogue/poisons.go",
-		"note": "Beta client 1.60.1.70009: Deadly Poison V (enchant 2630) ticks 23 every 3 sec through 25349 (Classic 34), 5 stacks over 12 sec, 30% chance, 180 charges, which the sim does not model. The sim logs the ticks under the imbue's id 25347; 25349 carries Periodic Can Crit (#364).",
+		"note": "Beta client 1.60.1.70009: Deadly Poison V (enchant 2630) ticks 23 every 3 sec through 25349 (Classic 34), 5 stacks over 12 sec, 30% chance, 180 charges, which the sim does not model. The sim logs the ticks under the imbue's id 25347; 25349 carries Periodic Can Crit (#364). Each tick adds 0.45% of attack power per stack, read at the tick (devs, forever-bugs #100; log 2701: Salty's rank 1 ticks ~8.8 a stack fit per tick, 9.2, not spread over 4 ticks, 7.7).",
 		"source": "forever",
 		"tooltip": "3 sec cast\nCoats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy for 92 Nature damage over 12 sec. Stacks up to 5 times on a single target. 180 charges."
 	},

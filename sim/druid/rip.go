@@ -13,10 +13,6 @@ var ripTick = ripRank.PeriodicEffect()
 var ripTickPerComboPoint = float64(ripTick.PointsPerResource)
 
 func (druid *Druid) registerRipSpell() {
-	// Combo points are spent at cast, so they stay fixed for the life of each target's Rip; only
-	// the attack power share is dynamic. Kept per target and reused by OnTick to rebuild the raw
-	// base with current attack power every tick.
-	comboPointsAtCast := map[int32]float64{}
 	druid.Rip = druid.RegisterSpell(Cat, core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: ripRank.ID},
 		SpellSchool:    ripRank.SpellSchool(),
@@ -52,12 +48,13 @@ func (druid *Druid) registerRipSpell() {
 			TickLength:    ripTick.Period(),
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				comboPointsAtCast[target.UnitIndex] = float64(druid.ComboPoints())
-				dot.SnapshotPhysical(target, ripTickDamage(comboPointsAtCast[target.UnitIndex], dot.Spell.MeleeAttackPower(target)))
+				comboPoints := float64(druid.ComboPoints())
+				share := ripAttackPowerShare(comboPoints)
+				dot.SnapshotPhysical(target, ripFlatDamage(comboPoints)+share*dot.Spell.MeleeAttackPower(target))
+				dot.SnapshotAttackPowerShare(target, share, false)
 				druid.UpdateBleedPower(druid.Rip, sim, target, true, true)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.SnapshotRawBaseDamage = ripTickDamage(comboPointsAtCast[target.UnitIndex], dot.Spell.MeleeAttackPower(target))
 				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, periodicTickOutcome(ripRank, dot))
 			},
 		},
@@ -91,8 +88,17 @@ func (druid *Druid) registerRipSpell() {
 	druid.Rip.ShortName = "Rip"
 }
 
+func ripFlatDamage(comboPoints float64) float64 {
+	return ripTick.Average(core.CharacterLevel) + ripTickPerComboPoint*comboPoints
+}
+
+// The share of attack power a tick adds, read at the tick.
+func ripAttackPowerShare(comboPoints float64) float64 {
+	return 0.01 * min(comboPoints, 4)
+}
+
 func ripTickDamage(comboPoints float64, attackPower float64) float64 {
-	return ripTick.Average(core.CharacterLevel) + ripTickPerComboPoint*comboPoints + 0.01*min(comboPoints, 4)*attackPower
+	return ripFlatDamage(comboPoints) + ripAttackPowerShare(comboPoints)*attackPower
 }
 
 func (druid *Druid) CurrentRipCost() float64 {

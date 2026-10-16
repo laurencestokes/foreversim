@@ -57,7 +57,15 @@ func preRaid(item *proto.UIItem) bool {
 			dropped = true
 		}
 	}
-	return !dropped && item.ScalingOptions[0].GetIlvl() <= maxUnsourcedIlvl
+	return !dropped && item.ScalingOptions[0].GetIlvl() <= maxUnsourcedIlvl && !zulGurubCrafts[item.Id]
+}
+
+// Crafts under the unsourced ceiling whose reagents only drop in Zul'Gurub.
+// ponytail: listed by hand; a reagent-source check would catch any others.
+var zulGurubCrafts = map[int32]bool{
+	19682: true, // Bloodvine Vest
+	19683: true, // Bloodvine Leggings
+	19684: true, // Bloodvine Boots
 }
 
 type slot struct {
@@ -86,7 +94,12 @@ func main() {
 	specName := flag.String("spec", "", "entry in specs.go, e.g. retribution_paladin")
 	out := flag.String("out", "", "gear set name to write; defaults to the spec entry's")
 	dir := flag.String("dir", filepath.Join("ui", "specs"), "output root; the set goes to <dir>/<class>/<spec>/gear_sets/")
+	phase1 := flag.Bool("p1", false, "admit Molten Core and Onyxia loot: the phase 1 best-in-slot pool")
 	flag.Parse()
+	if *phase1 {
+		delete(raidZones, 2717)
+		delete(raidZones, 2159)
+	}
 
 	spec, ok := specs[*specName]
 	if !ok {

@@ -27,6 +27,9 @@ type Mage struct {
 	PresenceOfMindAura *core.Aura
 	WintersChillAura   *core.Aura
 
+	// procFingersOfFrost rolls Fingers of Frost for a chilling bolt at launch; nil without the talent.
+	procFingersOfFrost func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult)
+
 	ArcaneBlast *core.Spell
 	Ignite      *core.Spell
 	Flamestrike []*core.Spell
@@ -119,19 +122,6 @@ func NewMage(character *core.Character, options *proto.Player) *Mage {
 
 	core.FillTalentsProto(mage.Talents.ProtoReflect(), options.TalentsString, TalentTreeSizes)
 
-	// The gnome's Eureka! (1259817): its SpellEffect class mask read against the mage's damaging
-	// spells, including Frostfire Bolt. Arcane Missiles' tick is a spell of its own
-	// (MageSpellArcaneMissilesTick) and takes the bonus, but only the cast that opens the channel
-	// (MageSpellArcaneMissilesCast) spends a charge. Blizzard's periodic damage is likewise cast as
-	// its own spell each tick (blizzard.go), but unlike Arcane Missiles it reuses the channel's own
-	// mask (MageSpellBlizzard) rather than a tick-only one, so there is no bit that names just the
-	// opening cast; Blizzard stays in the damage mask but out of the charge mask; the mage's other
-	// Eureka!-covered casts spend the charges instead.
-	mage.EurekaSpellMask = MageSpellFrostbolt | MageSpellFrostfireBolt | MageSpellFireball | MageSpellPyroblast | MageSpellScorch | MageSpellFireBlast |
-		MageSpellArcaneMissilesCast | MageSpellArcaneMissilesTick | MageSpellArcaneBlast | MageSpellArcaneExplosion |
-		MageSpellBlizzard | MageSpellConeOfCold | MageSpellFlamestrike | MageSpellBlastWave | MageSpellIceLance
-	mage.EurekaChargeMask = mage.EurekaSpellMask &^ (MageSpellArcaneMissilesTick | MageSpellBlizzard)
-
 	mage.EnableManaBar()
 	mage.AddStatDependency(stats.Agility, stats.PhysicalCritPercent, core.CritPerAgiMaxLevel[character.Class])
 
@@ -201,3 +191,9 @@ const (
 	// (all three carry the client's chill bit, 0x100000) and Improved Blizzard's.
 	MageSpellChill = MageSpellFrostbolt | MageSpellConeOfCold | MageSpellFrostfireBolt | MageSpellImprovedBlizzard
 )
+
+// Arcane Explosion, Blast Wave, Cone of Cold and Frost Nova reach the targets within 10 yards of the
+// mage and state no cast range, so the radius is their range. Client 1.60.1.70245: Cone of Cold,
+// Blast Wave and Frost Nova state 10 yd on their area effects; Arcane Explosion's row carries no
+// radius, its Era one 10 yd.
+const pointBlankRadius = 10

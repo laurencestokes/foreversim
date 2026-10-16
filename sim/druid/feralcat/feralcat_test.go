@@ -72,8 +72,8 @@ func TestFeralCat(t *testing.T) {
 }
 
 // Our Forever sim's feral builds.
-const DefaultTalents = "-5521002023132213051-05503"
-const FeralCatTalents = "050022-5500002123032213051-052"
+const DefaultTalents = "-55210032021132212051-05503"
+const FeralCatTalents = "050022-55000032121032212051-052"
 
 var DefaultSpecOptions = &proto.Player_FeralCatDruid{
 	FeralCatDruid: &proto.FeralCatDruid{
@@ -282,5 +282,57 @@ func TestClawFromTheFront(t *testing.T) {
 	}
 	if landed < 10 {
 		t.Errorf("Claw awarded a combo point %d times in 20 casts", landed)
+	}
+}
+
+// Ravage (9867) carries Attributes[0] 0x200000 on every rank: it can miss but is never dodged, parried
+// or blocked. Behind the target already rules out parry and block, so dodges are what this checks.
+func TestRavageCannotBeDodged(t *testing.T) {
+	sim := core.NewSim(&proto.RaidSimRequest{
+		SimOptions: &proto.SimOptions{RandomSeed: 1},
+		Raid: &proto.Raid{Parties: []*proto.Party{{Buffs: &proto.PartyBuffs{}, Players: []*proto.Player{{
+			Name: "Cat", Class: proto.Class_ClassDruid, Race: proto.Race_RaceNightElf, TalentsString: DefaultTalents,
+			Equipment: &proto.EquipmentSpec{}, Buffs: &proto.IndividualBuffs{}, Spec: DefaultSpecOptions,
+			Rotation: &proto.APLRotation{Type: proto.APLRotation_TypeAPL},
+		}}}}},
+		Encounter: core.MakeSingleTargetEncounter(0),
+	}, simsignals.CreateSignals())
+	sim.Reset()
+
+	cat := sim.Raid.Parties[0].Players[0].(druid.DruidAgent).GetDruid()
+	target := cat.CurrentTarget
+	for range 2000 {
+		cat.Ravage.SkipCastAndApplyEffects(sim, target)
+	}
+	if m := cat.Ravage.SpellMetrics[target.UnitIndex]; m.Dodges != 0 || m.Misses == 0 {
+		t.Errorf("Ravage over 2000 attempts: %d dodges, %d misses, want 0 dodges and some misses", m.Dodges, m.Misses)
+	}
+}
+
+// Shifting Power (1322605) can't be used at full Energy since the 8 Oct beta build (dev notes:
+// "can no longer be used while already at Full Energy").
+func TestShiftingPowerRefusedAtFullEnergy(t *testing.T) {
+	sim := core.NewSim(&proto.RaidSimRequest{
+		SimOptions: &proto.SimOptions{RandomSeed: 1},
+		Raid: &proto.Raid{Parties: []*proto.Party{{Buffs: &proto.PartyBuffs{}, Players: []*proto.Player{{
+			Name: "Cat", Class: proto.Class_ClassDruid, Race: proto.Race_RaceNightElf, TalentsString: DefaultTalents,
+			Equipment: &proto.EquipmentSpec{}, Buffs: &proto.IndividualBuffs{}, Spec: DefaultSpecOptions,
+			Rotation: &proto.APLRotation{Type: proto.APLRotation_TypeAPL},
+		}}}}},
+		Encounter: core.MakeSingleTargetEncounter(0),
+	}, simsignals.CreateSignals())
+	sim.Reset()
+
+	cat := sim.Raid.Parties[0].Players[0].(druid.DruidAgent).GetDruid()
+	if cat.ShiftingPower == nil {
+		t.Fatal("the default build has no Shifting Power")
+	}
+	cat.AddEnergy(sim, 100, cat.EnergyRefundMetrics)
+	if cat.ShiftingPower.Cast(sim, cat.CurrentTarget) {
+		t.Fatal("Shifting Power cast at full Energy")
+	}
+	cat.SpendEnergy(sim, 50, cat.EnergyRefundMetrics)
+	if !cat.ShiftingPower.Cast(sim, cat.CurrentTarget) {
+		t.Fatal("Shifting Power did not cast at half Energy")
 	}
 }

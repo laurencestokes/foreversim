@@ -32,12 +32,14 @@ func (mage *Mage) registerBlizzardSpell() {
 		})
 	}
 
+	// The tick rows lack Not a Proc (1.60.1.70205), so only listeners that can proc from procs hear
+	// them: no Arcane Concentration (log 2706: 0 of 642 tick hits) or Winter's Chill off ticks.
 	blizzardTickCast := mage.RegisterSpell(core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: blizzardTickSpell.ID},
 		SpellSchool:    blizzardRank.SpellSchool(),
 		DefenseType:    blizzardRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagNoOnCastComplete,
+		Flags:          core.SpellFlagNoOnCastComplete | core.SpellFlagProc,
 		ClassSpellMask: MageSpellBlizzard,
 
 		DamageMultiplier: 1,
@@ -45,7 +47,9 @@ func (mage *Mage) registerBlizzardSpell() {
 		ThreatMultiplier: 1,
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			results := spell.CalcAndDealAoeDamage(sim, blizzardTick.Average(core.CharacterLevel), spell.OutcomeMagicHit)
+			// The tick row (1279949) carries no Cannot Crit bit, and beta logs show the ticks crit (foreverlogs
+			// 2668: 27 of 301; 2706: 24 of 649).
+			results := spell.CalcAndDealAoeDamage(sim, blizzardTick.Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 			if improvedBlizzard == nil {
 				return
 			}
@@ -64,6 +68,7 @@ func (mage *Mage) registerBlizzardSpell() {
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagChanneled | core.SpellFlagAPL,
 		ClassSpellMask: MageSpellBlizzard,
+		MaxRange:       float64(blizzardRank.MaxRange),
 		ManaCost: core.ManaCostOptions{
 			FlatCost: int32(blizzardRank.Cost()),
 		},
@@ -86,6 +91,11 @@ func (mage *Mage) registerBlizzardSpell() {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			// The cast's own E_DUMMY lands on every enemy in the area, so it can proc what a spell hit
+			// procs (Arcane Concentration); the ticks are triggered by the area trigger and cannot.
+			for _, aoeTarget := range sim.Encounter.ActiveTargetUnits {
+				spell.CalcAndDealOutcome(sim, aoeTarget, spell.OutcomeMagicHitNoHitCounter)
+			}
 			spell.AOEDot().Apply(sim)
 		},
 	})

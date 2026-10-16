@@ -75,6 +75,12 @@ func (druid *Druid) applyNaturesGrace() {
 	triggered := spellData.NaturesGraceTriggered.Highest()
 	hasteMultiplier := 1 + triggered.Effect(dbcenums.A_MOD_CASTING_SPEED_NOT_STACK, 0).BaseValue()/100
 
+	// Effect 1 also cuts the global cooldown by 10% ("reducing your global cooldown by $m1%"), on top
+	// of the haste. The client's mask (7604215/67108864) is every druid spell but the forms, Innervate,
+	// Lifebloom and the cat and bear abilities. Every spell in it has the default 1.5 sec GCD, so the
+	// percentage is taken off that.
+	gcdReduction := time.Duration(float64(core.GCDDefault) * triggered.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_GLOBAL_COOLDOWN)).Percent())
+
 	aura := druid.RegisterAura(core.Aura{
 		Label:    "Nature's Grace",
 		ActionID: core.ActionID{SpellID: triggered.ID},
@@ -85,6 +91,12 @@ func (druid *Druid) applyNaturesGrace() {
 		OnExpire: func(_ *core.Aura, sim *core.Simulation) {
 			druid.MultiplyCastSpeed(sim, 1/hasteMultiplier)
 		},
+	}).AttachSpellMod(core.SpellModConfig{
+		Kind: core.SpellMod_GlobalCooldown_Flat,
+		ClassMask: DruidSpellEntanglingRoots | DruidSpellFaerieFire | DruidSpellHurricane | DruidSpellInsectSwarm |
+			DruidSpellMoonfire | DruidSpellStarfire | DruidSpellThorns | DruidSpellWrath | DruidSpellHealingTouch |
+			DruidSpellRegrowth | DruidSpellRejuvenation | DruidSpellTranquility | DruidSpellMarkOfTheWild,
+		TimeValue: gcdReduction,
 	})
 
 	druid.MakeProcTriggerAura(core.ProcTrigger{
@@ -112,11 +124,21 @@ func (druid *Druid) applyVengeance() {
 	})
 }
 
-// The client states a bonus range, which the sim does not model.
+// Nature's Reach: 16819 adds 2/4% hit, and 10/20% to the range of every spell its class mask reaches
+// (Wrath, Starfire, Moonfire, Insect Swarm, Hurricane, Faerie Fire, Entangling Roots, Thorns). The sim's
+// range mod is flat yards, so the share is taken of each spell's own range as it registers.
 func (druid *Druid) applyNaturesReach() {
 	if druid.Talents.NaturesReach == 0 {
 		return
 	}
+
+	share := spellData.NaturesReach.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_RANGE)).FractionAt(druid.Talents.NaturesReach)
+	druid.OnSpellRegistered(func(spell *core.Spell) {
+		if spell.Matches(DruidSpellWrath | DruidSpellStarfire | DruidSpellMoonfireInitial | DruidSpellMoonfireDoT |
+			DruidSpellInsectSwarm | DruidSpellHurricane | DruidSpellFaerieFire | DruidSpellEntanglingRoots | DruidSpellThorns) {
+			spell.MaxRange *= 1 + share
+		}
+	})
 
 	hit := spellData.NaturesReach.Effect(dbcenums.A_MOD_HIT_CHANCE, 0).ValueAt(druid.Talents.NaturesReach)
 	druid.AddStat(stats.PhysicalHitPercent, hit)

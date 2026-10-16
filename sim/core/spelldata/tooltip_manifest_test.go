@@ -21,7 +21,14 @@ import (
 // multiplier, a proc chance from a beta tooltip, a measured coefficient). Those are listed in
 // tooltipAllowed with the numbers alone, so a changed number on the same row still fails.
 var tooltipAllowed = map[int32][]float64{
-	10301:   {13.6},                                   // Retribution Aura: spell power share measured in game (#385)
+	// Client 1.60.1.70291 cut the low ranks' gain per level to fractions (#758). The tooltip rounds the gain,
+	// the store truncates it, so these rows read one point apart; beta logs should settle which the server does.
+	585:     {14},                                     // Smite rank 1
+	591:     {26},                                     // Smite rank 2
+	686:     {16},                                     // Shadow Bolt rank 1
+	5143:    {25},                                     // Arcane Missiles rank 2
+	5145:    {49},                                     // Arcane Missiles rank 4
+	10301:   {6},                                      // Retribution Aura: spell power share, beta notes 8 Oct 2026
 	14893:   {25},                                     // Inspiration: Classic's 25%, the client buff says 8% (assumed row)
 	17794:   {20},                                     // Improved Shadow Bolt: 4% a point, 20% at five
 	20346:   {50, 61},                                 // Judgement of Light: 50% chance not in the client (assumed row)
@@ -44,6 +51,8 @@ var tooltipAllowed = map[int32][]float64{
 	20922:   {48, 88},                                 // Consecration
 	20923:   {160},                                    // Consecration
 	20924:   {96, 216},                                // Consecration
+	20925:   {20},                                     // Holy Shield: the 20% extra threat is scripted; the 70170 block chance (30) no longer matches it
+	20928:   {20},                                     // Holy Shield: the 20% extra threat is scripted; the 70170 block chance (30) no longer matches it
 	20128:   {2, 6},                                   // Redoubt: per point
 	20178:   {8, 20},                                  // Reckoning: per point
 	24239:   {20},                                     // Hammer of Wrath: the 20% health condition
@@ -57,6 +66,7 @@ var tooltipAllowed = map[int32][]float64{
 	13976:   {3, 33, 67},                              // Initiative: per rank
 	16257:   {5, 20, 25},                              // Flurry (shaman): per rank
 	16344:   {35, 112},                                // Flametongue Weapon: by weapon speed
+	16387:   {54},                                     // Flametongue Totem: by weapon speed (1363 / 25)
 	408345:  {443},                                    // Fire Nova: damage is on 408428, via hand triggers
 	408505:  {4},                                      // Maelstrom Weapon: per point
 	1293696: {7.8, 65, 68},                            // Demonic Brand: assumed row
@@ -77,7 +87,7 @@ var tooltipAllowed = map[int32][]float64{
 	871:     {5.5},
 	12579:   {20},                         // Winter's Chill: 20% a point to proc
 	24858:   {35},                         // Moonkin Form: the cost is a percentage of base mana the store rounds away
-	9634:    {30, 1240, 55},               // Dire Bear Form: threat is not in the client; health is on 9635
+	9634:    {50, 1240, 55},               // Dire Bear Form: threat is not in the client; health is on 9635
 	19577:   {8},                          // Intimidation: base mana share
 	1310703: {3, 4, 5, 9, 12, 15, 18, 21}, // Venom: per combo point durations
 	16488:   {20},                         // Blood Craze: the 20% health condition

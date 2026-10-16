@@ -5,6 +5,7 @@
 #
 #   python tools/arena/background.py --detach --optimise
 #   python tools/arena/background.py --specs druid/balance,mage
+#   python tools/arena/background.py --detach --optimise --push --specs warlock   # one class
 #   ARENA_REF=arena/port python tools/arena/background.py --detach --optimise   # a local branch
 #   python tools/arena/background.py --detach --optimise --all   # rerun even unchanged specs
 #
@@ -115,6 +116,17 @@ def prepare_worktree():
     subprocess.run(['node', protoc, '-I=./proto',
                     '--go_opt=Mgoogle/protobuf/descriptor.proto=google.golang.org/protobuf/types/descriptorpb',
                     '--go_out=./sim/core', *protos], cwd=WORK, check=True)
+
+
+def remove_worktree():
+    """Gone after every run, pass or fail: a full checkout plus generated protos, on a disk that is
+    nearly full. The next run recreates it in seconds. Kept only when it holds a commit REF does
+    not have - a leaderboard whose push was rejected - because removing it would lose that."""
+    ahead = subprocess.run(['git', 'rev-list', '--count', f'{REF}..HEAD'], cwd=WORK, capture_output=True, text=True)
+    if ahead.returncode != 0 or ahead.stdout.strip() != '0':
+        print(f'kept {WORK}: it has a commit {REF} does not')
+        return
+    subprocess.run(['git', 'worktree', 'remove', '--force', WORK], cwd=REPO, check=False)
 
 
 def packages(specs):
@@ -246,6 +258,13 @@ def main():
         return
 
     prepare_worktree()
+    try:
+        run(args)
+    finally:
+        remove_worktree()
+
+
+def run(args):
     specs = [s for s in args.specs.split(',') if s]
     # Only packages that register an arena spec; the rest of ./sim/... is core with nothing to run.
     pkgs = [p for p in packages(specs) if arena_entries([p])]

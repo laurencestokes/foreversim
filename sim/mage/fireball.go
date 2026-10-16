@@ -23,6 +23,7 @@ func (mage *Mage) registerFireballRank(fireballRank *spelldata.Spell) {
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: MageSpellFireball,
+		MaxRange:       float64(fireballRank.MaxRange),
 		Rank:           fireballRank.RankNumber(),
 		MissileSpeed:   float64(fireballRank.Speed),
 

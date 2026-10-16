@@ -86,6 +86,8 @@
 1293539 an outcome the proc mask has no bit for
 1293670 ProcTypeMask TAKE_HELPFUL_SPELL; ProcTypeMask bit 31
 1293980 states no rate
+1294055 states no rate
+1294064 states no rate
 1294255 states no rate
 1294530 states no rate
 1297085 states no rate
@@ -102,8 +104,11 @@
 1302348 states no rate
 1302380 ProcTypeMask TAKE_HELPFUL_SPELL; ProcTypeMask bit 31
 1305424 ProcTypeMask KILL; no callback in the proc mask
-1307644 states no rate
 1317039 states no rate
 1318159 states no rate
 1318323 states no rate
-1321560 ProcTypeMask TAKE_HELPFUL_SPELL; ProcTypeMask bit 31
+1321560 ProcTypeMask bit 34; no callback in the proc mask
+1321587 states no rate
+1324298 states no rate
+1324318 states no rate
+1324323 states no rate

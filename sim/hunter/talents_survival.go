@@ -80,10 +80,11 @@ func (hunter *Hunter) registerResourcefulness() {
 		return
 	}
 
-	// 440529's cost mask leaves out Strider Kick.
+	// 440529's cost mask leaves out Strider Kick, but dev AidanZMoon called that a bug fixed for the
+	// 15 Oct build (forever-bugs #271), so it gets the discount like the other melee abilities.
 	hunter.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_PowerCost_Pct_Add,
-		ClassMask:  HunterSpellsTraps | HunterSpellsMelee&^HunterSpellStriderKick,
+		ClassMask:  HunterSpellsTraps | HunterSpellsMelee,
 		FloatValue: spellData.Resourcefulness.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(hunter.Talents.Resourcefulness),
 	})
 
@@ -130,14 +131,15 @@ func (hunter *Hunter) registerImprovedTracking() {
 	}
 
 	// Everything a raid encounter can be is trackable apart from Mechanical. Damage only: 24293 has
-	// no crit damage effect.
+	// no crit damage effect. Unknown counts: it's the site's default "Level 60" target, a boss of no
+	// set type, and the hunter tracks whatever the boss is (pick Mechanical to turn it off).
 	multiplier := spellData.ImprovedTracking.MultiplierAt(hunter.Talents.ImprovedTracking)
 	hunter.Env.RegisterPostFinalizeEffect(func() {
 		for _, t := range hunter.Env.Encounter.AllTargets {
 			switch t.MobType {
-			case proto.MobType_MobTypeBeast, proto.MobType_MobTypeDemon, proto.MobType_MobTypeDragonkin,
-				proto.MobType_MobTypeElemental, proto.MobType_MobTypeGiant, proto.MobType_MobTypeHumanoid,
-				proto.MobType_MobTypeUndead:
+			case proto.MobType_MobTypeUnknown, proto.MobType_MobTypeBeast, proto.MobType_MobTypeDemon,
+				proto.MobType_MobTypeDragonkin, proto.MobType_MobTypeElemental, proto.MobType_MobTypeGiant,
+				proto.MobType_MobTypeHumanoid, proto.MobType_MobTypeUndead:
 				at := hunter.AttackTables[t.UnitIndex]
 				at.DamageDealtMultiplier *= multiplier
 			}

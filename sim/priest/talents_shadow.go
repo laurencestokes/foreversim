@@ -102,13 +102,25 @@ func (priest *Priest) applyImprovedShadowWordPain() {
 	})
 }
 
-// applyShadowReach implements Shadow Reach.
-//
-// TODO: To be implemented. It is range only (17322), which a single-target sim never reads.
+// applyShadowReach implements Shadow Reach: 17322 adds 10/20% to the range of the spells its class
+// mask reaches, of the priest's the five targeted Shadow spells.
 func (priest *Priest) applyShadowReach() {
 	if priest.Talents.ShadowReach == 0 {
 		return
 	}
+
+	priest.extendRange(PriestSpellDevouringPlague|PriestSpellMindBlast|PriestSpellMindFlay|PriestSpellShadowWordDeath|PriestSpellShadowWordPain,
+		spellData.ShadowReach.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_RANGE)).FractionAt(priest.Talents.ShadowReach))
+}
+
+// extendRange is a percent range modifier: the sim's range mod is flat yards, so the share is taken of
+// each spell's own range as it registers. A spell with no range (0) keeps none.
+func (priest *Priest) extendRange(mask int64, share float64) {
+	priest.OnSpellRegistered(func(spell *core.Spell) {
+		if spell.Matches(mask) {
+			spell.MaxRange *= 1 + share
+		}
+	})
 }
 
 func (priest *Priest) applyImprovedMindBlast() {
@@ -183,7 +195,7 @@ func (priest *Priest) registerMindFlaySpell(rank *spelldata.Spell) {
 				dot.Snapshot(target, tick.Average(core.CharacterLevel))
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, priestTickOutcome(rank.PeriodicCanCrit(), dot))
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, priest.tickOutcome(rank.PeriodicCanCrit(), dot))
 			},
 		},
 
@@ -293,8 +305,10 @@ func (priest *Priest) applyVampiricEmbrace() {
 	})
 }
 
-// The raid debuff version of Shadow Weaving is a Classic mechanic; in Forever the stacks (15258)
-// raise the Shadow damage the priest deals, 2% a stack to five.
+// Shadow Weaving's stacks (15258) are a debuff on the target, as in Classic, but they raise only the
+// priest's own Shadow damage on that target (A_MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER), 2% a stack to five.
+// Each target keeps its own stacks: beta log 2726 (Serana) dots four Razorfen mobs and each carries
+// one stack of its own, dropping off on its own 15 sec.
 func (priest *Priest) applyShadowWeaving() {
 	if priest.Talents.ShadowWeaving == 0 {
 		return
@@ -303,27 +317,25 @@ func (priest *Priest) applyShadowWeaving() {
 	stackAura := spellData.ShadowWeavingTriggered.Highest()
 	perStack := stackAura.Effect(dbcenums.A_MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER, 32).Average(core.CharacterLevel) / 100
 
-	damageMod := priest.AddDynamicMod(core.SpellModConfig{
-		ClassMask: PriestSpellsAll,
-		School:    core.SpellSchoolShadow,
-		Kind:      core.SpellMod_DamageDone_Pct,
+	priest.ShadowWeavingAuras = priest.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
+		return target.RegisterAura(core.Aura{
+			Label:     "Shadow Weaving-" + priest.Label,
+			ActionID:  core.ActionID{SpellID: stackAura.ID},
+			Duration:  stackAura.Duration(),
+			MaxStacks: 5,
+		})
 	})
 
-	priest.ShadowWeavingAura = priest.RegisterAura(core.Aura{
-		Label:     "Shadow Weaving",
-		ActionID:  core.ActionID{SpellID: stackAura.ID},
-		Duration:  stackAura.Duration(),
-		MaxStacks: 5,
-		OnGain: func(_ *core.Aura, _ *core.Simulation) {
-			damageMod.Activate()
-		},
-		OnExpire: func(_ *core.Aura, _ *core.Simulation) {
-			damageMod.Deactivate()
-		},
-		OnStacksChange: func(_ *core.Aura, _ *core.Simulation, _ int32, newStacks int32) {
-			damageMod.UpdateFloatValue(perStack * float64(newStacks))
-		},
-	})
+	for _, target := range priest.Env.Encounter.AllTargetUnits {
+		target.AddDynamicDamageTakenModifier(func(_ *core.Simulation, spell *core.Spell, result *core.SpellResult, _ bool) {
+			if spell.Unit != &priest.Unit || !spell.SpellSchool.Matches(core.SpellSchoolShadow) {
+				return
+			}
+			if aura := priest.ShadowWeavingAuras.Get(result.Target); aura.IsActive() {
+				result.Damage *= 1 + perStack*float64(aura.GetStacks())
+			}
+		})
+	}
 
 	priest.MakeProcTriggerAura(core.ProcTrigger{
 		Name:               "Shadow Weaving Trigger",
@@ -332,9 +344,10 @@ func (priest *Priest) applyShadowWeaving() {
 		Outcome:            core.OutcomeLanded,
 		ProcChance:         spellData.ShadowWeaving.FractionAt(priest.Talents.ShadowWeaving),
 		TriggerImmediately: true,
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			priest.ShadowWeavingAura.Activate(sim)
-			priest.ShadowWeavingAura.AddStack(sim)
+		Handler: func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
+			aura := priest.ShadowWeavingAuras.Get(result.Target)
+			aura.Activate(sim)
+			aura.AddStack(sim)
 		},
 	})
 }
@@ -387,7 +400,8 @@ func (priest *Priest) applyDarkness() {
 // The beta client's 15473: +10% Shadow damage, -50% Shadow mana cost, +100% Shadow critical strike
 // damage bonus, -15% Physical damage taken. Only healing is blocked, so Smite and Holy Fire stay
 // castable inside it and do not break it. The crit bonus is not school-wide: its mask (41984016)
-// names Mind Blast, Mind Flay, Shadow Word: Pain, Devouring Plague and Mana Burn.
+// names Mind Blast, Mind Flay, Shadow Word: Pain, Devouring Plague and Mana Burn. Shadow Word: Death
+// is added: the devs called its absence a bug, fixed for the next build (forever-bugs #328).
 func (priest *Priest) applyShadowform() {
 	if !priest.Talents.Shadowform {
 		return
@@ -404,10 +418,12 @@ func (priest *Priest) applyShadowform() {
 				aura.Activate(sim)
 			}
 		},
-		OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
-			if spell.SpellSchool.Matches(core.SpellSchoolHoly) && spell.Flags.Matches(core.SpellFlagHelpful) {
-				aura.Deactivate(sim)
-			}
+		// The client's form 28, which Holy Nova's and Chastise's rows exclude.
+		OnGain: func(aura *core.Aura, sim *core.Simulation) {
+			priest.ShapeshiftForm = rank.ShapeshiftForm()
+		},
+		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
+			priest.ShapeshiftForm = 0
 		},
 	}).AttachSpellMod(core.SpellModConfig{
 		ClassMask:  PriestSpellsAll,
@@ -420,7 +436,7 @@ func (priest *Priest) applyShadowform() {
 		FloatValue: rank.Effect(dbcenums.A_MOD_POWER_COST_SCHOOL_PCT, 32).Average(core.CharacterLevel) / 100,
 		Kind:       core.SpellMod_PowerCost_Pct,
 	}).AttachSpellMod(core.SpellModConfig{
-		ClassMask:  PriestSpellMindBlast | PriestSpellMindFlay | PriestSpellShadowWordPain | PriestSpellDevouringPlague,
+		ClassMask:  PriestSpellMindBlast | PriestSpellMindFlay | PriestSpellShadowWordPain | PriestSpellDevouringPlague | PriestSpellShadowWordDeath,
 		FloatValue: rank.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_CRIT_DAMAGE_BONUS)).Average(core.CharacterLevel) / 100,
 		Kind:       core.SpellMod_CritMultiplier_Flat,
 	}).AttachMultiplicativePseudoStatBuff(

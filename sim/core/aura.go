@@ -785,12 +785,9 @@ func (aura *Aura) Deactivate(sim *Simulation) {
 	}
 	aura.active = false
 
+	// An aura that ends before the pull (a party totem a pre-pull cast replaces) books no uptime.
 	if !aura.ActionID.IsEmptyAction() {
-		if sim.CurrentTime > aura.expires {
-			aura.metrics.Uptime += aura.expires - max(aura.startTime, 0)
-		} else {
-			aura.metrics.Uptime += sim.CurrentTime - max(aura.startTime, 0)
-		}
+		aura.metrics.Uptime += max(min(sim.CurrentTime, aura.expires)-max(aura.startTime, 0), 0)
 	}
 
 	if sim.Log != nil && !aura.ActionID.IsEmptyAction() {

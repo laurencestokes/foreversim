@@ -96,7 +96,10 @@ func (shaman *Shaman) registerWindfuryTotemSpell() {
 		Label:    "Windfury Totem (Self)",
 		ActionID: config.ActionID,
 		Duration: duration,
-	}).ApplyOnInit(func(aura *core.Aura, sim *core.Simulation) {
+	})
+	wfAura.NewExclusiveEffect(buffs.AirTotemCategory, true, core.ExclusiveEffect{Priority: buffs.AirTotemCastWindfury})
+	wfAura.NewExclusiveEffect(buffs.FlametongueTotemCategory, false, core.ExclusiveEffect{Priority: buffs.FlametongueTotemWindfuryTotem})
+	wfAura.ApplyOnInit(func(aura *core.Aura, sim *core.Simulation) {
 		mhConfig := *shaman.AutoAttacks.MHConfig()
 		mhConfig.ActionID = mhConfig.ActionID.WithTag(windfuryTotemBuff.ID)
 		windfurySpell = shaman.GetOrRegisterSpell(mhConfig)
@@ -181,6 +184,7 @@ func (shaman *Shaman) registerGraceOfAirTotemSpell() {
 		ActionID: config.ActionID,
 		Duration: duration,
 	})
+	buffAura.NewExclusiveEffect(buffs.AirTotemCategory, true, core.ExclusiveEffect{Priority: buffs.AirTotemCastGraceOfAir})
 	buffAura.NewExclusiveEffect(buffs.GraceOfAirTotemCategory+stats.Agility.StatName()+"Add", false, core.ExclusiveEffect{
 		Priority: value,
 		OnGain: func(ee *core.ExclusiveEffect, sim *core.Simulation) {

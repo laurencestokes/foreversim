@@ -1,6 +1,7 @@
 package core_test
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -638,8 +639,8 @@ func TestGeneratedThornsStrikesBackAtAMeleeHit(t *testing.T) {
 	char := sim.Raid.Parties[0].Players[0].GetCharacter()
 	attacker := sim.Encounter.AllTargetUnits[0]
 
-	if buffs.ThornsValue(0) != 22 {
-		t.Errorf("Thorns is worth %v, want the client's 22", buffs.ThornsValue(0))
+	if buffs.ThornsValue(0) != 18 {
+		t.Errorf("Thorns is worth %v, want the client's 18", buffs.ThornsValue(0))
 	}
 
 	aura := char.GetAura("Thorns (External)")
@@ -665,8 +666,8 @@ func TestGeneratedThornsStrikesBackAtAMeleeHit(t *testing.T) {
 	if got := shield.SpellMetrics[attacker.UnitIndex].Casts; got != 1 {
 		t.Errorf("a melee hit taken cast the shield %d times, want once", got)
 	}
-	if got := shield.SpellMetrics[attacker.UnitIndex].TotalDamage; got != 22 {
-		t.Errorf("the shield dealt %v damage, want the client's 22", got)
+	if got := shield.SpellMetrics[attacker.UnitIndex].TotalDamage; got != 18 {
+		t.Errorf("the shield dealt %v damage, want the client's 18", got)
 	}
 
 	caster := sim.Raid.Parties[0].Players[0].(*core.FakeAgent)
@@ -674,6 +675,21 @@ func TestGeneratedThornsStrikesBackAtAMeleeHit(t *testing.T) {
 	sim.Step()
 	if got := shield.SpellMetrics[attacker.UnitIndex].Casts; got != 1 {
 		t.Errorf("a shadow spell taken cast the shield %d times, want the shield to ignore it", got)
+	}
+}
+
+// Thorns scales with the druid's spell power at 6% (beta notes, 8 Oct 2026): the druid's own copy
+// carries the coefficient, the raid option's deals the base.
+func TestThornsScalesWithTheDruidsSpellPower(t *testing.T) {
+	char := core.NewGeneratedBuffTestCharacter()
+	buffs.ThornsAura(&char.Unit, true, 0)
+	buffs.ThornsAura(&char.Unit, false, 0)
+
+	if got := char.GetSpell(core.ActionID{SpellID: 9910, Tag: 2}).BonusCoefficient; got != 0.06 {
+		t.Errorf("the druid's own Thorns has coefficient %v, want 0.06", got)
+	}
+	if got := char.GetSpell(core.ActionID{SpellID: 9910, Tag: 1}).BonusCoefficient; got != 0 {
+		t.Errorf("the raid option's Thorns has coefficient %v, want 0", got)
 	}
 }
 
@@ -689,13 +705,13 @@ func TestGeneratedRetributionAuraHoldsThePaladinSlot(t *testing.T) {
 	if external == nil {
 		t.Fatalf("no aura is labelled %q; the unit has %v", "Retribution Aura (External)", auraLabels(char))
 	}
-	if buffs.RetributionAuraValue(0) != 30 {
-		t.Errorf("the aura is worth %v holy damage, want the client's 30", buffs.RetributionAuraValue(0))
+	if buffs.RetributionAuraValue(0) != 20 {
+		t.Errorf("the aura is worth %v holy damage, want the client's 20", buffs.RetributionAuraValue(0))
 	}
 
 	category := char.ExclusiveEffectManager.GetExclusiveEffectCategory(buffs.RetributionAuraCategory)
-	if !category.SingleAura || len(category.Effects()) != 1 || category.Effects()[0].Priority != 30 {
-		t.Errorf("the category is single-aura %v with %d effects, first bid %v; want one bidding 30",
+	if !category.SingleAura || len(category.Effects()) != 1 || category.Effects()[0].Priority != 20 {
+		t.Errorf("the category is single-aura %v with %d effects, first bid %v; want one bidding 20",
 			category.SingleAura, len(category.Effects()), category.Effects()[0].Priority)
 	}
 	if shared := char.ExclusiveEffectManager.GetExclusiveEffectCategory(buffs.PaladinAuraCategory); len(shared.Effects()) != 0 {
@@ -712,23 +728,27 @@ func TestGeneratedRetributionAuraHoldsThePaladinSlot(t *testing.T) {
 	}
 }
 
-// The party's copy cannot see the providing paladin, so the spell power the party states is folded
-// into the damage it bids and deals.
-func TestRetributionAuraCarriesThePartysSpellPower(t *testing.T) {
-	char := core.NewGeneratedBuffTestCharacter()
+// Retribution Aura scales with the paladin's spell power (beta notes, 8 Oct 2026), not the struck
+// member's: the party option's copy deals the base whatever its holder has.
+func TestRetributionAuraIgnoresTheHoldersSpellPower(t *testing.T) {
+	sim := setupFakeSimWithBuffs(&proto.RaidBuffs{},
+		&proto.PartyBuffs{RetributionAura: true}, &proto.IndividualBuffs{})
+	char := sim.Raid.Parties[0].Players[0].GetCharacter()
+	attacker := sim.Encounter.AllTargetUnits[0]
+	attacker.AutoAttacks.CancelAutoSwing(sim)
+	landed := &core.SpellResult{Target: &char.Unit, Outcome: core.OutcomeHit}
+	base := buffs.RetributionAuraValue(0)
 
-	core.ApplyBuffEffects(generatedBuffTestAgent{char},
-		&proto.RaidBuffs{}, &proto.PartyBuffs{RetributionAura: true, RetributionAuraSpellPower: 450}, &proto.IndividualBuffs{})
-
-	if char.GetAura("Retribution Aura (External)") == nil {
+	shield := char.GetSpell(core.ActionID{SpellID: 10301, Tag: 1})
+	external := char.GetAura("Retribution Aura (External)")
+	if external == nil {
 		t.Fatalf("no aura is labelled %q; the unit has %v", "Retribution Aura (External)", auraLabels(char))
 	}
-
-	want := buffs.RetributionAuraValue(0) + buffs.RetributionAuraSpellPowerCoefficient*450
-	category := char.ExclusiveEffectManager.GetExclusiveEffectCategory(buffs.RetributionAuraCategory)
-	if len(category.Effects()) != 1 || category.Effects()[0].Priority != want {
-		t.Errorf("the category has %d effects, first bid %v; want one bidding %v",
-			len(category.Effects()), category.Effects()[0].Priority, want)
+	char.AddStatDynamic(sim, stats.SpellDamage, 100)
+	external.OnSpellHitTaken(external, sim, attacker.AutoAttacks.MHAuto(), landed)
+	sim.Step()
+	if got := shield.SpellMetrics[attacker.UnitIndex].TotalDamage; math.Abs(got-base) > 1e-6 {
+		t.Errorf("the party's copy on a holder with 100 spell power dealt %v, want the base %v", got, base)
 	}
 }
 

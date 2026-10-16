@@ -117,7 +117,9 @@ func (paladin *Paladin) applyAnticipation() {
 
 // Improved Seal of Fury - When Seal of Fury's shield is fully absorbed, restore 60 Mana, increased
 // by 15% per level the attacker is above you, up to 45%. The level is the current target's. The
-// client states the mana as one point per caster level, so it is read folded.
+// client states the mana as one point per caster level, so it is read folded. The mana is
+// restored by 1314104, which client 70374 flags No Threat (beta notes 8 Oct: no longer generates
+// threat when restoring Mana); that spell isn't in the store, so the flag is set here.
 func (paladin *Paladin) applyImprovedSealOfFury(shield *core.DamageAbsorptionAura) {
 	if !paladin.Talents.ImprovedSealOfFury {
 		return
@@ -128,6 +130,7 @@ func (paladin *Paladin) applyImprovedSealOfFury(shield *core.DamageAbsorptionAur
 	perLevel := rank.EffectN(2).Percent()
 	maxLevels := rank.EffectN(3).Average(core.CharacterLevel)
 	manaMetrics := paladin.NewManaMetrics(core.ActionID{SpellID: rank.ID})
+	manaMetrics.NoThreat = true
 
 	shield.AttachOnDamageAbsorbed(func(sim *core.Simulation, aura *core.DamageAbsorptionAura, _ *core.SpellResult, _ float64) {
 		if aura.ShieldStrength > 0 {
@@ -170,6 +173,7 @@ func (paladin *Paladin) applyShieldSpecialization() {
 	rank := spellData.ShieldSpecializationTriggered.Highest()
 	manaShare := rank.EffectN(1).Percent()
 	manaMetrics := paladin.NewManaMetrics(core.ActionID{SpellID: rank.ID})
+	manaMetrics.NoThreat = rank.NoThreat() // No Threat since client 70374 (beta notes 8 Oct)
 
 	paladin.MakeProcTriggerAura(core.ProcTrigger{
 		Name:               "Shield Specialization" + paladin.Label,
@@ -246,17 +250,46 @@ func (paladin *Paladin) applyReckoning() {
 	blockChance := spellData.Reckoning.FractionAt(paladin.Talents.Reckoning)
 	critChance := blockChance * 2.5
 
-	// The extra attack (20178) is the Classic one, as on master: it pulls the next main-hand
-	// swing to now rather than adding a free swing.
+	// 16 Oct build: each proc banks a charge (max 4) and the next melee swing (auto attack) spends
+	// them all, 1 extra attack each. An extra attack is a free swing that leaves the swing timer
+	// alone (beta logs 2747-2749). Client 70291+ gives 20177 a 1.5 s proc cooldown, shared by both
+	// triggers.
+	icd := core.Cooldown{Timer: paladin.NewTimer(), Duration: spellData.Reckoning.Highest().ICD()}
+	charges := paladin.RegisterAura(core.Aura{
+		Label:     "Reckoning" + paladin.Label,
+		ActionID:  core.ActionID{SpellID: 20178},
+		Duration:  core.NeverExpires,
+		MaxStacks: 4,
+		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, _ *core.SpellResult) {
+			if !spell.ProcMask.Matches(core.ProcMaskMeleeMHAuto) {
+				return
+			}
+			// Spend after this swing resolves: deactivating inside the callback reorders the other
+			// hit-dealt auras mid-loop.
+			sim.AddPendingAction(core.NewDelayedAction(core.DelayedActionOptions{DoAt: sim.CurrentTime, OnAction: func(sim *core.Simulation) {
+				n := aura.GetStacks()
+				aura.Deactivate(sim)
+				for range n {
+					paladin.AutoAttacks.InstantMHAttack(sim)
+				}
+			}}))
+		},
+	})
+	extraAttack := func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+		if !icd.IsReady(sim) {
+			return
+		}
+		icd.Use(sim)
+		charges.Activate(sim)
+		charges.AddStack(sim)
+	}
 
 	paladin.MakeProcTriggerAura(core.ProcTrigger{
 		Name:       "Reckoning - Block" + paladin.Label,
 		Callback:   core.CallbackOnSpellHitTaken,
 		Outcome:    core.OutcomeBlock,
 		ProcChance: blockChance,
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			paladin.AutoAttacks.ExtraMHAttack(sim)
-		},
+		Handler:    extraAttack,
 	})
 
 	paladin.MakeProcTriggerAura(core.ProcTrigger{
@@ -264,9 +297,7 @@ func (paladin *Paladin) applyReckoning() {
 		Callback:   core.CallbackOnSpellHitTaken,
 		Outcome:    core.OutcomeCrit,
 		ProcChance: critChance,
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			paladin.AutoAttacks.ExtraMHAttack(sim)
-		},
+		Handler:    extraAttack,
 	})
 }
 

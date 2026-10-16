@@ -180,7 +180,7 @@ func RetributionAuraAura(unit *core.Unit, isPlayer bool, talentPoints int32) *co
 	return newDamageShield(unit, retributionAuraMeta, isPlayer, talentPoints)
 }
 
-// func RetributionAuraSpellPowerAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura // retribution_aura_spell_power, KindFlag: the Holy spell power of the paladin providing Retribution Aura, which driveRetributionAura scales the damage with; a sim input with no spell source, rendered under Other Inputs.
+// func RetributionAuraSpellPowerAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura // retribution_aura_spell_power, KindFlag: retired: Retribution Aura reads the spell power of the unit it is on, not the paladin's (beta logs 2729-2736), so nothing reads this; the row stays so the party fields after it keep their proto numbers.
 
 // Concentration Aura
 // Left out: effect 3 A_MECHANIC_DURATION_MOD(232) misc 26

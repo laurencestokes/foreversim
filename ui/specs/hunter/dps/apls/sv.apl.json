@@ -14,6 +14,12 @@
 		{ "action": { "autocastOtherCooldowns": {} } },
 		{
 			"action": {
+				"condition": { "cmp": { "op": "OpGe", "lhs": { "numberTargets": {} }, "rhs": { "const": { "val": "3" } } } },
+				"castSpell": { "spellId": { "spellId": 14295 } }
+			}
+		},
+		{
+			"action": {
 				"condition": {
 					"and": {
 						"vals": [
@@ -100,6 +106,19 @@
 					}
 				},
 				"castSpell": { "spellId": { "spellId": 25295 } }
+			}
+		},
+		{
+			"action": {
+				"condition": {
+					"and": {
+						"vals": [
+							{ "cmp": { "op": "OpGt", "lhs": { "autoTimeToNext": { "autoType": "RangedAuto" } }, "rhs": { "const": { "val": "0.5s" } } } },
+							{ "cmp": { "op": "OpGe", "lhs": { "currentManaPercent": {} }, "rhs": { "const": { "val": "30%" } } } }
+						]
+					}
+				},
+				"castSpell": { "spellId": { "spellId": 14287 } }
 			}
 		}
 	]

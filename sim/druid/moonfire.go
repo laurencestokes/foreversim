@@ -42,10 +42,7 @@ func (druid *Druid) registerMoonfireDoTSpell() {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcOutcome(sim, target, spell.OutcomeAlwaysHitNoHitCounter)
-
 			spell.Dot(target).Apply(sim)
-			spell.DealOutcome(sim, result)
 		},
 	})
 }
@@ -77,8 +74,10 @@ func (druid *Druid) registerMoonfireImpactSpell() {
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			result := spell.CalcDamage(sim, target, moonfireRank.DamageEffect().Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 
+			// Moonfire is one client spell, so one hit event: applying the DoT directly keeps Omen of
+			// Clarity and on-hit procs from rolling a second time off it.
 			if result.Landed() {
-				druid.Moonfire.RelatedDotSpell.Cast(sim, target)
+				druid.Moonfire.RelatedDotSpell.Dot(target).Apply(sim)
 			}
 
 			spell.DealDamage(sim, result)

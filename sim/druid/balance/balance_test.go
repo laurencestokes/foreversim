@@ -32,7 +32,7 @@ func TestBalance(t *testing.T) {
 			// with yet, and gives the rest TBC-shaped stats.
 			GearSet:  core.GearSetCombo{Label: "Naked", GearSet: &proto.EquipmentSpec{}},
 			Talents:  DefaultTalents,
-			Rotation: core.GetAplRotation("../../../ui/specs/druid/balance/apls", "default"),
+			Rotation: core.GetAplRotation("../../../ui/specs/druid/balance/apls", "launch"),
 			ItemFilter: core.ItemFilter{
 				WeaponTypes:       DefaultWeaponTypes,
 				ArmorType:         DefaultArmorType,

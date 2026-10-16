@@ -9,7 +9,9 @@ import BlankAPL from './apls/default.apl.json';
 import FireApl from './apls/fire.apl.json';
 import FireLowRankApl from './apls/fire_lowrank.apl.json';
 import FrostApl from './apls/frost.apl.json';
-import LaunchGear from './gear_sets/launch.gear.json';
+import ArcaneLaunchGear from './gear_sets/arcane_launch.gear.json';
+import FireLaunchGear from './gear_sets/fire_launch.gear.json';
+import FrostLaunchGear from './gear_sets/frost_launch.gear.json';
 import P0BisGear from './gear_sets/p0.bis.gear.json';
 import P1BisGear from './gear_sets/p1.bis.gear.json';
 
@@ -91,8 +93,11 @@ export const DefaultIndividualBuffs = IndividualBuffs.create({
 export const DefaultDebuffs = Debuffs.create({});
 
 // Our Forever sim's gear presets (master ui/<spec>/gear_sets).
-export const GEAR_LAUNCH = PresetUtils.makePresetGear('Launch', LaunchGear);
+// One launch set per tree (tools/launch_gear): each is valued for its own school's damage.
+export const GEAR_FROST_LAUNCH = PresetUtils.makePresetGear('Frost Launch', FrostLaunchGear);
+export const GEAR_FIRE_LAUNCH = PresetUtils.makePresetGear('Fire Launch', FireLaunchGear);
+export const GEAR_ARCANE_LAUNCH = PresetUtils.makePresetGear('Arcane Launch', ArcaneLaunchGear);
 export const GEAR_P0_BIS = PresetUtils.makePresetGear('Pre-BiS', P0BisGear);
 export const GEAR_P1_BIS = PresetUtils.makePresetGear('P1 BiS', P1BisGear);
 export const DEFAULT_GEAR = GEAR_P0_BIS;
-export const GEAR_PRESETS = [GEAR_LAUNCH, GEAR_P0_BIS, GEAR_P1_BIS];
+export const GEAR_PRESETS = [GEAR_FROST_LAUNCH, GEAR_FIRE_LAUNCH, GEAR_ARCANE_LAUNCH, GEAR_P0_BIS, GEAR_P1_BIS];

@@ -17,8 +17,8 @@ func init() {
 
 // The three builds our Forever sim ships for the DPS warrior: its default DPS build, Fury 17/34/0
 // and Arms 39/12/0.
-var DpsTalents = "30305013-050520035150310051"
-var FuryTalents = "30305213-550501015050010051"
+var DpsTalents = "30305013-05553005150010501"
+var FuryTalents = "30305213-55051105050010501"
 var ArmsTalents = "32305213132515201-5502"
 
 func TestFury(t *testing.T) {
@@ -27,10 +27,13 @@ func TestFury(t *testing.T) {
 	}))
 }
 
+// Arms runs dps_battle, the rotation the site's Auto picks for 5/5 Bloodthrill on a two-hander
+// (#641): the Berserker rotations never Rend or Overpower, so Bloodthrill, Improved Rend and
+// Improved Overpower went untested.
 func TestArms(t *testing.T) {
-	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator([]core.CharacterSuiteConfig{
-		warriorSuite(TwoHandGear, ArmsTalents, nil),
-	}))
+	arms := warriorSuite(TwoHandGear, ArmsTalents, nil)
+	arms.Rotation = core.GetAplRotation("../../../ui/specs/warrior/dps/apls", "dps_battle")
+	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator([]core.CharacterSuiteConfig{arms}))
 }
 
 // Weapons and nothing else. The generated item database does not carry the Forever gear our sim
@@ -86,6 +89,21 @@ func warriorSuite(gear core.GearSetCombo, talents string, otherTalents []core.Ta
 	}
 }
 
+// The arena pulls at 0 rage, as a real pull does (rage decays out of combat); Bloodrage still goes
+// at 0 s. The UI default of 50 opened every arena row with two free Heroic Strikes (+0.2..+0.6%).
+var arenaOptions = &proto.Player_DpsWarrior{
+	DpsWarrior: &proto.DpsWarrior{
+		Options: &proto.DpsWarrior_Options{
+			ClassOptions: &proto.WarriorOptions{
+				StartingRage:   0,
+				QueueDelay:     250,
+				UseBattleShout: true,
+				DefaultStance:  proto.WarriorStance_WarriorStanceBerserker,
+			},
+		},
+	},
+}
+
 var DefaultOptions = &proto.Player_DpsWarrior{
 	DpsWarrior: &proto.DpsWarrior{
 		Options: &proto.DpsWarrior_Options{
@@ -120,7 +138,7 @@ var arenaSpec = arenalib.Spec{
 	UI:          "warrior/dps",
 	Class:       proto.Class_ClassWarrior,
 	Race:        proto.Race_RaceOrc,
-	SpecOptions: DefaultOptions,
+	SpecOptions: arenaOptions,
 	Role:        arenalib.Melee,
 	// The page plays every build with its No Reck rotation (autoRotation). Arms is a two-hander build
 	// and the page's default set dual wields, so Arms wears the page's one two-hander set short of P1.

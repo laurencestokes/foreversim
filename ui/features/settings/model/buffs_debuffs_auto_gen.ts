@@ -62,8 +62,8 @@ export const MoonkinAura = makeBooleanPartyBuffInput({
 // retribution_aura: the hand-written input shows itself for tank specs only, since a damage shield only matters on the unit being hit; a role gate no manifest
 // row carries.
 
-// retribution_aura_spell_power: the Holy spell power of the paladin providing Retribution Aura, which driveRetributionAura scales the damage with; a sim input
-// with no spell source, rendered under Other Inputs.
+// retribution_aura_spell_power: retired: Retribution Aura reads the spell power of the unit it is on, not the paladin's (beta logs 2729-2736), so nothing reads
+// this; the row stays so the party fields after it keep their proto numbers.
 
 export const ConcentrationAura = makeBooleanPartyBuffInput({
 	actionId: ActionId.fromSpellId(19746),

@@ -35,7 +35,7 @@
 	"12319": {
 		"ability": "Flurry",
 		"file": "sim/warrior/talents_fury.go",
-		"note": "Client 1.60.1.70009: the talent 12319's curve reads 5/10/15/20/25% attack speed for 3 swings, Classic's values, but the buff it triggers (12966) now carries a flat 30%. The sim applies the curve; the proc trigger is 12319 and the buff 12966.",
+		"note": "Client 1.60.1.70009: the talent 12319's curve reads 5/10/15/20/25% attack speed for 3 swings, but the buff it triggers (12966) now carries a flat 30%. The sim applies the curve; the proc trigger is 12319 and the buff 12966. The shaman's Flurry has the same split (that curve, a flat 10% buff), and beta log 2701 timed it at 10% and 15% on shamans with different point totals, so the server reads the talent there, not the buff.",
 		"source": "assumed",
 		"tooltip": "Passive\nIncreases your attack speed by 5% per point for your next 3 swings after dealing a melee critical strike. Lasts 15 sec.",
 		"assumptions": [
@@ -52,7 +52,7 @@
 	"12723": {
 		"ability": "Sweeping Strikes",
 		"file": "sim/warrior/talents_arms.go",
-		"note": "Sweeping Strikes registers under 12723: the 30 Rage cast on a 30 sec cooldown, its 20 sec aura with 5 charges (client 1.60.1.70009, 12292, as in Classic Era) and the copied hit for auto attacks and most abilities; the normalized Execute copy is 12723 tag 1 (26654 in the client).",
+		"note": "Sweeping Strikes registers under 12723: the 30 Rage cast on a 30 sec cooldown, its 20 sec aura with 5 charges (client 1.60.1.70009, 12292, as in Classic Era) and the copied hit for auto attacks and most abilities; the normalized Execute copy is 12723 tag 1 (26654 in the client). Beta logs (foreverlogs 2705-2743: Rinsy, Arthass, Noftw) put the copied hits at 7-18% of their dungeon damage, so the battle and stance-dance rotations cast it on cooldown whenever two or more targets are up.",
 		"source": "classic"
 	},
 	"12880": {
@@ -79,14 +79,14 @@
 	"12964": {
 		"ability": "Unbridled Wrath",
 		"file": "sim/warrior/talents_fury.go",
-		"note": "Client 1.60.1.70009: the rank curve reads 12/24/36/48/60% for 1 Rage, doubled with a two-handed weapon (Classic 8% per point, 1 Rage). The sim only procs it from white swings.",
+		"note": "Client 1.60.1.70009: the rank curve reads 12/24/36/48/60% for 1 Rage (Classic 8% per point); hotfix 112347 dropped the two-handed doubling. Procs from white swings only: beta logs 2670/2698 show it on 31-59% of landed autos and on none of 148 Heroic Strike/Cleave hits, so the sim excludes those queued swings.",
 		"source": "forever",
 		"tooltip": "Passive\nGives you a 12% chance per point to generate 1 additional Rage when you deal melee damage with a weapon. This effect is increased to 2 Rage for two-handed weapons."
 	},
 	"12966": {
 		"ability": "Flurry",
 		"file": "sim/warrior/talents_fury.go",
-		"note": "The buff, client 1.60.1.70009: 15 sec, 3 charges and a flat 30% attack speed where Era's rank 1 buff is 10%. The sim applies the talent's 5% a point instead (12319).",
+		"note": "The buff, client 1.60.1.70009: 15 sec, 3 charges and a flat 30% attack speed where Era's rank 1 buff is 10%. The sim applies the talent's 5% a point instead (12319), as the shaman's twin buff was timed doing on beta log 2701.",
 		"source": "assumed",
 		"tooltip": "Passive\nIncreases your attack speed by 5% per point for your next 3 swings after dealing a melee critical strike. Lasts 15 sec.",
 		"assumptions": [
@@ -103,7 +103,7 @@
 	"1310222": {
 		"ability": "Spearing Strike",
 		"file": "sim/warrior/talents_arms.go",
-		"note": "Client 1.60.1.70009: a new Arms talent with no Classic spell. 15 Rage, 20 sec cooldown, 40% normalized weapon damage and another 80% against Giants and Dragonkin.",
+		"note": "Client 1.60.1.70009: a new Arms talent with no Classic spell. 15 Rage, 20 sec cooldown, 40% normalized weapon damage and another 80% against Giants and Dragonkin. Battle Stance only (client 1.60.1.70178 SpellShapeshift), so the default Berserker Stance rotation no longer casts it.",
 		"source": "forever",
 		"tooltip": "15 Rage\nMelee Range\nInstant\n20 sec cooldown\nA brutal attack that deals 40% weapon damage. Deals an additional 80% weapon damage against Giants, Dragonkin, and mounted targets. Mounted targets are dismounted."
 	},
@@ -124,14 +124,14 @@
 	"16488": {
 		"ability": "Blood Craze",
 		"file": "sim/warrior/talents_fury.go",
-		"note": "Client 1.60.1.70009: Forever widens the trigger to Bloodthirst damage and hits over 20% of maximum health, and the curve (16487) reads 1/2/3% of maximum health over 6 sec in 3 ticks. Classic heals over 6 sec only after a critical strike.",
+		"note": "Client 1.60.1.70374: Forever adds hits over 20% of maximum health to Classic's critical-strike trigger, and the curve (16487) reads 1/2/3% of maximum health over 6 sec in 3 ticks. Bloodthirst no longer triggers it: 70009 listed it, the 1 Oct Blizzard beta notes say 'Blood Craze no longer activates off of Bloodthirst casts'.",
 		"source": "forever",
-		"tooltip": "Passive\nRegenerates 1% of your total Health per point over 6 sec after being the victim of a critical strike, dealing damage with Bloodthirst, or suffering more than 20% of your maximum Health from a single attack."
+		"tooltip": "Passive\nRegenerates 1% of your total Health per point over 6 sec after being the victim of a critical strike or suffering more than 20% of your maximum Health from a single attack."
 	},
 	"1680": {
 		"ability": "Whirlwind",
 		"file": "sim/warrior/whirlwind.go",
-		"note": "Base Whirlwind is untouched (25 Rage, 10 sec cooldown, up to 4 targets, Berserker Stance); the same id with tag 2 is the off-hand swing that Forever's Raging Blows talent adds, which is the talent's text and not this one's.",
+		"note": "25 Rage, 10 sec cooldown, up to 4 targets, Berserker Stance as in Classic. Hotfix 112347 (build 70170) rewrote its text to \"weapon damage from both melee weapons\": the off-hand swing, the same id with tag 2, is now Whirlwind's own for a dual-wielding warrior, where it used to come from Raging Blows. Raging Blows now takes 3 Rage off Whirlwind and Cleave instead.",
 		"source": "classic"
 	},
 	"1719": {
@@ -149,7 +149,7 @@
 	"20569": {
 		"ability": "Cleave",
 		"file": "sim/warrior/heroic_strike_cleave.go",
-		"note": "Client 1.60.1.70009: 50 bonus damage and 20 Rage as in Classic Era; the Rage discounts come from Forever's Improved Cleave and Raging Blows.",
+		"note": "Client 1.60.1.70009: 50 bonus damage and 20 Rage as in Classic Era; build 70170 dropped Improved Cleave, so the Rage discount is Raging Blows' 3 (shared with Whirlwind).",
 		"source": "classic"
 	},
 	"20662": {
@@ -185,9 +185,9 @@
 	"23894": {
 		"ability": "Bloodthirst",
 		"file": "sim/warrior/talents_fury.go",
-		"note": "Client 1.60.1.70009: rank 4 deals 48 plus 35% of attack power and grants 10% movement speed for 10 sec, for 30 Rage on a 6 sec cooldown. Classic is a flat 45% of attack power with a five stack heal. The talent tooltip's 30 is rank 1 (23881).",
+		"note": "Client 1.60.1.70009: rank 4 deals 48 plus 45% of attack power (35% before the 70170 hotfixes) and grants 10% movement speed for 10 sec, for 30 Rage on a 6 sec cooldown. Classic is a flat 45% of attack power with a five stack heal. The talent tooltip's 30 is rank 1 (23881).",
 		"source": "forever",
-		"tooltip": "30 Rage\nMelee Range\nInstant\n6 sec cooldown\nInstantly attack the target causing damage equal to 35% of your Attack Power plus 48 and increasing your movement speed by 10% for 10 sec."
+		"tooltip": "30 Rage\nMelee Range\nInstant\n6 sec cooldown\nInstantly attack the target causing damage equal to 45% of your Attack Power plus 48 and increasing your movement speed by 10% for 10 sec."
 	},
 	"23925": {
 		"ability": "Shield Slam",
@@ -238,7 +238,7 @@
 	"412609": {
 		"ability": "Deep Wounds",
 		"file": "sim/warrior/talents_arms.go",
-		"note": "The bleed itself (Deep Wound), the only Deep Wounds id the sim registers; its 3 sec ticks land as 412613 in logs. Client 1.60.1.70009 and Classic Era agree: 4 ticks over 12 sec. The share of average weapon damage, 20/40/60%, is the talent 12834's curve. Beta logs (foreverlogs reports 33 and 35: Toro, Battle Slayer 38-58, and Peon, Forsaken Greataxe 49-74, both 11 Arms points so 1 point) put a lone bleed at 9 and 12-13 over 4 ticks, 20% of the weapon's average damage with no attack power (with it, 19 and 23). A crit on a running bleed adds what it still owed: Peon's 7/6/6/6 and 6/7/6/7 after two quick crits.",
+		"note": "The bleed itself (Deep Wound), the only Deep Wounds id the sim registers; its 3 sec ticks land as 412613 in logs. Client 1.60.1.70009 and Classic Era agree: 4 ticks over 12 sec. The share of average weapon damage, 20/40/60%, is the talent 12834's curve. Beta logs (foreverlogs reports 33 and 35: Toro, Battle Slayer 38-58, and Peon, Forsaken Greataxe 49-74, both 11 Arms points so 1 point) put a lone bleed at 9 and 12-13 over 4 ticks, 20% of the weapon's average damage with no attack power (with it, 19 and 23). A crit on a running bleed adds what it still owed: Peon's 7/6/6/6 and 6/7/6/7 after two quick crits. The top rank holds at level 30 (foreverlogs 2705: Rinsy, 21 Arms points, Whirlwind Axe 102-154): 126 lone-bleed ticks of 17-20, mean 19.25, against 60% x 128 / 4 = 19.2; with attack power it would be about 37. Caster damage modifiers don't reach the ticks: 412613 carries Attributes[6] 0x20000000 (ignore caster damage modifiers, client 1.60.1.70205), and Rinsy's Defensive Stance ticks hold the Battle Stance level (2705: 15 ticks, 18.9; 2708: ticks from crits landed in Defensive Stance 19.3 over 9, vs 19.6 in Battle) while his Rend and Thunder Clap drop 9-13% there. So stances, Two-Handed Weapon Specialization, Death Wish and Enrage leave the bleed alone.",
 		"source": "forever"
 	},
 	"6554": {

@@ -9,7 +9,7 @@ import (
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-var TalentTreeSizes = [3]int{17, 18, 18}
+var TalentTreeSizes = [3]int{17, 17, 18}
 
 type WarriorInputs struct {
 	UseBattleShout bool
@@ -227,14 +227,8 @@ func NewWarrior(character *core.Character, options *proto.WarriorOptions, talent
 	}
 	core.FillTalentsProto(warrior.Talents.ProtoReflect(), talents, TalentTreeSizes)
 
-	// The gnome's Eureka! (1259813): its SpellEffect class mask read against the warrior's
-	// abilities. Revenge, Sunder Armor and the shouts are not on it.
-	warrior.EurekaSpellMask = SpellMaskBloodthirst | SpellMaskCleave | SpellMaskConcussionBlow | SpellMaskExecute |
-		SpellMaskHamstring | SpellMaskHeroicStrike | SpellMaskMockingBlow | SpellMaskMortalStrike | SpellMaskOverpower |
-		SpellMaskRend | SpellMaskShieldSlam | SpellMaskSlam | SpellMaskThunderClap | SpellMaskWhirlwind | SpellMaskWhirlwindOh
-
 	warrior.EnableRageBar(core.RageBarOptions{
-		MaxRage:            100 + spellData.BoundlessRage.TenthsAt(warrior.Talents.BoundlessRage),
+		MaxRage:            100,
 		BaseRageMultiplier: 1,
 		StartingRage:       inputs.StartingRage,
 	})
@@ -269,6 +263,10 @@ func NewWarrior(character *core.Character, options *proto.WarriorOptions, talent
 }
 
 func (warrior *Warrior) CastNormalizedSweepingStrikesAttack(results core.SpellResultSlice, sim *core.Simulation) {
+	// With one target the "additional nearby opponent" wraps around to the same one.
+	if warrior.Env.ActiveTargetCount() < 2 {
+		return
+	}
 	if warrior.SweepingStrikesAura != nil && warrior.SweepingStrikesAura.IsActive() {
 		for _, result := range results {
 			if result.Landed() {

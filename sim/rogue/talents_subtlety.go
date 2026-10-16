@@ -208,8 +208,10 @@ func (rogue *Rogue) registerPreparation() {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			for _, affected := range []*core.Spell{rogue.ColdBlood, rogue.Shadowstep, rogue.Premeditation, rogue.Vanish} {
-				if affected != nil {
+			// "Finishes the cooldown on your other Rogue abilities": every one, as in Classic, not the
+			// TBC list (Cold Blood, Shadowstep, Premeditation, Vanish) this carried.
+			for _, affected := range rogue.Spellbook {
+				if affected != spell && affected.ClassSpellMask&RogueSpellsAll != 0 && affected.CD.Timer != nil {
 					affected.CD.Reset()
 				}
 			}
@@ -239,10 +241,6 @@ func (rogue *Rogue) registerDirtyDeeds() {
 	})
 }
 
-// Hemorrhage no longer weakens the target for the whole raid, it makes the rogue's own Rupture
-// hit harder.
-const HemorrhageRuptureMultiplier = 1.15
-
 func (rogue *Rogue) registerHemorrhage() {
 	if !rogue.Talents.Hemorrhage {
 		return
@@ -250,11 +248,20 @@ func (rogue *Rogue) registerHemorrhage() {
 
 	actionID := core.ActionID{SpellID: hemorrhageRank.ID}
 
+	// Hemorrhage no longer weakens the target for the whole raid: effect 2 makes it take more of the
+	// rogue's own Rupture (mask 0x100000). A damage-taken effect on the target, so it counts on every
+	// tick that lands while it is up, not only on a Rupture cast under it.
+	ruptureTaken := 1 + hemorrhageRank.Effect(dbcenums.A_MOD_SPELL_DAMAGE_FROM_CASTER, 0).Percent()
 	rogue.HemorrhageAuras = rogue.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		return target.GetOrRegisterAura(core.Aura{
 			Label:    "Hemorrhage-" + rogue.Label,
 			ActionID: actionID,
 			Duration: hemorrhageRank.Duration(),
+		}).AttachDDBC(0, 1, &rogue.AttackTables, func(_ *core.Simulation, spell *core.Spell, _ *core.AttackTable) float64 {
+			if spell.Matches(RogueSpellRupture) {
+				return ruptureTaken
+			}
+			return 1
 		})
 	})
 
@@ -307,11 +314,6 @@ func (rogue *Rogue) registerHemorrhage() {
 
 		RelatedAuraArrays: rogue.HemorrhageAuras.ToMap(),
 	})
-}
-
-// Hemorrhage is optional, so the debuff has to be looked up defensively.
-func (rogue *Rogue) isHemorrhaging(target *core.Unit) bool {
-	return rogue.HemorrhageAuras != nil && rogue.HemorrhageAuras.Get(target).IsActive()
 }
 
 func (rogue *Rogue) registerPremeditation() {

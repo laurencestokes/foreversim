@@ -4,7 +4,7 @@
 		"file": "sim/warlock/shadowbolt.go",
 		"note": "Forever roughly halved the damage and removed the low rank coefficient penalty. Every rank is registered since #447, so a low-rank rotation can cast it. Values from the beta client 1.60.1.70009.",
 		"source": "forever",
-		"tooltip": "110 Mana\n3 sec cast\nSends a shadowy bolt at the enemy, causing 56 to 64 Shadow damage."
+		"tooltip": "110 Mana\n3 sec cast\nSends a shadowy bolt at the enemy, causing 58 to 66 Shadow damage."
 	},
 	"1106": {
 		"ability": "Shadow Bolt",
@@ -34,10 +34,17 @@
 		"source": "forever",
 		"tooltip": "370 Mana\n3 sec cast\nSends a shadowy bolt at the enemy, causing 237 to 265 Shadow damage."
 	},
+	"11678": {
+		"ability": "Rain of Fire",
+		"file": "sim/warlock/rain_of_fire.go",
+		"note": "Beta client 1.60.1.70205: an area trigger casts a damage spell every 2 seconds on every enemy in the area, 1282385 at rank 4, which the sim registers for the ticks; the sim casts rank 4 only. 221 a tick (Era's 226) at .083 per tick. Beta log 2695 (rank 1): 4 ticks 2 s apart on up to 5 targets, ticks crit. The parent spell's dummy effect carries .03, which the sim does not read.",
+		"source": "forever",
+		"tooltip": "1185 Mana\nChanneled\nCalls down a fiery rain to burn enemies in the area of effect for 884 Fire damage over 8 sec."
+	},
 	"11689": {
 		"ability": "Life Tap",
 		"file": "sim/warlock/lifetap.go",
-		"note": "Forever makes Life Tap a plain mana gain that grows with Spirit: 424 plus Spirit, raised by Improved Life Tap, with no spell power or damage modifier on it (#432), and #441 made the health cost equal the mana it returns. Beta client 1.60.1.70009.",
+		"note": "Forever makes Life Tap a plain mana gain that grows with Spirit: 424 plus Spirit, raised by Improved Life Tap, with no spell power or damage modifier on it (#432), and #441 made the health cost equal the mana it returns. Beta client 1.60.1.70009. Every rank is flagged No Threat (client 1.60.1.70205 Attributes[1] 0x400), so the mana it returns adds no threat.",
 		"source": "forever",
 		"tooltip": "Instant\nConverts health equal to 424 plus your Spirit into as much Mana."
 	},
@@ -64,7 +71,7 @@
 	"11763": {
 		"ability": "Firebolt",
 		"file": "sim/warlock/pets.go",
-		"note": "Forever halved the damage. The pet spells are not in the sim's spell store, so pets.go carries rank 7's client row by hand (44 + 0.6 a level from 58, capped at 63, +-11.4%: 42 to 48 at 60, was a hand-typed 43 to 48; 0.571 coefficient, 115 mana) and no lower rank is registered. Values from the beta client 1.60.1.70094.",
+		"note": "Forever halved the damage. The pet spells are not in the sim's spell store, so pets.go carries rank 7's client row by hand (44 + 0.6 a level from 58, capped at 63, +-11.4%: 42 to 48 at 60, was a hand-typed 43 to 48; 0.571 coefficient, 115 mana) and no lower rank is registered. Values from the beta client 1.60.1.70094. The Imp starts its next Firebolt about 0.43 sec after the last one lands (beta logs: 281 Firebolts a median 2.435 sec apart with a 2.0 sec cast, foreverlogs.gg 2687 and 2695); the sim casts every 2.4 sec.",
 		"source": "forever",
 		"tooltip": "115 Mana\n2 sec cast\nDeals 43 to 48 Fire damage to a target."
 	},
@@ -88,9 +95,11 @@
 	},
 	"1293696": {
 		"ability": "Demonic Brand",
-		"assumptions": ["The extra hit carries three times normal threat, rolls spell hit and cannot crit"],
+		"assumptions": [
+			"The Shadow hit carries three times normal threat (the 8 Oct beta notes say high threat, no number); the Imp's Fire hit carries normal threat, the notes saying high threat only on Shadow damage"
+		],
 		"file": "sim/warlock/talents_demonology.go",
-		"note": "The brand the pet carries (10 sec, beta client 1.60.1.70009), whose id the sim gives the branded hit. The talent is 1293695: 17/33/50% less Searing Pain threat and 2/4/6 branded attacks. #432 settled the hit from the client's SpellDescriptionVariables formula for 1293696/1293697 (1.60.1.69977, also resolved on Wowhead's Forever tooltip), ((level - 26) * 1.5) + 14 to + 17 plus 7.8% of spell power. The client (1.60.1.70009) splits the hit by pet: the Imp's is Fire (1293698, on fire spell power), the other demons' Shadow (1293697, on shadow spell power); 1293699 (Physical, 1 point) has no pet that uses it. The brand procs on the target taking melee or spell hits (ProcTypeMask 139944), so the Imp's Firebolt and the Succubus' Lash of Pain spend charges too (the Imp never spent one before, having no melee).",
+		"note": "The brand the pet carries (10 sec, beta client 1.60.1.70009), whose id the sim gives the branded hit. The talent is 1293695: 17/33/50% less Searing Pain threat and 2/4/6 branded attacks. #432 settled the hit from the client's SpellDescriptionVariables formula for 1293696/1293697 (1.60.1.69977, also resolved on Wowhead's Forever tooltip), ((level - 26) * 1.5) + 14 to + 17 plus 7.8% of spell power. The client (1.60.1.70009) splits the hit by pet: the Imp's is Fire (1293698, on fire spell power), the other demons' Shadow (1293697, on shadow spell power); 1293699 (Physical, 1 point) has no pet that uses it. The brand procs on the target taking melee or spell hits (ProcTypeMask 139944), so the Imp's Firebolt and the Succubus' Lash of Pain spend charges too (the Imp never spent one before, having no melee). Both hit rows (1293697/1293698, client 1.60.1.70205) carry Always Hit (Attributes[3] 0x40000) and no Cannot Crit, so the hit never misses and crits on the pet's spell crit; the sim rolled spell hit and never crit before.",
 		"source": "assumed",
 		"tooltip": "Your pet's next attacks against the branded target generate high threat and deal 65 to 68 plus 7.8% of Shadow spell power Fire or Shadow damage based on the pet."
 	},
@@ -266,7 +275,7 @@
 		"file": "sim/warlock/shadowbolt.go",
 		"note": "Forever roughly halved the damage and removed the low rank coefficient penalty. Every rank is registered since #447, so a low-rank rotation can cast it. Values from the beta client 1.60.1.70009.",
 		"source": "forever",
-		"tooltip": "40 Mana\n2.2 sec cast\nSends a shadowy bolt at the enemy, causing 25 to 31 Shadow damage.",
+		"tooltip": "40 Mana\n2.2 sec cast\nSends a shadowy bolt at the enemy, causing 22 to 27 Shadow damage.",
 		"measured": {
 			"date": "2026-09-19",
 			"how": "the client's own damage meter, levelling sessions on the beta",
@@ -279,7 +288,7 @@
 		"file": "sim/warlock/shadowbolt.go",
 		"note": "Forever roughly halved the damage and removed the low rank coefficient penalty. Every rank is registered since #447, so a low-rank rotation can cast it. Values from the beta client 1.60.1.70009.",
 		"source": "forever",
-		"tooltip": "70 Mana\n2.8 sec cast\nSends a shadowy bolt at the enemy, causing 41 to 47 Shadow damage."
+		"tooltip": "70 Mana\n2.8 sec cast\nSends a shadowy bolt at the enemy, causing 40 to 46 Shadow damage."
 	},
 	"7641": {
 		"ability": "Shadow Bolt",

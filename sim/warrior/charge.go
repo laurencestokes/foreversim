@@ -11,6 +11,9 @@ func (warrior *Warrior) registerCharge() {
 
 	actionID := core.ActionID{SpellID: chargeRank.ID}
 	metrics := warrior.NewRageMetrics(actionID)
+	// Every rank is flagged No Threat (client 1.60.1.70205 SpellMisc Attributes[1] 0x400), so the rage
+	// it gives adds no threat.
+	metrics.NoThreat = chargeRank.NoThreat()
 
 	chargeCD := cooldownOf(chargeRank)
 	chargeRage := chargeRank.EnergizeEffect().Tenths() + spellData.ImprovedCharge.TenthsAt(warrior.Talents.ImprovedCharge)

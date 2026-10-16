@@ -7,7 +7,7 @@ import { Warlock_Options as WarlockOptions, WarlockOptions_Armor, WarlockOptions
 import AfflictionRot from './apls/affliction.apl.json';
 import BlankAPL from './apls/default.apl.json';
 import DemonicPactRot from './apls/demonic_pact.apl.json';
-import ShadowAndFlameRot from './apls/destruction.apl.json';
+import ShadowAndFlameRot from './apls/destruction_conflag.apl.json';
 import DSRuinRot from './apls/ds_ruin.apl.json';
 import LaunchGear from './gear_sets/launch.gear.json';
 import McGear from './gear_sets/mc.gear.json';
@@ -22,6 +22,7 @@ export const BLANK_APL = PresetUtils.makePresetAPLRotation('Blank', BlankAPL);
 export const RotationDemonicPact = PresetUtils.makePresetAPLRotation('Demonic Pact', DemonicPactRot);
 export const RotationAffliction = PresetUtils.makePresetAPLRotation('Affliction', AfflictionRot);
 export const RotationDSRuin = PresetUtils.makePresetAPLRotation('DS/Ruin', DSRuinRot);
+// Shadow and Flame 5/5 keeps Immolate up through Conflagrate, so its rotation casts it.
 export const RotationShadowAndFlame = PresetUtils.makePresetAPLRotation('Shadow and Flame', ShadowAndFlameRot);
 export const APLPresets = [RotationDemonicPact, RotationAffliction, RotationDSRuin, RotationShadowAndFlame];
 

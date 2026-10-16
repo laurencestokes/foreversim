@@ -9,15 +9,6 @@ import (
 type OnSnapshot func(sim *Simulation, target *Unit, dot *Dot)
 type OnTick func(sim *Simulation, target *Unit, dot *Dot)
 
-// Forever's periodic effects recalculate every tick from the caster's CURRENT buffs and the
-// target's current debuffs instead of snapshotting them when the dot is applied (Warcraft Tavern's
-// warlock guide: "every tick checks your active buffs and the target's debuffs"; the forever-hunter
-// beta-changes wiki: dots "dynamically recalculate damage rather than snapshotting Attack Power").
-// Rank base damage, combo points spent and stack counts still fix at cast, and tick speed is fixed
-// at application - see docs/forever_rules.md. Tests flip this off to check the old, purely
-// snapshotted behavior.
-var DynamicDoTs = true
-
 type DotConfig struct {
 	// Optional, will default to the corresponding spell.
 	Spell *Spell
@@ -56,18 +47,17 @@ type Dot struct {
 	SnapshotBaseDamage         float64
 	SnapshotAttackerMultiplier float64
 
-	// The raw base damage last passed to Snapshot/SnapshotPhysical, before BonusCoefficient*spell
-	// power is added in. While DynamicDoTs is on, this is what SnapshotBaseDamage gets recomputed
-	// from before every tick (see CalcSnapshotDamage/computeSnapshot in spell_result.go); a caller
-	// that grows an already-active dot's base out of band (a set bonus like Corruptor Raiment's
-	// 4pc) should write here rather than to SnapshotBaseDamage, or the change is overwritten on the
-	// next tick. dynamicSnapshot is only set by Snapshot/SnapshotPhysical, so a dot whose OnTick
-	// assigns the two Snapshot* fields directly instead of calling them (a bleed that carries a
-	// fixed cut of the hit that triggered it, like Ignite or Lacerating Strikes) never has this
-	// field read and keeps today's fully-snapshotted behavior automatically.
-	SnapshotRawBaseDamage float64
-	dynamicSnapshot       bool
-	snapshotIsPhysical    bool
+	// Forever dots tick on the caster's current stats, not the ones in force when the dot landed. A dot
+	// built by Snapshot or SnapshotPhysical keeps its flat damage in SnapshotBaseDamage and swaps what
+	// was folded in from the caster - a spell power share (Snapshot with a BonusCoefficient) and an
+	// attack power share (SnapshotAttackPowerShare) - for its current value at every tick, and takes
+	// the attacker multiplier afresh. The fields below remember what was folded in to take it out.
+	tickOnCurrentStats  bool
+	readsSpellPower     bool
+	snapshotSpellPower  float64
+	attackPowerShare    float64
+	attackPowerRanged   bool
+	snapshotAttackPower float64
 
 	BaseTickCount          int32 // base tick count without haste applied
 	remainingTicks         int32
@@ -208,9 +198,8 @@ func (dot *Dot) AddTick() {
 func (dot *Dot) CopyDotAndApply(sim *Simulation, originaldot *Dot) {
 	dot.TakeSnapshot(sim)
 	dot.SnapshotBaseDamage = originaldot.SnapshotBaseDamage
-	dot.SnapshotRawBaseDamage = originaldot.SnapshotRawBaseDamage
-	dot.dynamicSnapshot = originaldot.dynamicSnapshot
-	dot.snapshotIsPhysical = originaldot.snapshotIsPhysical
+	dot.snapshotSpellPower = originaldot.snapshotSpellPower
+	dot.snapshotAttackPower = originaldot.snapshotAttackPower
 
 	dot.tickPeriod = originaldot.tickPeriod
 	dot.remainingTicks = originaldot.remainingTicks
@@ -391,9 +380,6 @@ func newDot(config Dot) *Dot {
 
 		dot.SnapshotAttackerMultiplier = 0
 		dot.SnapshotBaseDamage = 0
-		dot.SnapshotRawBaseDamage = 0
-		dot.dynamicSnapshot = false
-		dot.snapshotIsPhysical = false
 	})
 
 	return dot
@@ -463,9 +449,8 @@ type DotState struct {
 
 	SnapshotBaseDamage         float64
 	SnapshotAttackerMultiplier float64
-	SnapshotRawBaseDamage      float64
-	DynamicSnapshot            bool
-	SnapshotIsPhysical         bool
+	SnapshotSpellPower         float64
+	SnapshotAttackPower        float64
 	TicksRemaining             int32
 	ExtraTicks                 int32
 	TickPeriod                 time.Duration
@@ -478,9 +463,8 @@ func (dot *Dot) SaveState(sim *Simulation) DotState {
 		AuraState:                  aura,
 		SnapshotBaseDamage:         dot.SnapshotBaseDamage,
 		SnapshotAttackerMultiplier: dot.SnapshotAttackerMultiplier,
-		SnapshotRawBaseDamage:      dot.SnapshotRawBaseDamage,
-		DynamicSnapshot:            dot.dynamicSnapshot,
-		SnapshotIsPhysical:         dot.snapshotIsPhysical,
+		SnapshotSpellPower:         dot.snapshotSpellPower,
+		SnapshotAttackPower:        dot.snapshotAttackPower,
 		TicksRemaining:             dot.remainingTicks,
 		ExtraTicks:                 dot.tmpExtraTicks,
 		TickPeriod:                 dot.tickPeriod,
@@ -494,9 +478,8 @@ func (dot *Dot) RestoreState(state DotState, sim *Simulation) {
 	dot.tmpExtraTicks = state.ExtraTicks
 	dot.SnapshotBaseDamage = state.SnapshotBaseDamage
 	dot.SnapshotAttackerMultiplier = state.SnapshotAttackerMultiplier
-	dot.SnapshotRawBaseDamage = state.SnapshotRawBaseDamage
-	dot.dynamicSnapshot = state.DynamicSnapshot
-	dot.snapshotIsPhysical = state.SnapshotIsPhysical
+	dot.snapshotSpellPower = state.SnapshotSpellPower
+	dot.snapshotAttackPower = state.SnapshotAttackPower
 	dot.Aura.RestoreState(state.AuraState, sim)
 
 	// recreate with new period, resetting the next tick.

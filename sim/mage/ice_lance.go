@@ -5,7 +5,8 @@ import (
 )
 
 // Damage bonus against a target the mage counts as frozen, i.e. one held by Fingers of Frost.
-const IceLanceFrozenMultiplier = 4.0
+// +200% (was +300%) since the beta build of 2026-10-16 (Blizzard's beta notes, forums t/2360696 post 6).
+const IceLanceFrozenMultiplier = 3.0
 
 func (mage *Mage) registerIceLanceSpell() {
 	if !mage.Talents.IceLance {
@@ -16,10 +17,12 @@ func (mage *Mage) registerIceLanceSpell() {
 
 	// The client's damage effect carries no spell power coefficient (the row reads 0), as Season of
 	// Discovery's reworked Ice Lance (400640) does, whose 2024-12-04 hotfix raised it from .143 to .572.
-	// Two level 20 frost mages in the beta logs side with .143: rank 1 (base 25.7-30.3) hit unfrozen
-	// for 33-34 with 30-34 spell power (report 2668) and 29-34 with 19 (Toma, report 2687), and frozen
-	// for about 4x that. .429 would put every hit at 36 or more. Not pinned closer: frost talents unknown.
-	iceLanceCoefficient := 0.143
+	// Fitted from the beta logs with each mage's spell power read off their other spells in the same
+	// log (client base + coefficient): Mana (report 2727, ~80 spell power from Fire Blast, Frostbolt,
+	// Cone of Cold, Frost Nova, Blizzard) hit rank 1 (base 30.1 at its max level 26) for 38.8 on average
+	// unfrozen over 52 hits and 38.2 frozen (/4, 32 hits), .10-.11; Toma (report 2687, ~33 spell power,
+	// level 20, base 28) for 31.4, .09-.11. .143 would put Mana's hits at 38.8-43.8, but 13 land at 36-37.
+	iceLanceCoefficient := 0.1
 
 	mage.RegisterSpell(core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: iceLanceRank.ID},
@@ -28,6 +31,7 @@ func (mage *Mage) registerIceLanceSpell() {
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL | core.SpellFlagBinary,
 		ClassSpellMask: MageSpellIceLance,
+		MaxRange:       float64(iceLanceRank.MaxRange),
 		MissileSpeed:   float64(iceLanceRank.Speed),
 
 		ManaCost: core.ManaCostOptions{

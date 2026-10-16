@@ -18,21 +18,21 @@
 		"file": "sim/shaman/lightning_bolt.go",
 		"note": "Rank 2. Beta client 1.60.1.70009 (sim/core/spelldata), damage scaled to level 60 by the client's per-level points. Spell power coefficient 0.571; Classic Era had 0.314, a 3 sec cast from rank 4 up and about twice the damage at the upper ranks.",
 		"source": "forever",
-		"tooltip": "30 Mana\n30 yd range\n2 sec cast\nCasts a bolt of lightning at the target for 29 to 33 Nature damage."
+		"tooltip": "30 Mana\n30 yd range\n2 sec cast\nCasts a bolt of lightning at the target for 26 to 29 Nature damage."
 	},
 	"548": {
 		"ability": "Lightning Bolt",
 		"file": "sim/shaman/lightning_bolt.go",
 		"note": "Rank 3. Beta client 1.60.1.70009 (sim/core/spelldata), damage scaled to level 60 by the client's per-level points; build 70009 raised its base points from 35 to 45 (#441). Spell power coefficient 0.714; Classic Era had 0.554, a 3 sec cast from rank 4 up and about twice the damage at the upper ranks.",
 		"source": "forever",
-		"tooltip": "45 Mana\n30 yd range\n2.5 sec cast\nCasts a bolt of lightning at the target for 44 to 52 Nature damage."
+		"tooltip": "45 Mana\n30 yd range\n2.5 sec cast\nCasts a bolt of lightning at the target for 43 to 50 Nature damage."
 	},
 	"915": {
 		"ability": "Lightning Bolt",
 		"file": "sim/shaman/lightning_bolt.go",
 		"note": "Rank 4. Beta client 1.60.1.70009 (sim/core/spelldata), damage scaled to level 60 by the client's per-level points; build 70009 raised its base points from 50 to 56 (#441). Spell power coefficient 0.714; Classic Era had 0.857, a 3 sec cast from rank 4 up and about twice the damage at the upper ranks.",
 		"source": "forever",
-		"tooltip": "60 Mana\n30 yd range\n2.5 sec cast\nCasts a bolt of lightning at the target for 55 to 63 Nature damage."
+		"tooltip": "60 Mana\n30 yd range\n2.5 sec cast\nCasts a bolt of lightning at the target for 59 to 67 Nature damage."
 	},
 	"930": {
 		"ability": "Chain Lightning",
@@ -46,7 +46,7 @@
 		"file": "sim/shaman/lightning_bolt.go",
 		"note": "Rank 5. Beta client 1.60.1.70009 (sim/core/spelldata), damage scaled to level 60 by the client's per-level points. Spell power coefficient 0.714; Classic Era had 0.857, a 3 sec cast from rank 4 up and about twice the damage at the upper ranks.",
 		"source": "forever",
-		"tooltip": "85 Mana\n30 yd range\n2.5 sec cast\nCasts a bolt of lightning at the target for 70 to 80 Nature damage."
+		"tooltip": "85 Mana\n30 yd range\n2.5 sec cast\nCasts a bolt of lightning at the target for 79 to 90 Nature damage."
 	},
 	"2860": {
 		"ability": "Chain Lightning",
@@ -139,7 +139,7 @@
 	"10438": {
 		"ability": "Searing Totem",
 		"file": "sim/shaman/fire_totems.go",
-		"note": "Rank 6, the only rank the sim casts. The beta client keeps the summon's cost, duration and attack damage, so the Classic tooltip reads right; only the 1 sec totem global cooldown and the attack's coefficient (see 10436) changed.",
+		"note": "Rank 6, the only rank the sim casts. The beta client keeps the summon's cost, duration and attack damage, so the Classic tooltip reads right; only the 1 sec totem global cooldown and the attack's coefficient (see 10436) changed. The totem hard casts its 2.2 sec attack and waits about 0.23 sec before the next, so it attacks every 2.43 sec: beta logs time 1,267 attacks a median 2.435 sec apart (ranks 1 and 2, foreverlogs.gg reports up to 2717).",
 		"source": "classic"
 	},
 	"10473": {
@@ -192,7 +192,7 @@
 	"16257": {
 		"ability": "Flurry",
 		"file": "sim/shaman/talents_enhancement.go",
-		"note": "The buff the sim applies at every rank (3 swings, 15 sec); its own 10% is a placeholder and the attack speed comes from the beta client's talent curve, 5/10/15/20/25% (Classic: 10% to 30%). The other ranks' buff ids are gone from the client.",
+		"note": "The buff the sim applies at every rank (3 swings, 15 sec); its own 10% is a placeholder and the attack speed comes from the beta client's talent curve, 5/10/15/20/25% (Classic: 10% to 30%). The other ranks' buff ids are gone from the client. Beta log 2701 (foreverlogs.gg, 2026-10-02) bears this out: swings under the buff ran 15% faster for two 19-point Enhancement shamans (Tide, Lietus: 102 swings in 25 fights) and 10% for an 18-point one (Thundrax: 33 in 10), the most points each total allows next to Stormstrike, so the server grants a per-point amount, not the buff's flat 10%.",
 		"source": "forever",
 		"tooltip": "Increases your attack speed by 5/10/15/20/25% for your next 3 swings."
 	},
@@ -210,11 +210,13 @@
 		"source": "forever",
 		"tooltip": "Imbue the Shaman's weapon with frost. Each hit has a chance of causing 169 additional Frost damage and slowing the target's movement speed by 25% for 8 sec. Lasts 1 hour."
 	},
-	"25505": {
-		"ability": "Windfury Weapon",
-		"file": "sim/shaman/weapon_imbues.go",
-		"note": "Not a Forever spell id: the Burning Crusade Windfury Attack id, kept as the imbue's label and absent from the beta client. Beta client 1.60.1.70009: every rank's enchant (283/284/525/1669) equips 439431, which rolls 20% on landed melee autos and abilities (ProcTypeMask 20) with a 1.5 sec ProcCategoryRecovery and casts rank 4's 16361: +333 melee attack power for 1.5 sec (SpellDuration 65) and 3 charges spent by landed auto attacks (ProcTypeMask 4), plus 2 extra attacks (SPELL_EFFECT_ADD_EXTRA_ATTACKS). The sim swings the main hand twice as ordinary white attacks (glancing, white hit table, timer reset, the third charge lifts the next swing if it lands within 1.5 sec), not two special hits. An off-hand proc swings the off hand twice; the client may give main-hand attacks there, unmeasured.",
-		"source": "classic"
+	"16387": {
+		"ability": "Flametongue Totem",
+		"file": "sim/shaman/fire_totems.go",
+		"note": "Rank 4, the only rank the sim casts. Beta client 1.60.1.70205: 275 mana, 1 sec global, 5 min; its party aura (15036) procs on every landed melee auto and triggers 16389, 1363 hundredths of Fire damage per second of main-hand speed (1.3-4.0), the imbue's shape. The hit lands as Flametongue Attack 16368, whose client row has no spell power coefficient and a class mask Elemental Fury and Elemental Weapons don't name. A beta log bears it out at rank 1 (8253, 5.48 a second): 5 players' totem hits average 13.0-20.6 against 13.2-20.8 for their 2.4-3.8 speed main hands, crits 1.5x, one hit for every landed main-hand swing while the totem was up (735 of 738), none from a rogue's off hand, Sinister Strike, Holy Strike, Stormstrike or Windfury Weapon's extra hits (foreverlogs.gg report 2713). It doesn't stack with Windfury Totem or a main-hand Flametongue Weapon (beta development notes, tooltips 8024/16342). Ported from MythicSim patch 70.",
+		"source": "assumed",
+		"assumptions": ["Windfury Totem wins when both totems are down: the development notes say they no longer stack, not which one stays."],
+		"tooltip": "275 Mana\nInstant\nSummons a Flametongue Totem with 5 health at the feet of the caster. The totem enhances the melee attacks of all party members within 30 yards. Each main hand hit causes 17 to 54 additional Fire damage, based on the speed of the weapon. Slower weapons cause more fire damage per swing. Lasts 5 min."
 	},
 	"26121": {
 		"ability": "Stormcaller's Wrath",
@@ -259,20 +261,16 @@
 	"408505": {
 		"ability": "Maelstrom Weapon",
 		"file": "sim/shaman/talents_enhancement.go",
-		"note": "The stacking buff (408505, 30 sec, 5 stacks) and -4/-8/-12/-16/-20% per stack (408498's curve) are the beta client's. The client states no proc rate, so the sim's 2 procs per minute per point is a guess; 408498's eff1 50 is Season of Discovery's Windfury and two-hander bonus, not a rate (#468).",
-		"source": "assumed",
-		"tooltip": "30 sec duration\nWhen you deal damage with a melee attack, you have a chance to reduce the cast time and Mana cost of your next Lightning Bolt spell by 4% per talent point. Stacks up to 5 times.",
-		"assumptions": [
-			"Maelstrom Weapon procs 2 times a minute per talent point (10 at 5/5) from any melee hit",
-			"Windfury Weapon and a two-handed weapon do not raise the proc rate"
-		]
+		"note": "The stacking buff (408505, 30 sec, 5 stacks) and -4/-8/-12/-16/-20% per stack (408498's curve) are the beta client's. The client states no proc rate; the beta's combat log gives it. Steele (foreverlogs.gg report 2748, 26 Enhancement points so 1 in the talent; their Lightning Bolt casts 4% faster per stack) gains a stack on 0.54 of 335 lone landed auto attacks and Stormstrikes with a 3.6 sec two-hander and Windfury Weapon: 9 procs a minute (8 to 10), never on a miss. The rate does not grow with points, so the sim uses Season of Discovery's 10 a minute at every rank (it gave 2 a point, 0.12 a hit at 1 point). SoD's +50% for Windfury Weapon and +50% for a two-hander (408498's eff1 50) would have procced every hit; Forever drops them. One weapon speed can't tell procs a minute from a flat chance, so the sim keeps procs a minute.",
+		"source": "forever",
+		"tooltip": "30 sec duration\nWhen you deal damage with a melee attack, you have a chance to reduce the cast time and Mana cost of your next Lightning Bolt spell by 4% per talent point. Stacks up to 5 times."
 	},
 	"408510": {
 		"ability": "Water Shield",
 		"file": "sim/shaman/shields.go",
 		"note": "Beta client 1.60.1.70009 408510: no mana cost, 15 sec cooldown, 3 charges, 3.5 sec proc recovery, 2% of maximum mana per globe (408511).",
 		"source": "forever",
-		"tooltip": "Instant\n15 sec cooldown\nThe caster is surrounded by 3 globes of water. When a spell, melee, or ranged attack hits the caster or when one of the caster's healing spells gets a critical result, 2% of maximum mana is restored to the caster, expending one water globe. Only one globe will activate every 3.5 sec. Lasts 10 min. Only one Elemental Shield can be active on the Shaman at any one time."
+		"tooltip": "Instant\nThe caster is surrounded by 3 globes of water. When a spell, melee, or ranged attack hits the caster or when one of the caster's healing spells gets a critical result, 2% of maximum mana is restored to the caster, expending one water globe. Only one globe will activate every few seconds. Lasts 10 min. Only one Elemental Shield can be active on the Shaman at any one time."
 	},
 	"425336": {
 		"ability": "Rage of the Farseer",
@@ -280,6 +278,19 @@
 		"note": "Beta client 1.60.1.70009 425336: 30% melee haste, 25 sec, 3 min cooldown. Build 70009 dropped the 30% cast speed it carried (#441).",
 		"source": "forever",
 		"tooltip": "Instant\n3 min cooldown\nIncreases your melee attack speed by 30% for 25 sec."
+	},
+	"439440": {
+		"ability": "Windfury Weapon",
+		"file": "sim/shaman/weapon_imbues.go",
+		"note": "Beta client 1.60.1.70205: every rank's enchant (283/284/525/1669) equips 439431, a dummy aura that rolls 20% on landed melee autos and abilities (ProcTypeMask 20) with a 1.5 sec ProcCategoryRecovery; it triggers nothing in the client, so the server scripts the attack. Beta log 2708 (foreverlogs.gg, 2026-10-03, Toma, 22 Enhancement, level 30, Corpsemaker 3.8 speed) shows what it does: all 62 procs (46 off autos, 16 off Stormstrike) are two hits of this spell, a SPELL_EFFECT_WEAPON_DAMAGE special attack, in the same instant as the hit that procced them; they miss, dodge and parry on their own (20 of 121) and their crits proc Flurry. The next auto still lands one weapon speed after the last one (0.2 to 3 sec after a Stormstrike proc), so the swing timer is untouched, and no 16361 buff is ever applied, so there is no third, lifted swing. The sim strikes twice with the proc's weapon (439441, Attributes[3] 0x1000000, for the off hand) and adds the rank's attack power to them, 333 at 60 (16361; Wowhead's 433 is its level 68 print). At level 30 the strikes averaged 9% above Stormstrike's on the same mobs, about 67 attack power; rank 1's 46 fits within the log's unknown buffs.",
+		"source": "forever",
+		"tooltip": "Imbue the Shaman's weapon with wind. Each hit has a 20% chance of granting you 2 extra attacks with 333 extra melee attack power. When applied to main hand, disables any benefit you personally receive from Windfury Totem. Lasts for 60 minutes."
+	},
+	"439441": {
+		"ability": "Windfury Weapon (off hand)",
+		"file": "sim/shaman/weapon_imbues.go",
+		"note": "The off-hand twin of 439440 (same SPELL_EFFECT_WEAPON_DAMAGE, Attributes[3] 0x1000000 requires an off-hand weapon), struck twice when an off-hand hit procs the imbue. No beta log has an off-hand Windfury proc yet.",
+		"source": "forever"
 	},
 	"1238300": {
 		"ability": "Lava Burst",

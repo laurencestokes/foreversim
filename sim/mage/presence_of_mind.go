@@ -45,8 +45,9 @@ func (mage *Mage) registerPresenceOfMindSpell() {
 		Flags:          core.SpellFlagNoOnCastComplete | core.SpellFlagAPL,
 		ClassSpellMask: MageSpellPresenceOfMind,
 		Cast: core.CastConfig{
+			// Shared with Combustion (client category 1151).
 			CD: core.Cooldown{
-				Timer:    mage.NewTimer(),
+				Timer:    mage.CategoryTimer(int32(pomRank.Category)),
 				Duration: max(pomRank.Cooldown(), pomRank.CategoryCooldown()),
 			},
 		},

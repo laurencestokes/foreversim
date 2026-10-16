@@ -16,9 +16,9 @@ func (hunter *Hunter) registerSerpentStingSpell() {
 	spellCoeff := 1.0 / float64(numberOfTicks)
 	// Nor any attack power share, but the same combat logs that fit Arcane Shot's (arcane_shot.go) put
 	// each tick at base + about 0.035 of ranged attack power, and the same aspect swap moves a tick
-	// 0.037-0.041 a point. Kept dynamic: application and every later tick read the hunter's current
-	// RAP.
-	const rapCoeffPerTick = 0.035
+	// 0.037-0.041 a point. At levels 24-30 Hunter's Mark rank 2 moves a tick 0.034 (Miss, 2712, 549
+	// ticks; Consumer, 2717) and 0.042 (Lokronn, 2695); Miss's absolute fit is 0.033.
+	const rapPerTick = 0.035
 
 	hunter.SerpentSting = hunter.RegisterRangedSpell(core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: rank.ID},
@@ -43,12 +43,10 @@ func (hunter *Hunter) registerSerpentStingSpell() {
 			BonusCoefficient: spellCoeff,
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, tickDamage+rapCoeffPerTick*dot.Spell.RangedAttackPower(target))
+				dot.Snapshot(target, tickDamage+rapPerTick*dot.Spell.RangedAttackPower(target))
+				dot.SnapshotAttackPowerShare(target, rapPerTick, true)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				// The RAP share isn't spell power, so it doesn't go through BonusCoefficient/
-				// BonusDamage; refresh the raw base by hand each tick so it tracks current RAP.
-				dot.SnapshotRawBaseDamage = tickDamage + rapCoeffPerTick*dot.Spell.RangedAttackPower(target)
 				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, rank.TickOutcome(dot))
 			},
 		},

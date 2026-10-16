@@ -23,6 +23,7 @@ func (warlock *Warlock) registerWrack() {
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagChanneled | core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellWrack,
+		MaxRange:       float64(rank.MaxRange),
 
 		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
 		Cast:     core.CastConfig{DefaultCast: core.Cast{GCD: rank.GCD()}},

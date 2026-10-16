@@ -18,6 +18,7 @@ func (mage *Mage) registerArcaneBlastSpell() {
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: MageSpellArcaneBlast,
+		MaxRange:       float64(arcaneBlastRank.MaxRange),
 
 		ManaCost: arcaneBlastRank.ManaCost(),
 		Cast: core.CastConfig{

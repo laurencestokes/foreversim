@@ -117,7 +117,7 @@ func rageFromAutoAttack(sim *Simulation, fw *FakeRageWarrior, spell *Spell, outc
 }
 
 func TestAutoAttackRageGeneration(t *testing.T) {
-	// A one-hand MH swing at 2.6 speed: 2.6 * 3.46 = 8.996, whatever it dealt, and 75% more on a crit.
+	// A one-hand MH swing at 2.6 speed: 2.6 * 3.46 = 8.996, whatever it dealt; a crit pays it twice.
 	const swingDamage = 500.0
 
 	tests := []struct {
@@ -133,7 +133,7 @@ func TestAutoAttackRageGeneration(t *testing.T) {
 		{
 			name:     "crit",
 			outcome:  OutcomeCrit,
-			wantRage: 8.996 * 1.75,
+			wantRage: 8.996 * 2,
 		},
 		{
 			name:     "glance",
@@ -183,6 +183,13 @@ func TestTwoHandAutoAttackRageGeneration(t *testing.T) {
 	if !WithinToleranceFloat64(11.7, hitRage, 0.001) {
 		t.Fatalf("Incorrect Rage generated on 2H hit: Expected: %0.3f, Actual: %0.3f", 11.695, hitRage)
 	}
+
+	// A crit adds the swing's rage before the two-hand factor: 11.7 + 2.6 * 3.46 = 20.696 (Magey's
+	// beta logs: 14.85 + 11.42 on a 3.3 sec two-hander).
+	critRage := rageFromAutoAttack(sim, fw, fw.AutoAttacks.MHAuto(), OutcomeCrit, swingDamage)
+	if !WithinToleranceFloat64(20.696, critRage, 0.001) {
+		t.Fatalf("Incorrect Rage generated on 2H crit: Expected: %0.3f, Actual: %0.3f", 20.696, critRage)
+	}
 }
 
 func TestOffHandAutoAttackRageGeneration(t *testing.T) {
@@ -196,11 +203,6 @@ func TestOffHandAutoAttackRageGeneration(t *testing.T) {
 	hitRage := rageFromAutoAttack(sim, fw, ohAuto, OutcomeHit, swingDamage)
 	if !WithinToleranceFloat64(3.114, hitRage, 0.01) {
 		t.Fatalf("Incorrect Rage generated on OH hit: Expected: %0.3f, Actual: %0.3f", 3.114, hitRage)
-	}
-
-	critRage := rageFromAutoAttack(sim, fw, ohAuto, OutcomeCrit, swingDamage)
-	if !WithinToleranceFloat64(3.114*1.75, critRage, 0.01) {
-		t.Fatalf("Incorrect Rage generated on OH crit: Expected: %0.3f, Actual: %0.3f", 3.114*1.75, critRage)
 	}
 
 	dodgeRage := rageFromAutoAttack(sim, fw, ohAuto, OutcomeDodge, swingDamage)

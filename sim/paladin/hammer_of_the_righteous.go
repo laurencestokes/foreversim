@@ -15,11 +15,12 @@ var HammerOfTheRighteousRankMap = spellData.HammerOfTheRighteous
 // Trained on the Protection line at level 40 (SkillLineAbility AcquireMethod 0). The tooltip says
 // its cooldown is shared with Crusader Strike, a leftover: Forever has no Crusader Strike, and the
 // client's cooldown category 2404 puts it with Holy Strike, so casting either puts both on
-// cooldown. The weapon DPS multiple is the row's effect 2. The three extra targets are not
-// modelled.
+// cooldown. The weapon DPS multiple is the row's effect 2. The damage effect's ChainTargets 4 is the
+// target and up to 3 more, each taking the full hit.
 func (paladin *Paladin) registerHammerOfTheRighteous() {
 	rank := HammerOfTheRighteousRankMap.Highest()
 	weaponDPS := rank.EffectN(3).BasePoints
+	maxTargets := int32(rank.EffectN(1).ChainTargets)
 
 	paladin.RegisterSpell(core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: rank.ID},
@@ -46,7 +47,7 @@ func (paladin *Paladin) registerHammerOfTheRighteous() {
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 			baseDamage := weaponDPS * paladin.AutoAttacks.MH().DPS()
-			spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
+			spell.CalcAndDealCleaveDamage(sim, target, maxTargets, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
 		},
 	})
 }

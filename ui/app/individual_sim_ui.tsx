@@ -12,7 +12,6 @@ import { SimResultsManager } from '@features/results/model/results_manager';
 import type { ResultsPanelHandle } from '@features/results/model/results_panel_handle';
 import { WarningsRegistry } from '@features/results/model/warnings';
 import { applyEmptyAplRotation, applyIndividualDefaults } from '@features/settings/model/apply_defaults';
-import * as OtherInputs from '@features/settings/model/other_inputs';
 import { type ErrorOutcome, ErrorOutcomeType } from '@generated/proto/api';
 import { Spec } from '@generated/proto/common';
 import { IndividualSimSettings } from '@generated/proto/ui';
@@ -260,8 +259,6 @@ export class SimHostObject<SpecType extends Spec> implements IndividualSimHost<S
 	}
 
 	applyDefaultConfigOptions(config: IndividualSimUIConfig<SpecType>): IndividualSimUIConfig<SpecType> {
-		config.otherInputs.inputs = [...(this.player.getPlayerSpec().isTankSpec ? [OtherInputs.RetributionAuraSpellPower] : []), ...config.otherInputs.inputs];
-
 		return config;
 	}
 

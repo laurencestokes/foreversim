@@ -72,6 +72,18 @@ describe('communityBuilds', () => {
 		).toEqual([{ id: 2 }]);
 		expect(gear([['P1 BiS', 1]])).toEqual([]);
 	});
+
+	it('gives each build the launch set named for its tree', () => {
+		const presets: Array<[string, number]> = [
+			['Frost Launch', 1],
+			['Fire Launch', 2],
+			['Arcane Launch', 3],
+		];
+		const gear = (name: string) => gearFor({ key: 'mage/dps', name, def: def(Spec.SpecMage, [], '', presets) }).items;
+		expect(gear('MythicSim Fire 12/34/5')).toEqual([{ id: 2 }]);
+		expect(gear('Arcane 35/0/16')).toEqual([{ id: 3 }]);
+		expect(gear('Something 1/2/3')).toEqual([{ id: 1 }]);
+	});
 });
 
 describe('composition', () => {

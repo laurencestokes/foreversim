@@ -27,7 +27,13 @@
 				}
 			}
 		},
-		{ "action": { "castSpell": { "spellId": { "spellId": 1316995, "rank": 4 } } } },
+		{ "action": { "castSpell": { "spellId": { "spellId": 1316995, "rank": 3 } } } },
+		{
+			"action": {
+				"condition": { "isExecutePhase": { "threshold": "E20" } },
+				"castSpell": { "spellId": { "spellId": 1309636, "rank": 4 } }
+			}
+		},
 		{
 			"action": {
 				"condition": {

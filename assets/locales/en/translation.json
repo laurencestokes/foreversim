@@ -520,10 +520,6 @@
 				"label": "HP % for Defensive CDs",
 				"tooltip": "% of Maximum Health, below which defensive cooldowns are allowed to be used. If set to 0, this restriction is disabled."
 			},
-			"retribution_aura_spell_power": {
-				"label": "Retribution Aura Spell Power",
-				"tooltip": "The Holy spell power of the paladin providing Retribution Aura. Each hit you take deals the aura's base damage plus about 13.6% of this."
-			},
 			"totem_twisting": {
 				"label": "Totem Twisting",
 				"tooltip": "If both Windfury and Grace of Air are active will alternate between them to keep up both buffs."

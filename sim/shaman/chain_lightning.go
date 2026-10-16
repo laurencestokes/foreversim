@@ -7,6 +7,10 @@ import (
 
 var ChainLightningRankMap = spellData.ChainLightning
 
+// Lightning Overload's Chain Lightning, one client row per rank (client 1.60.1.70205). Not exactly
+// half the rank: its damage grows 1.25-1.5x faster per level, so rank 4 at 60 averages 66, not 63.
+var chainLightningOverloadRanks = spelldata.Ranked(408479, 408481, 408482, 408484)
+
 func (shaman *Shaman) registerChainLightningSpell() {
 	maxHits := min(3, shaman.Env.TotalTargetCount())
 	sharedCDTimer := shaman.NewTimer()
@@ -20,12 +24,16 @@ func (shaman *Shaman) registerChainLightningSpell() {
 }
 
 func (shaman *Shaman) newChainLightningSpell(config *spelldata.Spell, rank int32, isElementalOverload bool, sharedCDTimer *core.Timer) *core.Spell {
+	damage := config.DamageEffect()
+	if isElementalOverload {
+		damage = chainLightningOverloadRanks.Rank(rank).DamageEffect()
+	}
 	shamConfig := ShamSpellConfig{
 		ActionID:            core.ActionID{SpellID: config.ID},
 		Rank:                rank,
 		IsElementalOverload: isElementalOverload,
 		BaseFlatCost:        int32(config.Cost()),
-		BonusCoefficient:    config.DamageEffect().Coeff(),
+		BonusCoefficient:    damage.Coeff(),
 		SpellSchool:         core.SpellSchoolNature,
 		Overloads:           shaman.ChainLightningOverloads,
 		BounceReduction:     0.7,
@@ -34,6 +42,7 @@ func (shaman *Shaman) newChainLightningSpell(config *spelldata.Spell, rank int32
 	}
 	spellConfig := shaman.newElectricSpellConfig(shamConfig)
 	if !isElementalOverload {
+		spellConfig.MaxRange = float64(config.MaxRange)
 		spellConfig.Cast.CD = core.Cooldown{
 			Timer:    sharedCDTimer,
 			Duration: max(config.Cooldown(), config.CategoryCooldown()),
@@ -51,7 +60,7 @@ func (shaman *Shaman) newChainLightningSpell(config *spelldata.Spell, rank int32
 		numHits := min(maxHits, shaman.Env.ActiveTargetCount())
 		results := make([]*core.SpellResult, numHits)
 		for hitIndex := range numHits {
-			baseDamage := config.DamageEffect().Roll(sim, core.CharacterLevel)
+			baseDamage := damage.Roll(sim, core.CharacterLevel)
 			results[hitIndex] = spell.CalcDamage(sim, curTarget, baseDamage, spell.OutcomeMagicHitAndCrit)
 
 			curTarget = sim.Environment.NextActiveTargetUnit(curTarget)

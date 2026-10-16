@@ -187,6 +187,69 @@
 		{
 			"action": {
 				"condition": {
+					"and": {
+						"vals": [
+							{
+								"cmp": {
+									"op": "OpGe",
+									"lhs": {
+										"numberTargets": {}
+									},
+									"rhs": {
+										"const": {
+											"val": "3"
+										}
+									}
+								}
+							},
+							{
+								"cmp": {
+									"op": "OpLe",
+									"lhs": {
+										"unitDistance": {}
+									},
+									"rhs": {
+										"const": {
+											"val": "10"
+										}
+									}
+								}
+							}
+						]
+					}
+				},
+				"castSpell": {
+					"spellId": {
+						"spellId": 11684
+					}
+				}
+			}
+		},
+		{
+			"action": {
+				"condition": {
+					"cmp": {
+						"op": "OpGe",
+						"lhs": {
+							"numberTargets": {}
+						},
+						"rhs": {
+							"const": {
+								"val": "4"
+							}
+						}
+					}
+				},
+				"castSpell": {
+					"spellId": {
+						"spellId": 11678
+					}
+				}
+			}
+		},
+		{
+			"action": {
+				"condition": {
 					"not": {
 						"val": {
 							"auraIsActive": {
@@ -220,21 +283,60 @@
 			"action": {
 				"condition": {
 					"cmp": {
-						"op": "OpLe",
+						"op": "OpGe",
 						"lhs": {
-							"dotRemainingTime": {
-								"spellId": {
-									"spellId": 11713
-								}
-							}
+							"remainingTime": {}
 						},
 						"rhs": {
-							"spellCastTime": {
-								"spellId": {
-									"spellId": 11713
-								}
+							"const": {
+								"val": "60s"
 							}
 						}
+					}
+				},
+				"castSpell": {
+					"spellId": {
+						"spellId": 603
+					}
+				}
+			}
+		},
+		{
+			"action": {
+				"condition": {
+					"and": {
+						"vals": [
+							{
+								"not": {
+									"val": {
+										"dotIsActive": {
+											"spellId": {
+												"spellId": 603
+											}
+										}
+									}
+								}
+							},
+							{
+								"cmp": {
+									"op": "OpLe",
+									"lhs": {
+										"dotRemainingTime": {
+											"spellId": {
+												"spellId": 11713
+											}
+										}
+									},
+									"rhs": {
+										"spellCastTime": {
+											"spellId": {
+												"spellId": 11713
+											}
+										}
+									}
+								}
+							}
+						]
 					}
 				},
 				"castSpell": {
@@ -296,6 +398,28 @@
 				"castSpell": {
 					"spellId": {
 						"spellId": 25309
+					}
+				}
+			}
+		},
+		{
+			"action": {
+				"condition": {
+					"cmp": {
+						"op": "OpGe",
+						"lhs": {
+							"numberTargets": {}
+						},
+						"rhs": {
+							"const": {
+								"val": "3"
+							}
+						}
+					}
+				},
+				"castSpell": {
+					"spellId": {
+						"spellId": 11678
 					}
 				}
 			}

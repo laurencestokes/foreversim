@@ -175,7 +175,7 @@ func (hp *HunterPet) newLightningBreath() *core.Spell {
 	})
 }
 
-// Beta client: 5 a tick at rank 4, down from 8.
+// Beta client: 5 a tick at rank 4, down from 8, every 2 sec for 10 sec, stacking to 5 (24587 MaxStack).
 func (hp *HunterPet) newScorpidPoison() *core.Spell {
 	const baseDamageTick = 5.0
 
@@ -215,17 +215,11 @@ func (hp *HunterPet) newScorpidPoison() *core.Spell {
 			TickLength:    time.Second * 2,
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				// Each stack adds another flat tick; the multiplier no longer needs to special-case
-				// the first stack since SnapshotPhysical keeps it live every tick regardless (see
-				// core.Dot.computeSnapshot).
-				rawBase := baseDamageTick
-				if dot.GetStacks() > 1 {
-					rawBase += dot.SnapshotRawBaseDamage
-				}
-				dot.SnapshotPhysical(target, rawBase)
+				dot.Snapshot(target, baseDamageTick*float64(dot.GetStacks()))
 			},
+			// 24587 carries Periodic Can Crit: the ticks roll the pet's melee crit.
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, spellData.ScorpidPoisonTriggered.Rank(4).TickOutcomeHitRolled(dot))
 			},
 		},
 
@@ -239,12 +233,18 @@ func (hp *HunterPet) newScorpidPoison() *core.Spell {
 				return
 			}
 
+			// Apply would wipe the stacks, so a landed poison on a poisoned target refreshes it instead.
 			dot := spell.Dot(target)
-			dot.Apply(sim)
-			if dot.GetStacks() < dot.MaxStacks {
-				dot.AddStack(sim)
-				dot.TakeSnapshot(sim)
+			if dot.IsActive() {
+				dot.Refresh(sim)
+				if dot.GetStacks() < dot.MaxStacks {
+					dot.AddStack(sim)
+				}
+			} else {
+				dot.Apply(sim)
+				dot.SetStacks(sim, 1)
 			}
+			dot.TakeSnapshot(sim)
 		},
 	})
 }

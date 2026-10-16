@@ -4,6 +4,7 @@ import (
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/buffs"
 	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -42,8 +43,8 @@ func (priest *Priest) registerDisciplineTalents() {
 }
 
 // Power in Light is new in Forever: Smite and Penance hit 2% harder per point while this priest's
-// Holy Fire is burning the target. The client states the ladder on a dummy effect (1309969), so the
-// spells it names come from the tooltip.
+// Holy Fire or Shadow Word: Pain is on the target (SW:P added by the 16 Oct beta notes). The client
+// states the ladder on a dummy effect (1309969), so the spells it names come from the tooltip.
 func (priest *Priest) applyPowerInLight() {
 	if priest.Talents.PowerInLight == 0 {
 		return
@@ -53,7 +54,7 @@ func (priest *Priest) applyPowerInLight() {
 
 	for _, target := range priest.Env.Encounter.AllTargetUnits {
 		target.AddDynamicDamageTakenModifier(func(_ *core.Simulation, spell *core.Spell, result *core.SpellResult, _ bool) {
-			if spell.Unit == &priest.Unit && spell.Matches(PriestSpellSmite|PriestSpellPenance) && priest.hasActiveHolyFire(result.Target) {
+			if spell.Unit == &priest.Unit && spell.Matches(PriestSpellSmite|PriestSpellPenance) && priest.hasPowerInLightDot(result.Target) {
 				result.Damage *= multiplier
 			}
 		})
@@ -73,8 +74,9 @@ func (priest *Priest) applyWandSpecialization() {
 // Twin Disciplines is new in Forever: +1% damage and healing per point on instant spells. The client
 // states it as two SPELL_AURA_ADD_PCT_MODIFIER effects, damage and dot, so it joins the additive
 // bucket rather than multiplying. 1225132's masks name Holy Nova, Chastise, Divine Grace and
-// Contingency Plan (damage) and Shadow Word: Pain and Devouring Plague (dot) - not Mind Flay,
-// Penance, Shadow Word: Death or Starshards.
+// Contingency Plan (damage) and Shadow Word: Pain and Devouring Plague (dot). The devs called the
+// missing Mind Flay and Shadow Word: Death bugs (forever-bugs #322, #328, 2026-10-13), and the 16 Oct
+// beta notes add Starshards and Penance too, so all four join the masks.
 func (priest *Priest) applyTwinDisciplines() {
 	if priest.Talents.TwinDisciplines == 0 {
 		return
@@ -82,7 +84,8 @@ func (priest *Priest) applyTwinDisciplines() {
 
 	priest.AddStaticMod(core.SpellModConfig{
 		ClassMask: PriestSpellHolyNova | PriestSpellChastise | PriestSpellDivineGrace | PriestSpellContingencyPlan |
-			PriestSpellShadowWordPain | PriestSpellDevouringPlague,
+			PriestSpellShadowWordPain | PriestSpellDevouringPlague | PriestSpellMindFlay | PriestSpellShadowWordDeath |
+			PriestSpellStarshards | PriestSpellPenance,
 		FloatValue: spellData.TwinDisciplines.EffectAt(1).FractionAt(priest.Talents.TwinDisciplines),
 		Kind:       core.SpellMod_DamageDone_Flat,
 	})
@@ -93,23 +96,28 @@ func (priest *Priest) applySilentResolve() {
 		return
 	}
 
+	// Client 14523 still names Holy (misc 2); the 16 Oct beta notes widen it to all spells, so read
+	// the first effect by position and drop the school.
 	priest.AddStaticMod(core.SpellModConfig{
 		ClassMask:  PriestSpellsAll,
-		School:     core.SpellSchoolHoly,
-		FloatValue: spellData.SilentResolve.Effect(dbcenums.A_MOD_THREAT, 2).FractionAt(priest.Talents.SilentResolve),
+		FloatValue: spellData.SilentResolve.EffectAt(1).FractionAt(priest.Talents.SilentResolve),
 		Kind:       core.SpellMod_ThreatMultiplier_Pct,
 	})
 }
 
-// Holy Precision is new in Forever: +6% Holy hit per point. A school-specific hit bonus has to go
-// through the pseudo-stat; a SpellMod carrying a school panics.
+// Holy Precision is new in Forever: +6% hit per point. 1309957 is a miss chance mod on a class mask,
+// not school hit: Smite, Holy Fire, Holy Nova and the Penance bolts are in, Chastise (1277335) is not
+// (client 1.60.1.70205). The mask also catches Vampiric Embrace and Shadowfiend, which never roll hit here.
 func (priest *Priest) applyHolyPrecision() {
 	if priest.Talents.HolyPrecision == 0 {
 		return
 	}
 
-	priest.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexHoly] +=
-		spellData.HolyPrecision.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_RESIST_MISS_CHANCE)).ValueAt(priest.Talents.HolyPrecision)
+	priest.AddStaticMod(core.SpellModConfig{
+		ClassMask:  PriestHolySpells,
+		Kind:       core.SpellMod_BonusHit_Percent,
+		FloatValue: spellData.HolyPrecision.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_RESIST_MISS_CHANCE)).ValueAt(priest.Talents.HolyPrecision),
+	})
 }
 
 // applyImprovedPowerWordShield implements Improved Power Word: Shield, new in Forever.
@@ -156,11 +164,13 @@ func (priest *Priest) applyInnerFocus() {
 	// The cost cut (14751 e0) covers every priest spell; the crit (e1) leaves out Mind Flay,
 	// Shadow Word: Death and Starshards.
 	rank := spellData.InnerFocus.Highest()
+	critPercent := rank.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CRITICAL_CHANCE)).Average(core.CharacterLevel)
 	critMod := priest.AddDynamicMod(core.SpellModConfig{
 		ClassMask:  PriestSpellsAll &^ (PriestSpellMindFlay | PriestSpellShadowWordDeath | PriestSpellStarshards),
-		FloatValue: rank.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CRITICAL_CHANCE)).Average(core.CharacterLevel),
+		FloatValue: critPercent,
 		Kind:       core.SpellMod_BonusCrit_Percent,
 	})
+	priest.innerFocusCrit, priest.innerFocusCritChance = critMod, critPercent/100
 
 	var innerFocusSpell *core.Spell
 	costPercent := int32(rank.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).Average(core.CharacterLevel))
@@ -265,7 +275,7 @@ func (priest *Priest) applyPenance() {
 		return
 	}
 
-	priest.registerPenanceSpell()
+	spellData.Penance.Each(func(_ int32, rank *spelldata.Spell) { priest.registerPenanceSpell(rank) })
 }
 
 // applyRenewedHope implements Renewed Hope, new in Forever.

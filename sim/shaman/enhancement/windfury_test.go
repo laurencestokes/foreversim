@@ -7,9 +7,10 @@ import (
 	"github.com/wowsims/forever/sim/core/proto"
 )
 
-// Windfury Weapon (16361) is +333 attack power for 3 charges and 2 extra attacks: ordinary main-hand
-// white swings, so the swing count rises and no special-hit row (25505) is dealt.
-func TestWindfuryWeaponGrantsExtraSwings(t *testing.T) {
+// Windfury Weapon strikes twice with 439440, a weapon-damage special hit, and leaves the swing timer
+// alone: beta log 2708 has every proc as two 439440 hits, the next auto one weapon speed after the
+// last, and no 16361 buff.
+func TestWindfuryWeaponStrikesTwiceWithoutSwinging(t *testing.T) {
 	run := func(imbue proto.ShamanImbue) *proto.UnitMetrics {
 		player := &proto.Player{
 			Name: "enh", Class: proto.Class_ClassShaman, Race: proto.Race_RaceOrc, TalentsString: DefaultTalents,
@@ -29,34 +30,35 @@ func TestWindfuryWeaponGrantsExtraSwings(t *testing.T) {
 		}
 		return res.RaidMetrics.Parties[0].Players[0]
 	}
-	swings := func(m *proto.UnitMetrics) (n int32) {
+	count := func(m *proto.UnitMetrics) (swings, strikes int32) {
 		for _, a := range m.Actions {
-			if a.Id.GetSpellId() == 25505 {
-				t.Fatal("Windfury Weapon still deals its own special hits (25505)")
-			}
-			if a.Id.GetOtherId() == proto.OtherAction_OtherActionAttack && a.Id.Tag == 1 {
-				for _, tgt := range a.Targets {
-					n += tgt.Casts
+			for _, tgt := range a.Targets {
+				if a.Id.GetOtherId() == proto.OtherAction_OtherActionAttack && a.Id.Tag == 1 {
+					swings += tgt.Casts
+				}
+				if a.Id.GetSpellId() == 439440 {
+					strikes += tgt.Hits + tgt.Crits + tgt.Misses + tgt.Dodges + tgt.Parries + tgt.Blocks + tgt.Glances
 				}
 			}
 		}
-		return n
+		return
 	}
 
 	plain, wf := run(proto.ShamanImbue_NoImbue), run(proto.ShamanImbue_WindfuryWeapon)
-	var procs float64
 	for _, a := range wf.Auras {
 		if a.Id.GetSpellId() == 16361 {
-			procs = a.ProcsAvg
+			t.Fatal("Windfury Weapon still raises 16361's attack power buff")
 		}
 	}
-	if procs == 0 {
-		t.Fatal("Windfury Weapon's attack power buff (16361) never went up")
+	plainSwings, _ := count(plain)
+	swings, strikes := count(wf)
+	t.Logf("swings %d -> %d, %d Windfury strikes", plainSwings, swings, strikes)
+	if strikes == 0 {
+		t.Fatal("Windfury Weapon never struck (439440)")
 	}
-	t.Logf("swings %d -> %d, %.1f procs a fight", swings(plain), swings(wf), procs)
-	// Each proc owes 2 extra swings, and the timer restarts from the proc.
-	if got, want := float64(swings(wf)), float64(swings(plain))+2*20*procs; got < 0.95*want || got > 1.05*want {
-		t.Fatalf("main-hand swings with Windfury %v, want ~%v (%v without, %.1f procs a fight)", got, want, swings(plain), procs)
+	// Extra swings would add one per strike; only Flurry off the strikes' crits may add a few.
+	if extra := swings - plainSwings; extra > strikes/4 {
+		t.Fatalf("main-hand swings %d with Windfury vs %d without: %d more for %d strikes", swings, plainSwings, extra, strikes)
 	}
 }
 

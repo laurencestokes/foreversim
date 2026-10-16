@@ -52,12 +52,7 @@ func (shaman *Shaman) newElectricSpellConfig(config ShamSpellConfig) core.SpellC
 				CastTime: config.BaseCastTime,
 				GCD:      core.GCDDefault,
 			},
-			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
-				castTime := shaman.ApplyCastSpeedForSpell(cast.CastTime, spell)
-				if sim.CurrentTime+castTime > shaman.AutoAttacks.NextAttackAt() {
-					shaman.AutoAttacks.StopMeleeUntil(sim, sim.CurrentTime+castTime)
-				}
-			},
+			ModifyCast: shaman.holdSwingDuringCast,
 		},
 
 		DamageMultiplier: 1,
@@ -73,9 +68,16 @@ func (shaman *Shaman) newElectricSpellConfig(config ShamSpellConfig) core.SpellC
 		spell.Cast.DefaultCast.Cost = 0
 		spell.Cast.ModifyCast = nil
 		spell.MetricSplits = 0
-		spell.DamageMultiplier *= 0.5
 		spell.ThreatMultiplier = 0
 	}
 
 	return spell
+}
+
+// A hard cast holds the swing and restarts it when the cast completes, even when no swing was due
+// before then (beta logs 2701, 2712). An instant cast leaves it alone.
+func (shaman *Shaman) holdSwingDuringCast(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
+	if castTime := shaman.ApplyCastSpeedForSpell(cast.CastTime, spell); castTime > 0 {
+		shaman.AutoAttacks.StopMeleeUntil(sim, sim.CurrentTime+castTime)
+	}
 }

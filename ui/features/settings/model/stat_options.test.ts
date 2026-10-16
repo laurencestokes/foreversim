@@ -35,7 +35,7 @@ describe('relevantStatOptions', () => {
 		expect(relevantStatOptions(options, host({ include: [Stat.StatStrength] }))).toEqual([untagged, strengthOfEarth]);
 	});
 
-	it('excludes by stat, the sentinel way the feral specs drop Windfury', () => {
+	it('excludes by stat', () => {
 		expect(relevantStatOptions(options, host({ epStats: [Stat.StatMP5], exclude: [Stat.StatMP5] }))).toEqual([untagged]);
 	});
 

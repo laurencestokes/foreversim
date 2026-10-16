@@ -120,16 +120,16 @@
 	"11129": {
 		"ability": "Combustion",
 		"file": "sim/mage/combustion.go",
-		"note": "combustion.go reads 4 fire crits from 11129's charges and 10% a stack from 28682 in beta client 1.60.1.70009, where Classic's 11129 tooltip says 3 crits; the 3 minute cooldown is on the client row too.",
+		"note": "combustion.go reads 3 fire crits from 11129's charges (client 1.60.1.70205; it was 4 in 70009) and 10% a stack from 28682; the 3 minute cooldown is on the client row too, in category 1151, which it shares with Presence of Mind (client 1.60.1.70205 and Classic Era alike), so casting either locks both.",
 		"source": "forever",
-		"tooltip": "Instant\n3 min cooldown\nWhen activated, each of your Fire damage spell hits increases your critical strike chance with Fire spells by 10%.\nLasts until you have dealt 4 non-periodic critical strikes with Fire spells."
+		"tooltip": "Instant\n3 min cooldown\nWhen activated, this spell causes each of your Fire damage spell hits to increase your critical strike chance with Fire damage spells by 10%. This effect lasts until you have caused 3 non-periodic critical strikes with Fire spells."
 	},
 	"116": {
 		"ability": "Frostbolt",
 		"file": "sim/mage/frostbolt.go",
 		"note": "Beta client 1.60.1.70009: lower damage from rank 3 up (rank 11 515-555 -> 457-493) and the low ranks lost their downranking penalty (rank 1 coefficient .163 -> .407). Cast times and costs are Classic's. #448 registers every rank, so a rotation can drop to a cheaper one.",
 		"source": "forever",
-		"tooltip": "25 Mana\n1.5 sec cast\nLaunches a bolt of frost at the enemy, causing 20 to 22 Frost damage and slowing movement speed by 40%."
+		"tooltip": "25 Mana\n1.5 sec cast\nLaunches a bolt of frost at the enemy, causing 19 to 21  Frost damage and slowing movement speed by 40% for 5 sec."
 	},
 	"12042": {
 		"ability": "Arcane Power",
@@ -140,7 +140,7 @@
 	"12043": {
 		"ability": "Presence of Mind",
 		"file": "sim/mage/presence_of_mind.go",
-		"note": "presence_of_mind.go reads 12043 from beta client 1.60.1.70009: a 3 min cooldown, and the next spell with a cast time is instant, the same as Classic.",
+		"note": "presence_of_mind.go reads 12043 from beta client 1.60.1.70009: a 3 min cooldown, and the next spell with a cast time is instant, the same as Classic. The cooldown is category 1151 (client 1.60.1.70205), shared with Combustion.",
 		"source": "classic"
 	},
 	"12051": {
@@ -166,19 +166,19 @@
 	"1239700": {
 		"ability": "Arcane Blast",
 		"file": "sim/mage/arcane_blast.go",
-		"note": "Rank 5, Forever's own id; Arcane Blast is a later expansion spell, so the Classic database has no entry for it. Beta client 1.60.1.70009: 364-424, coefficient .714, 15% of base mana, 2.5 sec cast. The 10%, 175%, 4 stacks and 8 sec come from its buff, 400573.",
+		"note": "Rank 5, Forever's own id; Arcane Blast is a later expansion spell, so the Classic database has no entry for it. Beta client 1.60.1.70009: 364-424, coefficient .714, 15% of base mana, 2.5 sec cast. The 10%, 175%, 4 stacks and 8 sec come from its buff, 400573. Arcane Missiles spends the stacks as it starts and its missiles keep 15% a stack, though 400573's mask leaves them out: beta log 2721 (rank 3, same fights and targets) has 99-101 a missile after 1 stack and 112-114 after 2, a 1.13 ratio where 10% would give 1.09.",
 		"source": "forever",
 		"tooltip": "15% of base mana\n2.5 sec cast\nBlasts the target with energy, dealing 364 to 424 Arcane damage.\nEach cast increases the damage of all your other spells by 10% and the mana cost of Arcane Blast by 175%, stacking up to 4 times. Lasts 8 sec or until any other damage spell is cast."
 	},
 	"1240047": {
 		"ability": "Ice Lance",
 		"assumptions": [
-			"Spell power coefficient .143. The client row carries 0, as Season of Discovery's Ice Lance (400640) does: the scaling lives in a server script, and SoD's hotfix of 2024-12-04 raised it by 300% to .572. The beta's public combat logs side with .143: a level 20 frost mage with 30-34 spell power from gear (foreverlogs.gg report 2668, 2026-09-25) hit rank 1 (base 25.7-30.3) for 33 and 34 unfrozen and 132-141 frozen (33-35 before the x4), about +6 for spell power. .143 predicts +4 to +5; .429 would put every hit at 38 or more and .572 at 43 or more. A second frost mage agrees: Toma, 19 spell power from gear (report 2687, 2026-09-30), hit rank 1 for 29-34 unfrozen and 119-135 frozen, where .429 would give 36 or more. The exact figure is not pinned (two mages, eighteen hits, frost talents unknown)."
+			"Spell power coefficient .1, fitted from the beta logs. The client row carries 0, as Season of Discovery's Ice Lance (400640) does: the scaling lives in a server script, and SoD's hotfix of 2024-12-04 raised it by 300% to .572. Each mage's spell power is read off their other spells in the same log (client base plus coefficient), since gear alone undercounts it. Mana (foreverlogs.gg report 2727, 2026-10-07): Fire Blast, both Frostbolt ranks, Cone of Cold, Frost Nova and Blizzard all give about 80 spell power, and rank 1 (base 27.6-32.6 at its max level 26) hit for 38.8 on average unfrozen (52 hits, 36-42) and 38.2 frozen before the x4 (32 hits), .10-.11. Toma (report 2687, 2026-09-30, level 20, about 33 spell power though gear shows 19) hit for 31.4 unfrozen, .09-.11. .143 would put every unfrozen hit of Mana's at 39 or more, but 13 land at 36-37."
 		],
 		"file": "sim/mage/ice_lance.go",
-		"note": "Rank 6, Forever's own id; Ice Lance is a later expansion spell, so the Classic database has no entry for it. Beta client 1.60.1.70009: 133-157 plus its growth to level 60 = 136-160, 160 mana, 300% against frozen targets. Wowhead's 140-164 is the same row at its max level of 64.",
+		"note": "Rank 6, Forever's own id; Ice Lance is a later expansion spell, so the Classic database has no entry for it. Beta client 1.60.1.70009: 133-157 plus its growth to level 60 = 136-160, 160 mana, 300% against frozen targets, cut to 200% by the beta build of 2026-10-16 (Blizzard's beta notes, us.forums.blizzard.com t/2360696 post 6: 'changed to a 200% increase (Was 300%)'). Wowhead's 140-164 is the same row at its max level of 64.",
 		"source": "assumed",
-		"tooltip": "160 Mana\nInstant\nDeals 136 to 160 Frost damage to an enemy target.\nDeals 300% increased damage to a frozen target, which against a raid boss means one held by Fingers of Frost."
+		"tooltip": "160 Mana\nInstant\nDeals 136 to 160 Frost damage to an enemy target.\nDeals 200% increased damage to a frozen target, which against a raid boss means one held by Fingers of Frost."
 	},
 	"12472": {
 		"ability": "Cold Snap",
@@ -196,7 +196,7 @@
 	"12536": {
 		"ability": "Clearcasting",
 		"file": "sim/mage/talents_arcane.go",
-		"note": "Arcane Concentration's Clearcasting buff, the id the sim registers. 2% chance per point (11213's curve 2/4/6/8/10 in beta client 1.60.1.70009) that the next spell costs no mana, 15 sec, the same as Classic.",
+		"note": "Arcane Concentration's Clearcasting buff, the id the sim registers. 2% chance per point (11213's curve 2/4/6/8/10 in beta client 1.60.1.70009) that the next spell costs no mana, 15 sec, the same as Classic. It rolls on each enemy a spell hits, not on spells another spell triggers: beta log 2706 (Jamal, 18 Arcane, level 26) has 70 procs from 246 Arcane Explosions (11% an enemy hit), 12 from 37 Blizzard casts, none from 642 Blizzard tick hits (62 if they rolled) and none from 32 Arcane Missiles missiles. The sim rolls Blizzard once an enemy on the cast and skips its ticks and the missiles.",
 		"source": "classic"
 	},
 	"13021": {
@@ -211,7 +211,7 @@
 		"file": "sim/mage/fireball.go",
 		"note": "Beta client 1.60.1.70009: lower damage at every rank from 2 up (rank 12 596-760 -> 425-541, dot 76 -> 60) and no downranking penalty (rank 1 coefficient .123 -> .429). Cast times and costs are Classic's. #448 registers every rank, so a rotation can drop to a cheaper one.",
 		"source": "forever",
-		"tooltip": "30 Mana\n1.5 sec cast\nHurls a fiery ball that causes 16 to 24 Fire damage and an additional 2 Fire damage over 4 sec."
+		"tooltip": "30 Mana\n1.5 sec cast\nHurls a fiery ball that causes 15 to 23 Fire damage and an additional 2 Fire damage over 4 sec."
 	},
 	"143": {
 		"ability": "Fireball",
@@ -245,7 +245,7 @@
 		"file": "sim/mage/frostbolt.go",
 		"note": "Beta client 1.60.1.70009: lower damage from rank 3 up (rank 11 515-555 -> 457-493) and the low ranks lost their downranking penalty (rank 1 coefficient .163 -> .407). Cast times and costs are Classic's. #448 registers every rank, so a rotation can drop to a cheaper one.",
 		"source": "forever",
-		"tooltip": "35 Mana\n1.8 sec cast\nLaunches a bolt of frost at the enemy, causing 33 to 37 Frost damage and slowing movement speed by 40%.",
+		"tooltip": "35 Mana\n1.8 sec cast\nLaunches a bolt of frost at the enemy, causing 28 to 32  Frost damage and slowing movement speed by 40% for 6 sec.",
 		"measured": {
 			"date": "2026-09-19",
 			"how": "the client's own damage meter, levelling sessions on the beta",
@@ -325,24 +325,21 @@
 		"file": "sim/mage/fireball.go",
 		"note": "Beta client 1.60.1.70009: lower damage at every rank from 2 up (rank 12 596-760 -> 425-541, dot 76 -> 60) and no downranking penalty (rank 1 coefficient .123 -> .429). Cast times and costs are Classic's. #448 registers every rank, so a rotation can drop to a cheaper one.",
 		"source": "forever",
-		"tooltip": "95 Mana\n3 sec cast\nHurls a fiery ball that causes 66 to 90 Fire damage and an additional 12 Fire damage over 8 sec."
+		"tooltip": "95 Mana\n3 sec cast\nHurls a fiery ball that causes 68 to 93 Fire damage and an additional 12 Fire damage over 8 sec."
 	},
 	"400625": {
 		"ability": "Hot Streak",
 		"file": "sim/mage/talents_fire.go",
-		"note": "Hot Streak's buff, Forever's own id; it is a later expansion spell, so the Classic database has no entry for it. Beta client 1.60.1.70009: 20 sec (15 before 70009), -25% Pyroblast cast time a stack, 3 stacks, spent by the next Pyroblast. Frostfire Bolt crits, which the Forever tooltip also names, grant a stack too.",
+		"note": "Hot Streak's buff, Forever's own id; it is a later expansion spell, so the Classic database has no entry for it. Beta client 1.60.1.70009: 20 sec (15 before 70009), -25% Pyroblast cast time a stack, 3 stacks, spent by the next Pyroblast. Frostfire Bolt crits, which the Forever tooltip also names, grant a stack too. Since the beta build of 2026-10-16 (Blizzard's beta notes, us.forums.blizzard.com t/2360696 post 6): 'Heating up also always gains an additional charge each time the Mage casts Fire Blast. This does mean Fire Blast critical strikes generate 2 charges', and it is 'no longer consumed if the Mage also had Presence of Mind active for the Pyroblast cast'.",
 		"source": "forever",
 		"tooltip": "Your non-periodic critical strikes with Fireball, Frostfire Bolt, Fire Blast and Scorch grant Hot Streak for 20 sec.\nEach stack reduces the cast time of Pyroblast by 25%, stacking up to 3 times."
 	},
 	"400669": {
 		"ability": "Fingers of Frost",
-		"assumptions": [
-			"A cast already in progress when the chill lands is not the 'next spell cast': it takes neither the Shatter crit nor a charge, and the cast after it takes both."
-		],
 		"file": "sim/mage/talents_frost.go",
 		"foreverId": 400669,
-		"note": "Forever's own id; Fingers of Frost is a later expansion spell, so the Classic database has no entry for it. Beta client 1.60.1.70009 (400647, 400669): 15% at both ranks, one charge per rank, 15 sec. Shatter's crit bonus is folded into this aura because a raid boss can never be chilled or frozen by anything else.",
-		"source": "assumed",
+		"note": "Forever's own id; Fingers of Frost is a later expansion spell, so the Classic database has no entry for it. Beta client 1.60.1.70009 (400647, 400669): 15% at both ranks, one charge per rank, 15 sec. Shatter's crit bonus is folded into this aura because a raid boss can never be chilled or frozen by anything else. The beta's combat logs (foreverlogs.gg reports 2747 and 2748, five procs off Frostbolt from four mages) gain it the moment Frostbolt's cast ends, 0.6 to 0.9 sec before the bolt lands: the next cast (Fire Blast, Ice Lance, Frostbolt) takes a charge and the bolt's own impact doesn't. So the sim rolls it for Frostbolt and Frostfire Bolt at launch, on the hit rolled there, and no chill lands part way through a cast.",
+		"source": "forever",
 		"tooltip": "Your Chill effects have a 15% chance to grant Fingers of Frost, which treats your next spell cast, or next 2 at rank 2, as though the target were frozen. Lasts 15 sec.\nWhile it is up your spells gain Shatter's critical strike chance, 17/33/50%, and Ice Lance deals its frozen damage."
 	},
 	"401502": {
@@ -379,21 +376,21 @@
 		"file": "sim/mage/arcane_missiles.go",
 		"note": "Beta client 1.60.1.70009, from the missile spells each rank triggers: less damage per missile (rank 8 230 -> 209) but a .286 coefficient per missile at every rank, up from .24. #448 registers every rank, each with its own missile.",
 		"source": "forever",
-		"tooltip": "140 Mana\nChanneled\nLaunches Arcane Missiles at the enemy, causing 32 Arcane damage each second for 4 sec."
+		"tooltip": "140 Mana\nChanneled\nLaunches Arcane Missiles at the enemy, causing 35 Arcane damage each second for 4 sec."
 	},
 	"5145": {
 		"ability": "Arcane Missiles",
 		"file": "sim/mage/arcane_missiles.go",
 		"note": "Beta client 1.60.1.70009, from the missile spells each rank triggers: less damage per missile (rank 8 230 -> 209) but a .286 coefficient per missile at every rank, up from .24. #448 registers every rank, each with its own missile.",
 		"source": "forever",
-		"tooltip": "235 Mana\nChanneled\nLaunches Arcane Missiles at the enemy, causing 46 Arcane damage each second for 5 sec."
+		"tooltip": "235 Mana\nChanneled\nLaunches Arcane Missiles at the enemy, causing 49 Arcane damage each second for 5 sec."
 	},
 	"7322": {
 		"ability": "Frostbolt",
 		"file": "sim/mage/frostbolt.go",
 		"note": "Beta client 1.60.1.70009: lower damage from rank 3 up (rank 11 515-555 -> 457-493) and the low ranks lost their downranking penalty (rank 1 coefficient .163 -> .407). Cast times and costs are Classic's. #448 registers every rank, so a rotation can drop to a cheaper one.",
 		"source": "forever",
-		"tooltip": "65 Mana\n2.6 sec cast\nLaunches a bolt of frost at the enemy, causing 61 to 67 Frost damage and slowing movement speed by 40%."
+		"tooltip": "65 Mana\n2.6 sec cast\nLaunches a bolt of frost at the enemy, causing 70 to 77 Frost damage and slowing movement speed by 40%."
 	},
 	"837": {
 		"ability": "Frostbolt",
@@ -407,7 +404,7 @@
 		"file": "sim/mage/fireball.go",
 		"note": "Beta client 1.60.1.70009: lower damage at every rank from 2 up (rank 12 596-760 -> 425-541, dot 76 -> 60) and no downranking penalty (rank 1 coefficient .123 -> .429). Cast times and costs are Classic's. #448 registers every rank, so a rotation can drop to a cheaper one.",
 		"source": "forever",
-		"tooltip": "140 Mana\n3.5 sec cast\nHurls a fiery ball that causes 97 to 131 Fire damage and an additional 16 Fire damage over 8 sec."
+		"tooltip": "140 Mana\n3.5 sec cast\nHurls a fiery ball that causes 108 to 143 Fire damage and an additional 16 Fire damage over 8 sec."
 	},
 	"8401": {
 		"ability": "Fireball",
@@ -428,7 +425,7 @@
 		"file": "sim/mage/frostbolt.go",
 		"note": "Beta client 1.60.1.70009: lower damage from rank 3 up (rank 11 515-555 -> 457-493) and the low ranks lost their downranking penalty (rank 1 coefficient .163 -> .407). Cast times and costs are Classic's. #448 registers every rank, so a rotation can drop to a cheaper one.",
 		"source": "forever",
-		"tooltip": "100 Mana\n3 sec cast\nLaunches a bolt of frost at the enemy, causing 96 to 106 Frost damage and slowing movement speed by 40%."
+		"tooltip": "100 Mana\n3 sec cast\nLaunches a bolt of frost at the enemy, causing 104 to 114  Frost damage and slowing movement speed by 40% for 7 sec."
 	},
 	"8407": {
 		"ability": "Frostbolt",

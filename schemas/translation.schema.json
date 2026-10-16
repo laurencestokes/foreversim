@@ -1843,19 +1843,6 @@
 							"additionalProperties": false,
 							"required": ["label", "tooltip"]
 						},
-						"retribution_aura_spell_power": {
-							"type": "object",
-							"properties": {
-								"label": {
-									"type": "string"
-								},
-								"tooltip": {
-									"type": "string"
-								}
-							},
-							"additionalProperties": false,
-							"required": ["label", "tooltip"]
-						},
 						"totem_twisting": {
 							"type": "object",
 							"properties": {
@@ -2406,7 +2393,6 @@
 						"absorb_frac",
 						"burst_window",
 						"hp_percent_for_defensives",
-						"retribution_aura_spell_power",
 						"totem_twisting",
 						"pet_uptime",
 						"pet_single_ability",

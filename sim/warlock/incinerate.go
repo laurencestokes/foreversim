@@ -21,6 +21,7 @@ func (warlock *Warlock) registerIncinerate() {
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellIncinerate,
+		MaxRange:       float64(rank.MaxRange),
 		MissileSpeed:   float64(rank.Speed),
 
 		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},

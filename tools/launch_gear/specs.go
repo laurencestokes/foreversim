@@ -128,6 +128,8 @@ type spec struct {
 	// not swing: a caster's dagger, a bear's mace, a rogue's thrown weapon.
 	mainHandDps, offHandDps, rangedDps float64
 	weights                            stats.Stats
+	// A fixed ranged-slot item: idols carry no stats to weigh.
+	rangedItem int32
 }
 
 // fingerprint is everything about an item that a stat sheet can see. The two factions'
@@ -162,6 +164,9 @@ func (s spec) allows(item *proto.UIItem) bool {
 	}
 	switch item.Type {
 	case proto.ItemType_ItemTypeRanged:
+		if s.rangedItem != 0 {
+			return item.Id == s.rangedItem
+		}
 		allowed := classRanged[s.class]
 		if len(s.ranged) > 0 {
 			allowed = s.ranged
@@ -202,7 +207,8 @@ func (s spec) ep(item *proto.UIItem, h hand) float64 {
 	total := 0.0
 	// Stats and weapon damage live on the item's base scaling option in this db.
 	base := item.ScalingOptions[0]
-	itemStats := stats.FromProtoMap(base.GetStats())
+	// Weighed as the sim pays it: Forever's gear hit and crit count for spells and melee alike.
+	itemStats := core.UnifyGearHitAndCrit(stats.FromProtoMap(base.GetStats()))
 	for i := range s.weights {
 		total += itemStats[i] * s.weights[i]
 	}
@@ -336,10 +342,20 @@ var specs = map[string]spec{
 			stats.Intellect: 0.02, stats.AttackPower: 1, stats.RangedAttackPower: 1, stats.MeleeHitRating: 3.29 / core.PhysicalHitRatingPerHitPercent, stats.MeleeCritRating: 4.45 / core.PhysicalCritRatingPerCritPercent,
 			stats.SpellDamage: 0.03, stats.MP5: 0.05}),
 	},
-	"mage": {
-		class: proto.Class_ClassMage, dir: "mage/dps", twoHand: true,
-		weights: w(map[stats.Stat]float64{stats.Intellect: 0.49, stats.SpellDamage: 1, stats.ArcaneDamage: 1,
-			stats.FireDamage: 1, stats.FrostDamage: 1, stats.SpellHitRating: 18.59 / core.SpellHitRatingPerHitPercent, stats.SpellCritRating: 13.91 / core.SpellCritRatingPerCritPercent, stats.SpellHasteRating: 6.85 / core.SpellHasteRatingPerHastePercent, stats.MP5: 0.11}),
+
+	// One set per mage tree: a +Fire item is worth nothing to a Frost mage, and one shared set
+	// that counted every school as spell power dressed all three in each other's gear.
+	"mage_frost": {
+		class: proto.Class_ClassMage, dir: "mage/dps", set: "frost_launch", twoHand: true,
+		weights: w(map[stats.Stat]float64{stats.Intellect: 0.49, stats.SpellDamage: 1, stats.FrostDamage: 1, stats.SpellHitRating: 18.59 / core.SpellHitRatingPerHitPercent, stats.SpellCritRating: 13.91 / core.SpellCritRatingPerCritPercent, stats.SpellHasteRating: 6.85 / core.SpellHasteRatingPerHastePercent, stats.MP5: 0.11}),
+	},
+	"mage_fire": {
+		class: proto.Class_ClassMage, dir: "mage/dps", set: "fire_launch", twoHand: true,
+		weights: w(map[stats.Stat]float64{stats.Intellect: 0.49, stats.SpellDamage: 1, stats.FireDamage: 1, stats.SpellHitRating: 18.59 / core.SpellHitRatingPerHitPercent, stats.SpellCritRating: 13.91 / core.SpellCritRatingPerCritPercent, stats.SpellHasteRating: 6.85 / core.SpellHasteRatingPerHastePercent, stats.MP5: 0.11}),
+	},
+	"mage_arcane": {
+		class: proto.Class_ClassMage, dir: "mage/dps", set: "arcane_launch", twoHand: true,
+		weights: w(map[stats.Stat]float64{stats.Intellect: 0.49, stats.SpellDamage: 1, stats.ArcaneDamage: 1, stats.SpellHitRating: 18.59 / core.SpellHitRatingPerHitPercent, stats.SpellCritRating: 13.91 / core.SpellCritRatingPerCritPercent, stats.SpellHasteRating: 6.85 / core.SpellHasteRatingPerHastePercent, stats.MP5: 0.11}),
 	},
 	"warlock": {
 		class: proto.Class_ClassWarlock, dir: "warlock/dps", twoHand: true,
@@ -371,7 +387,7 @@ var specs = map[string]spec{
 			stats.MeleeHitRating: 14 / core.PhysicalHitRatingPerHitPercent, stats.SpellDamage: 0.2, stats.Intellect: 0.1, stats.Stamina: 0.1}),
 	},
 	"balance_druid": {
-		class: proto.Class_ClassDruid, dir: "druid/balance", twoHand: true,
+		class: proto.Class_ClassDruid, dir: "druid/balance", twoHand: true, rangedItem: 23197, // Idol of the Moon
 		weights: w(map[stats.Stat]float64{stats.Intellect: 0.16, stats.SpellDamage: 1, stats.ArcaneDamage: 0.62,
 			stats.NatureDamage: 0.38, stats.SpellHitRating: 11.75 / core.SpellHitRatingPerHitPercent, stats.SpellCritRating: 7.5 / core.SpellCritRatingPerCritPercent, stats.SpellHasteRating: 0.8 / core.SpellHasteRatingPerHastePercent}),
 	},

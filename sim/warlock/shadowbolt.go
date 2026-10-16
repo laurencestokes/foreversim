@@ -26,6 +26,7 @@ func (warlock *Warlock) registerShadowBoltRank(rank *spelldata.Spell) *core.Spel
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellShadowBolt,
+		MaxRange:       float64(rank.MaxRange),
 		Rank:           rank.RankNumber(),
 		MissileSpeed:   float64(rank.Speed),
 

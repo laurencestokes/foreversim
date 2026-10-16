@@ -28,13 +28,15 @@ func TestPetStrikes(t *testing.T) {
 		{proto.HunterOptions_Bear, spellData.SwipeTriggered.Highest().ID, 20, 22, 3},
 		{proto.HunterOptions_Bat, spellData.DemoralizingScreechTriggered.Highest().ID, 24, 42, 0},
 	} {
+		// Marksmanship, so no Intimidation: long-cooldown strikes land about once a fight (Claw spends the
+		// focus first, as on beta logs), and Intimidation makes that one a crit.
 		player := &proto.Player{
-			Name: "bm", Class: proto.Class_ClassHunter, Race: proto.Race_RaceOrc, TalentsString: BeastMasteryTalents,
+			Name: "mm", Class: proto.Class_ClassHunter, Race: proto.Race_RaceOrc, TalentsString: MarksmanshipTalents,
 			Equipment: WeaponsOnly, DistanceFromTarget: 30,
 			Spec: &proto.Player_Hunter{Hunter: &proto.Hunter{Options: &proto.Hunter_Options{ClassOptions: &proto.HunterOptions{
 				Ammo: proto.HunterOptions_Doomshot, QuiverBonus: proto.HunterOptions_Speed15, PetType: c.pet,
 				PetAttackSpeed: proto.HunterOptions_OneTwo, PetUptime: 1}}}},
-			Rotation: core.GetAplRotation("../../ui/specs/hunter/dps/apls", "bm").Rotation,
+			Rotation: core.GetAplRotation("../../ui/specs/hunter/dps/apls", "mm").Rotation,
 		}
 		raid := &proto.Raid{Parties: []*proto.Party{{Players: []*proto.Player{player}, Buffs: &proto.PartyBuffs{}}}, Buffs: &proto.RaidBuffs{}, Debuffs: &proto.Debuffs{}, NumActiveParties: 1}
 		// A target with no armor, so a hit shows the row's own damage.
@@ -43,7 +45,7 @@ func TestPetStrikes(t *testing.T) {
 		for len(encounter.Targets) < c.targets {
 			encounter.Targets = append(encounter.Targets, encounter.Targets[0])
 		}
-		res := core.RunRaidSim(&proto.RaidSimRequest{Raid: raid, Encounter: encounter, SimOptions: &proto.SimOptions{Iterations: 1, RandomSeed: 1}})
+		res := core.RunRaidSim(&proto.RaidSimRequest{Raid: raid, Encounter: encounter, SimOptions: &proto.SimOptions{Iterations: 10, RandomSeed: 1}})
 		if res.Error != nil {
 			t.Fatal(res.Error.Message)
 		}

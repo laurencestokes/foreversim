@@ -5,24 +5,22 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
-	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
 func (warrior *Warrior) registerFuryTalents() {
 	// Tier 1
-	// Booming Voice (12321) widens the shout radius only, which the sim does not model.
+	warrior.registerBoomingVoice()
 	warrior.registerCruelty()
 
 	// Tier 2
-	warrior.registerIronWill()
+	// Lingering Rage (1323964) delays out-of-combat Rage decay, which the sim does not model.
 	warrior.registerUnbridledWrath()
 
 	// Tier 3
-	warrior.registerImprovedCleave()
+	warrior.registerFuriousPrecision()
 	warrior.registerPiercingHowl()
 	warrior.registerBloodCraze()
-	// Boundless Rage: warrior.go, when it enables the rage bar
 
 	// Tier 4
 	warrior.registerDualWieldSpecialization()
@@ -31,13 +29,13 @@ func (warrior *Warrior) registerFuryTalents() {
 	warrior.registerImprovedExecute()
 
 	// Tier 5
-	warrior.registerPrecision()
+	// Improved Berserker Rage: berserker_rage.go
 	warrior.registerDeathWish()
 	warrior.registerImprovedIntercept()
 
 	// Tier 6
-	// Improved Berserker Rage: berserker_rage.go
 	warrior.registerFlurry()
+	// Gore Drinker (1323967) heals on melee attacks after an Enrage, which the sim does not model.
 
 	// Tier 7
 	warrior.registerBloodthirst()
@@ -64,14 +62,17 @@ func (warrior *Warrior) registerUnbridledWrath() {
 	warrior.MakeProcTriggerAura(core.ProcTrigger{
 		Name:               "Unbridled Wrath",
 		ProcMask:           core.ProcMaskMeleeWhiteHit,
+		// Heroic Strike and Cleave replace a main-hand swing (ProcMaskMeleeMH) but never proc it: beta
+		// logs 2670/2698 (Cor, Osicat) show it on 31-59% of landed autos and 0 of 148 HS/Cleave hits.
+		ProcMaskExclude:    core.ProcMaskMeleeSpecial,
 		ProcChance:         spellData.UnbridledWrath.FractionAt(warrior.Talents.UnbridledWrath),
 		RequireDamageDealt: true,
 		Outcome:            core.OutcomeLanded,
 		Callback:           core.CallbackOnSpellHitDealt,
+		// Hotfix 112347 rewrote 12322's text to drop "increased to 2 Rage for two-handed weapons":
+		// every weapon gets 12964's 1 rage.
 		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			// The tooltip of 12322 doubles the rage for a two-handed weapon.
-			twoHanded := warrior.GetMainHandType() == proto.HandType_HandTypeTwoHand
-			warrior.AddRage(sim, unbridledWrathRage*core.TernaryFloat64(twoHanded, 2, 1), rageMetrics)
+			warrior.AddRage(sim, unbridledWrathRage, rageMetrics)
 		},
 	})
 }
@@ -87,21 +88,9 @@ func (warrior *Warrior) registerDualWieldSpecialization() {
 		FloatValue: spellData.DualWieldSpecialization.Effect(dbcenums.A_MOD_OFFHAND_DAMAGE_PCT, 0).FractionAt(warrior.Talents.DualWieldSpecialization),
 	})
 
-	warrior.AddStaticMod(core.SpellModConfig{
-		ProcMask:   core.ProcMaskMeleeOH,
-		Kind:       core.SpellMod_BonusHit_Percent,
-		FloatValue: spellData.DualWieldSpecialization.Effect(dbcenums.A_MOD_HIT_CHANCE, 0).ValueAt(warrior.Talents.DualWieldSpecialization),
-	})
-
-	warrior.SetOffHandRageMultiplier(spellData.DualWieldSpecialization.EffectAt(2).MultiplierAt(warrior.Talents.DualWieldSpecialization))
-}
-
-func (warrior *Warrior) registerIronWill() {
-	if warrior.Talents.IronWill == 0 {
-		return
-	}
-	warrior.PseudoStats.FearDurationMultiplier = spellData.IronWill.Effect(dbcenums.A_MECHANIC_DURATION_MOD, 1).MultiplierAt(warrior.Talents.IronWill)
-	warrior.PseudoStats.StunDurationMultiplier = spellData.IronWill.Effect(dbcenums.A_MECHANIC_DURATION_MOD, 12).MultiplierAt(warrior.Talents.IronWill)
+	// The 70170 hotfixes moved the off-hand hit chance to Furious Precision and brought the off-hand
+	// Rage bonus back as a dummy effect, 10% a rank.
+	warrior.SetOffHandRageMultiplier(spellData.DualWieldSpecialization.Effect(dbcenums.A_DUMMY, 0).MultiplierAt(warrior.Talents.DualWieldSpecialization))
 }
 
 func (warrior *Warrior) registerImprovedExecute() {
@@ -191,13 +180,17 @@ func (warrior *Warrior) registerFlurry() {
 	})
 }
 
-func (warrior *Warrior) registerPrecision() {
-	if warrior.Talents.Precision == 0 {
+// Furious Precision: off-hand hit chance, in the same shape as Dual Wield Specialization's.
+func (warrior *Warrior) registerFuriousPrecision() {
+	if warrior.Talents.FuriousPrecision == 0 {
 		return
 	}
 
-	warrior.AddStat(stats.PhysicalHitPercent, spellData.Precision.Effect(dbcenums.A_MOD_HIT_CHANCE, 0).ValueAt(warrior.Talents.Precision))
-	warrior.AddStat(stats.SpellHitPercent, spellData.Precision.Effect(dbcenums.A_MOD_SPELL_HIT_CHANCE, 0).ValueAt(warrior.Talents.Precision))
+	warrior.AddStaticMod(core.SpellModConfig{
+		ProcMask:   core.ProcMaskMeleeOH,
+		Kind:       core.SpellMod_BonusHit_Percent,
+		FloatValue: spellData.FuriousPrecision.Effect(dbcenums.A_MOD_HIT_CHANCE, 0).ValueAt(warrior.Talents.FuriousPrecision),
+	})
 }
 
 func (warrior *Warrior) registerBloodthirst() {
@@ -319,16 +312,22 @@ func (warrior *Warrior) registerBloodCraze() {
 			bloodCraze.SelfHot().Apply(sim)
 		},
 	})
+	// No Bloodthirst trigger: the 1 Oct beta notes ("Blood Craze no longer activates off of Bloodthirst
+	// casts") and the client 70374 tooltip dropped it.
+}
 
-	warrior.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Blood Craze - Bloodthirst",
-		Callback:           core.CallbackOnSpellHitDealt,
-		ClassSpellMask:     SpellMaskBloodthirst,
-		Outcome:            core.OutcomeLanded,
-		RequireDamageDealt: true,
-		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			bloodCraze.SelfHot().Apply(sim)
-		},
+// Booming Voice (12321) widens the shout radius, which the sim does not model. Build 70170 added a
+// second effect the tooltip does not mention yet: -5% a point off the Rage cost of Battle,
+// Demoralizing, Intimidating and Challenging Shout (mask 0xF0000).
+func (warrior *Warrior) registerBoomingVoice() {
+	if warrior.Talents.BoomingVoice == 0 {
+		return
+	}
+
+	warrior.AddStaticMod(core.SpellModConfig{
+		ClassMask:  SpellMaskShouts,
+		Kind:       core.SpellMod_PowerCost_Pct_Add,
+		FloatValue: spellData.BoomingVoice.EffectAt(2).FractionAt(warrior.Talents.BoomingVoice),
 	})
 }
 
@@ -337,8 +336,10 @@ func (warrior *Warrior) registerRagingBlows() {
 		return
 	}
 
+	// Build 70170 + hotfix 112347: "Reduces the Rage cost of your Cleave and Whirlwind abilities",
+	// effect 2's mask names both (Cleave 0x400000, Whirlwind mask_1 0x4).
 	warrior.AddStaticMod(core.SpellModConfig{
-		ClassMask: SpellMaskCleave,
+		ClassMask: SpellMaskCleave | SpellMaskWhirlwind,
 		Kind:      core.SpellMod_PowerCost_Flat,
 		IntValue:  int32(spellData.RagingBlows.EffectAt(2).TenthsAt(1)),
 	})
@@ -410,16 +411,5 @@ func (warrior *Warrior) registerImprovedIntercept() {
 		ClassMask: SpellMaskIntercept,
 		Kind:      core.SpellMod_Cooldown_Flat,
 		TimeValue: time.Duration(spellData.ImprovedIntercept.ValueAt(warrior.Talents.ImprovedIntercept)) * time.Millisecond,
-	})
-}
-
-func (warrior *Warrior) registerImprovedCleave() {
-	if warrior.Talents.ImprovedCleave == 0 {
-		return
-	}
-	warrior.AddStaticMod(core.SpellModConfig{
-		ClassMask: SpellMaskCleave,
-		Kind:      core.SpellMod_PowerCost_Flat,
-		IntValue:  int32(spellData.ImprovedCleave.TenthsAt(warrior.Talents.ImprovedCleave)),
 	})
 }

@@ -33,7 +33,8 @@ func (rogue *Rogue) registerAmbushSpell() {
 			IgnoreHaste: true,
 		},
 		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			if !rogue.HasDagger(core.MainHand) {
+			// "Must be stealthed and behind the target" (11269 carries Backstab's behind-target attribute).
+			if !rogue.HasDagger(core.MainHand) || rogue.PseudoStats.InFrontOfTarget {
 				return false
 			}
 			// Cutthroat lets the Stealth requirement slide for a short while after a Backstab.

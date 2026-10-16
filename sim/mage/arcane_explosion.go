@@ -14,6 +14,7 @@ func (mage *Mage) registerArcaneExplosionSpell() {
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: MageSpellArcaneExplosion,
+		MaxRange:       pointBlankRadius,
 
 		ManaCost: core.ManaCostOptions{
 			FlatCost: int32(arcaneExplosionRank.Cost()),

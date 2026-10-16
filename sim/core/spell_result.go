@@ -408,16 +408,35 @@ func (spell *Spell) CalcPeriodicDamage(sim *Simulation, target *Unit, baseDamage
 
 	return spell.calcDamageInternal(sim, target, baseDamage, attackerMultiplier, true, outcomeApplier)
 }
+
+// The tick of a dot built by Snapshot or SnapshotPhysical, dealt on the caster's current stats: see the
+// note on Dot.tickOnCurrentStats. A snapshot heal, or a dot that wrote SnapshotBaseDamage by hand,
+// ticks on the stored numbers.
 func (dot *Dot) CalcSnapshotDamage(sim *Simulation, target *Unit, outcomeApplier OutcomeApplier) *SpellResult {
-	// Forever recalculates the caster-side part of a dot's damage every tick instead of freezing it
-	// at application; see DynamicDoTs. dynamicSnapshot is only set by Snapshot/SnapshotPhysical, so
-	// a dot whose OnTick pokes SnapshotBaseDamage/SnapshotAttackerMultiplier directly (Ignite's
-	// fixed crit share, Deep Wounds, a bleed carrying a fixed cut of the hit that triggered it) is
-	// left alone here and keeps its own, already-correct semantics.
-	if DynamicDoTs && dot.dynamicSnapshot {
-		dot.computeSnapshot(target)
+	baseDamage, attackerMultiplier := dot.SnapshotBaseDamage, dot.SnapshotAttackerMultiplier
+	if dot.tickOnCurrentStats {
+		baseDamage, attackerMultiplier = dot.currentTickInputs(target)
 	}
-	return dot.Spell.calcDamageInternal(sim, target, dot.SnapshotBaseDamage, dot.SnapshotAttackerMultiplier, true, outcomeApplier)
+	return dot.Spell.calcDamageInternal(sim, target, baseDamage, attackerMultiplier, true, outcomeApplier)
+}
+
+func (dot *Dot) currentTickInputs(target *Unit) (baseDamage float64, attackerMultiplier float64) {
+	attackTable := dot.Spell.Unit.AttackTables[target.UnitIndex]
+	baseDamage = dot.SnapshotBaseDamage
+	if dot.readsSpellPower {
+		baseDamage += dot.BonusCoefficient*dot.Spell.BonusDamage(attackTable) - dot.snapshotSpellPower
+	}
+	if dot.attackPowerShare != 0 {
+		baseDamage += dot.attackPowerShare*dot.currentAttackPower(target) - dot.snapshotAttackPower
+	}
+	return baseDamage, dot.Spell.AttackerDamageMultiplier(attackTable, true) * dot.PeriodicDamageMultiplier
+}
+
+func (dot *Dot) currentAttackPower(target *Unit) float64 {
+	if dot.attackPowerRanged {
+		return dot.Spell.RangedAttackPower(target)
+	}
+	return dot.Spell.MeleeAttackPower(target)
 }
 
 func (spell *Spell) DealOutcome(sim *Simulation, result *SpellResult) {
@@ -606,32 +625,47 @@ func (dot *Dot) CalcAndDealPeriodicSnapshotDamage(sim *Simulation, target *Unit,
 	return result
 }
 
+// Snapshot stores a dot's flat damage plus the caster's spell power share and attacker multiplier as
+// they stand now. The stored share and multiplier are what a tick swaps for their current values
+// (dot.tickOnCurrentStats), so this is the value the dot is first dealt on, not the one it keeps.
 func (dot *Dot) Snapshot(target *Unit, baseDamage float64) {
-	dot.SnapshotRawBaseDamage = baseDamage
-	dot.dynamicSnapshot = true
-	dot.snapshotIsPhysical = false
-	dot.computeSnapshot(target)
+	dot.SnapshotBaseDamage = baseDamage
+	attackTable := dot.Spell.Unit.AttackTables[target.UnitIndex]
+	dot.resetCurrentStatShares()
+	if dot.BonusCoefficient > 0 {
+		dot.readsSpellPower = true
+		dot.snapshotSpellPower = dot.BonusCoefficient * dot.Spell.BonusDamage(attackTable)
+		dot.SnapshotBaseDamage += dot.snapshotSpellPower
+	}
+	dot.tickOnCurrentStats = true
+	dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(attackTable, true) *
+		dot.PeriodicDamageMultiplier
+}
+
+func (dot *Dot) resetCurrentStatShares() {
+	dot.tickOnCurrentStats = false
+	dot.readsSpellPower = false
+	dot.snapshotSpellPower = 0
+	dot.attackPowerShare = 0
+	dot.attackPowerRanged = false
+	dot.snapshotAttackPower = 0
+}
+
+// SnapshotAttackPowerShare marks share of the caster's attack power (ranged when ranged is set) as
+// already part of the base damage handed to Snapshot or SnapshotPhysical, so a tick reads that share
+// from the attack power it has then. Call it right after the snapshot, with the same share.
+func (dot *Dot) SnapshotAttackPowerShare(target *Unit, share float64, ranged bool) {
+	dot.attackPowerShare = share
+	dot.attackPowerRanged = ranged
+	dot.snapshotAttackPower = share * dot.currentAttackPower(target)
 }
 
 func (dot *Dot) SnapshotPhysical(target *Unit, baseDamage float64) {
-	dot.SnapshotRawBaseDamage = baseDamage
-	dot.dynamicSnapshot = true
-	dot.snapshotIsPhysical = true
-	// At this time, not aware of any physical-scaling DoTs that need BonusCoefficient
-	dot.computeSnapshot(target)
-}
-
-// Computes SnapshotBaseDamage/SnapshotAttackerMultiplier from SnapshotRawBaseDamage and the
-// caster's CURRENT bonus damage and attacker multipliers. Called once at application by
-// Snapshot/SnapshotPhysical, and again before every tick while DynamicDoTs is on (see
-// CalcSnapshotDamage) so the caster-side part of the dot stays live.
-func (dot *Dot) computeSnapshot(target *Unit) {
-	attackTable := dot.Spell.Unit.AttackTables[target.UnitIndex]
-	baseDamage := dot.SnapshotRawBaseDamage
-	if !dot.snapshotIsPhysical && dot.BonusCoefficient > 0 {
-		baseDamage += dot.BonusCoefficient * dot.Spell.BonusDamage(attackTable)
-	}
+	dot.resetCurrentStatShares()
+	dot.tickOnCurrentStats = true
 	dot.SnapshotBaseDamage = baseDamage
+	// At this time, not aware of any physical-scaling DoTs that need BonusCoefficient
+	attackTable := dot.Spell.Unit.AttackTables[target.UnitIndex]
 	dot.SnapshotAttackerMultiplier = dot.Spell.AttackerDamageMultiplier(attackTable, true) *
 		dot.PeriodicDamageMultiplier
 }
@@ -685,6 +719,7 @@ func (dot *Dot) CalcSnapshotHealing(sim *Simulation, target *Unit, outcomeApplie
 }
 
 func (dot *Dot) SnapshotHeal(target *Unit, baseHealing float64) {
+	dot.resetCurrentStatShares()
 	dot.SnapshotBaseDamage = baseHealing
 	if dot.BonusCoefficient > 0 {
 		dot.SnapshotBaseDamage += dot.BonusCoefficient * dot.Spell.HealingPower(target)

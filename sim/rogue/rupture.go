@@ -18,17 +18,6 @@ func (rogue *Rogue) registerRupture() {
 
 	// The beta client cut the per combo point step with the tick (rank 6: 60 + 8 -> 35 + 4.73).
 	damagePerComboPoint := float64(tick.PointsPerResource)
-	apCoeffByComboPoint := []float64{0, 0.01, 0.02, 0.03, 0.03, 0.03}
-
-	// Combo points spent and the Hemorrhage bonus are fixed at cast, for each target's Rupture;
-	// only the attack power share is dynamic, so both are kept per target and reused by OnTick to
-	// rebuild the raw base with current attack power every tick.
-	comboPointsAtCast := map[int32]int32{}
-	hemoMultiplierAtCast := map[int32]float64{}
-	rawBaseDamage := func(target *core.Unit, meleeAttackPower float64) float64 {
-		comboPoints := comboPointsAtCast[target.UnitIndex]
-		return (tickDamage + damagePerComboPoint*float64(comboPoints) + apCoeffByComboPoint[comboPoints]*meleeAttackPower) * hemoMultiplierAtCast[target.UnitIndex]
-	}
 
 	rogue.Rupture = rogue.RegisterSpell(core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: ruptureRank.ID},
@@ -71,12 +60,12 @@ func (rogue *Rogue) registerRupture() {
 			TickLength:    tickLength,
 
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				comboPointsAtCast[target.UnitIndex] = rogue.ComboPoints()
-				hemoMultiplierAtCast[target.UnitIndex] = core.TernaryFloat64(rogue.isHemorrhaging(target), HemorrhageRuptureMultiplier, 1)
-				dot.SnapshotPhysical(target, rawBaseDamage(target, dot.Spell.MeleeAttackPower(target)))
+				share := ruptureAttackPowerShare(rogue.ComboPoints())
+				flat := tickDamage + damagePerComboPoint*float64(rogue.ComboPoints())
+				dot.SnapshotPhysical(target, flat+share*rogue.Rupture.MeleeAttackPower(target))
+				dot.SnapshotAttackPowerShare(target, share, false)
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.SnapshotRawBaseDamage = rawBaseDamage(target, dot.Spell.MeleeAttackPower(target))
 				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, ruptureRank.TickOutcome(dot))
 			},
 		},
@@ -95,4 +84,10 @@ func (rogue *Rogue) registerRupture() {
 			spell.DealOutcome(sim, result)
 		},
 	})
+}
+
+// The share of attack power a tick adds, read at the tick. TBC's share, not in the client.
+// Beta logs agree: 1% of AP a tick per combo point, capped at 3.
+func ruptureAttackPowerShare(comboPoints int32) float64 {
+	return []float64{0, 0.01, 0.02, 0.03, 0.03, 0.03}[comboPoints]
 }

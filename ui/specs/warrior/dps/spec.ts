@@ -133,13 +133,16 @@ export default defineSpec<Spec.SpecDpsWarrior>({
 		// Preset talents that the user can quickly select.
 		talents: [Presets.DpsTalents, Presets.FuryTalents, Presets.ArmsTalents],
 		// Preset rotations that the user can quickly select.
-		rotations: [Presets.ROTATION_PRESET_NO_RECK, Presets.ROTATION_PRESET_RECK],
+		rotations: [Presets.ROTATION_PRESET_DANCE, Presets.ROTATION_PRESET_BATTLE, Presets.ROTATION_PRESET_NO_RECK, Presets.ROTATION_PRESET_RECK],
 		// Preset gear configurations that the user can quickly select.
 		gear: Presets.GEAR_PRESETS,
 	},
 
-	autoRotation: (_player: Player<Spec.SpecDpsWarrior>): APLRotation => {
-		return Presets.ROTATION_PRESET_NO_RECK.rotation.rotation!;
+	// Arena (189 build/gear pairs): Dance beats No Reck on every one (+4..+16%); only 5/5 Bloodthrill
+	// with a two-hander does better staying in Battle Stance (+3..+6% over Dance).
+	autoRotation: (player: Player<Spec.SpecDpsWarrior>): APLRotation => {
+		const battle = player.getTalents().bloodthrill === 5 && Presets.isArmsSpec(player);
+		return (battle ? Presets.ROTATION_PRESET_BATTLE : Presets.ROTATION_PRESET_DANCE).rotation.rotation!;
 	},
 
 	reforge: {

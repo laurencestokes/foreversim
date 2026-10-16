@@ -37,8 +37,10 @@ func TestEnhancement(t *testing.T) {
 					},
 				},
 			}},
-			// Naked, for the same reason as Elemental and the merged Mage port.
-			GearSet:  core.GearSetCombo{Label: "Naked", GearSet: &proto.EquipmentSpec{}},
+			// Arcanite Reaper alone, as Retribution: the generated item database does not carry the
+			// Forever gear our sim tests with, and a naked shaman never casts Stormstrike or procs
+			// Windfury, Flurry or Elemental Weapons.
+			GearSet:  core.GearSetCombo{Label: "Weapon", GearSet: WeaponOnly},
 			Talents:  DefaultTalents,
 			Rotation: core.GetAplRotation("../../../ui/specs/shaman/enhancement/apls", "forever"),
 			ItemFilter: core.ItemFilter{
@@ -56,6 +58,13 @@ func TestEnhancement(t *testing.T) {
 			},
 		},
 	}))
+}
+
+var WeaponOnly = &proto.EquipmentSpec{
+	Items: []*proto.ItemSpec{
+		{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+		{Id: 12784}, // Arcanite Reaper
+	},
 }
 
 // The community build our Forever sim ranks Enhancement with.

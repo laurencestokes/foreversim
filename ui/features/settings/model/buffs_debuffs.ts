@@ -35,8 +35,8 @@ export const RetributionAura = makeBooleanPartyBuffInput({
 	actionId: ActionId.fromSpellId(10301),
 	fieldName: 'retributionAura',
 	label: 'Retribution Aura',
-	// A damage shield only matters on the unit being hit, so only tanks get to pick it. The spell
-	// power it scales with is the RetributionAuraSpellPower other-input, shown under the same rule.
+	// A damage shield only matters on the unit being hit, so only tanks get to pick it. It scales
+	// with the tank's own spell power.
 	showWhen: (party: Party) => !!party.getPlayer(0)?.getPlayerSpec().isTankSpec,
 });
 

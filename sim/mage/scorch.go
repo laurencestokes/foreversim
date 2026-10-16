@@ -21,6 +21,7 @@ func (mage *Mage) registerScorchRank(scorchRank *spelldata.Spell) {
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: MageSpellScorch,
+		MaxRange:       float64(scorchRank.MaxRange),
 		Rank:           scorchRank.RankNumber(),
 
 		ManaCost: core.ManaCostOptions{

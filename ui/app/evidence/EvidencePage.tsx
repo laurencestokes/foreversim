@@ -60,7 +60,7 @@ const NEEDS: Array<Need> = [
 	},
 	{
 		title: 'Warrior: is Flurry 25% at five points, or a flat 30%?',
-		why: "The talent's rank curve reads 5% attack speed a point, Classic's values, but the buff it triggers now carries a flat 30%. The sim applies the curve. If the buff wins, every Fury warrior on the site swings faster than shown. Flurry sits at level 35, above the beta's level cap, so no public beta log has it yet.",
+		why: "The talent's rank curve reads 5% attack speed a point, but the buff it triggers now carries a flat 30%. The sim applies the curve. The shaman's Flurry has the same split, and beta logs time it at 10% and 15% on shamans with different point totals, so there the curve won; the warrior's has not been seen. If the buff wins, every Fury warrior on the site swings faster than shown. Flurry sits at level 35, above the beta's level cap, so no public beta log has it yet.",
 		send: 'Once the cap allows it: a screenshot of the Flurry buff tooltip with one point in the talent. It shows 5% or 30%, and that settles it.',
 		find: 'Flurry',
 	},

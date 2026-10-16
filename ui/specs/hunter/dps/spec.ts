@@ -143,7 +143,7 @@ export default defineSpec<Spec.SpecHunter>({
 		// Preset talents that the user can quickly select.
 		talents: Presets.TalentPresets,
 		// Preset rotations that the user can quickly select.
-		rotations: [Presets.MarksmanshipRotation],
+		rotations: [Presets.MarksmanshipRotation, Presets.SurvivalMeleeRotation],
 		// Preset gear configurations that the user can quickly select.
 		gear: Presets.GEAR_PRESETS,
 	},

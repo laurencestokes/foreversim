@@ -6,6 +6,8 @@ import { DpsWarrior_Options as WarriorOptions, WarriorStance } from '@generated/
 import { Player } from '@sim/player/player';
 
 import * as WarriorPresets from '../shared/presets';
+import ForeverBattleApl from './apls/dps_battle.apl.json';
+import ForeverDanceApl from './apls/dps_dance.apl.json';
 import ForeverNoReckApl from './apls/dps_no_reck.apl.json';
 import ForeverReckApl from './apls/dps_reck.apl.json';
 import ArmsLaunchGear from './gear_sets/arms_launch.gear.json';
@@ -31,10 +33,14 @@ export const isFurySpec = (player: Player<Spec.SpecDpsWarrior>) =>
 // Master's rotation presets, in master's order; No Reck is master's default.
 export const ROTATION_PRESET_NO_RECK = PresetUtils.makePresetAPLRotation('DPS (No Reck)', ForeverNoReckApl);
 export const ROTATION_PRESET_RECK = PresetUtils.makePresetAPLRotation('DPS (With Reck)', ForeverReckApl);
+// Ours: With Reck plus Overpower. Dance swaps to Battle Stance for a dodge's Overpower and back;
+// Battle stays there to keep Rend up for Bloodthrill's Overpower windows.
+export const ROTATION_PRESET_DANCE = PresetUtils.makePresetAPLRotation('DPS (Stance Dance)', ForeverDanceApl);
+export const ROTATION_PRESET_BATTLE = PresetUtils.makePresetAPLRotation('DPS (Battle Stance)', ForeverBattleApl);
 
 // The three builds our Forever sim ships.
-export const DpsTalents = PresetUtils.makePresetTalents('DPS', SavedTalents.create({ talentsString: '30305013-050520035150310051' }));
-export const FuryTalents = PresetUtils.makePresetTalents('Fury 17/34/0', SavedTalents.create({ talentsString: '30305213-550501015050010051' }));
+export const DpsTalents = PresetUtils.makePresetTalents('DPS', SavedTalents.create({ talentsString: '30305013-05553005150010501' }));
+export const FuryTalents = PresetUtils.makePresetTalents('Fury 17/34/0', SavedTalents.create({ talentsString: '30305213-55051105050010501' }));
 export const ArmsTalents = PresetUtils.makePresetTalents('Arms 39/12/0', SavedTalents.create({ talentsString: '32305213132515201-5502' }));
 
 export const DefaultOptions = WarriorOptions.create({

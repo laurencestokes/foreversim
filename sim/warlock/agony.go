@@ -22,6 +22,7 @@ func (warlock *Warlock) registerCurseOfAgony() {
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellCurseOfAgony,
+		MaxRange:       float64(rank.MaxRange),
 
 		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
 		Cast: core.CastConfig{
@@ -57,11 +58,7 @@ func (warlock *Warlock) registerCurseOfAgony() {
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, periodicTickOutcome(rank, dot))
 				if dot.TickCount()%4 == 0 {
-					// The ramp adds to the raw base, not the live SnapshotBaseDamage: with dynamic
-					// dots on, SnapshotBaseDamage gets recomputed from SnapshotRawBaseDamage before
-					// every tick, so poking it directly here would be overwritten and lost on the
-					// next tick.
-					dot.SnapshotRawBaseDamage += rampStep
+					dot.SnapshotBaseDamage += rampStep
 				}
 			},
 		},

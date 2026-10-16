@@ -52,7 +52,7 @@ func (priest *Priest) registerHolyFireSpell(rank *spelldata.Spell) {
 				dot.Snapshot(target, tick.Average(core.CharacterLevel))
 			},
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, priestTickOutcome(rank.PeriodicCanCrit(), dot))
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, priest.tickOutcome(rank.PeriodicCanCrit(), dot))
 			},
 		},
 
@@ -66,11 +66,13 @@ func (priest *Priest) registerHolyFireSpell(rank *spelldata.Spell) {
 	}))
 }
 
-// Whether this priest's Holy Fire is burning the target, which is what Power in Light asks.
-func (priest *Priest) hasActiveHolyFire(target *core.Unit) bool {
-	for _, spell := range priest.HolyFire {
-		if spell.Dot(target).IsActive() {
-			return true
+// Whether this priest's Holy Fire or Shadow Word: Pain is on the target, which is what Power in Light asks.
+func (priest *Priest) hasPowerInLightDot(target *core.Unit) bool {
+	for _, spells := range [][]*core.Spell{priest.HolyFire, priest.ShadowWordPain} {
+		for _, spell := range spells {
+			if spell.Dot(target).IsActive() {
+				return true
+			}
 		}
 	}
 	return false

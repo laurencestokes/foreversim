@@ -551,6 +551,32 @@
     {
       "action": {
         "condition": {
+          "cmp": {
+            "op": "OpLt",
+            "lhs": {
+              "spellCastTime": {
+                "spellId": {
+                  "spellId": 11605
+                }
+              }
+            },
+            "rhs": {
+              "const": {
+                "val": "1.5s"
+              }
+            }
+          }
+        },
+        "castSpell": {
+          "spellId": {
+            "spellId": 11605
+          }
+        }
+      }
+    },
+    {
+      "action": {
+        "condition": {
           "and": {
             "vals": [
               {
@@ -567,27 +593,16 @@
                 }
               },
               {
-                "or": {
-                  "vals": [
-                    {
-                      "cmp": {
-                        "op": "OpGe",
-                        "lhs": {
-                          "currentRage": {}
-                        },
-                        "rhs": {
-                          "const": {
-                            "val": "40"
-                          }
-                        }
-                      }
-                    },
-                    {
-                      "isExecutePhase": {
-                        "threshold": "E20"
-                      }
+                "cmp": {
+                  "op": "OpGe",
+                  "lhs": {
+                    "currentRage": {}
+                  },
+                  "rhs": {
+                    "const": {
+                      "val": "40"
                     }
-                  ]
+                  }
                 }
               }
             ]
@@ -621,27 +636,16 @@
                 }
               },
               {
-                "or": {
-                  "vals": [
-                    {
-                      "cmp": {
-                        "op": "OpGe",
-                        "lhs": {
-                          "currentRage": {}
-                        },
-                        "rhs": {
-                          "const": {
-                            "val": "40"
-                          }
-                        }
-                      }
-                    },
-                    {
-                      "isExecutePhase": {
-                        "threshold": "E20"
-                      }
+                "cmp": {
+                  "op": "OpGe",
+                  "lhs": {
+                    "currentRage": {}
+                  },
+                  "rhs": {
+                    "const": {
+                      "val": "40"
                     }
-                  ]
+                  }
                 }
               }
             ]

@@ -144,7 +144,7 @@ func (mb *manaBar) doneIteration(sim *Simulation) {
 			// Vampiric Touch mana threat goes to the priest, so it's handled in the priest code.
 			continue
 		}
-		if resourceMetrics.ActualGainForCurrentIteration() <= 0 {
+		if resourceMetrics.NoThreat || resourceMetrics.ActualGainForCurrentIteration() <= 0 {
 			continue
 		}
 

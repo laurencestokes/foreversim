@@ -9,7 +9,7 @@ import (
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-var TalentTreeSizes = [3]int{16, 19, 16}
+var TalentTreeSizes = [3]int{16, 20, 16}
 
 type Druid struct {
 	core.Character
@@ -52,6 +52,7 @@ type Druid struct {
 	Shred                *DruidSpell
 	Starfire             []*DruidSpell
 	TigersFury           *DruidSpell
+	ShiftingPower        *DruidSpell
 	Swipe                *DruidSpell
 	Wrath                *DruidSpell
 
@@ -118,6 +119,7 @@ const (
 	DruidSpellWrath
 	DruidSpellEnrage
 	DruidSpellTigersFury
+	DruidSpellShiftingPower
 	DruidSpellCatForm
 	DruidSpellBearForm
 	DruidSpellMoonkinForm
@@ -272,6 +274,7 @@ func (druid *Druid) RegisterFeralCatSpells() {
 	druid.registerProwlSpell()
 	druid.registerRavageSpell()
 	druid.registerTigersFurySpell()
+	druid.registerShiftingPowerSpell()
 }
 
 func (druid *Druid) RegisterFeralTankSpells() {

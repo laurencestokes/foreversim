@@ -41,12 +41,16 @@ type EnergyBarOptions struct {
 func (unit *Unit) EnableEnergyBar(options EnergyBarOptions) {
 	unit.SetCurrentPowerBar(EnergyBar)
 
+	// Energy refills smoothly at 10 a second (client 1.60.1.70205 PowerType Energy RegenCombat 10), not in
+	// Classic's 20-energy ticks every 2 s: in beta logs (rogues + cat druids, reports 2670-2717) the gaps
+	// between energy spends that weren't GCD-bound sit evenly across a 2 s cycle instead of piling on the
+	// tick. 1 every 100 ms, the smooth refill pet focus has (focus.go).
 	unit.energyBar = energyBar{
 		unit:                  unit,
 		maxEnergy:             max(10, options.MaxEnergy),
 		maxComboPoints:        options.MaxComboPoints,
-		EnergyTickDuration:    time.Millisecond * 2020,
-		EnergyPerTick:         20.2,
+		EnergyTickDuration:    time.Millisecond * 100,
+		EnergyPerTick:         1,
 		energyRegenMultiplier: 1,
 		regenMetrics:          unit.NewEnergyMetrics(ActionID{OtherID: proto.OtherAction_OtherActionEnergyRegen}),
 		EnergyRefundMetrics:   unit.NewEnergyMetrics(ActionID{OtherID: proto.OtherAction_OtherActionRefund}),

@@ -116,6 +116,30 @@ func driveManaTideTotems(char *core.Character, party *proto.PartyBuffs) {
 // The extra attack 10610 grants is always a main-hand one.
 var windfuryTotemPartyAura = spelldata.MustFind(10612)
 
+// Since build 70009 Tranquil Air, Windfury and Grace of Air totems no longer
+// stack, even from different shamans in the group (Forever beta development
+// notes). One air totem stands: a totem the shaman casts replaces the one the
+// party buffs assume, and of the two party buffs Windfury holds.
+var AirTotemCategory = "AirTotem"
+
+const (
+	AirTotemPartyGraceOfAir = iota + 1
+	AirTotemPartyWindfury
+	AirTotemCastGraceOfAir
+	AirTotemCastWindfury
+)
+
+// Flametongue Totem no longer stacks with Flametongue Weapon or Windfury Totem (the same notes), and a
+// main-hand Flametongue Weapon "disables any benefit you personally receive from Flametongue Totem"
+// (tooltips 8024/16342). Neither text says which of the two totems holds; Windfury, the stronger, does.
+var FlametongueTotemCategory = "FlametongueTotem"
+
+const (
+	FlametongueTotemCast = iota + 1
+	FlametongueTotemWindfuryTotem
+	FlametongueTotemMainHandImbue
+)
+
 func driveWindfuryTotem(char *core.Character, _ *proto.PartyBuffs) {
 	procAura := WindfuryTotemAura(&char.Unit, false, 0)
 	// The attack power is only there for a moment after a proc, so it is not
@@ -174,6 +198,9 @@ func driveWindfuryTotem(char *core.Character, _ *proto.PartyBuffs) {
 		})
 	})
 
+	// Joined first, so a cast air totem refuses the aura before it arms the proc.
+	totemAura.NewExclusiveEffect(AirTotemCategory, true, core.ExclusiveEffect{Priority: AirTotemPartyWindfury})
+	totemAura.NewExclusiveEffect(FlametongueTotemCategory, false, core.ExclusiveEffect{Priority: FlametongueTotemWindfuryTotem})
 	totemAura.NewExclusiveEffect(WindfuryTotemCategory, false, core.ExclusiveEffect{
 		Priority: WindfuryTotemValue(0),
 		OnGain: func(_ *core.ExclusiveEffect, sim *core.Simulation) {
@@ -191,6 +218,7 @@ func driveWindfuryTotem(char *core.Character, _ *proto.PartyBuffs) {
 // who is not twisting leaves it standing.
 func driveGraceOfAirTotem(char *core.Character, party *proto.PartyBuffs) {
 	aura := GraceOfAirTotemAura(&char.Unit, false, 0)
+	aura.NewExclusiveEffect(AirTotemCategory, true, core.ExclusiveEffect{Priority: AirTotemPartyGraceOfAir})
 
 	if !party.TotemTwisting {
 		core.MakePermanent(aura)
@@ -211,10 +239,10 @@ func driveGraceOfAirTotem(char *core.Character, party *proto.PartyBuffs) {
 	})
 }
 
-// The party's Retribution Aura is the top rank, and its damage carries the
-// providing paladin's Holy spell power, which the party states alongside it.
-func driveRetributionAura(char *core.Character, party *proto.PartyBuffs) {
-	core.MakePermanent(RetributionAuraBuff(char, false, RetributionAuraMaxRank, party.RetributionAuraSpellPower))
+// The party's Retribution Aura is the top rank at its base damage: it scales with
+// the paladin's spell power, which the party config does not carry.
+func driveRetributionAura(char *core.Character, _ *proto.PartyBuffs) {
+	core.MakePermanent(RetributionAuraBuff(char, false, RetributionAuraMaxRank))
 }
 
 // The blessing does nothing on its own: the paladin's Holy Light and Flash of

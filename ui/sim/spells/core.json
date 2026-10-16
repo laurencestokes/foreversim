@@ -14,9 +14,9 @@
 	"10301": {
 		"ability": "Retribution Aura",
 		"file": "sim/core/buffs/paladin.go",
-		"note": "Client 10301 (1.60.1.70009): 30 Holy damage to each melee attacker where Era's is 20, and #385 scales it with the providing paladin's Holy spell power at 0.1357 (1.5/3.5/3 x 0.95), checked in game at level 20. The raid option takes that spell power as its own input.",
+		"note": "Client 10301: 20 Holy damage to each melee attacker since 1.60.1.70291 (was 30), back to Era's. Blizzard's beta notes of 8 Oct 2026 set the rest: \"the spell power ratio has been reduced to 6% (was 13.3%)\" and it now uses \"the casting Paladin's spell power\" instead of the struck member's. That retires #385's level-20 reading (0.1357) and the holder split in beta logs 2729-2736, both from the build before. The paladin's own aura adds 6% of the paladin's Holy spell power; the raid option deals the base, as the party config does not carry the paladin's spell power.",
 		"source": "forever",
-		"tooltip": "Causes 30 Holy damage, plus 13.6% of the paladin's Holy spell power, to any enemy that strikes a party member within 30 yards."
+		"tooltip": "Causes 20 Holy damage, plus 6% of the paladin's Holy spell power, to any enemy that strikes a party member within 30 yards."
 	},
 	"10610": {
 		"ability": "Windfury Totem Rank 3",
@@ -75,13 +75,9 @@
 	"1260198": {
 		"ability": "Touch of the Grave",
 		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: 1260189 (warrior, paladin, rogue) procs at 5% and 1260201 (priest, mage, warlock) at 10%, both with a 1 sec proc cooldown (SpellAuraOptions); the drain 1260198 is a health leech of 5% of the caster's maximum health.",
-		"source": "assumed",
-		"tooltip": "Passive\nYour spells and attacks have a 5% chance (10% for priests, mages and warlocks) to drain Health from the target, up to 5% of your maximum Health.",
-		"assumptions": [
-			"The drain is taken as Shadow damage that can be partially resisted and cannot crit.",
-			"Applying a damage over time spell can proc it and its ticks cannot (beta testing), although the client proc flags include periodic damage."
-		]
+		"source": "forever",
+		"note": "Forever's Undead racial, from the client's spells: aura 1260189 (warrior, paladin, rogue, 5%) or 1260201 (everyone else, 10%) on a landed hit, 1 sec cooldown, drains 5% of the caster's maximum health as Shadow damage and heals the same.",
+		"tooltip": "Passive\nYour damaging attacks and spells have a chance to drain 5% of your maximum health from the target as Shadow damage, healing you for the same amount."
 	},
 	"14325": {
 		"ability": "Hunter's Mark",
@@ -157,7 +153,7 @@
 		"file": "sim/core/racials.go",
 		"note": "Client 20572 (1.60.1.70009): 10% attack power and 10% spell power for 15 sec on a 2 min cooldown, with no healing penalty; Era's is 25% base melee attack power and halves healing taken. The sim scales melee and ranged attack power, spell damage and healing.",
 		"source": "forever",
-		"tooltip": "Instant\n2 min cooldown\nIncreases Attack Power and Spell Power by 10% for 15 sec."
+		"tooltip": "Instant\n2 min cooldown\nIncreases your attack power and spell power by 10% for 15 sec."
 	},
 	"20594": {
 		"ability": "Stoneform",
@@ -289,96 +285,8 @@
 	"9910": {
 		"ability": "Thorns",
 		"file": "sim/druid/thorns.go",
-		"note": "Rank 6, the druid's own cast; the raid option registers the same shield in sim/core/buffs/buffs_auto_gen.go. Client 9910 (1.60.1.70009): 22 Nature damage per melee hit taken, up from Classic Era's 18. Forever has no Improved Thorns or Brambles, so neither copy takes talent points, and the damage is dealt under 9910 itself.",
+		"note": "Rank 6, the druid's own cast; the raid option registers the same shield in sim/core/buffs/buffs_auto_gen.go. Client 9910 (1.60.1.70009): 22 Nature damage per melee hit taken, up from Classic Era's 18; 1.60.1.70291 put it back to 18 (#758). Forever has no Improved Thorns or Brambles, so neither copy takes talent points, and the damage is dealt under 9910 itself. The druid's own copy adds 6% of the druid's Nature spell power (Blizzard beta notes 24 Sep + 8 Oct 2026: scales with the caster's spell power, ratio 6%; the client row has no coefficient); the raid option's copy deals the base, as the notes say it does when the caster can't be found.",
 		"source": "forever",
-		"tooltip": "320 Mana\nInstant\nThorns sprout from the friendly target causing 22 Nature damage to attackers when hit. Lasts 10 min."
-	},
-	"1259710": {
-		"ability": "Wind Blessed",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the Skyborne passive, 1% melee, ranged and casting speed (auras 342 and 65). Both Skyborne halves share it.",
-		"source": "forever",
-		"tooltip": "Passive\nIncreases your spellcasting, melee, and ranged Haste by 1%."
-	},
-	"1259719": {
-		"ability": "Mace Specialization",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: moved to the dwarves, 1% critical strike while a one- or two-handed mace is equipped.",
-		"source": "forever",
-		"tooltip": "Passive\nIncreases your critical strike chance with all spells and attacks by 1% while you have a mace or two-handed mace equipped."
-	},
-	"1259799": {
-		"ability": "Elune's Light",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the night elf's Forever cooldown, +10% critical strike chance (aura 290) for 15 sec on a 3 min cooldown.",
-		"source": "forever",
-		"tooltip": "Instant\n3 min cooldown\nIncreases your critical strike chance with all spells and attacks by 10% for 15 sec."
-	},
-	"1259812": {
-		"ability": "Eureka! (rogue)",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.70009: the next 3 of the abilities on its SpellEffect class mask within 15 sec cost 10% less Energy and deal 10% more damage, Rupture and Garrote ticks included; 2 min cooldown.",
-		"source": "assumed",
-		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Energy cost reduced by 10% and deal 10% more damage.",
-		"assumptions": ["Blade Flurry is on the client mask but deals no damage itself, so it is taken not to spend a charge (\"damaging abilities\")."]
-	},
-	"1259813": {
-		"ability": "Eureka! (warrior)",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.70009: the next 3 of the abilities on its SpellEffect class mask within 15 sec (SpellAuraOptions charges) cost 10% less Rage and deal 10% more damage; 2 min cooldown.",
-		"source": "forever",
-		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Rage cost reduced by 10% and deal 10% more damage."
-	},
-	"1259817": {
-		"ability": "Eureka! (mage)",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.70009: the next 3 of the spells on its SpellEffect class mask within 15 sec cost 10% less Mana and deal 10% more damage, periodic damage included (Fireball's and Pyroblast's DoTs, Frostfire Bolt); 2 min cooldown.",
-		"source": "forever",
-		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Mana cost reduced by 10% and deal 10% more damage."
-	},
-	"1259821": {
-		"ability": "Eureka! (warlock)",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.70009: the next 3 of the spells on its SpellEffect class masks within 15 sec cost 10% less Mana and deal 10% more damage, periodic damage included; 2 min cooldown.",
-		"source": "forever",
-		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Mana cost reduced by 10% and deal 10% more damage."
-	},
-	"1259823": {
-		"ability": "Eureka! (priest)",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.70009: the next 3 of the spells on its SpellEffect class mask within 15 sec cost 10% less Mana and deal 10% more damage; 2 min cooldown.",
-		"source": "assumed",
-		"tooltip": "Instant\n2 min cooldown\nYour next 3 damaging abilities have their Mana cost reduced by 10% and deal 10% more damage.",
-		"assumptions": [
-			"The client mask also covers the heals (Flash Heal, Greater Heal, Heal, Renew, etc.), but the tooltip reads \"damaging abilities\", so heals are taken not to spend a charge or take the bonus."
-		]
-	},
-	"1299026": {
-		"ability": "Shatter Curse",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the orc's Forever cooldown in place of Command, 15% less magic damage taken (aura 87, school mask 126) for 8 sec on a 3 min cooldown. A survival cooldown.",
-		"source": "forever",
-		"tooltip": "Instant\n3 min cooldown\nInstantly removes and grants immunity to all Curses and Banes, and reduces all Magical damage taken by 15% for 8 sec."
-	},
-	"20554": {
-		"ability": "Berserking",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: a flat 10% melee, ranged and casting speed (auras 319, 140 and 65) for 10 sec on a 3 min cooldown, for every class, with no SpellPower cost row.",
-		"source": "forever",
-		"tooltip": "Instant\n3 min cooldown\nIncreases your spellcasting and attack speed by 10% for 10 sec."
-	},
-	"20574": {
-		"ability": "Axe Specialization",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the orc racial pays 1% critical strike while a one- or two-handed axe is equipped.",
-		"source": "forever",
-		"tooltip": "Passive\nIncreases your critical strike chance with all spells and abilities by 1% while you have an axe or a two-handed axe equipped."
-	},
-	"20597": {
-		"ability": "Sword Specialization",
-		"file": "sim/core/racials.go",
-		"note": "Beta client build 1.60.1.69977: the human racial pays 2% critical strike (aura 290) while a one- or two-handed sword is equipped (SpellEquippedItems).",
-		"source": "forever",
-		"tooltip": "Passive\nIncreases your critical strike chance with all spells and attacks by 2% while you have a sword or two-handed sword equipped."
+		"tooltip": "320 Mana\nInstant\nThorns sprout from the friendly target causing 18 Nature damage to attackers when hit. Lasts 10 min."
 	}
 }

@@ -48,7 +48,7 @@ func ExampleSpell_EffectN() {
 	fmt.Println(frostbolt.EffectN(3) == NilEffect)
 	// Output:
 	// 1
-	// 19 21 0.407
+	// 19 19 0.407
 	// true
 }
 

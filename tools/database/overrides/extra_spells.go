@@ -9,4 +9,10 @@ type Extra struct {
 }
 
 // The spells the generator adds to the store's roots by hand.
-var ExtraSpells = []Extra{}
+var ExtraSpells = []Extra{
+	{
+		SpellID: 5217,
+		Reason:  "Tiger's Fury: build 70170 grants rank 1 instead of training it, so no class ladder reaches it",
+		Source:  "client 1.60.1.70170 SkillLineAbility 3310 AcquireMethod 0 -> 3",
+	},
+}

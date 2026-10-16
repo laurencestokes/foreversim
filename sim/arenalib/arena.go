@@ -138,6 +138,16 @@ type Spec struct {
 	// name, where the page decides it in code rather than in a file the arena can read. A build
 	// not listed plays the page's default gear set and the spec's one rotation.
 	RaceBuilds map[string]RaceBuild
+	// Rotations that differ by class options rather than by APL: a warlock who sacrifices a demon
+	// before the pull runs the same priority list with another demon out. Each is ranked as a
+	// rotation of its own, under its key, so the arena keeps it only for the builds it wins.
+	Variants map[string]Variant
+}
+
+// A rotation file run with other spec options.
+type Variant struct {
+	Rotation    string
+	SpecOptions interface{}
 }
 
 type TalentBuild struct {
@@ -166,6 +176,13 @@ func Run(t *testing.T, spec Spec) {
 	}
 	gearSets := filter(namesIn(filepath.Join(uiDir, "gear_sets"), ".gear.json"), spec.GearSets)
 	rotations := filter(namesIn(filepath.Join(uiDir, "apls"), ".apl.json"), spec.Rotations)
+	for _, name := range slices.Sorted(maps.Keys(spec.Variants)) {
+		rotations = append(rotations, name)
+	}
+	if rotationAuditOn() && len(gearSets) > 0 && len(rotations) > 0 {
+		auditRotations(t, spec, talents, gearSets, rotations)
+		return
+	}
 	if outDir != "" && os.Getenv(relevanceEnv) != "" {
 		surveyRelevance(t, spec, outDir, talents, gearSets, rotations)
 		return
@@ -467,7 +484,6 @@ func (m *memo) all(runs []run) []Result {
 }
 
 func runAt(spec Spec, talent TalentBuild, gear string, rotation string, iterations int32) (row Result) {
-	uiDir := specDir(spec)
 	environment := consumesFor(spec.Role, spec.ClassImbues)
 	row = Result{
 		Spec:        spec.Dir,
@@ -488,14 +504,10 @@ func runAt(spec Spec, talent TalentBuild, gear string, rotation string, iteratio
 		}
 	}()
 
-	gearCombo := core.GetGearSet(filepath.Join(uiDir, "gear_sets"), gear)
-	rotationProto := &proto.APLRotation{}
-	if rotation != "" {
-		rotationProto = core.GetAplRotation(filepath.Join(uiDir, "apls"), rotation).Rotation
-	}
+	raid := raidFor(spec, talent, gear, rotation, environment)
 
 	result := core.RunRaidSim(&proto.RaidSimRequest{
-		Raid:      arenaRaid(spec, environment, spec.Race, gearCombo.GearSet, talent.Talents, rotationProto, spec.SpecOptions),
+		Raid:      raid,
 		Encounter: core.MakeSingleTargetEncounter(0),
 		SimOptions: &proto.SimOptions{
 			Iterations: iterations,
@@ -518,6 +530,21 @@ func runAt(spec Spec, talent TalentBuild, gear string, rotation string, iteratio
 		collect(&row, pet)
 	}
 	return row
+}
+
+// The one-player raid a build is simulated in.
+func raidFor(spec Spec, talent TalentBuild, gear string, rotation string, environment core.BuffsCombo) *proto.Raid {
+	uiDir := specDir(spec)
+	specOptions := spec.SpecOptions
+	if variant, ok := spec.Variants[rotation]; ok {
+		rotation, specOptions = variant.Rotation, variant.SpecOptions
+	}
+	gearCombo := core.GetGearSet(filepath.Join(uiDir, "gear_sets"), gear)
+	rotationProto := &proto.APLRotation{}
+	if rotation != "" {
+		rotationProto = core.GetAplRotation(filepath.Join(uiDir, "apls"), rotation).Rotation
+	}
+	return arenaRaid(spec, environment, spec.Race, gearCombo.GearSet, talent.Talents, rotationProto, specOptions)
 }
 
 // Every arena run uses the same random stream, so two builds, or two races, meet the same rolls.

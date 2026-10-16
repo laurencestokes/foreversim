@@ -26,6 +26,7 @@
 				}
 			}
 		},
+		{ "action": { "castSpell": { "spellId": { "spellId": 19280, "rank": 6 } } } },
 		{ "action": { "castSpell": { "spellId": { "spellId": 10947, "rank": 9 } } } },
 		{ "action": { "castSpell": { "spellId": { "spellId": 1309636, "rank": 4 } } } },
 		{ "action": { "channelSpell": { "spellId": { "spellId": 18807, "rank": 6 } } } }

@@ -650,7 +650,7 @@ func (equipment *Equipment) Stats(spec proto.Spec) stats.Stats {
 		equipStats = equipStats.Add(ItemEquipmentGemAndEnchantStats(item))
 	}
 
-	return unifyGearHitAndCrit(equipStats)
+	return UnifyGearHitAndCrit(equipStats)
 }
 
 // Returns the base stats on the equipment. That is all stats without Gems / Enchants

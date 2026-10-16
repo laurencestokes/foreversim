@@ -15,7 +15,6 @@ type focusBar struct {
 	maxFocus          float64
 	currentFocus      float64
 	focusRegenPerTick float64
-	focusTickInterval float64
 	focusTickDuration time.Duration
 	nextFocusTick     time.Duration
 
@@ -26,12 +25,14 @@ type focusBar struct {
 func (unit *Unit) EnableFocusBar(focusRegenMultiplier float64) {
 	unit.SetCurrentPowerBar(FocusBar)
 
+	// Focus regenerates 10 a second, as Energy does: client 1.60.1.70205 PowerType Focus RegenCombat 10
+	// (Energy's row reads the same). Beta logs agree: busy pets spend at least 9.5 focus a second, Claw lands
+	// every 2.4 s with the odd 3.2 s, a smooth refill; a 2 s tick would leave a 4 s gap one Claw in five.
 	unit.focusBar = focusBar{
 		unit:               unit,
 		maxFocus:           100.0,
-		focusRegenPerTick:  25.0 * focusRegenMultiplier,
-		focusTickInterval:  5,
-		focusTickDuration:  time.Second * 5,
+		focusRegenPerTick:  2.5 * focusRegenMultiplier,
+		focusTickDuration:  time.Millisecond * 250,
 		regenMetrics:       unit.NewFocusMetrics(ActionID{OtherID: proto.OtherAction_OtherActionFocusRegen}),
 		focusRefundMetrics: unit.NewFocusMetrics(ActionID{OtherID: proto.OtherAction_OtherActionRefund}),
 	}

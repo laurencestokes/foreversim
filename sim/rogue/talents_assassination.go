@@ -160,8 +160,11 @@ func (rogue *Rogue) registerColdBlood() {
 		ActionID: actionID,
 		Duration: core.NeverExpires,
 
+		// Both Mutilate hands take the crit, then the off-hand strike (always second) spends the
+		// charge. Beta logs 2701/2702 showed Cold Blood surviving every Mutilate, but dev
+		// AidanZMoon called that a bug fixed by the 8 or 15 October build (forever-bugs #224).
 		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if spell.Matches(RogueSpellColdBlooded) {
+			if spell.Matches(RogueSpellColdBlooded&^RogueSpellMutilateHit) || spell == rogue.MutilateOH {
 				aura.Deactivate(sim)
 			}
 		},
@@ -236,7 +239,9 @@ func (rogue *Rogue) registerMutilate() {
 		SpellSchool:    mutilateRank.SpellSchool(),
 		DefenseType:    mutilateRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskMeleeMHSpecial,
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
+		// The cast deals no damage (1241584 has no damage effect); its two hand strikes do, and they
+		// are what poisons and on-hit effects roll on. Without this every Mutilate rolled a third time.
+		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL | core.SpellFlagNoOnDamageDealt,
 		ClassSpellMask: RogueSpellMutilate,
 		MaxRange:       core.MaxMeleeRange,
 
@@ -262,8 +267,9 @@ func (rogue *Rogue) registerMutilate() {
 			result := spell.CalcOutcome(sim, target, spell.OutcomeMeleeSpecialHit) // Miss/Dodge/Parry/Hit
 			if result.Landed() {
 				rogue.AddComboPoints(sim, mutilateComboPoints(), spell.ComboPointMetrics())
-				rogue.MutilateOH.Cast(sim, target)
+				// Main hand first, as the client orders them (1310706 is effect 1, 1310705 effect 2).
 				rogue.MutilateMH.Cast(sim, target)
+				rogue.MutilateOH.Cast(sim, target)
 			} else {
 				spell.IssueRefund(sim)
 			}
@@ -328,7 +334,10 @@ func (rogue *Rogue) newMutilateHitSpell(isMH bool) *core.Spell {
 				spell.DamageMultiplier *= 1 + poisonBonus
 			}
 
-			spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
+			// The parent cast already rolled miss/dodge/parry: every hit rank carries the client's
+			// No Attack Miss/Dodge/Parry attributes (Attributes_7 0x3800000), so a hand can only be
+			// blocked or crit, as for Stormstrike.
+			spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialBlockAndCrit)
 			spell.DamageMultiplier = oldMultiplier
 		},
 	})

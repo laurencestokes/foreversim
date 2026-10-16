@@ -11,13 +11,15 @@ import (
 // base: rank 5 ticks 320 every 3 sec, five ticks. The tooltip's "(1640 + Spirit) Mana" adds Spirit on
 // top, which the row does not state; a beta combat log settles how: Papa (report 40, rank 1, Spirit 72)
 // took 80 health and gained 94, 94, 95, 94, 95 mana a tick, so each tick pays base + Spirit / 5. The
-// health cost is not modelled. The cooldown manager uses it once the whole gain fits in the mana bar.
+// health cost is not modelled. Every rank is flagged No Threat (1.60.1.70205 SpellMisc Attributes[1]
+// 0x400), so the mana adds no threat. The cooldown manager uses it once the whole gain fits in the mana bar.
 var DarkSacrificeRank = spellData.DarkSacrifice.Highest()
 
 func (priest *Priest) registerDarkSacrificeSpell() {
 	rank := DarkSacrificeRank
 	effect := rank.ProcEnergizeEffect()
 	metrics := priest.NewManaMetrics(core.ActionID{SpellID: rank.ID})
+	metrics.NoThreat = rank.NoThreat()
 	tick := func() float64 {
 		return effect.Average(priest.Level) + priest.GetStat(stats.Spirit)/5
 	}

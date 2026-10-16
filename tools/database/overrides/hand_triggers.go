@@ -54,4 +54,44 @@ var HandTriggers = []HandTrigger{
 			"0.214 coefficient; beta logs record every Fire Nova hit as 408423 and none as the $-cited Era row",
 		Source: "foreverlogs:2650,2671,2673,32,35",
 	},
+	{
+		Spell:    13795,
+		Triggers: 13797,
+		Reason: "Immolation Trap rank 1's trap object casts the burn 13797. Client 1.60.1.70291 renamed the burn " +
+			"from \"Immolation Trap Effect\" to \"Immolation Trap\", the cast's own name, so it no longer forms a family " +
+			"of its own (#758); same rank, fire school and 15 s periodic damage as before the rename",
+		Source: "client-rows",
+	},
+	{
+		Spell:    14302,
+		Triggers: 14298,
+		Reason: "Immolation Trap rank 2's trap object casts the burn 14298. Client 1.60.1.70291 renamed the burn " +
+			"from \"Immolation Trap Effect\" to \"Immolation Trap\", the cast's own name, so it no longer forms a family " +
+			"of its own (#758); same rank, fire school and 15 s periodic damage as before the rename",
+		Source: "client-rows",
+	},
+	{
+		Spell:    14303,
+		Triggers: 14299,
+		Reason: "Immolation Trap rank 3's trap object casts the burn 14299. Client 1.60.1.70291 renamed the burn " +
+			"from \"Immolation Trap Effect\" to \"Immolation Trap\", the cast's own name, so it no longer forms a family " +
+			"of its own (#758); same rank, fire school and 15 s periodic damage as before the rename",
+		Source: "client-rows",
+	},
+	{
+		Spell:    14304,
+		Triggers: 14300,
+		Reason: "Immolation Trap rank 4's trap object casts the burn 14300. Client 1.60.1.70291 renamed the burn " +
+			"from \"Immolation Trap Effect\" to \"Immolation Trap\", the cast's own name, so it no longer forms a family " +
+			"of its own (#758); same rank, fire school and 15 s periodic damage as before the rename",
+		Source: "client-rows",
+	},
+	{
+		Spell:    14305,
+		Triggers: 14301,
+		Reason: "Immolation Trap rank 5's trap object casts the burn 14301. Client 1.60.1.70291 renamed the burn " +
+			"from \"Immolation Trap Effect\" to \"Immolation Trap\", the cast's own name, so it no longer forms a family " +
+			"of its own (#758); same rank, fire school and 15 s periodic damage as before the rename",
+		Source: "client-rows",
+	},
 }

@@ -151,7 +151,6 @@
 226881 Beastmaster's Treads
 234562 High Warlord's Shield Wall
 234588 Grand Marshal's Aegis
-249396 Mystic Mushroom
 249469 Frozen Heart of the Mountain
 249470 Molten Heart of the Mountain
 267369 Wolfsbane
@@ -161,6 +160,7 @@
 272838 Premier Grand Marshal's Aegis
 272999 Barbaric Crossbow
 273003 Searing Dagger
+273046 Guardian's Dualblade
 273137 Skum's Bucket
 273840 Cursed Murloc Eye
 274159 Thorncursed Grips

@@ -120,16 +120,31 @@ func (mage *Mage) registerFrostbite() {
 	}
 }
 
+// registerPiercingIce: effect 0 (SPELLMOD_DAMAGE, 2/4/6%) raises Frost spell hits, Blizzard's too (its
+// ticks are direct hits of 1279949). Effect 1 (SPELLMOD_DOT) names Blizzard and Frostfire Bolt but has
+// no rank curve in client 1.60.1.70170, so Frostfire Bolt's DoT gets its base 2% at every rank.
 func (mage *Mage) registerPiercingIce() {
 	if mage.Talents.PiercingIce == 0 {
 		return
 	}
 
+	hit := spellData.PiercingIce.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(mage.Talents.PiercingIce)
+	dot := spellData.PiercingIce.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DOT)).FractionAt(mage.Talents.PiercingIce)
 	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll,
+		ClassMask:  MageSpellsAll &^ MageSpellFrostfireBolt,
 		School:     core.SpellSchoolFrost,
-		FloatValue: spellData.PiercingIce.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(mage.Talents.PiercingIce),
+		FloatValue: hit,
 		Kind:       core.SpellMod_DamageDone_Flat,
+	})
+	mage.AddStaticMod(core.SpellModConfig{
+		ClassMask:  MageSpellFrostfireBolt,
+		FloatValue: dot,
+		Kind:       core.SpellMod_DamageDone_Flat,
+	})
+	mage.AddStaticMod(core.SpellModConfig{
+		ClassMask:  MageSpellFrostfireBolt,
+		FloatValue: hit - dot,
+		Kind:       core.SpellMod_DirectDamageDone_Flat,
 	})
 }
 
@@ -152,13 +167,22 @@ func (mage *Mage) registerFrostChanneling() {
 	})
 }
 
-// registerArcticReach implements Arctic Reach, new in Forever.
-//
-// Not modelled: 16757 adds 10/20% to Frostbolt and Blizzard range and Frost Nova and Cone of Cold
-// radius; the sim has no range.
+// registerArcticReach implements Arctic Reach, new in Forever: 16757 adds 10/20% to Frostbolt and
+// Blizzard range and to Frost Nova and Cone of Cold radius (its two class masks). The sim has no
+// percent range mod, so the share is taken of each spell's own range here.
 func (mage *Mage) registerArcticReach() {
 	if mage.Talents.ArcticReach == 0 {
 		return
+	}
+
+	rangeShare := spellData.ArcticReach.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_RANGE)).FractionAt(mage.Talents.ArcticReach)
+	radiusShare := spellData.ArcticReach.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_RADIUS)).FractionAt(mage.Talents.ArcticReach)
+	for mask, yards := range map[int64]float64{
+		MageSpellFrostbolt:                       rangeShare * float64(spellData.Frostbolt.Highest().MaxRange),
+		MageSpellBlizzard:                        rangeShare * float64(spellData.Blizzard.Highest().MaxRange),
+		MageSpellFrostNova | MageSpellConeOfCold: radiusShare * pointBlankRadius,
+	} {
+		mage.AddStaticMod(core.SpellModConfig{ClassMask: mask, FloatValue: yards, Kind: core.SpellMod_Range_Flat})
 	}
 }
 
@@ -203,46 +227,29 @@ func (mage *Mage) registerFingersOfFrost() {
 		Kind:       core.SpellMod_BonusCrit_Percent,
 	})
 
-	// A chill lands while the mage is part way through the next cast. That cast is not the "next
-	// spell cast" the talent grants, so it is held out of the Shatter bonus and does not spend a
-	// charge; the cast after it gets both.
-	// TODO: beta will confirm whether a cast already in progress when the chill lands counts.
-	var inFlight *core.Spell
-
+	// The beta's logs (foreverlogs 2748, 5 procs off Frostbolt, 4 mages) gain the aura at Frostbolt's cast
+	// end, before it lands (0.6-0.9 sec later): the next cast takes the bonus and a charge, the bolt's
+	// own impact neither. So Frostbolt and Frostfire Bolt roll it at launch (procFingersOfFrost, on
+	// the hit already rolled there); Cone of Cold and Improved Blizzard's ticks land at once.
+	var launcher *core.Spell
 	mage.FingersOfFrostAura = mage.RegisterAura(core.Aura{
 		Label:     "Fingers of Frost",
 		ActionID:  core.ActionID{SpellID: fofRank.ID},
 		Duration:  fofRank.Duration(),
 		MaxStacks: int32(spellData.FingersOfFrost.EffectAt(1).ValueAt(mage.Talents.FingersOfFrost)),
-		OnGain: func(_ *core.Aura, sim *core.Simulation) {
+		OnGain: func(_ *core.Aura, _ *core.Simulation) {
 			shatterMod.Activate()
-
-			inFlight = nil
-			if mage.Hardcast.Expires > sim.CurrentTime {
-				for _, spell := range mage.Spellbook {
-					if spell.Matches(MageSpellsAll) && spell.ActionID.SameAction(mage.Hardcast.ActionID) {
-						spell.BonusCritPercent -= shatterCrit
-						inFlight = spell
-						break
-					}
-				}
-			}
 		},
 		OnExpire: func(_ *core.Aura, _ *core.Simulation) {
 			shatterMod.Deactivate()
-			if inFlight != nil {
-				inFlight.BonusCritPercent += shatterCrit
-				inFlight = nil
-			}
 		},
 		OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
 			if !spell.Matches(MageSpellsAllDamaging) {
 				return
 			}
 
-			if spell == inFlight {
-				spell.BonusCritPercent += shatterCrit
-				inFlight = nil
+			if spell == launcher {
+				launcher = nil
 				return
 			}
 
@@ -251,16 +258,27 @@ func (mage *Mage) registerFingersOfFrost() {
 		},
 	})
 
+	grant := func(sim *core.Simulation) {
+		mage.FingersOfFrostAura.Activate(sim)
+		mage.FingersOfFrostAura.SetStacks(sim, mage.FingersOfFrostAura.MaxStacks)
+	}
+
+	mage.procFingersOfFrost = func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+		if result.Landed() && sim.Proc(procChance, "Fingers of Frost") {
+			launcher = spell
+			grant(sim)
+		}
+	}
+
 	mage.MakeProcTriggerAura(core.ProcTrigger{
 		Name:               "Fingers of Frost Trigger",
 		Callback:           core.CallbackOnSpellHitDealt,
-		ClassSpellMask:     MageSpellChill,
+		ClassSpellMask:     MageSpellConeOfCold | MageSpellImprovedBlizzard,
 		Outcome:            core.OutcomeLanded,
 		ProcChance:         procChance,
 		TriggerImmediately: true,
 		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			mage.FingersOfFrostAura.Activate(sim)
-			mage.FingersOfFrostAura.SetStacks(sim, mage.FingersOfFrostAura.MaxStacks)
+			grant(sim)
 		},
 	})
 }

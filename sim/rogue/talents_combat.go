@@ -205,6 +205,8 @@ func (rogue *Rogue) registerBladeFlurry() {
 // rank on daggers and fists, 3% of the target's armor ignored per rank on maces.
 //
 // The extra attack's 200 ms internal cooldown is the client's own (13960's ProcCategoryRecovery).
+// The tooltip names the effects $s1 crit, $s2 armor, $s3 extra attack (client 1.60.1.70205); the crit
+// and extra attack curves are both 1-5 today, so reading them swapped would only show after a hotfix.
 func (rogue *Rogue) registerHackAndSlash() {
 	if rogue.Talents.HackAndSlash == 0 {
 		return
@@ -219,7 +221,7 @@ func (rogue *Rogue) registerHackAndSlash() {
 			Callback:           core.CallbackOnSpellHitDealt,
 			ProcMask:           mask,
 			Outcome:            core.OutcomeLanded,
-			ProcChance:         spellData.HackAndSlash.EffectAt(1).ValueAt(points) / 100,
+			ProcChance:         spellData.HackAndSlash.EffectAt(3).ValueAt(points) / 100,
 			ICD:                spellData.HackAndSlash.Highest().ICD(),
 			TriggerImmediately: true,
 			Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
@@ -227,7 +229,7 @@ func (rogue *Rogue) registerHackAndSlash() {
 			},
 		})
 	}
-	crit := spellData.HackAndSlash.EffectAt(3).ValueAt(points)
+	crit := spellData.HackAndSlash.EffectAt(1).ValueAt(points)
 	armorIgnore := spellData.HackAndSlash.EffectAt(2).ValueAt(points) / 100
 
 	// Daggers and fists: crit. The character pane shows the bonus for the main hand, so an

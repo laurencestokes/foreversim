@@ -4,7 +4,7 @@ import { act, render, screen } from '@testing-library/react';
 import { NumberPicker } from '@ui-kit/NumberPicker';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DistanceFromTarget, RetributionAuraSpellPower } from './other_inputs';
+import { DistanceFromTarget } from './other_inputs';
 
 const source = vi.hoisted(() => {
 	const listeners = new Set<() => void>();
@@ -70,35 +70,5 @@ describe('DistanceFromTarget', () => {
 
 		commit('-5');
 		expect(distance).toBe(5);
-	});
-});
-
-// The number only means something on a tank that has the aura ticked, and it lives on the party's
-// buffs so the sim reads it next to the aura itself.
-describe('RetributionAuraSpellPower', () => {
-	const fakePlayer = (isTankSpec: boolean, retributionAura: boolean) => {
-		let buffs = { retributionAura, retributionAuraSpellPower: 0 } as any;
-		return {
-			getPlayerSpec: () => ({ isTankSpec }),
-			getParty: () => ({
-				getBuffs: () => buffs,
-				setBuffs: (next: any) => {
-					buffs = next;
-				},
-			}),
-		} as any;
-	};
-
-	it('shows only for a tank with the aura selected', () => {
-		expect(RetributionAuraSpellPower.showWhen(fakePlayer(true, true))).toBe(true);
-		expect(RetributionAuraSpellPower.showWhen(fakePlayer(true, false))).toBe(false);
-		expect(RetributionAuraSpellPower.showWhen(fakePlayer(false, true))).toBe(false);
-	});
-
-	it('stores the value on the party buffs', () => {
-		const player = fakePlayer(true, true);
-		RetributionAuraSpellPower.setValue(player, 450);
-		expect(player.getParty().getBuffs().retributionAuraSpellPower).toBe(450);
-		expect(RetributionAuraSpellPower.getValue(player)).toBe(450);
 	});
 });

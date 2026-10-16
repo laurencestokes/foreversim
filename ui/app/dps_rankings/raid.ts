@@ -56,9 +56,14 @@ export function strongestOf<T extends object>(buffs: Array<T>): T {
 }
 
 // The gear a build wears: its spec's own Launch preset (the best pre-raid gear in the launch pool,
-// the set master's rankings used), otherwise the spec's default gear.
-export const gearFor = ({ def }: LoadedSpec): EquipmentSpec =>
-	(def.presets.gear.find(preset => /^launch$/i.test(preset.name)) ?? def.presets.gear.find(preset => /launch/i.test(preset.name)))?.gear ?? def.defaults.gear;
+// the set master's rankings used), otherwise the spec's default gear. A spec with a launch set per
+// tree (mage: Frost / Fire / Arcane Launch) gives each build the one named for a word in its name.
+export const gearFor = ({ def, name = '' }: LoadedSpec & { name?: string }): EquipmentSpec => {
+	const launch = def.presets.gear.filter(preset => /launch/i.test(preset.name));
+	const words = name.toLowerCase().split(/\s+/);
+	const own = launch.find(preset => words.includes(preset.name.toLowerCase().split(/\s+/)[0]));
+	return (own ?? launch.find(preset => /^launch$/i.test(preset.name)) ?? launch[0])?.gear ?? def.defaults.gear;
+};
 
 export type RaidSetup = { builds: Array<RankingBuild>; missingItemIds: Array<number> };
 

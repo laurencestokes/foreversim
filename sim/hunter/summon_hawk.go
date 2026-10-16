@@ -12,11 +12,16 @@ import (
 //
 // The beta client (1293241, 1293525-1293527) gives the dive bomb, 32/47/85/108 plus 5% of ranged
 // attack power, the mana cost, a 6 sec cooldown and the 18 sec hawk (1293248), and caps the hawks
-// out at once at its third effect, 2. The hawk that stays is a guardian whose swings the client does
-// not describe, so each hawk's assault is modelled as the rank's dive bomb base damage every 3 sec,
-// a melee hit that can crit. Every dive bomb rank carries the client's always-hit attribute, so it
-// never misses, and is never dodged or parried, and always leaves a hawk. A cast past the cap
+// out at once at its third effect, 2. Every dive bomb rank carries the client's always-hit attribute,
+// so it never misses, and is never dodged or parried, and always leaves a hawk. A cast past the cap
 // replaces the hawk closest to leaving.
+//
+// The hawk that stays is a guardian whose swings the client does not describe, so they come from beta
+// logs (foreverlogs 2695 and 2701, two level 25/30 hunters, 534 landed swings at rank 1): the first
+// swing lands on arrival, then one every 2.5 sec sped up by the hunter's ranged haste (its scaling
+// aura 1293586 passes haste on); each deals about 0.35 of the rank's dive bomb base (11.5 vs 32,
+// compared target by target with the dive bomb so armor cancels) and crits about 1% of the time.
+// ponytail: the swing damage follows the rank's dive bomb base; re-fit once a level 36+ log shows rank 2.
 func (hunter *Hunter) registerSummonHawkSpell(timer *core.Timer) {
 	if !hunter.Talents.SummonHawk {
 		return
@@ -24,8 +29,9 @@ func (hunter *Hunter) registerSummonHawkSpell(timer *core.Timer) {
 
 	rank := spellData.SummonHawk.Highest()
 	baseDamage := rank.DamageEffect().Average(core.CharacterLevel)
+	swingDamage := baseDamage * 0.35
 	hawkDuration := spellData.SummonHawkTriggered.ByID(1293248).Duration()
-	const swingInterval = time.Second * 3
+	const swingInterval = time.Millisecond * 2500
 
 	hawks := make([]*core.Spell, int(rank.EffectN(3).BasePoints))
 	for i := range hawks {
@@ -44,14 +50,16 @@ func (hunter *Hunter) registerSummonHawkSpell(timer *core.Timer) {
 				Aura: core.Aura{
 					Label: "Summon Hawk " + strconv.Itoa(i+1) + hunter.Label,
 				},
-				NumberOfTicks: int32(hawkDuration / swingInterval),
-				TickLength:    swingInterval,
+				// The arrival swing is TickOnce below, so the hawk's 18 sec hold 7 more at 2.5 sec.
+				NumberOfTicks:       int32(hawkDuration / swingInterval),
+				TickLength:          swingInterval,
+				AffectedByRealHaste: true,
 
 				OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-					dot.Snapshot(target, baseDamage)
+					dot.Snapshot(target, swingDamage)
 				},
 				OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-					dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.Spell.OutcomeTickPhysicalCrit)
+					dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.Spell.OutcomeMeleeSpecialHit)
 				},
 			},
 		})
@@ -102,6 +110,7 @@ func (hunter *Hunter) registerSummonHawkSpell(timer *core.Timer) {
 				}
 			}
 			hawk.Apply(sim)
+			hawk.TickOnce(sim)
 		},
 	})
 }

@@ -104,8 +104,9 @@ func applyConsumeEffects(agent Agent, partyBuffs *proto.PartyBuffs) {
 		registerDragonbreathChili(character)
 	}
 
-	// Static Imbues
-	if consumables.MhImbueId != 0 && !partyBuffs.WindfuryTotem {
+	// Static Imbues. Forever's Windfury Totem is a party aura, not Era's main-hand enchant (#550), so
+	// it no longer displaces a main-hand stone or oil.
+	if consumables.MhImbueId != 0 {
 		registerStaticImbue(agent, consumables.MhImbueId, character.AutoAttacks.MH())
 	}
 	if consumables.OhImbueId != 0 {
@@ -496,11 +497,6 @@ func makeConjuredActivationSpellInternal(conjured Consumable, character *Charact
 			switch config.resType {
 			case proto.ResourceType_ResourceTypeHealth:
 				gain *= character.PseudoStats.HealingTakenMultiplier
-			case proto.ResourceType_ResourceTypeEnergy:
-				// Thistle Tea 100 - 2 * max(0, CharacterLevel - 40) energy gain
-				if conjured.Id == 7676 {
-					gain -= 2 * max(0, CharacterLevel-40)
-				}
 			}
 			character.ExecuteResourceGain(sim, config.resType, gain, resourceMetrics[config.resType])
 		}
@@ -515,10 +511,9 @@ func makeConjuredActivationSpellInternal(conjured Consumable, character *Charact
 				manaGain := config.min + config.spread
 				shouldActivate = character.MaxMana()-(character.CurrentMana()+totalRegen) >= manaGain
 			case proto.ResourceType_ResourceTypeEnergy:
-				if conjured.Id == 7676 {
-					gain := (config.min + config.spread) - 2*max(0, CharacterLevel-40)
-					shouldActivate = character.MaximumEnergy()-(character.CurrentEnergy()) >= gain
-				}
+				// Thistle Tea (9512) restores a flat 100: the client row has no level scaling. Waiting for
+				// room for all of it would mean waiting for an empty bar, so up to 10 may spill.
+				shouldActivate = character.MaximumEnergy()-character.CurrentEnergy() >= config.min+config.spread-10
 			}
 		}
 		return shouldActivate

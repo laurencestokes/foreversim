@@ -196,25 +196,6 @@ export const HpPercentForDefensives = {
 	},
 };
 
-// The Holy spell power of the paladin providing Retribution Aura as a party buff (sim/core's
-// RetributionAuraBuff turns it into damage per hit). Only a tank takes the hits, and the number
-// means nothing without the aura, so it shows under both conditions.
-export const RetributionAuraSpellPower = {
-	id: 'retributionAuraSpellPower',
-	type: 'number' as const,
-	label: i18n.t('settings_tab.other.retribution_aura_spell_power.label'),
-	labelTooltip: i18n.t('settings_tab.other.retribution_aura_spell_power.tooltip'),
-	storeField: 'raid:partyBuffs' as const,
-	showWhen: (player: Player<any>) => player.getPlayerSpec().isTankSpec && !!player.getParty()?.getBuffs().retributionAura,
-	getValue: (player: Player<any>) => player.getParty()!.getBuffs().retributionAuraSpellPower,
-	setValue: (player: Player<any>, newValue: number) => {
-		const party = player.getParty()!;
-		const buffs = party.getBuffs();
-		buffs.retributionAuraSpellPower = newValue;
-		party.setBuffs(buffs);
-	},
-};
-
 export const TotemTwisting = {
 	id: 'totemTwisting',
 	type: 'boolean' as const,

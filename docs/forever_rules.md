@@ -14,6 +14,7 @@ below is gated on `IsForever()` unless it says the class code is Forever-only.
 | Rule | Source | Here |
 |---|---|---|
 | Periodic damage can crit: dots and bleeds roll for critical strikes using the snapshot crit chance. Spells that must not (Ignite) carry `SpellFlagNoPeriodicCrit`. | Tooltip wording ("non-periodic" qualifiers on Nature's Grace, Primal Fury; Pandemic exists) | `sim/core/ruleset.go`, `sim/core/dot.go` |
+| Dots tick on the caster's current spell power, attack power and damage multipliers, not the ones in force when they landed. | Beta log (foreverlogs.gg report 2668, 2026-09-25: Shadow Word: Pain ticks 34 -> 38 when Eureka! is cast on it, before build 70170 took DoTs off Eureka!); Rend per-tick AP (#524); dev confirmation. Ported from MythicSim patch 22 | `sim/core/dot.go`, `sim/core/spell_result.go` |
 | Hit and crit from gear apply to every kind of attack: an item's melee/spell hit and crit are summed and paid into both pools. Attribute conversions unchanged. | Panel | `sim/core/ruleset.go` `unifyEquipHitAndCrit` |
 | Bonus healing on gear carries a damage component: `SpellDamage += HealingPower / 3`. | Panel | `sim/core/ruleset.go` `addHealingSpellDamage` |
 | Improved Shadow Bolt and Stormstrike are personal: they raise only their caster's damage and are no longer raid debuffs. | Panel, confirmed by search | `sim/core/debuffs.go`, `sim/shaman/stormstrike.go` |
@@ -137,6 +138,7 @@ All in `sim/core/racials.go` unless noted.
 | Rule | Source | Here |
 |---|---|---|
 | Barrage applies to Aimed Shot as well as Multi-Shot and Volley. | Tooltip | `sim/hunter/aimed_shot.go` |
+| From 16 October 2026 a pet's physical crit is its master's ranged crit (Agility, gear, buffs, Lethal Attacks, ranged-only crit), not its own Agility; Ferocity and Intimidation still add on the pet. | Dev AidanZMoon, forever-bugs #331 | `sim/hunter/pet.go` |
 
 ## Encounters
 

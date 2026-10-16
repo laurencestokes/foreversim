@@ -7,7 +7,8 @@ import (
 
 // Life Tap is a plain mana gain, not damage: 11689 converts ($m1 (424) + Spirit) * (1 + Improved
 // Life Tap 18182) health into as much mana (the build 70009 tooltip states both sides that way), so
-// no damage done / taken modifier touches either side. Demonic Energies hands the pet a share of the restore (the talent's second effect,
+// no damage done / taken modifier touches either side. The client flags every rank No Threat
+// (1.60.1.70205 SpellMisc Attributes[1] 0x400), so the mana adds no threat, the pet's share neither. Demonic Energies hands the pet a share of the restore (the talent's second effect,
 // 50% per point).
 func (warlock *Warlock) registerLifeTap() {
 	rank := spellData.LifeTap.Highest()
@@ -17,9 +18,11 @@ func (warlock *Warlock) registerLifeTap() {
 	petManaShare := spellData.DemonicEnergies.EffectAt(2).FractionAt(warlock.Talents.DemonicEnergies)
 
 	manaMetrics := warlock.NewManaMetrics(actionID)
+	manaMetrics.NoThreat = rank.NoThreat()
 	petManaMetrics := make(map[*WarlockPet]*core.ResourceMetrics, len(warlock.BasePets))
 	for _, pet := range warlock.BasePets {
 		petManaMetrics[pet] = pet.NewManaMetrics(actionID)
+		petManaMetrics[pet].NoThreat = rank.NoThreat()
 	}
 
 	warlock.LifeTap = warlock.RegisterSpell(core.SpellConfig{

@@ -244,7 +244,7 @@ func TestGeneratedRowsBuildTheirShapes(t *testing.T) {
 		{"Thorns", false, false, ThornsAura, auraShape{
 			Label: "Thorns (External)", ActionID: external(9910), Duration: 10 * time.Minute,
 			BuildPhase: core.CharacterBuildPhaseBuffs,
-			Bids:       []string{"Thorns single=true priority=22"},
+			Bids:       []string{"Thorns single=true priority=18"},
 			Stacks:     []unitDelta{{}},
 			Shield:     "{SpellID: 9910, Tag: 1} school SpellSchoolNature",
 		}},

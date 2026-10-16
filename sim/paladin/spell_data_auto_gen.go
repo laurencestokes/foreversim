@@ -12,7 +12,6 @@ import (
 //   Judgement of the Crusader: missing rank 1 of 6
 
 // Generated with an effect held at its base points, the talent tree stating no rank value for it:
-//   Champion of the Light: effect 1 of spell 1311084 has no rank curve and is held at its base points
 //   Illumination: effect 2, 3 of spell 20210 has no rank curve and is held at its base points
 //   Sacred Arbiter: effect 0 of spell 1311087 has no rank curve and is held at its base points
 //   Twist of Light: effect 0 of spell 1310735 has no rank curve and is held at its base points
@@ -233,10 +232,10 @@ var spellData = generatedSpellData{
 	JudgementOfCommand:            spelldata.Ranked(20425, 20962, 20961, 20967, 20968),
 	JudgementOfJustice:            spelldata.Ranked(20184),
 	JudgementOfLight:              spelldata.Ranked(20185, 20344, 20345, 20346),
-	JudgementOfLightTriggered:     spelldata.Ranked(5373),
+	JudgementOfLightTriggered:     spelldata.Ranked(5373, 20267, 20341, 20342, 20343),
 	JudgementOfRighteousness:      spelldata.Ranked(20187, 20280, 20281, 20282, 20283, 20284, 20285, 20286),
 	JudgementOfWisdom:             spelldata.Ranked(20186, 20354, 20355),
-	JudgementOfWisdomTriggered:    spelldata.Ranked(1826),
+	JudgementOfWisdomTriggered:    spelldata.Ranked(1826, 20268, 20352, 20353),
 	LastingJudgement:              spelldata.Ranked(20359, 20360, 20361),
 	LayOnHands:                    spelldata.Ranked(633, 2800, 10310),
 	LightsVigil:                   spelldata.Ranked(1310911, 1311590, 1311595),

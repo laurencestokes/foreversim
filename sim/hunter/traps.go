@@ -5,18 +5,21 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Forever doubles the shared trap cooldown to 30 sec. Seen on every trap tooltip from the demo
-// streams (Savix, Xaryu and Soda, 12-13 September); the generated rows carry only the 60 sec the
-// trap lies armed for, not the cooldown.
-const trapSharedCooldown = time.Second * 30
+// Each trap's cooldown is its client category's: Immolation and Explosive Trap share 411, Freezing
+// and Frost Trap 2183, 30 sec each, in client 1.60.1.70205 (Classic Era put every trap in 411 at
+// 15 sec), so a Freezing Trap no longer locks the fire traps.
+func trapCooldown(hunter *Hunter, rank *spelldata.Spell) core.Cooldown {
+	return core.Cooldown{Timer: hunter.CategoryTimer(int32(rank.Category)), Duration: rank.CategoryCooldown()}
+}
 
 // Generator gap: the trap rows hold only the area trigger, and the effect spell's damage is stored
 // as the average of the client's range. Explosive Trap rolls 104-135 / 145-193 / 208-265.
 var explosiveTrapRange = [4][2]float64{{}, {104, 135}, {145, 193}, {208, 265}}
 
-func (hunter *Hunter) registerExplosiveTrapSpell(timer *core.Timer) {
+func (hunter *Hunter) registerExplosiveTrapSpell() {
 	rank := spellData.ExplosiveTrap.Highest()
 	effect := spellData.ExplosiveTrapEffect.Rank(rank.RankNumber())
 	// The dot sits on a persistent area aura, which PeriodicEffect does not answer for.
@@ -42,10 +45,7 @@ func (hunter *Hunter) registerExplosiveTrapSpell(timer *core.Timer) {
 				GCD: core.GCDDefault,
 			},
 			IgnoreHaste: true,
-			CD: core.Cooldown{
-				Timer:    timer,
-				Duration: trapSharedCooldown,
-			},
+			CD: trapCooldown(hunter, rank),
 		},
 
 		DamageMultiplier: 1,
@@ -67,7 +67,7 @@ func (hunter *Hunter) registerExplosiveTrapSpell(timer *core.Timer) {
 				for _, aoeTarget := range sim.Encounter.ActiveTargetUnits {
 					// The Explosive Trap dot only ticks where no Immolation Trap is already burning.
 					if !aoeTarget.HasActiveAuraWithTag("ImmolationTrap") {
-						dot.CalcAndDealPeriodicSnapshotDamage(sim, aoeTarget, dot.OutcomeTick)
+						dot.CalcAndDealPeriodicSnapshotDamage(sim, aoeTarget, effect.TickOutcomeHitRolled(dot))
 					}
 				}
 			},
@@ -85,9 +85,9 @@ func (hunter *Hunter) registerExplosiveTrapSpell(timer *core.Timer) {
 	})
 }
 
-func (hunter *Hunter) registerImmolationTrapSpell(timer *core.Timer) {
+func (hunter *Hunter) registerImmolationTrapSpell() {
 	rank := spellData.ImmolationTrap.Highest()
-	effect := spellData.ImmolationTrapEffect.Rank(rank.RankNumber())
+	effect := spellData.ImmolationTrapTriggered.Rank(rank.RankNumber())
 	tick := effect.PeriodicEffect()
 
 	hunter.ImmolationTrap = hunter.RegisterSpell(core.SpellConfig{
@@ -107,10 +107,7 @@ func (hunter *Hunter) registerImmolationTrapSpell(timer *core.Timer) {
 				GCD: core.GCDDefault,
 			},
 			IgnoreHaste: true,
-			CD: core.Cooldown{
-				Timer:    timer,
-				Duration: trapSharedCooldown,
-			},
+			CD: trapCooldown(hunter, rank),
 		},
 
 		DamageMultiplier: 1,
@@ -129,8 +126,9 @@ func (hunter *Hunter) registerImmolationTrapSpell(timer *core.Timer) {
 			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 				dot.Snapshot(target, tick.Average(core.CharacterLevel))
 			},
+			// Every effect rank carries Periodic Can Crit (client 1.60.1.70205), as Explosive Trap's do.
 			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, effect.TickOutcomeHitRolled(dot))
 			},
 		},
 
@@ -145,7 +143,7 @@ func (hunter *Hunter) registerImmolationTrapSpell(timer *core.Timer) {
 
 // Freezing Trap deals no damage; it is registered so the trap talents and the shared cooldown have
 // something to act on, and so an APL can press it.
-func (hunter *Hunter) registerFreezingTrapSpell(timer *core.Timer) {
+func (hunter *Hunter) registerFreezingTrapSpell() {
 	rank := spellData.FreezingTrap.Rank(1)
 
 	hunter.FreezingTrap = hunter.RegisterSpell(core.SpellConfig{
@@ -165,10 +163,7 @@ func (hunter *Hunter) registerFreezingTrapSpell(timer *core.Timer) {
 				GCD: core.GCDDefault,
 			},
 			IgnoreHaste: true,
-			CD: core.Cooldown{
-				Timer:    timer,
-				Duration: trapSharedCooldown,
-			},
+			CD: trapCooldown(hunter, rank),
 		},
 
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {

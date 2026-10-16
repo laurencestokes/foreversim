@@ -148,13 +148,23 @@ func (paladin *Paladin) applyVindication() {
 
 // Sanctified Judgement - Gives your Judgement ability a 33/66/100% chance to return 20/40/60% of
 // the Mana cost of the judged seal. The chance is the first effect, the refund the second.
+//
+// The game returns 10/9 of the stated share of what the seal cost: 22/44/67%. Beta logs (reports
+// 2699/2701/2712, 1311077) show it on 13 paladins at all three ranks and five seal costs: Seal
+// of Command 65 -> 14-15 / 29 / 43, Seal of the Crusader 40 -> 9 at rank 1, Seal of Fury 60 -> 40
+// and 90 -> 60, Seal of Command rank 2 110 -> 73 at rank 3. The chance reads true (Ligma 73 of
+// 223 Judgements at rank 1, 3-point paladins every one). Two paladins land on exactly 40% (Inco,
+// rank 2) and 60% (Tristram, rank 3): 10/9 of a seal 10% cheaper, five points of Benediction, so
+// the share applies to the cost paid.
+const sanctifiedJudgementLogScale = 10.0 / 9
+
 func (paladin *Paladin) applySanctifiedJudgement() {
 	if paladin.Talents.SanctifiedJudgement == 0 {
 		return
 	}
 
 	manaMetrics := paladin.NewManaMetrics(core.ActionID{SpellID: spellData.SanctifiedJudgement.Highest().ID})
-	refund := spellData.SanctifiedJudgement.EffectAt(2).FractionAt(paladin.Talents.SanctifiedJudgement)
+	refund := spellData.SanctifiedJudgement.EffectAt(2).FractionAt(paladin.Talents.SanctifiedJudgement) * sanctifiedJudgementLogScale
 
 	paladin.MakeProcTriggerAura(core.ProcTrigger{
 		Name:               "Sanctified Judgement" + paladin.Label,
@@ -315,8 +325,9 @@ func (paladin *Paladin) applyVengeance() {
 	})
 }
 
-// Champion of the Light - Increases your spell damage and healing by up to 33/66/100% of your
-// Intellect. The healing effect states no rank curve, so both follow the damage ladder.
+// Champion of the Light - Increases your spell damage by up to 20/40/60% of your Intellect. Client
+// 70170 cut it from 100% and dropped the healing effect, as the WoW: Forever Podcast (episode 2)
+// announced: "60% instead of 100, and it doesn't increase healing power anymore".
 func (paladin *Paladin) applyChampionOfTheLight() {
 	if paladin.Talents.ChampionOfTheLight == 0 {
 		return
@@ -324,7 +335,6 @@ func (paladin *Paladin) applyChampionOfTheLight() {
 
 	share := spellData.ChampionOfTheLight.Effect(dbcenums.A_MOD_SPELL_DAMAGE_OF_STAT_PERCENT, 126).FractionAt(paladin.Talents.ChampionOfTheLight)
 	paladin.AddStatDependency(stats.Intellect, stats.SpellDamage, share)
-	paladin.AddStatDependency(stats.Intellect, stats.HealingPower, share)
 }
 
 // Instrument of Law - Reduces the cast time of your Hammer of Wrath by 0.5/1.0 sec, and reduces all

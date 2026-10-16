@@ -73,6 +73,7 @@ type generatedSpellData struct {
 	ImprovedMoonfire          spelldata.Ladder
 	ImprovedRegrowth          spelldata.Ladder
 	ImprovedRejuvenation      spelldata.Ladder
+	ImprovedShiftingPower     spelldata.Ladder
 	ImprovedStarfire          spelldata.Ladder
 	ImprovedStarfireTriggered spelldata.Ladder
 	ImprovedThorns            spelldata.Ladder
@@ -80,7 +81,6 @@ type generatedSpellData struct {
 	ImprovedWrath             spelldata.Ladder
 	Innervate                 spelldata.Ladder
 	InsectSwarm               spelldata.Ladder
-	KingOfTheJungle           spelldata.Ladder
 	Lacerate                  spelldata.Ladder
 	LeaderOfThePack           spelldata.Ladder
 	LeaderOfThePackTriggered  spelldata.Ladder
@@ -92,6 +92,7 @@ type generatedSpellData struct {
 	Moonglow                  spelldata.Ladder
 	MoonkinForm               spelldata.Ladder
 	MoonkinFormTriggered      spelldata.Ladder
+	NaturalInstinct           spelldata.Ladder
 	NaturalReaction           spelldata.Ladder
 	NaturalReactionTriggered  spelldata.Ladder
 	NaturalShapeshifter       spelldata.Ladder
@@ -112,7 +113,6 @@ type generatedSpellData struct {
 	Pounce                    spelldata.Ladder
 	PounceTriggered           spelldata.Ladder
 	PounceBleed               spelldata.Ladder
-	PredatoryInstincts        spelldata.Ladder
 	PredatoryStrikes          spelldata.Ladder
 	PrimalBite                spelldata.Ladder
 	Prowl                     spelldata.Ladder
@@ -138,8 +138,6 @@ type generatedSpellData struct {
 	TeleportMoonglade         spelldata.Ladder
 	ThickHide                 spelldata.Ladder
 	Thorns                    spelldata.Ladder
-	TigersFury                spelldata.Ladder
-	TigersFuryTriggered       spelldata.Ladder
 	TrackHumanoids            spelldata.Ladder
 	TranquilSpirit            spelldata.Ladder
 	Tranquility               spelldata.Ladder
@@ -207,6 +205,7 @@ var spellData = generatedSpellData{
 	ImprovedMoonfire:          spelldata.Talent(16821, 2),
 	ImprovedRegrowth:          spelldata.Talent(17074, 5),
 	ImprovedRejuvenation:      spelldata.Talent(17111, 3),
+	ImprovedShiftingPower:     spelldata.Talent(1322670, 2),
 	ImprovedStarfire:          spelldata.Talent(16850, 5),
 	ImprovedStarfireTriggered: spelldata.Ranked(16922),
 	ImprovedThorns:            spelldata.Ranked(16836, 16839, 16840),
@@ -214,7 +213,6 @@ var spellData = generatedSpellData{
 	ImprovedWrath:             spelldata.Talent(16814, 5),
 	Innervate:                 spelldata.Ranked(29166),
 	InsectSwarm:               spelldata.Ranked(5570, 24974, 24975, 24976, 24977),
-	KingOfTheJungle:           spelldata.Talent(417046, 3),
 	Lacerate:                  spelldata.Ranked(414644, 1235826, 1235827),
 	LeaderOfThePack:           spelldata.Ranked(17007),
 	LeaderOfThePackTriggered:  spelldata.Ranked(24932),
@@ -226,6 +224,7 @@ var spellData = generatedSpellData{
 	Moonglow:                  spelldata.Talent(16845, 3),
 	MoonkinForm:               spelldata.Ranked(24858),
 	MoonkinFormTriggered:      spelldata.Ranked(24905, 24907),
+	NaturalInstinct:           spelldata.Talent(1223242, 2),
 	NaturalReaction:           spelldata.Talent(417051, 5),
 	NaturalReactionTriggered:  spelldata.Ranked(417053),
 	NaturalShapeshifter:       spelldata.Talent(16833, 3),
@@ -246,7 +245,6 @@ var spellData = generatedSpellData{
 	Pounce:                    spelldata.Ranked(9005, 9823, 9827),
 	PounceTriggered:           spelldata.Ranked(9007, 9824, 9826),
 	PounceBleed:               spelldata.Ranked(9007, 9824, 9826),
-	PredatoryInstincts:        spelldata.Talent(1223242, 2),
 	PredatoryStrikes:          spelldata.Talent(16972, 3),
 	PrimalBite:                spelldata.Ranked(407995, 1238069, 1238070, 1238073),
 	Prowl:                     spelldata.Ranked(5215, 6783, 9913),
@@ -272,8 +270,6 @@ var spellData = generatedSpellData{
 	TeleportMoonglade:         spelldata.Ranked(18960),
 	ThickHide:                 spelldata.Talent(16929, 3),
 	Thorns:                    spelldata.Ranked(467, 782, 1075, 8914, 9756, 9910),
-	TigersFury:                spelldata.Ranked(5217),
-	TigersFuryTriggered:       spelldata.Ranked(417046),
 	TrackHumanoids:            spelldata.Ranked(5225),
 	TranquilSpirit:            spelldata.Talent(24968, 5),
 	Tranquility:               spelldata.Ranked(740, 8918, 9862, 9863),

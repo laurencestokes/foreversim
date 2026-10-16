@@ -1,4 +1,3 @@
-import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { APLAction, APLListItem, APLRotation, APLRotation_Type as APLRotationType } from '@generated/proto/apl';
 import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
@@ -124,7 +123,7 @@ export default defineSpec<Spec.SpecFeralBearDruid>({
 	playerIconInputs: [],
 	rotationInputs: FeralBearInputs.FeralBearRotationConfig,
 	includeBuffDebuffInputs: [Stat.StatStamina, Stat.StatArmor],
-	excludeBuffDebuffInputs: [BuffDebuffInputs.WindfuryTotem],
+	excludeBuffDebuffInputs: [],
 	otherInputs: {
 		inputs: [
 			OtherInputs.TotemTwisting,

@@ -133,15 +133,40 @@ func TestGnomeWarrior(t *testing.T) {
 		t.Fatalf("Expansive Mind should raise maximum Rage to 105, got %0.1f", fw.MaximumRage())
 	}
 
-	castRacial(t, sim, fw, 1259813)
-	eureka := fw.GetAura("Eureka!")
-	if !eureka.IsActive() || eureka.GetStacks() != 3 {
-		t.Fatalf("Eureka! should start at 3 charges, got %d", eureka.GetStacks())
+	// Client 70170 family masks: Heroic Strike is named, Rend (a DoT) no longer is.
+	defer func(lookup func(int32) ClassFlags) { ClientClassFlags = lookup }(ClientClassFlags)
+	ClientClassFlags = func(id int32) ClassFlags {
+		return map[int32]ClassFlags{78: {Family: 4, Mask: [4]uint32{64}}, 99: {Family: 4, Mask: [4]uint32{64}}, 772: {Family: 4, Mask: [4]uint32{32}}}[id]
 	}
 
+	// A spell with a hit and a DoT; the DoT is attached by hand, as the test sim takes no new auras.
+	hybrid := fw.RegisterSpell(SpellConfig{
+		ActionID:         ActionID{SpellID: 99},
+		ClassSpellMask:   4,
+		ProcMask:         ProcMaskSpellDamage,
+		SpellSchool:      SpellSchoolFire,
+		DamageMultiplier: 1,
+	})
+	hybridDot := &Dot{PeriodicDamageMultiplier: 1}
+	hybrid.dots = DotArray{hybridDot}
+
+	castRacial(t, sim, fw, 1259813)
+	eureka := fw.GetAura("Eureka!")
+	if !eureka.IsActive() || eureka.Duration != time.Second*8 || eureka.MaxStacks != 0 {
+		t.Fatalf("Eureka! should be an 8 s buff with no charges (16 Oct build)")
+	}
+
+
 	ability := fw.RegisterSpell(SpellConfig{
-		ActionID:         ActionID{SpellID: 1},
+		ActionID:         ActionID{SpellID: 78},
 		ClassSpellMask:   1,
+		ProcMask:         ProcMaskMeleeMHSpecial,
+		SpellSchool:      SpellSchoolPhysical,
+		DamageMultiplier: 1,
+	})
+	rend := fw.RegisterSpell(SpellConfig{
+		ActionID:         ActionID{SpellID: 772},
+		ClassSpellMask:   2,
 		ProcMask:         ProcMaskMeleeMHSpecial,
 		SpellSchool:      SpellSchoolPhysical,
 		DamageMultiplier: 1,
@@ -153,31 +178,51 @@ func TestGnomeWarrior(t *testing.T) {
 		SpellSchool:      SpellSchoolPhysical,
 		DamageMultiplier: 1,
 	})
+	rend.Cast(sim, fw.CurrentTarget)
+	if rend.DamageMultiplier != 1 {
+		t.Fatalf("Eureka! should leave Rend alone since build 70170 (non-periodic abilities only)")
+	}
 	itemSpell.Cast(sim, fw.CurrentTarget)
-	if itemSpell.DamageMultiplier != 1 || eureka.GetStacks() != 3 {
+	if itemSpell.DamageMultiplier != 1 {
 		t.Fatalf("Eureka! should ignore spells that are not class abilities")
 	}
 	if !WithinToleranceFloat64(1.1, ability.DamageMultiplier, 0.0001) {
 		t.Fatalf("Eureka! should raise ability damage by 10%%, got x%0.2f", ability.DamageMultiplier)
 	}
 
+	// SPELLMOD_DAMAGE is the direct part: a named spell's DoT ticks (Immolate, Fireball) take nothing.
+	if !WithinToleranceFloat64(1.1, hybrid.DamageMultiplier, 0.0001) ||
+		!WithinToleranceFloat64(1, hybrid.DamageMultiplier*hybridDot.PeriodicDamageMultiplier, 0.0001) {
+		t.Fatalf("Eureka! should raise the hit by 10%% and leave the DoT alone, got x%0.2f / x%0.2f",
+			hybrid.DamageMultiplier, hybrid.DamageMultiplier*hybridDot.PeriodicDamageMultiplier)
+	}
+
 	for range 3 {
 		ability.Cast(sim, fw.CurrentTarget)
 	}
-	if eureka.IsActive() {
-		t.Fatalf("Eureka! should end after 3 abilities")
+	if !eureka.IsActive() {
+		t.Fatalf("Eureka! should not spend charges since the 16 Oct build")
 	}
+	eureka.Deactivate(sim)
 	if !WithinToleranceFloat64(1, ability.DamageMultiplier, 0.0001) {
 		t.Fatalf("Eureka! should drop its damage bonus when it ends, got x%0.2f", ability.DamageMultiplier)
 	}
+	if !WithinToleranceFloat64(1, hybridDot.PeriodicDamageMultiplier, 0.0001) {
+		t.Fatalf("Eureka! should restore the DoT multiplier when it ends, got x%0.2f", hybridDot.PeriodicDamageMultiplier)
+	}
 }
 
-func TestTaurenEndurance(t *testing.T) {
+// 16 Oct build: Endurance (tauren) and Earth Fury (dwarf) are 2% critical damage and healing; Endurance lost its 1% hit.
+func TestCritDamageRacials(t *testing.T) {
 	_, human := setupRacialSim(proto.Race_RaceHuman)
-	_, tauren := setupRacialSim(proto.Race_RaceTauren)
-
-	if !WithinToleranceFloat64(human.GetStat(stats.PhysicalHitPercent)+1, tauren.GetStat(stats.PhysicalHitPercent), 0.0001) {
-		t.Fatalf("Endurance should grant 1%% hit")
+	for _, race := range []proto.Race{proto.Race_RaceTauren, proto.Race_RaceDwarf} {
+		_, fw := setupRacialSim(race)
+		if got := fw.PseudoStats.CritDamageMultiplier; got != 1.02 {
+			t.Errorf("%s: crit damage x%.4f, want x1.02", race, got)
+		}
+		if got, want := fw.GetStat(stats.PhysicalHitPercent), human.GetStat(stats.PhysicalHitPercent); got != want {
+			t.Errorf("%s: hit %.2f, want %.2f (no hit racial)", race, got, want)
+		}
 	}
 }
 
@@ -201,8 +246,8 @@ func TestSkyborneRacials(t *testing.T) {
 		_, fw := setupRacialSim(race)
 
 		swingRatio := human.AutoAttacks.MainhandSwingSpeed().Seconds() / fw.AutoAttacks.MainhandSwingSpeed().Seconds()
-		if !WithinToleranceFloat64(1.01, swingRatio, 0.001) {
-			t.Errorf("%s: Wind Blessed should swing 1%% faster, got x%0.4f", race, swingRatio)
+		if !WithinToleranceFloat64(1.03, swingRatio, 0.001) {
+			t.Errorf("%s: Wind Blessed should swing 3%% faster, got x%0.4f", race, swingRatio)
 		}
 		if at := fw.AttackTables[fw.CurrentTarget.UnitIndex]; !WithinToleranceFloat64(1.05, at.DamageDealtMultiplier, 0.0001) {
 			t.Errorf("%s: Elemental Insight should grant 5%% damage against elementals, got x%0.4f", race, at.DamageDealtMultiplier)
@@ -292,5 +337,19 @@ func TestBloodFuryReportsItsTemporaryStats(t *testing.T) {
 	}
 	if got := heard[1][stats.AttackPower]; got != -heard[0][stats.AttackPower] {
 		t.Errorf("expire reported %v attack power, want the reverse of the gain's %v", got, heard[0][stats.AttackPower])
+	}
+}
+
+// 16 Oct build: Ruthless (human, 2%) and Savage (orc, 1%) replaced the weapon specializations, so the
+// crit no longer needs a sword or an axe and reaches melee, ranged and spells alike.
+func TestCritChanceRacialsNeedNoWeapon(t *testing.T) {
+	_, undead := setupRacialSim(proto.Race_RaceUndead)
+	for race, bonus := range map[proto.Race]float64{proto.Race_RaceHuman: 2, proto.Race_RaceOrc: 1} {
+		_, fw := setupRacialSim(race)
+		for _, stat := range []stats.Stat{stats.PhysicalCritPercent, stats.SpellCritPercent} {
+			if got, want := fw.GetStat(stat), undead.GetStat(stat)+bonus; !WithinToleranceFloat64(want, got, 1e-9) {
+				t.Errorf("%s: stat %d %.2f unarmed, want %.2f", race, stat, got, want)
+			}
+		}
 	}
 }

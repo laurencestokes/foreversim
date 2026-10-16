@@ -37,8 +37,11 @@ func TestMarksmanship(t *testing.T) {
 	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator([]core.CharacterSuiteConfig{hunterSuite("mm", MarksmanshipTalents)}))
 }
 
+// Survival melees, as every Survival hunter in the beta logs does (foreverlogs 2716, 2721-2727, 2730:
+// Raptor Strike, Strider Kick, Mongoose Bite and Immolation Trap, next to no Auto Shot). The ranged
+// sv rotation never reached Strider Kick, Predator's Edge, Savage Strikes or Lacerating Strikes.
 func TestSurvival(t *testing.T) {
-	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator([]core.CharacterSuiteConfig{hunterSuite("sv", SurvivalTalents)}))
+	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator([]core.CharacterSuiteConfig{hunterSuite("sv_melee", SurvivalTalents)}))
 }
 
 // The three builds our Forever sim ranks: Beast Mastery 35/16/0, Marksmanship 0/39/12 and

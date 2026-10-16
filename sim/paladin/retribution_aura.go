@@ -18,7 +18,7 @@ func (paladin *Paladin) registerRetributionAura() {
 		// The damage shield's number is the rank's first effect.
 		r := auraRank(rank)
 		r.Value = rank.EffectN(1).Average(core.CharacterLevel)
-		aura := buffs.RetributionAuraBuff(&paladin.Character, true, r, 0)
+		aura := buffs.RetributionAuraBuff(&paladin.Character, true, r)
 		paladin.registerAuraSpell(rank, aura, SpellMaskRetributionAura)
 	})
 }

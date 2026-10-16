@@ -58,7 +58,8 @@ func (druid *Druid) registerHurricaneSpell() {
 		DefenseType:    hurricaneRank.DefenseTypeCore(),
 		ProcMask:       core.ProcMaskSpellDamage,
 		ClassSpellMask: DruidSpellHurricane,
-		// The tick is its own client row that the channel triggers, a proc rather than a cast.
+		// The tick is its own client row that the channel triggers, a proc rather than a cast. It has
+		// no "can't crit" flag and the same attributes as Blizzard's tick, which crits in beta logs.
 		Flags: core.SpellFlagProc,
 
 		DamageMultiplier: 1,
@@ -66,7 +67,7 @@ func (druid *Druid) registerHurricaneSpell() {
 		BonusCoefficient: hurricaneTick.Coeff(),
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealAoeDamage(sim, hurricaneTick.Average(core.CharacterLevel), spell.OutcomeMagicHit)
+			spell.CalcAndDealAoeDamage(sim, hurricaneTick.Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
 		},
 	})
 }

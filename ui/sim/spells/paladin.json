@@ -72,7 +72,7 @@
 	"1311074": {
 		"ability": "Sanctified Judgement",
 		"file": "sim/paladin/talents_retribution.go",
-		"note": "Forever's own talent id, which the sim's Sanctified Judgement mana metrics carry and Classic's database does not. Beta client 1.60.1.70009 curves: 33/66/100% chance to return 20/40/60% of the judged seal's mana cost.",
+		"note": "Forever's own talent id, which the sim's Sanctified Judgement mana metrics carry and Classic's database does not. Beta client 1.60.1.70009 curves: 33/66/100% chance to return 20/40/60% of the judged seal's mana cost. The beta's combat logs (1311077, reports 2699/2701/2712) bear out the chance (Ligma 73 of 223 Judgements at 1 point, every Judgement at 3) but return 10/9 of the stated share, 22/44/67%, on 11 paladins at all three ranks: Seal of Command 65 mana -> 14-15 / 29 / 43, Seal of the Crusader 40 -> 9 at 1 point, Seal of Fury 60 -> 40 and 90 -> 60, Seal of Command rank 2 110 -> 73 at 3. Inco (2695/2699, 2 points) and Tristram (2712, 3 points) land on exactly 40% and 60%: 10/9 of a seal 10% cheaper, five points of Benediction, so the share is of the cost paid. The sim returns 22/44/67%.",
 		"source": "forever",
 		"tooltip": "Gives your Judgement ability a 33% chance per talent point to return 20% per talent point of the Mana cost of the judged seal."
 	},
@@ -114,7 +114,7 @@
 	"20178": {
 		"ability": "Reckoning",
 		"file": "sim/paladin/talents_protection.go",
-		"note": "The extra attack, which the sim models as the next main-hand swing pulled forward rather than under an id of its own. Beta client 1.60.1.70009: 8% a point on a block from 20177's curve, which Forever added; the crit half keeps Classic's 20% a point.",
+		"note": "The extra attack: a main-hand swing at once that leaves the swing timer alone (beta logs 2747-2749, 14 of 16 procs: the next normal swing comes one weapon speed after the previous one), at most once per 1.5 s (20177 ProcCategoryRecovery, client 1.60.1.70291+). Beta client 1.60.1.70009: 8% a point on a block from 20177's curve, which Forever added; the crit half keeps Classic's 20% a point.",
 		"source": "forever",
 		"tooltip": "Gives you an 8% chance per talent point to gain an extra attack after blocking a melee attack, and a 20% chance per talent point to gain an extra attack after being the victim of a non-periodic critical strike."
 	},
@@ -253,23 +253,23 @@
 	"20925": {
 		"ability": "Holy Shield",
 		"file": "sim/paladin/holy_shield.go",
-		"note": "Beta client 1.60.1.70009: 65 -> 110 damage a block at 0.08 (Classic 0.05), block chance 30% -> 20%. The block damage is its own metrics line under the same id.",
+		"note": "Beta client 1.60.1.70009: 65 -> 110 damage a block at 0.08 (Classic 0.05), block chance 30% -> 20% (the 70170 hotfixes put it back to 30%). The block damage is its own metrics line under the same id.",
 		"source": "forever",
-		"tooltip": "150 Mana\nInstant\n10 sec cooldown\nIncreases chance to block by 20% for 10 sec and deals 110 Holy damage for each attack blocked while active. Damage caused by Holy Shield causes 20% additional threat. Each block expends a charge. 4 charges."
+		"tooltip": "150 Mana\nInstant\n10 sec cooldown\nIncreases chance to block by 30% for 10 sec and deals 110 Holy damage for each attack blocked while active. Damage caused by Holy Shield causes 20% additional threat. Each block expends a charge. 4 charges."
 	},
 	"20927": {
 		"ability": "Holy Shield",
 		"file": "sim/paladin/holy_shield.go",
-		"note": "Beta client 1.60.1.70009: 95 -> 153 damage a block at 0.08 (Classic 0.05), block chance 30% -> 20%. The block damage is its own metrics line under the same id.",
+		"note": "Beta client 1.60.1.70009: 95 -> 153 damage a block at 0.08 (Classic 0.05), block chance 30% -> 20% (the 70170 hotfixes put it back to 30%). The block damage is its own metrics line under the same id.",
 		"source": "forever",
-		"tooltip": "195 Mana\nInstant\n10 sec cooldown\nIncreases chance to block by 20% for 10 sec and deals 153 Holy damage for each attack blocked while active. Damage caused by Holy Shield causes 20% additional threat. Each block expends a charge. 4 charges."
+		"tooltip": "195 Mana\nInstant\n10 sec cooldown\nIncreases chance to block by 30% for 10 sec and deals 153 Holy damage for each attack blocked while active. Damage caused by Holy Shield causes 20% additional threat. Each block expends a charge. 4 charges."
 	},
 	"20928": {
 		"ability": "Holy Shield",
 		"file": "sim/paladin/holy_shield.go",
-		"note": "Beta client 1.60.1.70009: 130 -> 221 damage a block at 0.08 (Classic 0.05), block chance 30% -> 20%. The block damage is its own metrics line under the same id.",
+		"note": "Beta client 1.60.1.70009: 130 -> 221 damage a block at 0.08 (Classic 0.05), block chance 30% -> 20% (the 70170 hotfixes put it back to 30%). The block damage is its own metrics line under the same id.",
 		"source": "forever",
-		"tooltip": "240 Mana\nInstant\n10 sec cooldown\nIncreases chance to block by 20% for 10 sec and deals 221 Holy damage for each attack blocked while active. Damage caused by Holy Shield causes 20% additional threat. Each block expends a charge. 4 charges."
+		"tooltip": "240 Mana\nInstant\n10 sec cooldown\nIncreases chance to block by 30% for 10 sec and deals 221 Holy damage for each attack blocked while active. Damage caused by Holy Shield causes 20% additional threat. Each block expends a charge. 4 charges."
 	},
 	"20929": {
 		"ability": "Holy Shock",
@@ -424,7 +424,7 @@
 	"407632": {
 		"ability": "Hammer of the Righteous",
 		"file": "sim/paladin/hammer_of_the_righteous.go",
-		"note": "New in Forever, trained on the Protection line at 40. Beta client 1.60.1.70009: Holy damage 3x main hand DPS, 6 sec cooldown, 6% base mana, melee table, no spell power coefficient. Shares client cooldown category 2404 with Holy Strike. Measured: taking it before Holy Strike costs protection 6.5% DPS, so the default rotation does not.",
+		"note": "New in Forever, trained on the Protection line at 40. Beta client 1.60.1.70009: Holy damage 3x main hand DPS, 6 sec cooldown, 6% base mana, melee table, no spell power coefficient. Shares client cooldown category 2404 with Holy Strike. Hits the target and up to 3 more (damage effect ChainTargets 4), each for the full amount. Measured: ahead of Holy Strike it costs 1-5% DPS on one target but gains 2-16% on 2-5 targets, so the protection and retribution rotations cast it on 2+ targets.",
 		"source": "forever",
 		"tooltip": "6% of base mana\nInstant\n6 sec cooldown\nHammer the current target and up to 3 additional nearby targets, causing Holy damage to each equal to 3 times the damage per second of your main hand weapon."
 	},

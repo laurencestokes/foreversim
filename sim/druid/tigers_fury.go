@@ -3,10 +3,13 @@ package druid
 import (
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-var tigersFuryRank = spellData.TigersFury.Highest()
+// Build 70170 grants Tiger's Fury rather than training it (SkillLineAbility AcquireMethod 3), so the
+// generator no longer finds it a ladder; the store carries it as an extra spell.
+var tigersFuryRank = spelldata.Ranked(5217).Highest()
 
 // Forever pays a share of Physical damage rather than Classic's flat amount, so it scales with the
 // cat's weapon and attack power instead of fading as gear improves: the client states 15% on the
@@ -14,11 +17,6 @@ var tigersFuryRank = spellData.TigersFury.Highest()
 func (druid *Druid) registerTigersFurySpell() {
 	actionID := core.ActionID{SpellID: tigersFuryRank.ID}
 	multiplier := 1 + tigersFuryRank.Effect(dbcenums.A_DUMMY, 0).BaseValue()/100
-
-	// King of the Jungle: Tiger's Fury instantly grants 20 Energy a rank.
-	energyGain := spellData.KingOfTheJungle.EffectAt(1).ValueAt(druid.Talents.KingOfTheJungle)
-	// Tagged so it does not collide with the metrics the cost would register under the same action.
-	energyMetrics := druid.NewEnergyMetrics(actionID.WithTag(1))
 
 	druid.TigersFuryAura = druid.RegisterAura(core.Aura{
 		Label:    "Tiger's Fury",
@@ -43,9 +41,6 @@ func (druid *Druid) registerTigersFurySpell() {
 		},
 
 		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
-			if energyGain > 0 {
-				druid.AddEnergy(sim, energyGain, energyMetrics)
-			}
 			druid.TigersFuryAura.Activate(sim)
 		},
 

@@ -22,6 +22,7 @@ func (warlock *Warlock) registerDrainLife() {
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagChanneled | core.SpellFlagAPL,
 		ClassSpellMask: WarlockSpellDrainLife,
+		MaxRange:       float64(rank.MaxRange),
 
 		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
 		Cast:     core.CastConfig{DefaultCast: core.Cast{GCD: rank.GCD()}},

@@ -56,13 +56,15 @@ func (warlock *Warlock) applyImprovedImp() {
 	})
 }
 
-// Forever drops Classic's spirit penalty: 18697 only raises stamina.
+// 18697 raises stamina 3% a rank. The tooltip no longer names Classic's spirit penalty, but the client
+// keeps it as a second effect with no rank curve: -1% spirit at every rank.
 func (warlock *Warlock) applyDemonicEmbrace() {
 	if warlock.Talents.DemonicEmbrace == 0 {
 		return
 	}
 
 	warlock.MultiplyStat(stats.Stamina, spellData.DemonicEmbrace.EffectAt(1).MultiplierAt(warlock.Talents.DemonicEmbrace))
+	warlock.MultiplyStat(stats.Spirit, spellData.DemonicEmbrace.EffectAt(2).MultiplierAt(warlock.Talents.DemonicEmbrace))
 }
 
 // 2% more pet damage a point (18769).
@@ -91,7 +93,8 @@ func (warlock *Warlock) applyFelVitality() {
 	}
 }
 
-// 10% more Lash of Pain damage a point (18754, second effect).
+// 10% more Lash of Pain damage a point: 18754 effect 0 (the tooltip's $s1, SPELLMOD_ALL_EFFECTS);
+// effect 1 (SPELLMOD_DURATION) is Seduction's duration.
 func (warlock *Warlock) applyImprovedSayaad() {
 	if warlock.Talents.ImprovedSayaad == 0 || warlock.Options.SacrificeSummon {
 		return
@@ -99,7 +102,7 @@ func (warlock *Warlock) applyImprovedSayaad() {
 
 	warlock.Succubus.AddStaticMod(core.SpellModConfig{
 		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.ImprovedSayaad.EffectAt(2).FractionAt(warlock.Talents.ImprovedSayaad),
+		FloatValue: spellData.ImprovedSayaad.EffectAt(1).FractionAt(warlock.Talents.ImprovedSayaad),
 		ClassMask:  WarlockSpellSuccubusLashOfPain,
 	})
 }
@@ -247,9 +250,10 @@ func (warlock *Warlock) applyDemonicBrand() {
 	charges := int32(spellData.DemonicBrand.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CHARGES)).ValueAt(points))
 
 	for _, pet := range warlock.BasePets {
-		school, schoolPower := core.SpellSchoolShadow, stats.ShadowDamage
+		// Only the Shadow hit carries the high threat (beta notes 8 Oct).
+		school, schoolPower, threat := core.SpellSchoolShadow, stats.ShadowDamage, 3.0
 		if pet == warlock.Imp {
-			school, schoolPower = core.SpellSchoolFire, stats.FireDamage
+			school, schoolPower, threat = core.SpellSchoolFire, stats.FireDamage, 1
 		}
 
 		brandSpell := pet.RegisterSpell(core.SpellConfig{
@@ -260,13 +264,15 @@ func (warlock *Warlock) applyDemonicBrand() {
 			Flags:       core.SpellFlagPassiveSpell | core.SpellFlagNoOnCastComplete,
 
 			DamageMultiplier: 1,
-			ThreatMultiplier: 3,
+			ThreatMultiplier: threat,
 
 			ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 				levelBonus := float64(core.CharacterLevel-26) * 1.5
 				spellPower := warlock.GetStat(stats.SpellDamage) + warlock.GetStat(schoolPower)
 				damage := sim.Roll(levelBonus+14, levelBonus+17) + 0.078*spellPower
-				spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMagicHit)
+				// 1293697/1293698 (client 1.60.1.70205) carry Always Hit (Attributes[3] 0x40000) and
+				// no Cannot Crit, so the hit never misses and crits on the pet's spell crit.
+				spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMagicCrit)
 			},
 		})
 

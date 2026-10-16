@@ -22,6 +22,7 @@ func (shaman *Shaman) registerLavaBurstSpell() {
 		ProcMask:       core.ProcMaskSpellDamage,
 		Flags:          core.SpellFlagAPL | SpellFlagShamanSpell | SpellFlagFocusable,
 		ClassSpellMask: SpellMaskLavaBurst,
+		MaxRange:       float64(lavaBurstRank.MaxRange),
 		MissileSpeed:   float64(lavaBurstRank.Speed),
 
 		ManaCost: core.ManaCostOptions{
@@ -32,6 +33,7 @@ func (shaman *Shaman) registerLavaBurstSpell() {
 				GCD:      lavaBurstRank.GCD(),
 				CastTime: lavaBurstRank.CastTime(),
 			},
+			ModifyCast: shaman.holdSwingDuringCast,
 			CD: core.Cooldown{
 				Timer:    shaman.NewTimer(),
 				Duration: max(lavaBurstRank.Cooldown(), lavaBurstRank.CategoryCooldown()),

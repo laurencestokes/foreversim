@@ -67,6 +67,12 @@ func (s *Spell) IsAProc() bool {
 	return !s.HasAttr(dbcenums.ATTR_INDEX_EX_3, dbcenums.ATTR_EX_3_NOT_A_PROC)
 }
 
+// Whether the client flags the spell No Threat: nothing it does, mana it restores included, puts the
+// caster on a threat table.
+func (s *Spell) NoThreat() bool {
+	return s.HasAttr(dbcenums.ATTR_INDEX_EX_1, dbcenums.ATTR_EX_1_NO_THREAT)
+}
+
 func (s *Spell) SuppressesWeaponProcs() bool {
 	return s.HasAttr(dbcenums.ATTR_INDEX_EX_4, dbcenums.ATTR_EX_4_SUPPRESS_WEAPON_PROCS)
 }

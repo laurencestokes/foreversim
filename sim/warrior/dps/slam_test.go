@@ -30,3 +30,37 @@ func TestImprovedSlamShortensSlamCooldown(t *testing.T) {
 		}
 	}
 }
+
+// Slam is a 1.5 sec cast that resets the swing; Improved Slam makes it 0.5 sec with no swing reset.
+// The rotations press it only when its cast is under 1.5 sec, so Arms 39/12 (Improved Slam 2/2)
+// slams and Fury, which would lose damage to it, does not.
+func TestRotationSlamsOnlyWithImprovedSlam(t *testing.T) {
+	for talents, wantSlams := range map[string]bool{
+		ArmsTalents: true,
+		FuryTalents: false,
+	} {
+		result := core.RunRaidSim(&proto.RaidSimRequest{
+			Raid: core.SinglePlayerRaidProto(&proto.Player{
+				Race: proto.Race_RaceOrc, Class: proto.Class_ClassWarrior,
+				Equipment: TwoHandGear.GearSet, TalentsString: talents, Spec: DefaultOptions,
+				Rotation: core.GetAplRotation("../../../ui/specs/warrior/dps/apls", "dps_reck").Rotation,
+			}, &proto.PartyBuffs{}, &proto.RaidBuffs{}, &proto.Debuffs{}),
+			Encounter:  core.MakeSingleTargetEncounter(0),
+			SimOptions: &proto.SimOptions{Iterations: 1, RandomSeed: 1},
+		})
+		if result.Error != nil {
+			t.Fatal(result.Error.Message)
+		}
+		slams := int32(0)
+		for _, action := range result.RaidMetrics.Parties[0].Players[0].Actions {
+			if action.Id.GetSpellId() == 11605 {
+				for _, target := range action.Targets {
+					slams += target.Casts
+				}
+			}
+		}
+		if got := slams > 0; got != wantSlams {
+			t.Errorf("%s: %d Slams, want any = %v", talents, slams, wantSlams)
+		}
+	}
+}

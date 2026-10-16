@@ -13,7 +13,7 @@ var thornsRank = spellData.Thorns.Highest()
 func (druid *Druid) registerThornsSpell() {
 	thornsAura := buffs.ThornsAura(&druid.Unit, true, 0)
 
-	druid.RegisterSpell(Humanoid, core.SpellConfig{
+	druid.RegisterSpell(Humanoid|Moonkin|Tree, core.SpellConfig{
 		ActionID:       core.ActionID{SpellID: thornsRank.ID},
 		SpellSchool:    thornsRank.SpellSchool(),
 		DefenseType:    thornsRank.DefenseTypeCore(),
