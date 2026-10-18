@@ -13,7 +13,7 @@ import (
 // Spell.Description_lang is generator input only - the store carries the reading, never the text -
 // so the sim reads a decided shape instead of re-parsing English at runtime.
 //
-// The four shapes are the ones docs/spell_data.md names under "Proc chances": the column is the
+// The four shapes are the ones docs/spell_data/procs.md names: the column is the
 // roll, an effect's value is the roll, the column is a sentinel for "fires on its own condition",
 // or nothing states a rate at all and an override owes one.
 
@@ -26,7 +26,7 @@ var tooltipOwnChance = regexp.MustCompile(`\$h`)
 // the token, because the same token is how a tooltip states a magnitude: Flurry's "$m1% melee
 // attack speed" and Deep Wounds' "$m1% of your weapon's average damage" are the no-roll shape, and
 // reading either as a chance turns an aura that always fires into a percentage. The digit is the
-// client's EffectIndex plus one.
+// game files' EffectIndex plus one.
 var tooltipEffectChance = regexp.MustCompile(`\$[ms]([123])%\s+chance`)
 
 // Damage divided among the targets hit, which the server knows per spell and no column states:
@@ -92,7 +92,7 @@ func procChanceSource(description string, ownChance bool, s *storeSpell) (storeP
 	// to generate rage" - so the one the chance is on is the one carrying the proc aura, not the
 	// first one the text mentions.
 	//
-	// The tooltip counts by the client's EffectIndex and the store by position, which differ on the
+	// The tooltip counts by the game files' EffectIndex and the store by position, which differ on the
 	// 46 rows whose indices have gaps. The position is what is emitted, since EffectN is how the
 	// sim reads the effect back.
 	for _, m := range tooltipEffectChance.FindAllStringSubmatch(description, -1) {
@@ -102,7 +102,7 @@ func procChanceSource(description string, ownChance bool, s *storeSpell) (storeP
 		}
 	}
 
-	// 100 and 101 are both the client's "no roll here": the aura fires whenever its own condition
+	// 100 and 101 are both the game files' "no roll here": the aura fires whenever its own condition
 	// is met, and on a spell that is not a proc at all they mean nothing.
 	//
 	// Except where the tooltip says the effect only happens sometimes. A proc whose text reads
@@ -116,7 +116,7 @@ func procChanceSource(description string, ownChance bool, s *storeSpell) (storeP
 		return procChanceAlways, 0
 	}
 
-	// A proc aura with no chance anywhere is the shape whose rate the client does not carry, so it
+	// A proc aura with no chance anywhere is the shape whose rate the game files do not carry, so it
 	// has to come from an override into RPPM.
 	if s.ProcChance == 0 && s.triggersAProc() {
 		return procChancePPM, 0
@@ -131,7 +131,7 @@ func isProcEffect(e *storeEffect) bool {
 	return e.Aura.IsProcTrigger() || e.Aura == dbcenums.A_DUMMY
 }
 
-// Whether the spell fires something through the client's own proc machinery, which is what makes a
+// Whether the spell fires something through the game's own proc machinery, which is what makes a
 // missing rate a rate somebody owes. The dummy is deliberately out: Rip, Rupture and Arcane
 // Missiles all carry one, and none of them is a proc.
 func (s *storeSpell) triggersAProc() bool {
@@ -143,7 +143,7 @@ func (s *storeSpell) triggersAProc() bool {
 	return false
 }
 
-// Where in the row the effect the client files under an index sits: EffectIndex is the tooltip's
+// Where in the row the effect the game files put under an index sits: EffectIndex is the tooltip's
 // numbering and has gaps, while the slice is packed.
 func (s *storeSpell) effectPosition(index uint8) (int, bool) {
 	for i := range s.Effects {
@@ -193,6 +193,7 @@ func formatProcHint(hint core.ProcHint) string {
 		{core.ProcHintOutcomeTaken, "core.ProcHintOutcomeTaken"},
 		{core.ProcHintAttackDodged, "core.ProcHintAttackDodged"},
 		{core.ProcHintAttackParried, "core.ProcHintAttackParried"},
+		{core.ProcHintDamage, "core.ProcHintDamage"},
 	}
 
 	var set []string

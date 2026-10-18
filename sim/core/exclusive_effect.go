@@ -4,6 +4,25 @@ import (
 	"time"
 )
 
+// Exclusive categories for resistance buffs — ensures only the highest value applies per school.
+const (
+	ResistanceCategoryArcane = "ResistanceArcane"
+	ResistanceCategoryFire   = "ResistanceFire"
+	ResistanceCategoryFrost  = "ResistanceFrost"
+	ResistanceCategoryNature = "ResistanceNature"
+	ResistanceCategoryShadow = "ResistanceShadow"
+)
+
+// Exclusive category for flat stat buffs which don't stack with each other
+// e.g. Arcane Brilliance vs Greater Arcane Elixir.
+const StatBuffCategory = "StatBuff"
+
+// The category one stat or pseudo-stat of a buff bids in alone: the buff's category, then the stat's
+// name or its PseudoStats field, then whether the buff adds to it or multiplies it.
+func ExclusiveStatCategory(category string, key string, multiplicative bool) string {
+	return category + key + Ternary(multiplicative, "Mul", "Add")
+}
+
 // An Exclusive effect is one which may not be active at the same time as other
 // effects in the same category. For example, the armor reduction effects from
 // Sunder Armor and Expose Armor are exclusive with each other.
@@ -11,8 +30,9 @@ import (
 // Within each ExclusiveCategory, the ExclusiveEffect with the highest Priority
 // AND isEnabled == true is the one whose effect is applied.
 type ExclusiveEffect struct {
-	Aura     *Aura
-	Priority float64
+	Aura       *Aura
+	Priority   float64
+	YieldsTies bool // The effect takes the category from an active effect only by outbidding it, never on an equal bid.
 
 	OnGain   func(*ExclusiveEffect, *Simulation)
 	OnExpire func(*ExclusiveEffect, *Simulation)
@@ -138,7 +158,7 @@ func (ee *ExclusiveEffect) Activate(sim *Simulation) bool {
 
 	if ee.Category.activeEffect == nil {
 		ee.Category.SetActive(sim, ee)
-	} else if ee.Priority > ee.Category.activeEffect.Priority || (ee.Priority == ee.Category.activeEffect.Priority && !ee.Category.activeEffect.keepsTie(sim, ee)) {
+	} else if ee.Priority > ee.Category.activeEffect.Priority || (ee.Priority == ee.Category.activeEffect.Priority && !ee.YieldsTies && !ee.Category.activeEffect.keepsTie(sim, ee)) {
 		if ee.Category.SingleAura && ee.Category.activeEffect != ee {
 			ee.Category.activeEffect.Aura.Deactivate(sim)
 		}

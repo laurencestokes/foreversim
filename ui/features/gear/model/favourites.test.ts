@@ -2,7 +2,7 @@ import { DatabaseFilters, UIEnchant as Enchant } from '@generated/proto/ui';
 import { describe, expect, it } from 'vitest';
 
 import { ItemData, ItemListType, SelectorModalTabs } from '../types';
-import { applyFavourite, favouriteFilterKey, favouriteId, isItemFavourited } from './favourites';
+import { applyFavourite, isItemFavourited } from './favourites';
 
 const row = <T extends ItemListType>(id: number, item: T): ItemData<T> =>
 	({
@@ -22,7 +22,6 @@ const filters = (over: Partial<DatabaseFilters> = {}): DatabaseFilters =>
 	({
 		favoriteItems: [],
 		favoriteEnchants: [],
-		favoriteGems: [],
 		favoriteRandomSuffixes: [],
 		favoriteReforges: [],
 		...over,
@@ -30,36 +29,25 @@ const filters = (over: Partial<DatabaseFilters> = {}): DatabaseFilters =>
 
 const enchant = (effectId: number, type: number) => ({ effectId, type }) as unknown as Enchant;
 
-describe('favouriteFilterKey', () => {
-	it('has its own list for enchants', () => {
-		expect(favouriteFilterKey(SelectorModalTabs.Enchants)).toBe('favoriteEnchants');
+describe('the list a favourite goes to', () => {
+	it('has its own list for enchants, keyed by the unique enchant string', () => {
+		const f = filters();
+		applyFavourite(f, SelectorModalTabs.Enchants, row(1, enchant(4444, 2)), true);
+		expect(f.favoriteEnchants).toEqual(['4444-2']);
+		expect(f.favoriteItems).toEqual([]);
 	});
 
-	it('shares one list between the three gem tabs', () => {
-		expect(favouriteFilterKey(SelectorModalTabs.Gem1)).toBe('favoriteGems');
-		expect(favouriteFilterKey(SelectorModalTabs.Gem2)).toBe('favoriteGems');
-		expect(favouriteFilterKey(SelectorModalTabs.Gem3)).toBe('favoriteGems');
-	});
-
-	it('has none for a tab that carries no favourites', () => {
-		expect(favouriteFilterKey('Nothing' as SelectorModalTabs)).toBeNull();
-	});
-});
-
-describe('favouriteId', () => {
-	it('is the row id everywhere but enchants', () => {
-		expect(favouriteId(SelectorModalTabs.Items, row(4321, {} as never))).toBe(4321);
-	});
-
-	it('is the unique enchant string on the enchant tab', () => {
-		expect(favouriteId(SelectorModalTabs.Enchants, row(1, enchant(4444, 2)))).toBe('4444-2');
+	it('keys every other tab by the row id', () => {
+		const f = filters();
+		applyFavourite(f, SelectorModalTabs.Items, row(4321, {} as never), true);
+		expect(f.favoriteItems).toEqual([4321]);
 	});
 });
 
 describe('isItemFavourited', () => {
 	it('reads the tab’s own list', () => {
 		expect(isItemFavourited(filters({ favoriteItems: [9] }), SelectorModalTabs.Items, row(9, {} as never))).toBe(true);
-		expect(isItemFavourited(filters({ favoriteGems: [9] }), SelectorModalTabs.Items, row(9, {} as never))).toBe(false);
+		expect(isItemFavourited(filters({ favoriteRandomSuffixes: [9] }), SelectorModalTabs.Items, row(9, {} as never))).toBe(false);
 	});
 
 	it('is always false on a tab with no favourites list', () => {

@@ -27,20 +27,18 @@ import {
 	APLValueCompare,
 	APLValueConst,
 	APLValueCurrentComboPoints,
-	APLValueCurrentEclipsePhase,
 	APLValueCurrentEnergy,
 	APLValueCurrentGenericResource,
 	APLValueCurrentHealth,
 	APLValueCurrentHealthPercent,
-	APLValueCurrentLunarEnergy,
 	APLValueCurrentMana,
 	APLValueCurrentManaPercent,
 	APLValueCurrentManaRegen,
 	APLValueCurrentRage,
-	APLValueCurrentSolarEnergy,
 	APLValueCurrentTime,
 	APLValueCurrentTimePercent,
 	APLValueDotBaseDuration,
+	APLValueDotExpectedDps,
 	APLValueDotIsActive,
 	APLValueDotIsActiveOnAllTargets,
 	APLValueDotLowestRemainingTime,
@@ -48,6 +46,8 @@ import {
 	APLValueDotRemainingTime,
 	APLValueDotTickFrequency,
 	APLValueDotTimeToNextTick,
+	APLValueDruidBleedIsActive,
+	APLValueEncounterInArea,
 	APLValueEnergyTimeToTarget,
 	APLValueFrontOfTarget,
 	APLValueGCDIsReady,
@@ -93,10 +93,12 @@ import {
 	APLValueSpellTimeToCharge,
 	APLValueSpellTimeToReady,
 	APLValueSpellTravelTime,
+	APLValueTargetIsMobType,
 	APLValueTimeToNextEnergyTick,
 	APLValueTotemRemainingTime,
 	APLValueUnitDistance,
 	APLValueUnitIsMoving,
+	APLValueWarlockActivePet,
 	APLValueWarlockAssignedCurseIsActive,
 	APLValueWarlockIsAssignedCurse,
 } from '@generated/proto/apl';
@@ -107,22 +109,24 @@ import { itemSwapEnabledSpecs } from '@sim/spec_config';
 
 import {
 	actionIdFieldConfig,
+	areaTypeFieldConfig,
 	autoSwingTypeFieldConfig,
 	autoTypeFieldConfig,
 	booleanFieldConfig,
 	comparisonOperatorFieldConfig,
 	curseTypeFieldConfig,
-	eclipseTypeFieldConfig,
 	executePhaseThresholdFieldConfig,
 	groupNameFieldConfig,
 	itemSwapSetFieldConfig,
 	makeUseDotBaseValueCheckbox,
 	mathOperatorFieldConfig,
 	minIcdInput,
+	mobTypeFieldConfig,
 	placeholderNameFieldConfig,
 	reactionTimeCheckbox,
 	statTypeFieldConfig,
 	stringFieldConfig,
+	summonTypeFieldConfig,
 	totemTypeFieldConfig,
 	unitFieldConfig,
 	valueFieldConfig,
@@ -164,6 +168,11 @@ function inputBuilder<T extends APLValueImplType>(config: ValueKindModel<T>): Va
 	return config;
 }
 
+const includeAutoValue = (player: Player<any>, isPrepull: boolean) => {
+	const spec = player.getSpec();
+	return !isPrepull && spec !== Spec.SpecBalanceDruid && spec !== Spec.SpecElementalShaman;
+};
+
 export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImplMap[f]> } = {
 	// Operators
 	const: inputBuilder({
@@ -171,7 +180,6 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		shortDescription: i18n.t('rotation_tab.apl.values.const.tooltip'),
 		fullDescription: i18n.t('rotation_tab.apl.values.const.full_description'),
 		newValue: APLValueConst.create,
-		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [stringFieldConfig('val')],
 	}),
 	cmp: inputBuilder({
@@ -214,7 +222,6 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		submenu: ['logic'],
 		shortDescription: i18n.t('rotation_tab.apl.values.any_of.tooltip'),
 		newValue: APLValueOr.create,
-		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [valueListFieldConfig('vals')],
 	}),
 	not: inputBuilder({
@@ -222,7 +229,6 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		submenu: ['logic'],
 		shortDescription: i18n.t('rotation_tab.apl.values.not.tooltip'),
 		newValue: APLValueNot.create,
-		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [valueFieldConfig('val')],
 	}),
 
@@ -272,7 +278,6 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		submenu: ['encounter'],
 		shortDescription: i18n.t('rotation_tab.apl.values.num_targets.tooltip'),
 		newValue: APLValueNumberTargets.create,
-		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [],
 	}),
 	frontOfTarget: inputBuilder({
@@ -282,6 +287,13 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		newValue: APLValueFrontOfTarget.create,
 		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [],
+	}),
+	encounterInArea: inputBuilder({
+		label: i18n.t('rotation_tab.apl.values.encounter_in_area.label'),
+		submenu: ['encounter'],
+		shortDescription: i18n.t('rotation_tab.apl.values.encounter_in_area.tooltip'),
+		newValue: APLValueEncounterInArea.create,
+		fields: [areaTypeFieldConfig('areaType')],
 	}),
 
 	// Boss
@@ -308,6 +320,13 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		newValue: APLValueBossCurrentTarget.create,
 		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [unitFieldConfig('targetUnit', 'targets')],
+	}),
+	targetIsMobType: inputBuilder({
+		label: i18n.t('rotation_tab.apl.values.target_is_mob_type.label'),
+		submenu: ['boss'],
+		shortDescription: i18n.t('rotation_tab.apl.values.target_is_mob_type.tooltip'),
+		newValue: APLValueTargetIsMobType.create,
+		fields: [unitFieldConfig('targetUnit', 'targets'), mobTypeFieldConfig('mobType')],
 	}),
 
 	// Unit
@@ -492,30 +511,6 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		},
 		fields: [],
 	}),
-	currentSolarEnergy: inputBuilder({
-		label: i18n.t('rotation_tab.apl.values.solar_energy.label'),
-		submenu: ['resources', 'eclipse'],
-		shortDescription: i18n.t('rotation_tab.apl.values.solar_energy.tooltip'),
-		newValue: APLValueCurrentSolarEnergy.create,
-		includeIf: (player: Player<any>, isPrepull: boolean) => !isPrepull && player.getSpec() == Spec.SpecBalanceDruid,
-		fields: [],
-	}),
-	currentLunarEnergy: inputBuilder({
-		label: i18n.t('rotation_tab.apl.values.lunar_energy.label'),
-		submenu: ['resources', 'eclipse'],
-		shortDescription: i18n.t('rotation_tab.apl.values.lunar_energy.tooltip'),
-		newValue: APLValueCurrentLunarEnergy.create,
-		includeIf: (player: Player<any>, isPrepull: boolean) => !isPrepull && player.getSpec() == Spec.SpecBalanceDruid,
-		fields: [],
-	}),
-	druidCurrentEclipsePhase: inputBuilder({
-		label: i18n.t('rotation_tab.apl.values.current_eclipse_phase.label'),
-		submenu: ['resources', 'eclipse'],
-		shortDescription: i18n.t('rotation_tab.apl.values.current_eclipse_phase.tooltip'),
-		newValue: APLValueCurrentEclipsePhase.create,
-		includeIf: (player: Player<any>, isPrepull: boolean) => !isPrepull && player.getSpec() == Spec.SpecBalanceDruid,
-		fields: [eclipseTypeFieldConfig('eclipsePhase')],
-	}),
 	currentGenericResource: inputBuilder({
 		label: i18n.t('rotation_tab.apl.values.generic_resource.label'),
 		submenu: ['resources'],
@@ -550,18 +545,7 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		submenu: ['auto'],
 		shortDescription: i18n.t('rotation_tab.apl.values.auto_swing_time.tooltip'),
 		newValue: APLValueAutoSwingTime.create,
-		includeIf(player: Player<any>, isPrepull: boolean) {
-			const clss = player.getClass();
-			const spec = player.getSpec();
-			return (
-				!isPrepull &&
-				clss !== Class.ClassMage &&
-				clss !== Class.ClassPriest &&
-				clss !== Class.ClassWarlock &&
-				spec !== Spec.SpecBalanceDruid &&
-				spec !== Spec.SpecElementalShaman
-			);
-		},
+		includeIf: includeAutoValue,
 		fields: [autoSwingTypeFieldConfig('autoType')],
 	}),
 	autoTimeToNext: inputBuilder({
@@ -569,18 +553,7 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		submenu: ['auto'],
 		shortDescription: i18n.t('rotation_tab.apl.values.time_to_next_auto.tooltip'),
 		newValue: APLValueAutoTimeToNext.create,
-		includeIf(player: Player<any>, isPrepull: boolean) {
-			const clss = player.getClass();
-			const spec = player.getSpec();
-			return (
-				!isPrepull &&
-				clss !== Class.ClassMage &&
-				clss !== Class.ClassPriest &&
-				clss !== Class.ClassWarlock &&
-				spec !== Spec.SpecBalanceDruid &&
-				spec !== Spec.SpecElementalShaman
-			);
-		},
+		includeIf: includeAutoValue,
 		fields: [autoTypeFieldConfig('autoType')],
 	}),
 	autoTimeSinceLast: inputBuilder({
@@ -588,18 +561,7 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		submenu: ['auto'],
 		shortDescription: i18n.t('rotation_tab.apl.values.time_since_last_auto.tooltip'),
 		newValue: APLValueAutoTimeSinceLast.create,
-		includeIf(player: Player<any>, isPrepull: boolean) {
-			const clss = player.getClass();
-			const spec = player.getSpec();
-			return (
-				!isPrepull &&
-				clss !== Class.ClassMage &&
-				clss !== Class.ClassPriest &&
-				clss !== Class.ClassWarlock &&
-				spec !== Spec.SpecBalanceDruid &&
-				spec !== Spec.SpecElementalShaman
-			);
-		},
+		includeIf: includeAutoValue,
 		fields: [autoTypeFieldConfig('autoType')],
 	}),
 
@@ -1007,9 +969,9 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		fields: [unitFieldConfig('targetUnit', 'targets'), actionIdFieldConfig('spellId', 'dot_spells', '')],
 	}),
 	dotBaseDuration: inputBuilder({
-		label: 'Dot Base Duration',
+		label: i18n.t('rotation_tab.apl.values.dot_base_duration.label'),
 		submenu: ['dot'],
-		shortDescription: 'The base duration of the DoT.',
+		shortDescription: i18n.t('rotation_tab.apl.values.dot_base_duration.tooltip'),
 		newValue: APLValueDotBaseDuration.create,
 		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [actionIdFieldConfig('spellId', 'dot_spells', '')],
@@ -1022,21 +984,21 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [unitFieldConfig('targetUnit', 'targets'), actionIdFieldConfig('spellId', 'expected_dot_spells', ''), makeUseDotBaseValueCheckbox()],
 	}),
-	dotCritPercentIncrease: inputBuilder({
-		label: 'Dot Crit Chance Increase %',
+	dotTickRatePercentIncrease: inputBuilder({
+		label: i18n.t('rotation_tab.apl.values.dot_tick_rate_percent_increase.label'),
 		submenu: ['dot'],
-		shortDescription: "How much higher a new DoT's Critical Strike Chance would be compared to the old.",
+		shortDescription: i18n.t('rotation_tab.apl.values.dot_tick_rate_percent_increase.tooltip'),
 		newValue: APLValueDotPercentIncrease.create,
 		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [unitFieldConfig('targetUnit', 'targets'), actionIdFieldConfig('spellId', 'expected_dot_spells', ''), makeUseDotBaseValueCheckbox()],
 	}),
-	dotTickRatePercentIncrease: inputBuilder({
-		label: 'Dot Tick Rate Increase %',
+	dotExpectedDps: inputBuilder({
+		label: i18n.t('rotation_tab.apl.values.dot_expected_dps.label'),
 		submenu: ['dot'],
-		shortDescription: 'How much faster a new DoT would tick compared to the old.',
-		newValue: APLValueDotPercentIncrease.create,
+		shortDescription: i18n.t('rotation_tab.apl.values.dot_expected_dps.tooltip'),
+		newValue: APLValueDotExpectedDps.create,
 		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
-		fields: [unitFieldConfig('targetUnit', 'targets'), actionIdFieldConfig('spellId', 'expected_dot_spells', ''), makeUseDotBaseValueCheckbox()],
+		fields: [unitFieldConfig('targetUnit', 'targets'), actionIdFieldConfig('spellId', 'expected_dot_spells', '')],
 	}),
 	sequenceIsComplete: inputBuilder({
 		label: i18n.t('rotation_tab.apl.values.sequence_is_complete.label'),
@@ -1088,6 +1050,14 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		includeIf: (player: Player<any>, isPrepull: boolean) => !isPrepull && player.getSpec() == Spec.SpecWarlock,
 		fields: [curseTypeFieldConfig('curseType')],
 	}),
+	warlockActivePet: inputBuilder({
+		label: i18n.t('rotation_tab.apl.values.warlock_active_pet.label'),
+		submenu: ['warlock'],
+		shortDescription: i18n.t('rotation_tab.apl.values.warlock_active_pet.tooltip'),
+		newValue: APLValueWarlockActivePet.create,
+		includeIf: (player: Player<any>, isPrepull: boolean) => !isPrepull && player.getSpec() == Spec.SpecWarlock,
+		fields: [summonTypeFieldConfig('summon')],
+	}),
 	protectionPaladinDamageTakenLastGlobal: inputBuilder({
 		label: i18n.t('rotation_tab.apl.values.protection_paladin_damage_taken_last_global.label'),
 		submenu: ['tank'],
@@ -1096,48 +1066,55 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		includeIf: (player: Player<any>, isPrepull: boolean) => !isPrepull && player.getSpec() === Spec.SpecProtectionPaladin,
 		fields: [],
 	}),
+	druidBleedIsActive: inputBuilder({
+		label: i18n.t('rotation_tab.apl.values.druid_bleed_is_active.label'),
+		submenu: ['feral_druid'],
+		shortDescription: i18n.t('rotation_tab.apl.values.druid_bleed_is_active.tooltip'),
+		newValue: APLValueDruidBleedIsActive.create,
+		includeIf(player: Player<any>, isPrepull: boolean) {
+			const spec = player.getSpec();
+			return !isPrepull && (spec === Spec.SpecFeralCatDruid || spec === Spec.SpecFeralBearDruid);
+		},
+		fields: [unitFieldConfig('targetUnit', 'targets')],
+	}),
 	variableRef: inputBuilder({
-		label: 'Variable Reference',
-		submenu: ['Variables'],
-		shortDescription: 'Reference a named condition variable',
+		label: i18n.t('rotation_tab.apl.values.variable_ref.label'),
+		submenu: ['variables'],
+		shortDescription: i18n.t('rotation_tab.apl.values.variable_ref.tooltip'),
 		newValue: () => ({ name: '' }),
 		fields: [variableNameFieldConfig('name')],
 	}),
 	variablePlaceholder: inputBuilder({
-		label: 'Variable Placeholder',
-		submenu: ['Variables'],
-		shortDescription: 'Placeholder value that gets replaced when group is referenced',
-		fullDescription: `
-			<p>Defines a placeholder value that must be set when this group is referenced. This allows groups to be parameterized.</p>
-			<p>Example: If you add a Variable Placeholder named "replace", then when referencing this group, you must provide a value for "replace".</p>
-		`,
+		label: i18n.t('rotation_tab.apl.values.variable_placeholder.label'),
+		submenu: ['variables'],
+		shortDescription: i18n.t('rotation_tab.apl.values.variable_placeholder.tooltip'),
+		fullDescription: i18n.t('rotation_tab.apl.values.variable_placeholder.full_description'),
 		includeIf: (_player: Player<any>, isPrepull: boolean, isGroup: boolean) => !isPrepull && isGroup, // Only show in groups, not prepull or priority list
 		newValue: () => ({ name: '' }),
 		fields: [
 			placeholderNameFieldConfig('name', {
-				labelTooltip: 'Name of the variable placeholder to expose. This name will be used when referencing the group.',
+				labelTooltip: i18n.t('rotation_tab.apl.values.variable_placeholder.name_tooltip'),
 			}),
 		],
 	}),
 	actionGroupUsed: inputBuilder({
-		label: 'Action Group is used',
-		submenu: ['Variables'],
-		shortDescription:
-			'Returns <b>True</b> if the specified action group is used in the rotation. This allows you to conditionally execute actions based on whether an action group is included in the rotation.',
+		label: i18n.t('rotation_tab.apl.values.action_group_used.label'),
+		submenu: ['variables'],
+		shortDescription: i18n.t('rotation_tab.apl.values.action_group_used.tooltip'),
 		newValue: APLValueActionGroupUsed.create,
 		fields: [groupNameFieldConfig('name')],
 	}),
 	activeItemSwapSet: inputBuilder({
-		label: 'Item Swap',
-		submenu: ['Misc'],
-		shortDescription: 'Returns <b>True</b> if the specified item swap set is currently active.',
+		label: i18n.t('rotation_tab.apl.values.active_item_swap_set.label'),
+		submenu: ['misc'],
+		shortDescription: i18n.t('rotation_tab.apl.values.active_item_swap_set.tooltip'),
 		includeIf: (player: Player<any>, isPrepull: boolean) => !isPrepull && itemSwapEnabledSpecs.includes(player.getSpec()),
 		newValue: APLValueActiveItemSwapSet.create,
 		fields: [itemSwapSetFieldConfig('swapSet')],
 	}),
 	selectedPotion: inputBuilder({
 		label: i18n.t('rotation_tab.apl.values.selected_potion.label'),
-		submenu: ['Misc'],
+		submenu: ['misc'],
 		shortDescription: i18n.t('rotation_tab.apl.values.selected_potion.tooltip'),
 		newValue: APLValueSelectedPotion.create,
 		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
@@ -1145,7 +1122,7 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 	}),
 	selectedConjured: inputBuilder({
 		label: i18n.t('rotation_tab.apl.values.selected_conjured.label'),
-		submenu: ['Misc'],
+		submenu: ['misc'],
 		shortDescription: i18n.t('rotation_tab.apl.values.selected_conjured.tooltip'),
 		newValue: APLValueSelectedConjured.create,
 		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
@@ -1153,7 +1130,7 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 	}),
 	multipleCdUsages: inputBuilder({
 		label: i18n.t('rotation_tab.apl.values.multiple_cd_usages.label'),
-		submenu: ['Misc'],
+		submenu: ['misc'],
 		shortDescription: i18n.t('rotation_tab.apl.values.multiple_cd_usages.tooltip'),
 		newValue: () =>
 			APLValueMultipleCdUsages.create({

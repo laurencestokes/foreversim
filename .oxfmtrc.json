@@ -27,6 +27,7 @@
 	},
 	"ignorePatterns": [
 		"ui/features/settings/model/buffs_debuffs_auto_gen.ts",
+		"ui/features/settings/model/consumables_auto_gen.ts",
 		"ui/worker/highs.js",
 		"ui/**/apls/*.apl.json",
 		"ui/**/builds/**/*.build.json",
@@ -35,11 +36,6 @@
 		"ui/sim/talents/trees/*.json",
 		"assets/**",
 		"**/test-fixtures/*.json",
-		"docs/**",
-		"ui/sim/proto/legacy_classic/**",
-		"tools/data_watch/**",
-		"tools/forever_talents/**",
-		"tools/parity/**",
 		".vscode/extensions/*/out/**"
 	]
 }

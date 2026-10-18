@@ -1,6 +1,7 @@
-import { BulkSimStage, ProgressMetrics } from '@generated/proto/api';
+import { ProgressMetrics } from '@generated/proto/api';
 import i18n from '@i18n/config';
 import type { BulkSimProgressConfig } from '@sim/bulk/types';
+import { timeRemainingAtRate } from '@sim/utils/math';
 
 export interface BulkProgress {
 	stage: string;
@@ -31,7 +32,7 @@ export const candidateGearProgress = ({
 }: CandidateGearProgressInput): BulkProgress => {
 	if (completed === undefined || total === undefined) return { stage, title };
 
-	const secondsRemaining = startedAt !== undefined && completed > 0 ? ((now - startedAt) / 1000 / completed) * Math.max(0, total - completed) : undefined;
+	const secondsRemaining = startedAt !== undefined ? timeRemainingAtRate((now - startedAt) / 1000, completed, total) : undefined;
 	return { stage, title, current: completed, total, secondsRemaining };
 };
 
@@ -40,7 +41,6 @@ export const simProgress = (progress: ProgressMetrics, config: BulkSimProgressCo
 	const stageCurrentRound = config.stageCurrentRound ?? config.currentRound;
 	const stageRounds = config.stageRounds ?? config.totalRounds;
 	const isBaselineRound = stageCurrentRound === 1;
-	const stage = progress.bulkStage == BulkSimStage.BulkSimStageReforge ? 'reforging' : 'sim';
 	const totalElapsedSeconds = (now - (config.aggregateStartedAt ?? simStart)) / 1000;
 	const completedIterations = config.aggregateCompletedIterations ?? progress.completedIterations;
 	const totalIterations = config.aggregateTotalIterations ?? progress.totalIterations;
@@ -57,12 +57,12 @@ export const simProgress = (progress: ProgressMetrics, config: BulkSimProgressCo
 	const completedRounds =
 		config.useSimCountProgress && progress.totalSims > 0 ? Math.max(progress.completedSims, completedSimsFromIterations) : completedRoundsFromIterations;
 	const totalRounds = config.useSimCountProgress && progress.totalSims > 0 ? progress.totalSims : stageRounds;
-	const secondsRemaining = completedRounds > 0 ? (totalElapsedSeconds / completedRounds) * Math.max(0, totalRounds - completedRounds) : 0;
+	const secondsRemaining = timeRemainingAtRate(totalElapsedSeconds, completedRounds, totalRounds) ?? 0;
 
 	if (isNaN(Number(secondsRemaining))) return null;
 
 	return {
-		stage,
+		stage: 'sim',
 		title: config.title ?? (isBaselineRound ? i18n.t('bulk_tab.progress.baseline_round') : i18n.t('bulk_tab.progress.refining_rounds')),
 		current: completedRounds,
 		total: totalRounds,

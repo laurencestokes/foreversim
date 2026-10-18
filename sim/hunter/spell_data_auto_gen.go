@@ -8,11 +8,9 @@ import (
 
 // Not generated:
 //   Monster Slaying: missing rank 1 of 3
-//   Natural Armor: ambiguous rank 1 between spells 24545, 24547; rank 2 between spells 24549, 24556; rank 3 between spells 24550, 24557; rank 4 between spells 24551, 24558; rank 5 between spells 24552, 24559; rank 6 between spells 24553, 24560; rank 7 between spells 24554, 24561; rank 8 between spells 24555, 24562
 
 // Generated with an effect held at its base points, the talent tree stating no rank value for it:
 //   Barrage: effect 1 of spell 19461 has no rank curve and is held at its base points
-//   Improved Serpent Sting: effect 1 of spell 19464 has no rank curve and is held at its base points
 //   Lacerating Strikes: effect 0 of spell 1310533 has no rank curve and is held at its base points
 //   Lone Wolf: effect 0, 1 of spell 415370 has no rank curve and is held at its base points
 //   Surefooted: effect 3 of spell 19290 has no rank curve and is held at its base points
@@ -138,7 +136,6 @@ type generatedSpellData struct {
 	ImprovedMendPet                 spelldata.Ladder
 	ImprovedMendPetTriggered        spelldata.Ladder
 	ImprovedRevivePet               spelldata.Ladder
-	ImprovedSerpentSting            spelldata.Ladder
 	ImprovedStings                  spelldata.Ladder
 	ImprovedTracking                spelldata.Ladder
 	ImprovedWingClip                spelldata.Ladder
@@ -162,6 +159,8 @@ type generatedSpellData struct {
 	MongooseBite                    spelldata.Ladder
 	MortalShots                     spelldata.Ladder
 	MultiShot                       spelldata.Ladder
+	NaturalArmor                    spelldata.Ladder
+	NaturalArmorTriggered           spelldata.Ladder
 	NatureResistance                spelldata.Ladder
 	NatureResistanceTriggered       spelldata.Ladder
 	Pathfinding                     spelldata.Ladder
@@ -358,7 +357,6 @@ var spellData = generatedSpellData{
 	ImprovedMendPet:                 spelldata.Talent(19572, 2),
 	ImprovedMendPetTriggered:        spelldata.Ranked(24406),
 	ImprovedRevivePet:               spelldata.Talent(24443, 2),
-	ImprovedSerpentSting:            spelldata.Talent(19464, 5),
 	ImprovedStings:                  spelldata.Talent(1310661, 3),
 	ImprovedTracking:                spelldata.Talent(24293, 5),
 	ImprovedWingClip:                spelldata.Talent(19228, 3),
@@ -382,6 +380,8 @@ var spellData = generatedSpellData{
 	MongooseBite:                    spelldata.Ranked(1495, 14269, 14270, 14271),
 	MortalShots:                     spelldata.Talent(19485, 5),
 	MultiShot:                       spelldata.Ranked(2643),
+	NaturalArmor:                    spelldata.Ranked(24547, 24556, 24557, 24558, 24559, 24560, 24561, 24562, 24631, 24632),
+	NaturalArmorTriggered:           spelldata.Ranked(24545, 24549, 24550, 24551, 24552, 24553, 24554, 24555, 24629, 24630),
 	NatureResistance:                spelldata.Ranked(24494, 24511, 24512, 24513),
 	NatureResistanceTriggered:       spelldata.Ranked(24492, 24502, 24503, 24504),
 	Pathfinding:                     spelldata.Talent(19559, 2),

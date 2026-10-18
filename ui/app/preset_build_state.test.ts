@@ -1,9 +1,12 @@
+import { ItemSpec, ItemSwap } from '@generated/proto/common';
+import { PresetConfigurationCategory } from '@sim/constants/preset_categories';
+import { Stats } from '@sim/proto/stats';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@i18n/config', () => ({ default: { t: (key: string) => key } }));
 vi.mock('@i18n/localization', () => ({ translatePresetConfigurationCategory: (category: string) => `category:${category}` }));
 
-const { buildCategories } = await import('./preset_build_state');
+const { buildCategories, isBuildActive } = await import('./preset_build_state');
 
 const build = (parts: Record<string, unknown>) => ({ name: 'P1', ...parts }) as any;
 
@@ -42,5 +45,24 @@ describe('buildCategories', () => {
 	it('names each specially-handled category exactly once', () => {
 		expect(buildCategories(build({ reforgeSettings: {} }))).toEqual(['common.preset.reforge_settings']);
 		expect(buildCategories(build({ epWeights: {} }))).toEqual(['common.preset.stat_weights']);
+	});
+});
+
+describe('isBuildActive', () => {
+	const swapWith = (id: number) => ItemSwap.create({ items: [ItemSpec.create(), ItemSpec.create({ id, enchant: 8211 })] });
+	const hostWithSwap = (itemSwap: ItemSwap) => ({ player: { itemSwapSettings: { getEnableItemSwap: () => true, toProto: () => itemSwap } } }) as any;
+	const swapBuild = (itemSwap: ItemSwap) => build({ settings: { name: 'P1', playerOptions: { enableItemSwap: true, itemSwap } } });
+
+	// The live swap always carries a prepull stats message; a preset's JSON leaves it out.
+	it('matches a preset item swap without prepull stats against the live all-zero ones', () => {
+		const live = { ...swapWith(15257), prepullBonusStats: { ...new Stats().toProto(), apiVersion: 2 } };
+
+		expect(isBuildActive(swapBuild(swapWith(15257)), hostWithSwap(live), [PresetConfigurationCategory.Settings])).toBe(true);
+	});
+
+	it('tells a different swap item apart', () => {
+		const live = { ...swapWith(15257), prepullBonusStats: new Stats().toProto() };
+
+		expect(isBuildActive(swapBuild(swapWith(9449)), hostWithSwap(live), [PresetConfigurationCategory.Settings])).toBe(false);
 	});
 });

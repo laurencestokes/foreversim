@@ -1,3 +1,4 @@
+import { SidebarRegistry } from '@app/sidebar_registry';
 import { initBulk } from '@features/bulk/model/init';
 import { watchTargetDummies } from '@features/encounter/model/target_dummies';
 import { repairTargetInputs } from '@features/encounter/model/target_inputs';
@@ -12,6 +13,8 @@ import { SimResultsManager } from '@features/results/model/results_manager';
 import type { ResultsPanelHandle } from '@features/results/model/results_panel_handle';
 import { WarningsRegistry } from '@features/results/model/warnings';
 import { applyEmptyAplRotation, applyIndividualDefaults } from '@features/settings/model/apply_defaults';
+import * as OtherInputs from '@features/settings/model/other_inputs';
+import { StatSweepAction } from '@features/stat-sweep/components/StatSweepAction';
 import { type ErrorOutcome, ErrorOutcomeType } from '@generated/proto/api';
 import { Spec } from '@generated/proto/common';
 import { IndividualSimSettings } from '@generated/proto/ui';
@@ -21,6 +24,7 @@ import { SimSettingCategories } from '@sim/constants/sim_settings';
 import { Player } from '@sim/player/player';
 import { Gear } from '@sim/proto/gear';
 import { SimResult } from '@sim/proto/sim_result';
+import { StatSweepSettings } from '@sim/settings/stat_sweep_settings';
 import { StatWeightActionSettings } from '@sim/settings/stat_weight_settings';
 import { RunSimOptions, Sim, SimError } from '@sim/sim';
 import type { IndividualSimHost, SimWarning } from '@sim/sim_host';
@@ -37,19 +41,18 @@ import {
 	SAVED_SETTINGS_STORAGE_KEY,
 	SAVED_TALENTS_STORAGE_KEY,
 	specStorageKey,
+	STAT_SWEEP_SETTINGS_STORAGE_KEY,
 	STAT_WEIGHT_SETTINGS_STORAGE_KEY,
 } from '@sim/state/storage_keys';
 import { subscribeAll, subscribeReforgeChange, subscribeSimChange } from '@sim/state/subscriptions';
 import { getEnumValues } from '@sim/utils/collections';
 import { isDevMode } from '@sim/utils/env';
 import { WorkerProgressCallback } from '@sim/workers/worker_pool';
-import { SidebarRegistry } from '@ui-kit/sidebar_registry';
 import { toastManager } from '@ui-kit/Toast';
 import { createElement } from 'react';
 
 import { reportSimCrash } from './crash_report';
 import { CrashReportOpener } from './crash_report_opener';
-import { updateIndividualProtoVersion } from './proto_version';
 import { PRESET_FILTER_STORAGE_KEY } from './storage_keys';
 import type { ShellDom } from './types/shell_dom';
 
@@ -80,13 +83,12 @@ export class SimHostObject<SpecType extends Spec> implements IndividualSimHost<S
 	readonly resultsPanel = new ResultsPanelStore();
 	readonly warnings = new WarningsRegistry();
 
-	readonly simActionsContainer: HTMLElement;
-	readonly simTabContentsContainer: HTMLElement;
 	readonly sidebar = new SidebarRegistry();
 
 	readonly player: Player<SpecType>;
 	readonly individualConfig: IndividualSimUIConfig<SpecType>;
 	readonly statWeightActionSettings: StatWeightActionSettings;
+	readonly statSweepSettings: StatSweepSettings;
 
 	readonly raidSimResultsManager: SimResultsManager;
 	readonly crashReport = new CrashReportOpener();
@@ -114,13 +116,11 @@ export class SimHostObject<SpecType extends Spec> implements IndividualSimHost<S
 
 		this.sim.crashEmitter.on((error: SimError) => this.handleCrash(error));
 
-		this.simActionsContainer = dom.sidebarActions;
-		this.simTabContentsContainer = dom.main;
-
 		this.player = player;
 		this.individualConfig = this.applyDefaultConfigOptions(config);
 		this.raidSimResultsManager = new SimResultsManager(this.sim);
 		this.statWeightActionSettings = new StatWeightActionSettings(this.player, this.getStorageKey(STAT_WEIGHT_SETTINGS_STORAGE_KEY));
+		this.statSweepSettings = new StatSweepSettings(this.player, this.getStorageKey(STAT_SWEEP_SETTINGS_STORAGE_KEY));
 
 		if ((config.itemSwapSlots || []).length > 0 && !itemSwapEnabledSpecs.includes(player.getSpec())) {
 			itemSwapEnabledSpecs.push(player.getSpec());
@@ -168,8 +168,6 @@ export class SimHostObject<SpecType extends Spec> implements IndividualSimHost<S
 			this.reforger = createReforgeOptimizer(this.sim, this.player, {
 				...this.reforgeOptions,
 				defaults: this.individualConfig.defaults,
-				// Omitting this leaves the solver un-weighted, and the gem-optimizer/ep-stats probe
-				// is the only thing that notices.
 				epStats: this.individualConfig.epStats,
 			});
 			this.sidebar.add({
@@ -177,6 +175,7 @@ export class SimHostObject<SpecType extends Spec> implements IndividualSimHost<S
 				render: () => createElement(ReforgeSidebarGroup, { model: this.reforger!, options: this.reforgeOptions ?? undefined }),
 			});
 		}
+		this.sidebar.add({ id: 'stat-sweep', render: () => createElement(StatSweepAction, { settings: this.statSweepSettings }) });
 		for (const derived of config.derivedSettings || []) {
 			derived.apply(this.player, this.sim);
 			derived.subscribe(this.player, this.sim)(() => derived.apply(this.player, this.sim));
@@ -187,7 +186,7 @@ export class SimHostObject<SpecType extends Spec> implements IndividualSimHost<S
 		return this.resultsPanel;
 	}
 
-	// `config` and `individualConfig` are the same object; `SimHost` only narrows what features see of it.
+	// The same object as `individualConfig`; `SimHost` only narrows what features see of it.
 	get config(): IndividualSimUIConfig<SpecType> {
 		return this.individualConfig;
 	}
@@ -259,6 +258,8 @@ export class SimHostObject<SpecType extends Spec> implements IndividualSimHost<S
 	}
 
 	applyDefaultConfigOptions(config: IndividualSimUIConfig<SpecType>): IndividualSimUIConfig<SpecType> {
+		config.otherInputs.inputs = [...(this.player.getPlayerSpec().isTankSpec ? [OtherInputs.RetributionAuraSpellPower] : []), ...config.otherInputs.inputs];
+
 		return config;
 	}
 
@@ -273,6 +274,7 @@ export class SimHostObject<SpecType extends Spec> implements IndividualSimHost<S
 			player: this.player,
 			autosaveSubscribe,
 			statWeightSettings: this.statWeightActionSettings,
+			statSweepSettings: this.statSweepSettings,
 		});
 	}
 
@@ -293,11 +295,8 @@ export class SimHostObject<SpecType extends Spec> implements IndividualSimHost<S
 	}
 
 	fromProto(settings: IndividualSimSettings, includeCategories?: Array<SimSettingCategories>) {
-		// Before `applyIndividualSimSettings`: an old link's buffs and consumables are reset to the
-		// spec's defaults here, and the proto stamped current.
-		updateIndividualProtoVersion(settings, this.individualConfig.defaults);
 		// A gear planner hides the encounter settings, so the default target applied by `applyDefaults`
-		// stays whatever the saved settings or the link carried: stats and the gem optimizer always
+		// stays whatever the saved settings or the link carried: stats and the gear optimizer always
 		// have a full environment to build, without a second ComputeStats to put it back.
 		const categories = this.simDisabled
 			? (includeCategories?.length ? includeCategories : ALL_SETTING_CATEGORIES).filter(category => category !== SimSettingCategories.Encounter)
@@ -330,6 +329,6 @@ export class SimHostObject<SpecType extends Spec> implements IndividualSimHost<S
 	}
 
 	getStorageKey(keyPart: string): string {
-		return specStorageKey(this.player.getPlayerSpec(), (this.individualConfig.storageKeyPart ?? '') + keyPart);
+		return specStorageKey(this.player.getPlayerSpec(), keyPart);
 	}
 }

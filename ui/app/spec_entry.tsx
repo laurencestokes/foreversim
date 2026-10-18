@@ -6,7 +6,8 @@ import { Player } from '@sim/player/player';
 import { PlayerSpecs } from '@sim/player/specs';
 import { Sim } from '@sim/sim';
 import type { SpecDefinition } from '@sim/spec_config';
-import { registerSpecConfig } from '@sim/spec_config';
+import { registerSpecConfig, withoutDevOnlyGear } from '@sim/spec_config';
+import { isPreviewOrDevMode } from '@sim/utils/env';
 import { StrictMode } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -15,7 +16,7 @@ import { SimApp } from './SimApp';
 
 const modules = import.meta.glob<{ default: SpecDefinition<any> }>('../specs/*/*/spec.{ts,tsx}');
 
-// '/forever/warrior/dps/' -> '../specs/warrior/dps/spec' (then tried as .ts and .tsx — no TBC spec
+// '/forever/warrior/dps/' -> '../specs/warrior/dps/spec' (then tried as .ts and .tsx — no spec
 // carries real JSX today, but the glob accepts one that starts to).
 const specModuleKey = (pathname: string): string => {
 	const base = import.meta.env.BASE_URL || '/';
@@ -34,7 +35,8 @@ void (async () => {
 		throw new Error(`No spec module for ${location.pathname} (looked for ${key}.ts(x)).`);
 	}
 
-	const def = (await loadSpec()).default;
+	const loaded = (await loadSpec()).default;
+	const def = isPreviewOrDevMode(location.hostname) ? loaded : withoutDevOnlyGear(loaded);
 
 	// `new Player()` resolves the spec's config out of the registry in its constructor, so the definition has to be registered before the player is built.
 	registerSpecConfig(def.spec, def);
@@ -43,11 +45,8 @@ void (async () => {
 	sim.runs.setFlush(flushSync);
 	const playerSpec = PlayerSpecs.fromProto(def.spec);
 	const player = new Player(playerSpec, sim);
-	// Opt-in per spec, not inferred. Upstream derives this from isTankSpec ||
-	// isHealingSpec; in TBC exactly four specs enable it -- feralbear, holy and
-	// protection paladin, and protection warrior -- and notably neither restoration
-	// spec does, so the heuristic would hand them a computed healing model the
-	// pre-port UI never gave them.
+	// Opt-in per spec, not inferred from isTankSpec || isHealingSpec: neither restoration
+	// spec enables it, so that heuristic would hand them a computed healing model.
 	if (def.enableHealing) player.enableHealing();
 
 	sim.raid.setPlayer(0, player);

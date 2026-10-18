@@ -2,50 +2,22 @@ package warrior
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+var pummelRank = spellData.Pummel.ByID(6554)
+var pummelBaseDamage = pummelRank.DamageEffect().Average()
+
 func (warrior *Warrior) registerPummel() {
-	pummelRank := spellData.Pummel.ByID(6554)
-	pummelBaseDamage := pummelRank.DamageEffect().Average(core.CharacterLevel)
+	config := spelldata.SpellConfig(&warrior.Unit, pummelRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
 
-	warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: pummelRank.ID},
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		ClassSpellMask: SpellMaskPummel,
-		ProcMask:       core.ProcMaskMeleeMHSpecial,
-		SpellSchool:    pummelRank.SpellSchool(),
-		DefenseType:    pummelRank.DefenseTypeCore(),
-		MaxRange:       core.MaxMeleeRange,
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcAndDealDamage(sim, target, pummelBaseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
 
-		RageCost: core.RageCostOptions{
-			Cost:   int32(pummelRank.Cost()),
-			Refund: pummelRank.MissRefund(),
-		},
+		if !result.Landed() {
+			spell.IssueRefund(sim)
+		}
+	}
 
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: pummelRank.GCD(),
-			},
-			IgnoreHaste: true,
-			CD: core.Cooldown{
-				Timer:    warrior.NewTimer(),
-				Duration: cooldownOf(pummelRank),
-			},
-		},
-
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return warrior.StanceMatches(BerserkerStance)
-		},
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcAndDealDamage(sim, target, pummelBaseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
-
-			if !result.Landed() {
-				spell.IssueRefund(sim)
-			}
-		},
-	})
+	warrior.RegisterSpell(config)
 }

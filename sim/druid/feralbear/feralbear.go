@@ -2,6 +2,7 @@ package feralbear
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/druid"
 )
@@ -28,14 +29,15 @@ func NewFeralBearDruid(character *core.Character, options *proto.Player) *Guardi
 	selfBuffs := druid.SelfBuffs{}
 
 	bear := &GuardianDruid{
-		Druid:   druid.New(character, druid.Bear, selfBuffs, options.TalentsString),
+		Druid:   druid.New(character, druid.DireBear, selfBuffs, options.TalentsString),
 		Options: tankOptions.Options,
 	}
+	bear.AssumeBleedActive = tankOptions.Options.GetAssumeBleedActive()
 
 	healingModel := options.HealingModel
 	if healingModel != nil {
 		if healingModel.InspirationUptime > 0.0 {
-			core.ApplyInspiration(bear.GetCharacter(), healingModel.InspirationUptime)
+			buffs.ApplyInspiration(bear.GetCharacter(), healingModel.InspirationUptime)
 		}
 	}
 
@@ -47,6 +49,7 @@ func NewFeralBearDruid(character *core.Character, options *proto.Player) *Guardi
 	bear.EnableRageBar(core.RageBarOptions{
 		BaseRageMultiplier: 1,
 		StartingRage:       tankOptions.Options.GetStartingRage(),
+		TwoHandRage:        druid.BearRageIsTwoHanded,
 	})
 	bear.EnableAutoAttacks(bear, core.AutoAttackOptions{
 		// Base paw weapon.
@@ -64,8 +67,7 @@ func NewFeralBearDruid(character *core.Character, options *proto.Player) *Guardi
 type GuardianDruid struct {
 	*druid.Druid
 
-	Options      *proto.FeralBearDruid_Options
-	BearRotation BearRotation
+	Options *proto.FeralBearDruid_Options
 }
 
 func (bear *GuardianDruid) GetDruid() *druid.Druid {
@@ -73,18 +75,14 @@ func (bear *GuardianDruid) GetDruid() *druid.Druid {
 }
 
 func (bear *GuardianDruid) AddRaidBuffs(raidBuffs *proto.RaidBuffs) {
+	bear.Druid.AddRaidBuffs(raidBuffs)
 }
 
 func (bear *GuardianDruid) ApplyTalents() {
 	bear.Druid.ApplyTalents()
 }
 
-// Windfury Totem stays: Forever's 8515 is a party proc aura, not a weapon
-// enchant, so a bear procs it (client 1.60.1.70205).
-func (bear *GuardianDruid) AddPartyBuffs(partyBuffs *proto.PartyBuffs) {
-	if bear.Talents.LeaderOfThePack {
-		partyBuffs.LeaderOfThePack = true
-	}
+func (bear *GuardianDruid) AddPartyBuffs(_ *proto.PartyBuffs) {
 }
 
 func (bear *GuardianDruid) Initialize() {
@@ -95,7 +93,7 @@ func (bear *GuardianDruid) Initialize() {
 func (bear *GuardianDruid) Reset(sim *core.Simulation) {
 	bear.Druid.Reset(sim)
 	bear.Druid.ClearForm(sim)
-	bear.BearFormAura.Activate(sim)
+	bear.DireBearFormAura.Activate(sim)
 	bear.Druid.PseudoStats.Stunned = false
 }
 

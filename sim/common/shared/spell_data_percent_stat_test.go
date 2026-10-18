@@ -2,9 +2,9 @@ package shared
 
 import (
 	"testing"
-	"time"
 
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/simsignals"
 	"github.com/wowsims/forever/sim/core/spelldata"
@@ -168,10 +168,14 @@ func TestShieldEnchantBuffDropsWithItsShield(t *testing.T) {
 	}
 }
 
-// Insight 8216's rows on a weapon enchant: trigger 1248758 hears spell damage and heals at 35% with a
-// 45 s lockout, and its buff 1299796 doubles Spirit for 10 s, on top of whatever Spirit the caster
-// gains while it is up.
+// Insight 8216's rows on a weapon enchant: trigger 1248758 hears spell damage and heals at its stated
+// chance with a lockout, and its buff 1299796 multiplies Spirit for its duration, on top of whatever
+// Spirit the caster gains while it is up.
 func TestInsightMultipliesSpirit(t *testing.T) {
+	trigger, buff := spelldata.MustFind(1248758), spelldata.MustFind(1299796)
+	percent := buff.FirstAura(dbcenums.A_MOD_TOTAL_STAT_PERCENTAGE).Mean()
+	needAmount(t, "1299796's Spirit share", percent)
+	multiplier := 1 + percent/100
 	weapon := testOneHander(insightWeaponID)
 	core.AddToDatabase(&proto.SimDatabase{
 		Items: []*proto.SimItem{weapon},
@@ -183,15 +187,15 @@ func TestInsightMultipliesSpirit(t *testing.T) {
 
 	cfg := SpellDataProc{Name: "Test Insight", EnchantID: insightEnchantID, TriggerSpellID: 1248758,
 		BuffSpellID: 1299796}
-	listener := spellDataProcListener(newTestAgent().character, cfg, cfg.effectSource(), spelldata.MustFind(1248758), nil)
+	listener := spellDataProcListener(newTestAgent().character, cfg, cfg.effectSource(), trigger)
 	if want := core.CallbackOnSpellHitDealt | core.CallbackOnHealDealt; listener.Callback != want {
 		t.Errorf("callback = %v, want %v", listener.Callback, want)
 	}
 	if want := core.ProcMaskSpellDamage | core.ProcMaskSpellHealing; listener.ProcMask != want {
 		t.Errorf("proc mask = %v, want %v", listener.ProcMask, want)
 	}
-	if listener.ProcChance != 0.35 || listener.DPM != nil {
-		t.Errorf("chance = %v with manager %v, want a stated 0.35 and no rate", listener.ProcChance, listener.DPM)
+	if want := trigger.StatedChance(); listener.ProcChance != want || listener.DPM != nil {
+		t.Errorf("chance = %v with manager %v, want the stated %v and no rate", listener.ProcChance, listener.DPM, want)
 	}
 
 	sim := newTestCasterSim(testHands(&proto.ItemSpec{Id: insightWeaponID, Enchant: insightEnchantID}, &proto.ItemSpec{}), nil)
@@ -201,8 +205,8 @@ func TestInsightMultipliesSpirit(t *testing.T) {
 	if insight == nil {
 		t.Fatal("no Insight buff on the caster")
 	}
-	if insight.Duration != 10*time.Second {
-		t.Errorf("buff duration = %v, want 1299796's 10s", insight.Duration)
+	if insight.Duration != buff.Duration() {
+		t.Errorf("buff duration = %v, want 1299796's %v", insight.Duration, buff.Duration())
 	}
 	if procBuffs := caster.GetMatchingItemProcAuras([]stats.Stat{stats.Spirit}, 0); len(procBuffs) != 1 || procBuffs[0].Aura != insight {
 		t.Errorf("Spirit proc buffs %v, want Insight's", procBuffs)
@@ -217,7 +221,7 @@ func TestInsightMultipliesSpirit(t *testing.T) {
 
 	spirit := caster.GetStat(stats.Spirit)
 	if spirit <= 0 {
-		t.Fatalf("Spirit is %v before Insight, nothing for 100%% to show on", spirit)
+		t.Fatalf("Spirit is %v before Insight, nothing for a multiplier to show on", spirit)
 	}
 
 	// A proc's handler runs one spell batch window after the hit, so each cast is followed by a step.
@@ -234,31 +238,33 @@ func TestInsightMultipliesSpirit(t *testing.T) {
 		castAndStep()
 	}
 	procTime := sim.CurrentTime
-	if got := caster.GetStat(stats.Spirit); got != 2*spirit {
-		t.Errorf("Spirit with Insight = %v, want twice %v", got, spirit)
+	if got := caster.GetStat(stats.Spirit); !core.WithinToleranceFloat64(multiplier*spirit, got, 1e-6) {
+		t.Errorf("Spirit with Insight = %v, want %v times %v", got, multiplier, spirit)
 	}
 
 	caster.AddStatsDynamic(sim, stats.Stats{stats.Spirit: 50})
-	if got := caster.GetStat(stats.Spirit); got != 2*(spirit+50) {
-		t.Errorf("Spirit with Insight after 50 more = %v, want twice %v", got, spirit+50)
+	if got := caster.GetStat(stats.Spirit); !core.WithinToleranceFloat64(multiplier*(spirit+50), got, 1e-6) {
+		t.Errorf("Spirit with Insight after 50 more = %v, want %v times %v", got, multiplier, spirit+50)
 	}
 	caster.AddStatsDynamic(sim, stats.Stats{stats.Spirit: -50})
 
 	insight.Deactivate(sim)
-	if got := caster.GetStat(stats.Spirit); got != spirit {
+	if got := caster.GetStat(stats.Spirit); !core.WithinToleranceFloat64(spirit, got, 1e-6) {
 		t.Errorf("Spirit after Insight = %v, want %v", got, spirit)
 	}
-	if len(heard) != 2 || heard[0][stats.Spirit] != spirit || heard[1][stats.Spirit] != -spirit {
-		t.Errorf("temporary stats heard %v, want +%v Spirit on gain and -%v on expire", heard, spirit, spirit)
+	gained := (multiplier - 1) * spirit
+	if len(heard) != 2 || !core.WithinToleranceFloat64(gained, heard[0][stats.Spirit], 1e-6) ||
+		!core.WithinToleranceFloat64(-gained, heard[1][stats.Spirit], 1e-6) {
+		t.Errorf("temporary stats heard %v, want +%v Spirit on gain and -%v on expire", heard, gained, gained)
 	}
 
 	for range 100 {
 		castAndStep()
 	}
-	if sim.CurrentTime-procTime >= 45*time.Second {
+	if sim.CurrentTime-procTime >= trigger.ICD() {
 		t.Fatalf("the casts ran %v past the proc, not inside the lockout", sim.CurrentTime-procTime)
 	}
 	if insight.IsActive() {
-		t.Error("Insight procced again inside its 45s lockout")
+		t.Errorf("Insight procced again inside its %v lockout", trigger.ICD())
 	}
 }

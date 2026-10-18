@@ -32,13 +32,14 @@ func createDynamicAddsAIPreset() {
 			TankIndex: 0,
 
 			Stats: stats.Stats{
+				stats.Health:      1_428_900,
 				stats.Armor:       3731,
 				stats.AttackPower: 320,
 			}.ToProtoArray(),
 
 			SpellSchool:   proto.SpellSchool_SpellSchoolPhysical,
 			SwingSpeed:    2.0,
-			MinBaseDamage: 4192.05,
+			MinBaseDamage: 2601,
 			DamageSpread:  0.5,
 			ParryHaste:    true,
 			CanCrush:      true,
@@ -54,7 +55,7 @@ func createDynamicAddsAIPreset() {
 		Config: &proto.Target{
 			Id:        dynamicAddID,
 			Name:      addName,
-			Level:     72,
+			Level:     63,
 			MobType:   proto.MobType_MobTypeMechanical,
 			TankIndex: 1,
 

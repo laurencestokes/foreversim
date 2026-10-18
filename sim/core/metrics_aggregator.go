@@ -52,7 +52,7 @@ func (distMetrics *DistributionMetrics) doneIteration(sim *Simulation) {
 		distMetrics.minSeed = sim.rand.GetSeed()
 	}
 
-	dpsRounded := int32(math.Round(dps/10) * 10)
+	dpsRounded := int32(math.Round(dps/5) * 5)
 	distMetrics.hist[dpsRounded]++
 }
 
@@ -123,9 +123,68 @@ type ActionMetrics struct {
 	IsMelee     bool // True if melee action, false if spell action.
 	IsPassive   bool // True if action is applied/cast as a result of another action
 	SpellSchool SpellSchool
+	Rank        int32 // The spell's rank, which the UI names the action with; 0 for an unranked spell.
 
 	// Metrics for this action, for each possible target.
 	Targets []TargetedActionMetrics
+
+	rangeSources [][]*hitRanges // One slice per spell and split feeding this action, indexed by target.
+}
+
+const numHitKinds = int(proto.HitKind_HitKindShield) + 1
+
+// Value ranges of one spell split against one target, accumulated over all iterations.
+type hitRanges struct {
+	kinds  [numHitKinds]valueRange
+	custom []customMetric
+}
+
+type customMetric struct {
+	key string
+	valueRange
+}
+
+func (hr *hitRanges) customRange(key string) *valueRange {
+	for i := range hr.custom {
+		if hr.custom[i].key == key {
+			return &hr.custom[i].valueRange
+		}
+	}
+	hr.custom = append(hr.custom, customMetric{key: key})
+	return &hr.custom[len(hr.custom)-1].valueRange
+}
+
+func (actionMetrics *ActionMetrics) hitRangesToProto(targetIdx int, tam *proto.TargetedActionMetrics) {
+	var merged hitRanges
+	for _, source := range actionMetrics.rangeSources {
+		hr := source[targetIdx]
+		if hr == nil {
+			continue
+		}
+		for k := range merged.kinds {
+			merged.kinds[k].merge(&hr.kinds[k])
+		}
+		for i := range hr.custom {
+			cm := &hr.custom[i]
+			merged.customRange(cm.key).merge(&cm.valueRange)
+		}
+	}
+
+	for k := range merged.kinds {
+		if merged.kinds[k].n == 0 {
+			continue
+		}
+		if tam.Ranges == nil {
+			tam.Ranges = make(map[int32]*proto.DistributionMetrics)
+		}
+		tam.Ranges[int32(k)] = merged.kinds[k].toProto()
+	}
+	for i := range merged.custom {
+		if merged.custom[i].n == 0 {
+			continue
+		}
+		tam.CustomMetrics = append(tam.CustomMetrics, &proto.CustomActionMetric{Key: merged.custom[i].key, Range: merged.custom[i].toProto()})
+	}
 }
 
 type tmiListItem struct {
@@ -135,12 +194,16 @@ type tmiListItem struct {
 
 func (actionMetrics *ActionMetrics) ToProto(actionID ActionID) *proto.ActionMetrics {
 	targetMetrics := make([]*proto.TargetedActionMetrics, 0, len(actionMetrics.Targets))
-	for _, tam := range actionMetrics.Targets {
-		targetMetrics = append(targetMetrics, tam.ToProto())
+	for i, tam := range actionMetrics.Targets {
+		tamProto := tam.ToProto()
+		actionMetrics.hitRangesToProto(i, tamProto)
+		targetMetrics = append(targetMetrics, tamProto)
 	}
 
+	id := actionID.ToProto()
+	id.Rank = actionMetrics.Rank
 	return &proto.ActionMetrics{
-		Id:          actionID.ToProto(),
+		Id:          id,
 		IsMelee:     actionMetrics.IsMelee,
 		IsPassive:   actionMetrics.IsPassive,
 		Targets:     targetMetrics,
@@ -280,10 +343,7 @@ func NewUnitMetrics() UnitMetrics {
 type ResourceMetrics struct {
 	ActionID ActionID
 	Type     proto.ResourceType
-
-	// Set for a gain from a spell the client flags No Threat (Life Tap, Dark Sacrifice, Charge): its
-	// mana or rage adds no threat at the end of the iteration.
-	NoThreat bool
+	NoThreat bool // Gains from this source generate no threat.
 
 	Events     int32
 	Gain       float64
@@ -355,7 +415,7 @@ func (unit *Unit) NewGenericMetric(actionID ActionID) *ResourceMetrics {
 }
 
 // Adds the results of a spell to the character metrics.
-func (unitMetrics *UnitMetrics) addSpellMetrics(spell *Spell, actionID ActionID, spellMetrics []SpellMetrics) {
+func (unitMetrics *UnitMetrics) addSpellMetrics(spell *Spell, actionID ActionID, spellMetrics []SpellMetrics, ranges []*hitRanges) {
 	actionMetrics, ok := unitMetrics.actions[actionID]
 
 	// no targets, nothing to add here
@@ -368,6 +428,7 @@ func (unitMetrics *UnitMetrics) addSpellMetrics(spell *Spell, actionID ActionID,
 			IsMelee:     spell.Flags.Matches(SpellFlagMeleeMetrics),
 			IsPassive:   spell.Flags.Matches(SpellFlagPassiveSpell),
 			SpellSchool: spell.SpellSchool,
+			Rank:        spell.Rank,
 		}
 		unitMetrics.actions[actionID] = actionMetrics
 	}
@@ -378,6 +439,10 @@ func (unitMetrics *UnitMetrics) addSpellMetrics(spell *Spell, actionID ActionID,
 			tam := &actionMetrics.Targets[i]
 			tam.UnitIndex = spell.Unit.AttackTables[i].Defender.UnitIndex
 		}
+	}
+
+	if len(ranges) > 0 && !slices.ContainsFunc(actionMetrics.rangeSources, func(s []*hitRanges) bool { return &s[0] == &ranges[0] }) {
+		actionMetrics.rangeSources = append(actionMetrics.rangeSources, ranges)
 	}
 
 	for i, spellTargetMetrics := range spellMetrics {

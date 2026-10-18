@@ -1,7 +1,9 @@
 import { IndividualSimSettings } from '@generated/proto/ui';
 import i18n from '@i18n/config';
 import { Database } from '@sim/proto/database';
-import { parseLegacySettingsJson } from '@sim/state/legacy_settings';
+import { fromJsonStringLenient } from '@sim/proto/lenient_json';
+import { individualSimSettingsCategories } from '@sim/state/serialization';
+import { withViewerStatFilters } from '@sim/state/stat_filter_sharing';
 
 import type { ImporterDefinition } from './types';
 
@@ -11,13 +13,13 @@ export const JSON_IMPORTER: ImporterDefinition = {
 	onImport: async (host, data) => {
 		let proto: ReturnType<typeof IndividualSimSettings.fromJson>;
 		try {
-			proto = IndividualSimSettings.fromJson(parseLegacySettingsJson(data) as never, { ignoreUnknownFields: true });
+			proto = fromJsonStringLenient(IndividualSimSettings, data);
 		} catch {
 			throw new Error(i18n.t('import.json.error_invalid_json'));
 		}
 		if (proto.player?.equipment) {
 			await Database.loadLeftoversIfNecessary(proto.player.equipment);
 		}
-		host.fromProto(proto);
+		host.fromProto(withViewerStatFilters(proto, host.sim), individualSimSettingsCategories(proto));
 	},
 };

@@ -194,19 +194,7 @@ func NewAgent(party *Party, partyIndex int, player *proto.Player, raidConfig *pr
 	}
 
 	character := NewCharacter(party, partyIndex, player)
-	agent := factory(&character, player, raidConfig)
-	for _, construct := range gearPetConstructors {
-		construct(agent.GetCharacter())
-	}
-	return agent
-}
-
-// Pets that come from gear rather than a class, like Dragon's Call's whelp. Pets must be added
-// during construction, and item effects only run after it, so the item's code registers here.
-var gearPetConstructors []func(*Character)
-
-func RegisterGearPetConstructor(construct func(*Character)) {
-	gearPetConstructors = append(gearPetConstructors, construct)
+	return factory(&character, player, raidConfig)
 }
 
 // Applies the spec options to the given player. This is only necessary because

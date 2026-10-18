@@ -1,6 +1,7 @@
 import { APLRotation, APLRotation_Type as APLRotationType } from '@generated/proto/apl';
 import { Cooldowns, ItemSwap, Profession, type Spec } from '@generated/proto/common';
 import type { Player } from '@sim/player/player';
+import type { StatSweepSettings } from '@sim/settings/stat_sweep_settings';
 import type { StatWeightActionSettings } from '@sim/settings/stat_weight_settings';
 import type { IndividualSimHost } from '@sim/sim_host';
 import type { IndividualSimUIConfig } from '@sim/spec_config';
@@ -8,7 +9,10 @@ import { batch } from '@sim/state/batch';
 
 import { applyBuild } from './apply_build';
 
-export type DefaultsHost<SpecType extends Spec> = IndividualSimHost<SpecType> & { readonly statWeightActionSettings: StatWeightActionSettings };
+export type DefaultsHost<SpecType extends Spec> = IndividualSimHost<SpecType> & {
+	readonly statWeightActionSettings: StatWeightActionSettings;
+	readonly statSweepSettings: StatSweepSettings;
+};
 
 export function applyDefaultRotation<SpecType extends Spec>(player: Player<SpecType>, config: IndividualSimUIConfig<SpecType>) {
 	batch(() => {
@@ -83,7 +87,7 @@ export function applyIndividualDefaults<SpecType extends Spec>(host: DefaultsHos
 		player.setProfession1(config.defaults.other?.profession1 || Profession.Engineering);
 
 		if (config.defaults.other?.profession2 === undefined) {
-			player.setProfession2(Profession.Jewelcrafting);
+			player.setProfession2(Profession.ProfessionUnknown);
 		} else {
 			player.setProfession2(config.defaults.other.profession2);
 		}
@@ -118,6 +122,7 @@ export function applyIndividualDefaults<SpecType extends Spec>(host: DefaultsHos
 		}
 
 		host.statWeightActionSettings.applyDefaults();
+		host.statSweepSettings.applyDefaults();
 
 		if (config.defaultBuild) {
 			applyBuild(config.defaultBuild, host);

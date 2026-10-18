@@ -12,12 +12,12 @@ const registryWith = (...contents: string[]) => {
 	return registry;
 };
 
-const zone = () => document.querySelector('[data-testid="warning-zone"] [data-testid="sim-toolbar-item"]') as HTMLElement | null;
+const zone = () => document.querySelector('[data-testid="warning-zone"] [data-testid="warning-trigger"]') as HTMLElement | null;
 const shown = () => !!zone();
 
 describe('SimWarnings', () => {
 	// Every warning judges gear and talents, which are empty until the sim loads, so an unready sim
-	// warns about a setup nobody chose. Master shows the icon for ~800ms on every page load.
+	// would warn about a setup nobody chose, for ~800ms on every page load.
 	it('says nothing while the sim is not ready, however much the registry holds', () => {
 		render(<SimWarnings warnings={registryWith('an enchant needs a profession')} ready={false} />);
 
@@ -28,7 +28,7 @@ describe('SimWarnings', () => {
 		render(<SimWarnings warnings={registryWith('an enchant needs a profession')} ready />);
 
 		expect(shown()).toBe(true);
-		expect(zone()?.querySelector('[data-testid="warning-trigger"]')?.getAttribute('aria-label')).toBe('sidebar.warnings.label');
+		expect(zone()?.getAttribute('aria-label')).toBe('sidebar.warnings.label');
 	});
 
 	it('stays quiet when a ready sim has nothing to say', () => {
@@ -44,7 +44,7 @@ describe('SimWarnings', () => {
 		expect(shown()).toBe(false);
 
 		act(() => {
-			remove.current = registry.add({ updateOn: () => () => {}, getContent: () => 'too many JC gems' });
+			remove.current = registry.add({ updateOn: () => () => {}, getContent: () => 'profession requirement not met' });
 		});
 		expect(shown()).toBe(true);
 
@@ -61,5 +61,12 @@ describe('SimWarnings', () => {
 
 		rerender(<SimWarnings warnings={registry} ready />);
 		expect(shown()).toBe(true);
+	});
+
+	it('takes its tooltip with it on unmount', () => {
+		const { unmount } = render(<SimWarnings warnings={registryWith('an enchant needs a profession')} ready />);
+		unmount();
+
+		expect(document.querySelector('.sim-tooltip')).toBeNull();
 	});
 });

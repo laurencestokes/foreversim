@@ -2,7 +2,7 @@ package core
 
 import "github.com/wowsims/forever/sim/core/proto"
 
-// The client's SpellClassSet per class: the family every one of that class's spells files its class
+// The game files' SpellClassSet per class: the family every one of that class's spells files its class
 // mask under. Verified row by row against the spell store in spelldata's TestClassSpellFamilies.
 var ClassSpellFamilies = map[proto.Class]int32{
 	proto.Class_ClassMage:    3,
@@ -16,7 +16,7 @@ var ClassSpellFamilies = map[proto.Class]int32{
 	proto.Class_ClassShaman:  11,
 }
 
-// ClassFlags is the client's SpellClassOptions: the family (SpellClassSet) and the four
+// ClassFlags is the game files' SpellClassOptions: the family (SpellClassSet) and the four
 // 32-bit words of SpellClassMask. A talent effect carries the same shape (EffectSpellClassMask)
 // naming the spells it modifies.
 type ClassFlags struct {
@@ -24,7 +24,7 @@ type ClassFlags struct {
 	Mask   [4]uint32
 }
 
-// Whether the spell carries no class options at all. The client leaves both the family and every
+// Whether the spell carries no class options at all. The game files leave both the family and every
 // mask word at zero on the spells no talent addresses by family.
 func (f ClassFlags) IsZero() bool {
 	return f.Family == 0 && f.Mask == [4]uint32{}
@@ -45,7 +45,3 @@ func (f ClassFlags) Matches(o ClassFlags) bool {
 
 	return false
 }
-
-// The client's SpellClassOptions of a spell id. spelldata installs the lookup, as core cannot import
-// it; until then no spell carries any.
-var ClientClassFlags = func(int32) ClassFlags { return ClassFlags{} }

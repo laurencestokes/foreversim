@@ -1,75 +1,58 @@
 package druid
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-var enrageRank = spellData.Enrage.Highest()
+// The tooltip's "reduces base armor by 27% in Bear Form and 16% in Dire Bear Form". The row carries the
+// penalty as effect 4, an A_DUMMY with no value. Base armor is the equipment share.
+const (
+	enrageBearArmorScale     = 0.73
+	enrageDireBearArmorScale = 0.84
+)
 
-// Enrage: 2 Rage a second for 10 sec, and Forever adds an instant 10 Rage up front (the client's
-// E_ENERGIZE effect, stated as 100 in its own units). Base armor is cut by 27% while it lasts,
-// which the client does not carry.
 func (druid *Druid) registerEnrageSpell() {
-	actionID := core.ActionID{SpellID: enrageRank.ID}
-	rageMetrics := druid.NewRageMetrics(actionID)
+	rank := spellData.Enrage.Highest()
+	periodic := rank.PeriodicEffect()
+	config := spelldata.SpellConfig(&druid.Unit, rank)
+	config.Flags |= core.SpellFlagAPL
+	config.Hot = spelldata.DotConfig(rank, periodic)
+	config.Hot.SelfOnly = true
+	config.Hot.OnTick = func(sim *core.Simulation, _ *core.Unit, _ *core.Dot) {
+		druid.AddRage(sim, periodic.Tenths(), druid.enrageMetrics())
+	}
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		if instant := rank.EnergizeEffect(); instant != spelldata.NilEffect {
+			druid.AddRage(sim, instant.Tenths()*(1+druid.WolfsheadEnrageBonus), druid.enrageMetrics())
+		}
+		spell.SelfHot().Apply(sim)
+	}
+	druid.Enrage = druid.RegisterSpell(config)
+	druid.EnrageAura = druid.Enrage.SelfHot().Aura
+	druid.Enrage.RelatedSelfBuff = druid.EnrageAura
 
-	const armorMultiplier = 1 - 0.27
-
-	// Energize is the periodic half; the instant 10 is effect 1 (E_ENERGIZE 100).
-	instantRage := enrageRank.Effect(dbcenums.A_NONE, 1).Tenths()
-	ragePerTick := enrageRank.Effect(dbcenums.A_PERIODIC_ENERGIZE, 1).BaseValue() / 10
-	numTicks := int(enrageRank.Duration() / time.Second)
-
-	druid.EnrageAura = druid.RegisterAura(core.Aura{
-		Label:    "Enrage",
-		ActionID: actionID,
-		Duration: enrageRank.Duration(),
-		OnGain: func(_ *core.Aura, sim *core.Simulation) {
-			druid.ApplyDynamicEquipScaling(sim, stats.Armor, armorMultiplier)
-		},
-		OnExpire: func(_ *core.Aura, sim *core.Simulation) {
-			druid.RemoveDynamicEquipScaling(sim, stats.Armor, armorMultiplier)
-		},
+	var armorScale float64
+	druid.EnrageAura.ApplyOnGain(func(_ *core.Aura, sim *core.Simulation) {
+		armorScale = core.TernaryFloat64(druid.InForm(DireBear), enrageDireBearArmorScale, enrageBearArmorScale)
+		druid.ApplyDynamicEquipScaling(sim, stats.Armor, armorScale)
 	})
-
-	druid.Enrage = druid.RegisterSpell(Bear, core.SpellConfig{
-		ActionID:       actionID,
-		ClassSpellMask: DruidSpellEnrage,
-		Flags:          core.SpellFlagAPL,
-
-		Cast: core.CastConfig{
-			CD: core.Cooldown{
-				Timer:    druid.NewTimer(),
-				Duration: max(enrageRank.Cooldown(), enrageRank.CategoryCooldown()),
-			},
-			IgnoreHaste: true,
-		},
-
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
-			druid.AddRage(sim, instantRage+druid.IntensityEnrageRageBonus, rageMetrics)
-			druid.EnrageAura.Activate(sim)
-
-			core.StartPeriodicAction(sim, core.PeriodicActionOptions{
-				Period:   time.Second,
-				NumTicks: numTicks,
-				Priority: core.ActionPriorityRegen,
-				OnAction: func(sim *core.Simulation) {
-					if druid.EnrageAura.IsActive() {
-						druid.AddRage(sim, ragePerTick, rageMetrics)
-					}
-				},
+	druid.EnrageAura.ApplyOnExpire(func(_ *core.Aura, sim *core.Simulation) {
+		druid.RemoveDynamicEquipScaling(sim, stats.Armor, armorScale)
+	})
+	for _, form := range []*core.Aura{druid.BearFormAura, druid.DireBearFormAura} {
+		if form != nil {
+			form.ApplyOnExpire(func(_ *core.Aura, sim *core.Simulation) {
+				druid.EnrageAura.Deactivate(sim)
 			})
-		},
+		}
+	}
+}
 
-		RelatedSelfBuff: druid.EnrageAura,
-	})
-
-	druid.AddMajorCooldown(core.MajorCooldown{
-		Spell: druid.Enrage.Spell,
-		Type:  core.CooldownTypeDPS,
-	})
+func (druid *Druid) enrageMetrics() *core.ResourceMetrics {
+	if druid.enrageMetric == nil {
+		druid.enrageMetric = druid.NewRageMetrics(core.ActionID{SpellID: spellData.Enrage.Highest().ID})
+	}
+	return druid.enrageMetric
 }

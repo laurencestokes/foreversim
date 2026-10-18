@@ -8,6 +8,7 @@ import type { Player } from '../player/player';
 import { Stats } from '../proto/stats';
 import type { ReforgeSettings } from '../settings/reforge_settings';
 import type { Sim } from '../sim';
+import { getEnumValues } from '../utils/collections';
 import { batch } from './batch';
 // The state surface the envelope serializes besides Player/Sim: the reforge
 // settings model and the EP reference-stat selections owned by the sim UI.
@@ -58,6 +59,23 @@ export function individualSimSettingsToProto(ctx: IndividualSimSerializationCont
 	}
 
 	return proto;
+}
+
+// The categories an export carries, read from one field each that the export always writes. An empty
+// talent string reads as no talents exported.
+export function individualSimSettingsCategories(settings: IndividualSimSettings): Array<SimSettingCategories> {
+	const player = settings.player;
+	const present: Record<SimSettingCategories, boolean> = {
+		[SimSettingCategories.Gear]: !!player?.equipment,
+		[SimSettingCategories.Talents]: !!player?.talentsString,
+		[SimSettingCategories.Rotation]: !!player?.rotation,
+		[SimSettingCategories.Consumes]: !!player?.consumables,
+		[SimSettingCategories.Miscellaneous]: !!player?.healingModel,
+		[SimSettingCategories.External]: !!player?.buffs,
+		[SimSettingCategories.Encounter]: !!settings.encounter,
+		[SimSettingCategories.UISettings]: !!settings.settings,
+	};
+	return (getEnumValues(SimSettingCategories) as Array<SimSettingCategories>).filter(category => present[category]);
 }
 
 export function applyIndividualSimSettings(

@@ -1,83 +1,100 @@
 import * as PresetUtils from '@app/preset_utils';
+import * as Consumables from '@features/settings/model/consumables_auto_gen';
 import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
-import { ConsumesSpec, Profession, Race, TristateEffect } from '@generated/proto/common';
+import { ConsumesSpec, HealingModel, Profession, Race, TristateEffect } from '@generated/proto/common';
 import { ProtectionPaladin_Options as ProtectionPaladinOptions } from '@generated/proto/paladin';
 import { SavedTalents } from '@generated/proto/ui';
 
 import DefaultApl from './apls/default.apl.json';
-import P5Apl from './apls/p5.apl.json';
-import LaunchGear from './gear_sets/launch.gear.json';
+import DefaultGear from './gear_sets/default.gear.json';
 
-// Our Forever sim's rotations.
-export const APL_PRESET = PresetUtils.makePresetAPLRotation('Basic Prot', DefaultApl);
-export const APL_P5 = PresetUtils.makePresetAPLRotation('P5 Prot', P5Apl);
+// Retribution Aura and Seal of the Crusader before the pull, then Judgement, Swift Judgement, Seal
+// of Fury, Consecration, Holy Shock while Consecrated Ground is on the target, Holy Shield, Holy
+// Strike and Exorcism.
+export const APL_PRESET = PresetUtils.makePresetAPLRotation('Default', DefaultApl);
 
-// Our Forever sim's builds.
-export const P4ProtTalents = PresetUtils.makePresetTalents('P4 Prot', SavedTalents.create({ talentsString: '52003003-5530513321301501' }));
-export const P5ProtTalents = PresetUtils.makePresetTalents('P5 Prot', SavedTalents.create({ talentsString: '55003-5530513321301501' }));
-export const TalentsProtection = PresetUtils.makePresetTalents('Protection 0/45/6', SavedTalents.create({ talentsString: '-5532513321301551-15' }));
+// Level 60 blues from dungeons, quests, reputations and crafting: a placeholder until Phase 1
+// gear is known.
+export const GEAR_DEFAULT = PresetUtils.makePresetGear('Default', DefaultGear, {
+	devOnly: true,
+	tooltip: 'Level 60 blues from dungeons, quests, reputations and crafting. A placeholder until the Phase 1 gear is known.',
+});
 
-export const TalentPresets = [P5ProtTalents, P4ProtTalents, TalentsProtection];
-export const DefaultTalents = P5ProtTalents;
+export const DefaultTalents = PresetUtils.makePresetTalents('Default', SavedTalents.create({ talentsString: '50003-0530313321301531-5022' }));
 
 export const DefaultOptions = ProtectionPaladinOptions.create({
 	classOptions: {},
 });
 
-// Defaults below are what master's ui/protection_paladin opens with (currentSettings on a fresh
-// profile); its raid-wide Battle Shout is a party buff here, its personal Blessing of Sanctuary
-// the individual one. Master's Greater Firepower (21546) is Forever's Elixir of Holy Power.
 export const DefaultConsumables = ConsumesSpec.create({
-	flaskId: 13510, // Flask of the Titans
-	battleElixirId: 13452, // Elixir of the Mongoose
-	spellPowerElixirId: 13454, // Greater Arcane Elixir
-	schoolElixirId: 21546, // Elixir of Holy Power
-	guardianElixirId: 3825, // Elixir of Lesser Fortitude
-	defenseElixirId: 13445, // Elixir of Greater Defense
-	strengthBuffId: 12451, // Juju Power
-	attackPowerBuffId: 12460, // Juju Might
-	zanzaId: 8410, // R.O.I.D.S.
-	alcoholId: 21151, // Rumsey Rum Black Label
-	dragonbreathChili: true,
-	foodId: 18045, // Tender Wolf Steak
-	potId: 13455, // Greater Stoneshield Potion
-	conjuredId: 12662, // Demonic Rune
-	explosiveId: 23063, // Dense Dynamite
+	flaskId: Consumables.FlaskOfSupremePower.id,
+	foodId: Consumables.BakedSalmon.id,
+	defensivePotId: Consumables.GreaterStoneshieldPotion.id,
+	conjuredId: Consumables.DemonicRune.id,
+	mhImbueId: Consumables.BrilliantWizardOil.id,
+	explosiveId: Consumables.EzThroDynamiteII.id,
+	extraIds: [Consumables.GoblinSapperCharge.id, Consumables.JujuMight.id, Consumables.ScrollOfStaminaIV.id],
+	elixirIds: [
+		Consumables.ElixirOfHolyPower.id,
+		Consumables.GreaterArcaneElixir.id,
+		Consumables.ElixirOfTheOwl.id,
+		Consumables.ElixirOfSages.id,
+		Consumables.ElixirOfGreaterFortitude.id,
+		Consumables.GreaterMagebloodElixir.id,
+		Consumables.ElixirOfGreaterDefense.id,
+		Consumables.ElixirOfFerocity.id,
+		Consumables.ElixirOfTheMongoose.id,
+	],
 });
 
 export const DefaultRaidBuffs = RaidBuffs.create({
-	arcaneBrilliance: true,
 	prayerOfSpirit: true,
+	arcaneBrilliance: true,
 	giftOfTheWild: true,
 	prayerOfFortitude: true,
+	prayerOfShadowProtection: true,
+	windfuryTotem: true,
+	battleShout: TristateEffect.TristateEffectRegular,
+	leaderOfThePack: true,
 });
 
 export const DefaultPartyBuffs = PartyBuffs.create({
-	battleShout: TristateEffect.TristateEffectImproved,
+	manaSpringTotem: TristateEffect.TristateEffectRegular,
 });
 
 export const DefaultIndividualBuffs = IndividualBuffs.create({
+	thorns: true,
+	greaterBlessingOfKings: true,
 	greaterBlessingOfWisdom: true,
+	greaterBlessingOfMight: true,
 });
 
 export const DefaultDebuffs = Debuffs.create({
-	curseOfRecklessness: true,
-	exposeArmor: true,
-	faerieFire: true,
-	giftOfArthas: true,
 	judgementOfTheCrusader: true,
+	curseOfElements: true,
 	judgementOfWisdom: true,
+	judgementOfLight: true,
+	curseOfRecklessness: true,
+	sunderArmor: true,
+	faerieFire: true,
+	exposeArmor: true,
+	giftOfArthas: true,
+	demoralizingShout: true,
+	insectSwarm: true,
 });
 
 export const OtherDefaults = {
-	reactionTime: 200, // master's default
-	profession1: Profession.Blacksmithing,
-	profession2: Profession.Engineering,
-	distanceFromTarget: 5,
 	race: Race.RaceHuman,
+	profession1: Profession.Engineering,
+	profession2: Profession.Enchanting,
+	distanceFromTarget: 5,
+	iterationCount: 25000,
+	healingModel: HealingModel.create({
+		hps: 2200,
+		cadenceSeconds: 0.4,
+		cadenceVariation: 1.2,
+		absorbFrac: 0.02,
+		burstWindow: 6,
+		inspirationUptime: 0.25,
+	}),
 };
-
-// Our Forever sim's gear presets (master ui/<spec>/gear_sets).
-export const GEAR_LAUNCH = PresetUtils.makePresetGear('Launch', LaunchGear);
-export const DEFAULT_GEAR = GEAR_LAUNCH;
-export const GEAR_PRESETS = [GEAR_LAUNCH];

@@ -13,8 +13,9 @@ export interface ResourceItemProps {
 }
 
 const FILL_CLASSES: Record<string, string> = {
-	focus: 'bottom-0 w-2.5 bg-orange',
-	energy: 'bottom-0 w-2.5 bg-damage-partial',
+	mana: 'bottom-0 w-full bg-resource-mana',
+	focus: 'bottom-0 w-2 bg-orange',
+	energy: 'bottom-0 w-2 bg-damage-partial',
 	'lunar-energy': 'bottom-0 w-6 bg-resource-lunar-energy',
 	'solar-energy': 'top-0 w-6 bg-resource-solar-energy',
 };
@@ -22,7 +23,7 @@ const FILL_CLASSES: Record<string, string> = {
 export const ResourceItem = ({ item, index, cssName }: ResourceItemProps) => (
 	<div
 		data-testid="series-color"
-		className={clsx('ui-timeline-item ui-timeline-item-slice top-0', TIMELINE_SERIES_TEXT[cssName], cssName)}
+		className={clsx('ui-timeline-item ui-timeline-item-slice top-0', TIMELINE_SERIES_TEXT[cssName], cssName, item.display === 'fill' && 'border-r-0')}
 		data-item-index={index}
 		style={spanStyle(item.start, item.end - item.start)}>
 		<div

@@ -14,6 +14,7 @@ type generatedSpellData struct {
 	AdrenalineRush               spelldata.Ladder
 	Aggression                   spelldata.Ladder
 	Ambush                       spelldata.Ladder
+	AtrophicPoison               spelldata.Ladder
 	Backstab                     spelldata.Ladder
 	BladeFlurry                  spelldata.Ladder
 	Blind                        spelldata.Ladder
@@ -21,8 +22,10 @@ type generatedSpellData struct {
 	CheapShot                    spelldata.Ladder
 	ColdBlood                    spelldata.Ladder
 	CoupDeGrace                  spelldata.Ladder
+	CripplingPoison              spelldata.Ladder
 	Cutthroat                    spelldata.Ladder
 	CutthroatTriggered           spelldata.Ladder
+	DeadlyPoison                 spelldata.Ladder
 	DefensiveState               spelldata.Ladder
 	DefensiveStateTriggered      spelldata.Ladder
 	Deflection                   spelldata.Ladder
@@ -63,15 +66,19 @@ type generatedSpellData struct {
 	ImprovedSprintTriggered      spelldata.Ladder
 	Initiative                   spelldata.Ladder
 	InitiativeTriggered          spelldata.Ladder
+	InstantPoison                spelldata.Ladder
 	Kick                         spelldata.Ladder
 	KidneyShot                   spelldata.Ladder
 	Lethality                    spelldata.Ladder
 	LightningReflexes            spelldata.Ladder
 	Malice                       spelldata.Ladder
 	MasterOfDeception            spelldata.Ladder
+	MindNumbingPoison            spelldata.Ladder
 	Murder                       spelldata.Ladder
 	Mutilate                     spelldata.Ladder
 	MutilateTriggered            spelldata.Ladder
+	NumbingPoison                spelldata.Ladder
+	OccultPoison                 spelldata.Ladder
 	Opportunity                  spelldata.Ladder
 	PickPocket                   spelldata.Ladder
 	Precision                    spelldata.Ladder
@@ -92,6 +99,7 @@ type generatedSpellData struct {
 	RuthlessnessTriggered        spelldata.Ladder
 	Sap                          spelldata.Ladder
 	SealFate                     spelldata.Ladder
+	SebaciousPoison              spelldata.Ladder
 	SerratedBlades               spelldata.Ladder
 	Setup                        spelldata.Ladder
 	SetupTriggered               spelldata.Ladder
@@ -108,12 +116,14 @@ type generatedSpellData struct {
 	Vigor                        spelldata.Ladder
 	VilePoisons                  spelldata.Ladder
 	WeaponExpertise              spelldata.Ladder
+	WoundPoison                  spelldata.Ladder
 }
 
 var spellData = generatedSpellData{
 	AdrenalineRush:               spelldata.Ranked(13750),
 	Aggression:                   spelldata.Talent(18427, 3),
 	Ambush:                       spelldata.Ranked(8676, 8724, 8725, 11267, 11268, 11269),
+	AtrophicPoison:               spelldata.Ranked(439473),
 	Backstab:                     spelldata.Ranked(53, 2589, 2590, 2591, 8721, 11279, 11280, 11281, 25300),
 	BladeFlurry:                  spelldata.Ranked(13877),
 	Blind:                        spelldata.Ranked(2094),
@@ -121,8 +131,10 @@ var spellData = generatedSpellData{
 	CheapShot:                    spelldata.Ranked(1833),
 	ColdBlood:                    spelldata.Ranked(14177),
 	CoupDeGrace:                  spelldata.Ranked(1310709),
+	CripplingPoison:              spelldata.Ranked(3409, 11201),
 	Cutthroat:                    spelldata.Talent(462708, 5),
 	CutthroatTriggered:           spelldata.Ranked(462707),
+	DeadlyPoison:                 spelldata.Ranked(2818, 2819, 11353, 11354, 25349),
 	DefensiveState:               spelldata.Ranked(16092),
 	DefensiveStateTriggered:      spelldata.Ranked(5302),
 	Deflection:                   spelldata.Talent(13713, 3),
@@ -163,15 +175,19 @@ var spellData = generatedSpellData{
 	ImprovedSprintTriggered:      spelldata.Ranked(30918),
 	Initiative:                   spelldata.Talent(13976, 3),
 	InitiativeTriggered:          spelldata.Ranked(13977),
+	InstantPoison:                spelldata.Ranked(8680, 8685, 8689, 11335, 11336, 11337),
 	Kick:                         spelldata.Ranked(1766, 1767, 1768, 1769),
 	KidneyShot:                   spelldata.Ranked(408, 8643),
 	Lethality:                    spelldata.Talent(14128, 5),
 	LightningReflexes:            spelldata.Talent(13712, 5),
 	Malice:                       spelldata.Talent(14138, 5),
 	MasterOfDeception:            spelldata.Talent(13958, 3),
+	MindNumbingPoison:            spelldata.Ranked(5760, 8692, 11398),
 	Murder:                       spelldata.Talent(14158, 2),
 	Mutilate:                     spelldata.Ranked(1310707, 399956, 1241582, 1241584),
 	MutilateTriggered:            spelldata.Ranked(399960, 399961, 1241585, 1241586, 1241588, 1241590, 1310705, 1310706),
+	NumbingPoison:                spelldata.Ranked(439472),
+	OccultPoison:                 spelldata.Ranked(458820, 1214170),
 	Opportunity:                  spelldata.Talent(14057, 2),
 	PickPocket:                   spelldata.Ranked(921),
 	Precision:                    spelldata.Talent(13705, 3),
@@ -192,6 +208,7 @@ var spellData = generatedSpellData{
 	RuthlessnessTriggered:        spelldata.Ranked(14157),
 	Sap:                          spelldata.Ranked(6770, 2070, 11297),
 	SealFate:                     spelldata.Talent(14186, 5),
+	SebaciousPoison:              spelldata.Ranked(439471),
 	SerratedBlades:               spelldata.Talent(14171, 3),
 	Setup:                        spelldata.Talent(13983, 3),
 	SetupTriggered:               spelldata.Ranked(15250),
@@ -208,4 +225,5 @@ var spellData = generatedSpellData{
 	Vigor:                        spelldata.Talent(14983, 2),
 	VilePoisons:                  spelldata.Talent(16513, 5),
 	WeaponExpertise:              spelldata.Talent(30919, 2),
+	WoundPoison:                  spelldata.Ranked(13218, 13222, 13223, 13224),
 }

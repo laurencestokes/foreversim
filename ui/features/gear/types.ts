@@ -1,11 +1,11 @@
 import { ItemQuality, ItemRandomSuffix } from '@generated/proto/common';
-import { UIEnchant as Enchant, UIGem as Gem, UIItem as Item } from '@generated/proto/ui';
+import { UIEnchant as Enchant, UIItem as Item } from '@generated/proto/ui';
 import i18n from '@i18n/config';
 import { ActionId } from '@sim/proto/action_id';
 import { EquippedItem } from '@sim/proto/equipped_item';
 import { StoreSubscribe } from '@sim/state/subscriptions';
 
-export type ItemListType = Item | Enchant | Gem | ItemRandomSuffix;
+export type ItemListType = Item | Enchant | ItemRandomSuffix;
 
 // Everything a row carries except its rendered name, so the helpers that sort, search and favourite
 // rows take this rather than a rendered row.
@@ -31,15 +31,14 @@ export interface GearData {
 	getEquippedItem: () => EquippedItem | null;
 	// Fires when the equipped item for this slot changes.
 	subscribe: StoreSubscribe;
+	// Each pick adds an item rather than replacing one, so the picker offers items only, with nothing to remove.
+	addOnly?: boolean;
 }
 
 export enum SelectorModalTabs {
 	Items = 'Items',
 	RandomSuffixes = 'Random Suffix',
 	Enchants = 'Enchants',
-	Gem1 = 'Gem1',
-	Gem2 = 'Gem2',
-	Gem3 = 'Gem3',
 }
 
 // Helper function to get translated tab labels
@@ -51,12 +50,6 @@ export function getTranslatedTabLabel(tab: SelectorModalTabs): string {
 			return i18n.t('gear_tab.gear_picker.tabs.random_suffix');
 		case SelectorModalTabs.Enchants:
 			return i18n.t('gear_tab.gear_picker.tabs.enchants');
-		case SelectorModalTabs.Gem1:
-			return i18n.t('gear_tab.gear_picker.tabs.gem1');
-		case SelectorModalTabs.Gem2:
-			return i18n.t('gear_tab.gear_picker.tabs.gem2');
-		case SelectorModalTabs.Gem3:
-			return i18n.t('gear_tab.gear_picker.tabs.gem3');
 		default:
 			return tab;
 	}

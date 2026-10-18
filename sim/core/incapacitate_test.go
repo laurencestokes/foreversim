@@ -163,9 +163,6 @@ func TestFearPausesSwingTimerWithoutResetting(t *testing.T) {
 	})
 }
 
-// The duration multipliers are read when the effect lands, not when it is
-// registered, because encounter AIs register their crowd control on every ally
-// before the players' talents have run.
 func TestIncapacitateDurationMultipliers(t *testing.T) {
 	t.Run("a stun lasts its registered duration by default", func(t *testing.T) {
 		sim, fw := setupFakeFearSim()

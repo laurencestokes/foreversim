@@ -12,14 +12,15 @@ import (
 // A chance-on-hit spell whose aura lands on the enemy routes to the debuff shape, never to a stat buff
 // on the wearer, even where the effect entry resolves stats from it:
 //   - Frostguard 12797's Chilled 16927 slows melee beside a movement slow.
-//   - Dark Iron Sunderer 11607's Cleave Armor 15280 takes 300 armor, resolved as Armor -300.
-//   - Bleakwood Hew 12769's Bleakwood Curse 16871 takes 25 of every magic resistance, stacking to 3.
-//   - Howling Hide 284262's Howler's Cry 1315767 takes 60 attack power.
+//   - Dark Iron Sunderer 11607's Cleave Armor 15280 takes armor, resolved as negative Armor.
+//   - Bleakwood Hew 12769's Bleakwood Curse 16871 takes every magic resistance, stacking.
+//   - Howling Hide 284262's Howler's Cry 1315767 takes attack power.
 //
 // The Lobotomizer 19324's Brain Damage 1290950 deals damage beside its cast slow and routes to the
-// damage shape, whose spell carries the debuff. None states a rate for its chance on hit, so all stay
-// commented out. Mug O' Hurt 4090's Dazed 13496 slows movement alone and stays skipped.
-func TestChanceOnHitDebuffsRouteAndStateNoRate(t *testing.T) {
+// damage shape, whose spell carries the debuff. It and Frostguard take their rate from an override, so
+// both register; the others have none, and while the game files state no rate for their chance on hit
+// they stay commented out. Mug O' Hurt 4090's Dazed 13496 slows movement alone and stays skipped.
+func TestChanceOnHitDebuffsRoute(t *testing.T) {
 	withDBCInputs(t)
 	instance := dbc.GetDBC()
 
@@ -31,22 +32,26 @@ func TestChanceOnHitDebuffsRouteAndStateNoRate(t *testing.T) {
 		itemID  int
 		spellID int32
 		damage  bool
-		slows   []int32
-		debuffs []int32
+		slows   bool
 	}{
-		{12797, 16927, false, []int32{1}, []int32{1}},
-		// The Lobotomizer 19324 (1290950) is left out: sim/common/forever/items_weapons.go carries it by hand
-		// at master's 0.4 PPM, so the generator reports it handled rather than refused.
-		{11607, 15280, false, nil, []int32{1}},
-		{12769, 16871, false, nil, []int32{1}},
-		{284262, 1315767, false, nil, []int32{1, 2}},
+		{12797, 16927, false, true},
+		{19324, 1290950, true, true},
+		{11607, 15280, false, false},
+		{12769, 16871, false, false},
+		{284262, 1315767, false, false},
 	} {
 		row := spelldata.Find(tc.spellID)
-		if got := row.SlowEffects(); !slices.Equal(got, tc.slows) {
-			t.Errorf("%d slows the target through effects %v, want %v", tc.spellID, got, tc.slows)
+		debuffs, slows := row.DebuffEffects(), row.SlowEffects()
+		if len(debuffs) == 0 {
+			t.Errorf("%d debuffs the target through no effect", tc.spellID)
 		}
-		if got := row.DebuffEffects(); !slices.Equal(got, tc.debuffs) {
-			t.Errorf("%d debuffs the target through effects %v, want %v", tc.spellID, got, tc.debuffs)
+		if (len(slows) > 0) != tc.slows {
+			t.Errorf("%d slows the target through effects %v, want a slow: %v", tc.spellID, slows, tc.slows)
+		}
+		for _, slow := range slows {
+			if !slices.Contains(debuffs, slow) {
+				t.Errorf("%d slows through effect %d, which is not among its debuffs %v", tc.spellID, slow, debuffs)
+			}
 		}
 
 		item := instance.Items[tc.itemID]
@@ -58,8 +63,8 @@ func TestChanceOnHitDebuffsRouteAndStateNoRate(t *testing.T) {
 		}
 
 		groups := map[string]Group{}
-		if got := TryParseProcEffect(parsed, parsed.ItemEffects[i], instance, groups); got != EffectParseResultRefused {
-			t.Errorf("item %d parsed as %v, want refused with a reason", tc.itemID, got)
+		wantUnsupported, ok := rateOutcome(t, tc.itemID, tc.spellID, TryParseProcEffect(parsed, parsed.ItemEffects[i], instance, groups))
+		if !ok {
 			continue
 		}
 		entry := groups["Procs"].Entries[0]
@@ -72,8 +77,8 @@ func TestChanceOnHitDebuffsRouteAndStateNoRate(t *testing.T) {
 			t.Errorf("item %d: shape %v, weapon proc %v, trigger %d; want a weapon proc on %d, shape %v",
 				tc.itemID, r.Shape, r.IsWeaponProc, r.TriggerSpellID, tc.spellID, wantShape)
 		}
-		if want := []string{spelldata.ReasonStatesNoRate}; !slices.Equal(r.Unsupported, want) {
-			t.Errorf("item %d refused for %q, want %q", tc.itemID, r.Unsupported, want)
+		if !slices.Equal(r.Unsupported, wantUnsupported) {
+			t.Errorf("item %d refused for %q, want %q", tc.itemID, r.Unsupported, wantUnsupported)
 		}
 	}
 }

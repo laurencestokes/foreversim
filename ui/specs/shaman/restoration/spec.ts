@@ -1,10 +1,12 @@
 import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import { APLRotation } from '@generated/proto/apl';
+import { Debuffs } from '@generated/proto/buffs';
 import { EquipmentSpec, PseudoStat, Spec, Stat } from '@generated/proto/common';
+import { SavedTalents } from '@generated/proto/ui';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
-import { masterEpWeights } from '@sim/proto/master_ep_weights';
-import { DEFAULT_HEALER_GEM_STATS, UnitStat } from '@sim/proto/stats';
+import { Stats, UnitStat } from '@sim/proto/stats';
+import { defaultHealerIndividualBuffs, defaultHealerPartyBuffs, defaultHealerRaidBuffs } from '@sim/proto/utils';
 import { defineSpec } from '@sim/spec_config';
 
 import * as Presets from './presets';
@@ -21,49 +23,32 @@ export default defineSpec<Spec.SpecRestorationShaman>({
 	knownIssues: [],
 
 	// All stats for which EP should be calculated.
-	epStats: [Stat.StatIntellect, Stat.StatSpirit, Stat.StatHealingPower, Stat.StatSpellCritRating, Stat.StatSpellHasteRating, Stat.StatMP5],
+	epStats: [Stat.StatIntellect, Stat.StatSpirit, Stat.StatHealingPower, Stat.StatCritRating, Stat.StatHasteRating, Stat.StatMP5],
 	// Reference stat against which to calculate EP.
 	epReferenceStat: Stat.StatHealingPower,
 	// Which stats to display in the Character Stats section, at the bottom of the left-hand sidebar.
-	// The resistances are there for planning resistance sets, the way the hunter sim shows them.
 	displayStats: UnitStat.createDisplayStatArray(
-		[
-			Stat.StatHealth,
-			Stat.StatMana,
-			Stat.StatStamina,
-			Stat.StatIntellect,
-			Stat.StatSpirit,
-			Stat.StatHealingPower,
-			Stat.StatSpellDamage,
-			Stat.StatMP5,
-			Stat.StatArcaneResistance,
-			Stat.StatFireResistance,
-			Stat.StatFrostResistance,
-			Stat.StatNatureResistance,
-			Stat.StatShadowResistance,
-		],
+		[Stat.StatHealth, Stat.StatMana, Stat.StatStamina, Stat.StatIntellect, Stat.StatSpirit, Stat.StatHealingPower, Stat.StatSpellDamage, Stat.StatMP5],
 		[PseudoStat.PseudoStatSpellCritPercent, PseudoStat.PseudoStatSpellHastePercent],
 	),
-	gemStats: DEFAULT_HEALER_GEM_STATS,
 
 	defaults: {
 		// Default equipped gear.
 		gear: EquipmentSpec.create(),
 		// Default EP weights for sorting gear in the gear picker.
-		// Master's weights (percent stats per 1%), in our ratings.
-		epWeights: masterEpWeights({ Intellect: 0.22, Spirit: 0.05, SpellPower: 1, SpellCrit: 0.67, SpellHaste: 1.29, MP5: 0.08 }),
+		epWeights: new Stats(),
 		// Default consumes settings.
 		consumables: Presets.DefaultConsumables,
 		// Default talents.
-		talents: Presets.TalentsRaidHealing.data,
+		talents: SavedTalents.create(),
 		// Default spec-specific settings.
 		specOptions: Presets.DefaultOptions,
 		other: Presets.OtherDefaults,
 		// Default raid/party buffs settings.
-		raidBuffs: Presets.DefaultRaidBuffs,
-		partyBuffs: Presets.DefaultPartyBuffs,
-		individualBuffs: Presets.DefaultIndividualBuffs,
-		debuffs: Presets.DefaultDebuffs,
+		raidBuffs: defaultHealerRaidBuffs(),
+		partyBuffs: defaultHealerPartyBuffs(),
+		individualBuffs: defaultHealerIndividualBuffs(),
+		debuffs: Debuffs.create({}),
 	},
 
 	// IconInputs to include in the 'Player' section on the settings tab.
@@ -86,7 +71,7 @@ export default defineSpec<Spec.SpecRestorationShaman>({
 	presets: {
 		epWeights: [],
 		// Preset talents that the user can quickly select.
-		talents: Presets.TalentPresets,
+		talents: [],
 		// Preset rotations that the user can quickly select.
 		rotations: [],
 		// Preset gear configurations that the user can quickly select.
@@ -97,6 +82,6 @@ export default defineSpec<Spec.SpecRestorationShaman>({
 		return APLRotation.create();
 	},
 
-	// The gem optimizer.
+	// The gear optimizer.
 	reforge: {},
 });

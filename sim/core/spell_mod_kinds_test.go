@@ -99,7 +99,7 @@ func TestDurationFlatModOnSpellWithoutTargets(t *testing.T) {
 
 func TestBuffMaxStacksFlatMod(t *testing.T) {
 	spell := newDurationTargetSpell()
-	// An aura the client never gives stacks, which the mod has to leave non-stacking.
+	// An aura the game files never give stacks, which the mod has to leave non-stacking.
 	spell.RelatedAuraArrays["debuff"] = append(spell.RelatedAuraArrays["debuff"], &Aura{})
 
 	mod := newTestMod(SpellModConfig{Kind: SpellMod_BuffMaxStacks_Flat, IntValue: 2}, spell)
@@ -149,6 +149,46 @@ func TestRangeFlatMod(t *testing.T) {
 	}
 }
 
+func TestRangePctMod(t *testing.T) {
+	spell := &Spell{MaxRange: 30, RangeMultiplier: 1}
+	mod := newTestMod(SpellModConfig{Kind: SpellMod_Range_Pct, FloatValue: 0.1}, spell)
+
+	mod.Activate()
+	if !WithinToleranceFloat64(1.1, spell.RangeMultiplier, 1e-9) {
+		t.Errorf("range multiplier with the mod active: %v, want 1.1", spell.RangeMultiplier)
+	}
+
+	mod.UpdateFloatValue(0.2)
+	if !WithinToleranceFloat64(1.2, spell.RangeMultiplier, 1e-9) {
+		t.Errorf("range multiplier after updating the mod: %v, want 1.2", spell.RangeMultiplier)
+	}
+
+	mod.Deactivate()
+	if !WithinToleranceFloat64(1, spell.RangeMultiplier, 1e-9) {
+		t.Errorf("range multiplier after removing the mod: %v, want 1", spell.RangeMultiplier)
+	}
+}
+
+// The flat mod moves MaxRange and the percentage one the multiplier, so the two leave the spell as
+// they found it whatever order they come and go in.
+func TestRangeFlatAndPctModsRemoveInAnyOrder(t *testing.T) {
+	spell := &Spell{MaxRange: 30, RangeMultiplier: 1}
+	pct := newTestMod(SpellModConfig{Kind: SpellMod_Range_Pct, FloatValue: 0.1}, spell)
+	flat := newTestMod(SpellModConfig{Kind: SpellMod_Range_Flat, FloatValue: 5}, spell)
+
+	pct.Activate()
+	flat.Activate()
+	if got := spell.MaxRange * spell.RangeMultiplier; !WithinToleranceFloat64(38.5, got, 1e-9) {
+		t.Errorf("range with both mods active: %v, want 38.5", got)
+	}
+
+	pct.Deactivate()
+	flat.Deactivate()
+	if spell.MaxRange != 30 || !WithinToleranceFloat64(1, spell.RangeMultiplier, 1e-9) {
+		t.Errorf("range after removing both mods: %v x %v, want 30 x 1", spell.MaxRange, spell.RangeMultiplier)
+	}
+}
+
 // The direct-only bucket reaches direct hits and leaves ticks at the shared additive bucket.
 func TestDirectDamageDoneFlatMod(t *testing.T) {
 	sim := SetupFakeSim()
@@ -176,6 +216,175 @@ func TestDirectDamageDoneFlatMod(t *testing.T) {
 	}
 }
 
+// A direct heal reads the bucket and a hot does not.
+func TestDirectDamageDoneFlatModReachesDirectHeals(t *testing.T) {
+	sim := SetupFakeSim()
+	fa := sim.Raid.Parties[0].Players[0].(*FakeAgent)
+
+	mod := newTestMod(SpellModConfig{Kind: SpellMod_DirectDamageDone_Flat, FloatValue: 0.2}, fa.Spell)
+	mod.Activate()
+
+	if got := fa.Spell.CasterHealingMultiplier(); !WithinToleranceFloat64(1.8, got, 0.001) {
+		t.Errorf("direct heal multiplier with the mod active: %0.3f, want 1.800", got)
+	}
+	if got := fa.Spell.casterHealingMultiplier(true); !WithinToleranceFloat64(1.5, got, 0.001) {
+		t.Errorf("hot multiplier with the mod active: %0.3f, want 1.500", got)
+	}
+}
+
+// Two direct damage mods are a factor each on the hit, and the ticks take neither.
+func TestDirectDamageDonePctModsMultiply(t *testing.T) {
+	sim := SetupFakeSim()
+	fa := sim.Raid.Parties[0].Players[0].(*FakeAgent)
+	attackTable := fa.AttackTables[sim.Encounter.ActiveTargetUnits[0].UnitIndex]
+	direct := fa.Spell.AttackerDamageMultiplier(attackTable, false)
+	tick := fa.Spell.AttackerDamageMultiplier(attackTable, true)
+
+	a, b := 0.1, 0.25
+	first := newTestMod(SpellModConfig{Kind: SpellMod_DirectDamageDone_Pct, FloatValue: a}, fa.Spell)
+	second := newTestMod(SpellModConfig{Kind: SpellMod_DirectDamageDone_Pct, FloatValue: b}, fa.Spell)
+	first.Activate()
+	second.Activate()
+
+	if want, got := direct*(1+a)*(1+b), fa.Spell.AttackerDamageMultiplier(attackTable, false); !WithinToleranceFloat64(want, got, 1e-9) {
+		t.Errorf("direct multiplier with both mods active: %v, want %v", got, want)
+	}
+	if got := fa.Spell.AttackerDamageMultiplier(attackTable, true); got != tick {
+		t.Errorf("tick multiplier with both mods active: %v, want %v", got, tick)
+	}
+
+	first.Deactivate()
+	if want, got := direct*(1+b), fa.Spell.AttackerDamageMultiplier(attackTable, false); !WithinToleranceFloat64(want, got, 1e-9) {
+		t.Errorf("direct multiplier with one mod left: %v, want %v", got, want)
+	}
+	second.Deactivate()
+	if got := fa.Spell.AttackerDamageMultiplier(attackTable, false); !WithinToleranceFloat64(direct, got, 1e-9) {
+		t.Errorf("direct multiplier after removing both mods: %v, want %v", got, direct)
+	}
+}
+
+// The direct damage factor multiplies on top of the additive bucket the shared damage mods sum into.
+func TestDirectDamageDonePctModMultipliesTheAdditiveBucket(t *testing.T) {
+	sim := SetupFakeSim()
+	fa := sim.Raid.Parties[0].Players[0].(*FakeAgent)
+	attackTable := fa.AttackTables[sim.Encounter.ActiveTargetUnits[0].UnitIndex]
+	newTestMod(SpellModConfig{Kind: SpellMod_DamageDone_Flat, FloatValue: 0.2}, fa.Spell).Activate()
+	withShared := fa.Spell.AttackerDamageMultiplier(attackTable, false)
+
+	own := 0.1
+	newTestMod(SpellModConfig{Kind: SpellMod_DirectDamageDone_Pct, FloatValue: own}, fa.Spell).Activate()
+
+	if want, got := withShared*(1+own), fa.Spell.AttackerDamageMultiplier(attackTable, false); !WithinToleranceFloat64(want, got, 1e-9) {
+		t.Errorf("direct multiplier with a shared and a direct mod: %v, want %v", got, want)
+	}
+}
+
+func TestDirectDamageDonePctModReachesDirectHeals(t *testing.T) {
+	sim := SetupFakeSim()
+	fa := sim.Raid.Parties[0].Players[0].(*FakeAgent)
+	direct := fa.Spell.CasterHealingMultiplier()
+	hot := fa.Spell.casterHealingMultiplier(true)
+
+	v := 0.2
+	newTestMod(SpellModConfig{Kind: SpellMod_DirectDamageDone_Pct, FloatValue: v}, fa.Spell).Activate()
+
+	if want, got := direct*(1+v), fa.Spell.CasterHealingMultiplier(); !WithinToleranceFloat64(want, got, 1e-9) {
+		t.Errorf("direct heal multiplier with the mod active: %v, want %v", got, want)
+	}
+	if got := fa.Spell.casterHealingMultiplier(true); got != hot {
+		t.Errorf("hot multiplier with the mod active: %v, want %v", got, hot)
+	}
+}
+
+// A spell of the fake agent's with a cost of its own, which the percent cost mods reach.
+func newCostSpell(fa *FakeAgent, baseCost int32) *Spell {
+	return fa.RegisterSpell(SpellConfig{
+		ActionID:    ActionID{SpellID: 43},
+		SpellSchool: SpellSchoolNature,
+		ProcMask:    ProcMaskSpellDamage,
+		ManaCost:    ManaCostOptions{FlatCost: baseCost},
+	})
+}
+
+// Two percent cost mods are a factor each, as two cost rows on one spell are in game.
+func TestPowerCostPctModsMultiply(t *testing.T) {
+	sim := SetupFakeSim()
+	fa := sim.Raid.Parties[0].Players[0].(*FakeAgent)
+	spell := newCostSpell(fa, 120)
+	base := spell.Cost.GetCurrentCost()
+
+	a, b := -0.5, -0.25
+	first := newTestMod(SpellModConfig{Kind: SpellMod_PowerCost_Pct, FloatValue: a}, spell)
+	second := newTestMod(SpellModConfig{Kind: SpellMod_PowerCost_Pct, FloatValue: b}, spell)
+	first.Activate()
+	second.Activate()
+
+	if want, got := base*(1+a)*(1+b), spell.Cost.GetCurrentCost(); !WithinToleranceFloat64(want, got, 1e-9) {
+		t.Errorf("cost with both mods active: %v, want %v", got, want)
+	}
+
+	// A mod that follows stacks moves its own factor and leaves the other one in place.
+	first.UpdateFloatValue(2 * a / 3)
+	if want, got := base*(1+2*a/3)*(1+b), spell.Cost.GetCurrentCost(); !WithinToleranceFloat64(want, got, 1e-9) {
+		t.Errorf("cost after updating an active mod: %v, want %v", got, want)
+	}
+
+	first.Deactivate()
+	second.Deactivate()
+	if got := spell.Cost.GetCurrentCost(); !WithinToleranceFloat64(base, got, 1e-9) {
+		t.Errorf("cost after removing both mods: %v, want %v", got, base)
+	}
+}
+
+// A mod that takes the whole cost or more makes the spell free while it is up, beside any other cost
+// mod, and gives the exact cost back when it ends.
+func TestPowerCostPctModFreesTheSpellAndGivesTheCostBack(t *testing.T) {
+	for _, free := range []float64{-1, -10} {
+		sim := SetupFakeSim()
+		fa := sim.Raid.Parties[0].Players[0].(*FakeAgent)
+		spell := newCostSpell(fa, 120)
+		base := spell.Cost.GetCurrentCost()
+
+		freeMod := newTestMod(SpellModConfig{Kind: SpellMod_PowerCost_Pct, FloatValue: free}, spell)
+		freeMod.Activate()
+		if got := spell.Cost.GetCurrentCost(); got != 0 {
+			t.Errorf("%v: cost with the mod active: %v, want 0", free, got)
+		}
+		freeMod.Deactivate()
+		if got := spell.Cost.GetCurrentCost(); got != base {
+			t.Errorf("%v: cost after the mod ended: %v, want %v", free, got, base)
+		}
+
+		other := -0.2
+		otherMod := newTestMod(SpellModConfig{Kind: SpellMod_PowerCost_Pct, FloatValue: other}, spell)
+		otherMod.Activate()
+		withOther := spell.Cost.GetCurrentCost()
+		freeMod.Activate()
+		if got := spell.Cost.GetCurrentCost(); got != 0 {
+			t.Errorf("%v: cost with the mod and another active: %v, want 0", free, got)
+		}
+		freeMod.Deactivate()
+		if got := spell.Cost.GetCurrentCost(); got != withOther {
+			t.Errorf("%v: cost after the mod ended beside another: %v, want %v", free, got, withOther)
+		}
+		otherMod.Deactivate()
+		if got := spell.Cost.GetCurrentCost(); !WithinToleranceFloat64(base, got, 1e-9) {
+			t.Errorf("%v: cost after both mods ended: %v, want %v", free, got, base)
+		}
+
+		// An active mod updated to a free cast and back moves between the count and the factor.
+		otherMod.Activate()
+		otherMod.UpdateFloatValue(free)
+		if got := spell.Cost.GetCurrentCost(); got != 0 {
+			t.Errorf("%v: cost after updating a mod to free: %v, want 0", free, got)
+		}
+		otherMod.UpdateFloatValue(other)
+		if got := spell.Cost.GetCurrentCost(); !WithinToleranceFloat64(withOther, got, 1e-9) {
+			t.Errorf("%v: cost after updating the mod back: %v, want %v", free, got, withOther)
+		}
+	}
+}
+
 // Stacks the mod took to 0 could not come back: the aura would be skipped as one that never stacked.
 func TestBuffMaxStacksFlatModRefusesToEmptyTheStacks(t *testing.T) {
 	defer func() {
@@ -198,6 +407,17 @@ func TestRangeFlatModRefusesToEmptyTheRange(t *testing.T) {
 
 	spell := &Spell{MaxRange: 5}
 	newTestMod(SpellModConfig{Kind: SpellMod_Range_Flat, FloatValue: -5}, spell).Activate()
+}
+
+func TestRangePctModRefusesToEmptyTheRange(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("a mod taking the range multiplier to 0 did not panic")
+		}
+	}()
+
+	spell := &Spell{MaxRange: 30, RangeMultiplier: 1}
+	newTestMod(SpellModConfig{Kind: SpellMod_Range_Pct, FloatValue: -1}, spell).Activate()
 }
 
 // Every rank of a family points at one aura and a class mask names every rank, so the value lands on

@@ -1,8 +1,8 @@
 package database
 
 // The override table is hand-kept data with a rule per field: the generator has to refuse a value
-// the client has started stating itself, and a table nobody can regenerate is a table nobody
-// trusts. These run the merge on synthetic rows, so they need no client database.
+// the game files have started stating themselves, and a table nobody can regenerate is a table nobody
+// trusts. These run the merge on synthetic rows, so they need no game files database.
 
 import (
 	"strings"
@@ -18,6 +18,7 @@ func TestOverridesBakeOntoTheRow(t *testing.T) {
 		{ID: 10, Effects: []storeEffect{
 			{Index: 0, Type: dbcenums.E_SCHOOL_DAMAGE},
 			{Index: 1, Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_PERIODIC_DAMAGE},
+			{Index: 2, Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_MOD_TOTAL_STAT_PERCENTAGE},
 		}},
 	}
 
@@ -26,20 +27,28 @@ func TestOverridesBakeOntoTheRow(t *testing.T) {
 		{SpellID: 10, Field: overrides.FlatThreat, Value: 200, Reason: "measured"},
 		{SpellID: 10, Field: overrides.APCoefDirect, Value: 0.2, Reason: "measured"},
 		{SpellID: 10, Field: overrides.APCoefPeriodic, Value: 0.1, Reason: "measured"},
+		{SpellID: 10, Field: overrides.SPCoefDirect, Value: 0.3, Reason: "measured"},
 		{SpellID: 10, Field: overrides.DurationMs, Value: 15000, Reason: "measured"},
+		{SpellID: 10, Field: overrides.ICDMs, Value: 10000, Reason: "measured"},
 		{SpellID: 10, Field: overrides.Hint, Value: float64(core.ProcHintCrit), Reason: "measured"},
+		{SpellID: 10, Field: overrides.StatMask, Value: 16, Reason: "tooltip"},
 	}
 	if err := applyOverrides(rows, list); err != nil {
 		t.Fatalf("baking the overrides: %v", err)
 	}
 
 	row := rows[0]
-	if row.RPPM != 1.5 || row.FlatThreat != 200 || row.DurationMs != 15000 {
-		t.Errorf("the row reads RPPM %v, flat threat %v, duration %d", row.RPPM, row.FlatThreat, row.DurationMs)
+	if row.RPPM != 1.5 || row.FlatThreat != 200 || row.DurationMs != 15000 || row.ICDMs != 10000 {
+		t.Errorf("the row reads RPPM %v, flat threat %v, duration %d, internal cooldown %d",
+			row.RPPM, row.FlatThreat, row.DurationMs, row.ICDMs)
 	}
 	if row.Effects[0].APCoef != 0.2 || row.Effects[1].APCoef != 0.1 {
 		t.Errorf("the effects read %v direct and %v periodic attack power",
 			row.Effects[0].APCoef, row.Effects[1].APCoef)
+	}
+	if row.Effects[0].SPCoef != 0.3 || row.Effects[1].SPCoef != 0 {
+		t.Errorf("the effects read %v direct and %v periodic spell power",
+			row.Effects[0].SPCoef, row.Effects[1].SPCoef)
 	}
 	if row.ProcChanceSource != procChancePPM {
 		t.Errorf("a PPM override leaves the chance source at %s", row.ProcChanceSource)
@@ -47,8 +56,41 @@ func TestOverridesBakeOntoTheRow(t *testing.T) {
 	if row.ProcHint != core.ProcHintCrit {
 		t.Errorf("the row reads hint %d", row.ProcHint)
 	}
+	if row.Effects[2].Misc2 != 16 {
+		t.Errorf("the stat percentage reads mask %d", row.Effects[2].Misc2)
+	}
 	if len(row.overrideNotes) != len(list) {
 		t.Errorf("the row states %d override reasons for %d overrides", len(row.overrideNotes), len(list))
+	}
+}
+
+func TestThreatAPCoefficientBakesOntoTheThreatEffect(t *testing.T) {
+	rows := []storeSpell{{ID: 10, Effects: []storeEffect{
+		{Index: 0, Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_MOD_RESISTANCE_PCT},
+		{Index: 1, Type: dbcenums.E_THREAT},
+	}}}
+	list := []overrides.Override{{SpellID: 10, Field: overrides.APCoefThreat, Value: 0.05, Reason: "measured"}}
+
+	if err := applyOverrides(rows, list); err != nil {
+		t.Fatalf("baking the override: %v", err)
+	}
+	if rows[0].Effects[0].APCoef != 0 || rows[0].Effects[1].APCoef != 0.05 {
+		t.Errorf("the effects read %v and %v attack power", rows[0].Effects[0].APCoef, rows[0].Effects[1].APCoef)
+	}
+}
+
+func TestThreatPerSpellLevelBakesTheRanksFlatThreat(t *testing.T) {
+	rows := []storeSpell{{ID: 10, SpellLevel: 16}, {ID: 11, SpellLevel: 24}}
+	list := []overrides.Override{
+		{SpellID: 10, Field: overrides.ThreatPerSpellLevel, Value: 2.5, Reason: "measured"},
+		{SpellID: 11, Field: overrides.ThreatPerSpellLevel, Value: 2.5, Reason: "measured"},
+	}
+
+	if err := applyOverrides(rows, list); err != nil {
+		t.Fatalf("baking the overrides: %v", err)
+	}
+	if rows[0].FlatThreat != 40 || rows[1].FlatThreat != 60 {
+		t.Errorf("the ranks read %v and %v flat threat", rows[0].FlatThreat, rows[1].FlatThreat)
 	}
 }
 
@@ -66,7 +108,7 @@ func TestProcChanceOverrideBecomesTheColumn(t *testing.T) {
 	}
 }
 
-func TestOverridesRefuseWhatTheClientNowStates(t *testing.T) {
+func TestOverridesRefuseWhatTheGameFilesState(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
 		rows  []storeSpell
@@ -95,19 +137,19 @@ func TestOverridesRefuseWhatTheClientNowStates(t *testing.T) {
 			wants: "two PPM overrides",
 		},
 		{
-			name:  "a client procs-per-minute row",
+			name:  "a game files procs-per-minute row",
 			rows:  []storeSpell{{ID: 10, procsPerMinuteID: 7}},
 			list:  []overrides.Override{{SpellID: 10, Field: overrides.PPM, Value: 1, Reason: "measured"}},
 			wants: "now states SpellProcsPerMinuteID 7",
 		},
 		{
-			name:  "a client threat effect",
+			name:  "a game files threat effect",
 			rows:  []storeSpell{{ID: 10, Effects: []storeEffect{{Index: 1, Type: dbcenums.E_THREAT}}}},
 			list:  []overrides.Override{{SpellID: 10, Field: overrides.FlatThreat, Value: 200, Reason: "measured"}},
 			wants: "now states threat on effect 1",
 		},
 		{
-			name: "a client attack-power coefficient",
+			name: "a game files attack-power coefficient",
 			rows: []storeSpell{{ID: 10, Effects: []storeEffect{
 				{Index: 0, Type: dbcenums.E_SCHOOL_DAMAGE, APCoef: 0.5},
 			}}},
@@ -115,10 +157,53 @@ func TestOverridesRefuseWhatTheClientNowStates(t *testing.T) {
 			wants: "now states 0.5 attack power on its direct effect",
 		},
 		{
+			name: "a game files spell-power coefficient",
+			rows: []storeSpell{{ID: 10, Effects: []storeEffect{
+				{Index: 0, Type: dbcenums.E_SCHOOL_DAMAGE, SPCoef: 0.5},
+			}}},
+			list:  []overrides.Override{{SpellID: 10, Field: overrides.SPCoefDirect, Value: 0.2, Reason: "measured"}},
+			wants: "now states 0.5 spell power on its direct effect",
+		},
+		{
+			name:  "no direct effect to carry a spell-power coefficient",
+			rows:  []storeSpell{{ID: 10}},
+			list:  []overrides.Override{{SpellID: 10, Field: overrides.SPCoefDirect, Value: 0.2, Reason: "measured"}},
+			wants: "no direct effect to carry a spell-power coefficient",
+		},
+		{
 			name:  "no effect to carry the coefficient",
 			rows:  []storeSpell{{ID: 10}},
 			list:  []overrides.Override{{SpellID: 10, Field: overrides.APCoefPeriodic, Value: 0.2, Reason: "measured"}},
 			wants: "no periodic effect",
+		},
+		{
+			name: "a game files threat coefficient",
+			rows: []storeSpell{{ID: 10, Effects: []storeEffect{
+				{Index: 1, Type: dbcenums.E_THREAT, APCoef: 0.1},
+			}}},
+			list:  []overrides.Override{{SpellID: 10, Field: overrides.APCoefThreat, Value: 0.05, Reason: "measured"}},
+			wants: "now states 0.1 attack power on its threat effect",
+		},
+		{
+			name:  "no threat effect to carry the coefficient",
+			rows:  []storeSpell{{ID: 10}},
+			list:  []overrides.Override{{SpellID: 10, Field: overrides.APCoefThreat, Value: 0.05, Reason: "measured"}},
+			wants: "no threat effect",
+		},
+		{
+			name:  "a per-level threat on a game files threat effect",
+			rows:  []storeSpell{{ID: 10, SpellLevel: 16, Effects: []storeEffect{{Index: 1, Type: dbcenums.E_THREAT}}}},
+			list:  []overrides.Override{{SpellID: 10, Field: overrides.ThreatPerSpellLevel, Value: 2.5, Reason: "measured"}},
+			wants: "now states threat on effect 1",
+		},
+		{
+			name: "a flat and a per-level threat on one spell",
+			rows: []storeSpell{{ID: 10, SpellLevel: 16}},
+			list: []overrides.Override{
+				{SpellID: 10, Field: overrides.FlatThreat, Value: 200, Reason: "measured"},
+				{SpellID: 10, Field: overrides.ThreatPerSpellLevel, Value: 2.5, Reason: "measured"},
+			},
+			wants: "two flat threat overrides",
 		},
 		{
 			name:  "a chance the tooltip states",
@@ -133,10 +218,30 @@ func TestOverridesRefuseWhatTheClientNowStates(t *testing.T) {
 			wants: "no whole percentage",
 		},
 		{
-			name:  "a client duration",
+			name:  "a game files duration",
 			rows:  []storeSpell{{ID: 10, DurationMs: 8000}},
 			list:  []overrides.Override{{SpellID: 10, Field: overrides.DurationMs, Value: 15000, Reason: "measured"}},
 			wants: "now states a duration of 8000 ms",
+		},
+		{
+			name:  "a game files internal cooldown",
+			rows:  []storeSpell{{ID: 10, ICDMs: 3000}},
+			list:  []overrides.Override{{SpellID: 10, Field: overrides.ICDMs, Value: 10000, Reason: "measured"}},
+			wants: "now states an internal cooldown of 3000 ms",
+		},
+		{
+			name: "a game files stat",
+			rows: []storeSpell{{ID: 10, Effects: []storeEffect{
+				{Index: 0, Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_MOD_TOTAL_STAT_PERCENTAGE, Misc2: 8},
+			}}},
+			list:  []overrides.Override{{SpellID: 10, Field: overrides.StatMask, Value: 16, Reason: "tooltip"}},
+			wants: "now states misc 0 and 8",
+		},
+		{
+			name:  "no stat percentage to carry the mask",
+			rows:  []storeSpell{{ID: 10}},
+			list:  []overrides.Override{{SpellID: 10, Field: overrides.StatMask, Value: 16, Reason: "tooltip"}},
+			wants: "no A_MOD_TOTAL_STAT_PERCENTAGE effect",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -178,6 +283,19 @@ func TestShippedOverridesAreWellFormed(t *testing.T) {
 		if link.Reason == "" || link.Source == "" {
 			t.Errorf("the hand trigger %d -> %d states reason %q and source %q",
 				link.Spell, link.Triggers, link.Reason, link.Source)
+		}
+	}
+
+	for _, proc := range overrides.WeaponProcs {
+		if proc.Reason == "" || proc.Source == "" {
+			t.Errorf("item %d's rate on %d states reason %q and source %q", proc.ItemID, proc.SpellID, proc.Reason, proc.Source)
+		}
+	}
+
+	for _, proc := range overrides.EnchantProcs {
+		if proc.Reason == "" || proc.Source == "" || proc.Kind.String() == "unknown rate kind" || proc.Value <= 0 {
+			t.Errorf("enchant %d's rate on %d is a %s of %v and states reason %q and source %q",
+				proc.EnchantID, proc.SpellID, proc.Kind, proc.Value, proc.Reason, proc.Source)
 		}
 	}
 }

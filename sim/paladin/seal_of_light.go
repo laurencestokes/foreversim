@@ -14,73 +14,50 @@ var judgementOfLightHealIDs = map[int32]int32{1: 20267, 2: 20341, 3: 20342, 4: 2
 // https://www.wowhead.com/forever/spell=20349
 //
 // Fills the Paladin with divine light for 30 sec, giving each melee attack a chance to heal the
-// Paladin. Only one Seal can be active on the Paladin at any one time.
+// Paladin for 94. Only one Seal can be active on the Paladin at any one time.
 //
-// Unleashing this Seal's energy will judge an enemy for 40 sec, granting melee attacks made
-// against the judged enemy a chance of healing the attacker. Your melee strikes will refresh the
+// Unleashing this Seal's energy will judge an enemy for 40 sec, granting melee attacks made against
+// the judged enemy a chance of healing the attacker for 61. Your melee strikes will refresh the
 // spell's duration. Only one Judgement per Paladin can be active at any one time.
-//
-// The seal's second effect names its judgement (the row has no effect at the client's index 1).
 func (paladin *Paladin) registerSealOfLight(_ int32, rank *spelldata.Spell) {
 	judgementID := int32(rank.EffectN(2).BaseValue())
 	healRank := spellData.SealOfLightTriggered.ByID(judgementOfLightHealIDs[rank.RankNumber()])
 	judgementAuras := paladin.newJudgementAuras(func(target *core.Unit) *core.Aura {
-		return buffs.JudgementOfLightRankAura(target, buffs.JudgementRank{
+		return buffs.NewSpellDataJudgementOfLightAuraRank(target, &paladin.Unit, buffs.JudgementRank{
 			SpellID: judgementID,
 			Rank:    rank.RankNumber(),
-			Value:   healRank.HealEffect().Average(core.CharacterLevel),
+			Value:   healRank.HealEffect().Average(),
 		})
 	})
 
 	// Melee in SpellCategories and Always Hit: the debuff lands without a roll.
-	judgement := paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: judgementID},
-		SpellSchool:    core.SpellSchoolHoly,
-		DefenseType:    core.DefenseTypeMelee,
-		ProcMask:       core.ProcMaskEmpty,
-		Flags:          core.SpellFlagMeleeMetrics,
-		ClassSpellMask: SpellMaskJudgementOfLight,
-
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealOutcome(sim, target, spell.OutcomeAlwaysHit)
-			judgementAuras.Get(target).Activate(sim)
-		},
-
-		RelatedAuraArrays: judgementAuras.ToMap(),
-	})
+	judgementConfig := spelldata.SpellConfig(&paladin.Unit, spelldata.MustFind(judgementID), spelldata.Melee(core.ProcMaskEmpty), spelldata.RemoveFlags(core.SpellFlagAPL))
+	judgementConfig.ClassSpellMask = SpellMaskJudgementOfLight
+	judgementConfig.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealOutcome(sim, target, spell.OutcomeAlwaysHit)
+		judgementAuras.Get(target).Activate(sim)
+	}
+	judgementConfig.RelatedAuraArrays = judgementAuras.ToMap()
+	judgement := paladin.RegisterSpell(judgementConfig)
 
 	procRank := rank.Refs()[0]
-	heal := procRank.HealEffect().Average(core.CharacterLevel)
-	procSpell := paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: procRank.ID},
-		SpellSchool:    core.SpellSchoolHoly,
-		ProcMask:       core.ProcMaskSpellHealing,
-		Flags:          core.SpellFlagHelpful | core.SpellFlagPassiveSpell | core.SpellFlagProc, // The heals lack Not a Proc.
-		ClassSpellMask: SpellMaskSealOfLightProc,
+	heal := procRank.HealEffect().Average()
+	procConfig := spelldata.SpellConfig(&paladin.Unit, procRank, spelldata.Magic(core.ProcMaskSpellHealing), spelldata.Proc(),
+		spelldata.Flags(core.SpellFlagProc)) // The heals lack Not a Proc.
+	procConfig.ClassSpellMask = SpellMaskSealOfLightProc
+	procConfig.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealHealing(sim, target, heal, spell.OutcomeAlwaysHit)
+	}
+	procSpell := paladin.RegisterSpell(procConfig)
 
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealHealing(sim, target, heal, spell.OutcomeAlwaysHit)
-		},
+	// The row hears melee swings and abilities; its rate is an override.
+	trigger := spelldata.ProcTrigger(&paladin.Character, rank, func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+		procSpell.Cast(sim, &paladin.Unit)
 	})
-
-	aura := paladin.makeSealExclusive(paladin.MakeProcTriggerAura(core.ProcTrigger{
-		Name:            sealLabel("Seal of Light", paladin, rank),
-		ActionID:        core.ActionID{SpellID: rank.ID},
-		MetricsActionID: core.ActionID{SpellID: rank.ID},
-		Duration:        sealDuration,
-		Callback:        core.CallbackOnSpellHitDealt,
-		ProcMask:        core.ProcMaskMelee,
-		Outcome:         core.OutcomeLanded,
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			procSpell.Cast(sim, &paladin.Unit)
-		},
-	}))
+	trigger.Name = rank.RankedLabel(&paladin.Unit)
+	trigger.MetricsActionID = core.ActionID{SpellID: rank.ID}
+	trigger.Duration = sealDuration
+	aura := paladin.makeSealExclusive(paladin.MakeProcTriggerAura(trigger))
 
 	paladin.registerSealSpell(&sealConfig{
 		rank:      rank,

@@ -3,7 +3,6 @@ package bulk
 import (
 	"fmt"
 	"math"
-	"slices"
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
@@ -15,14 +14,17 @@ type bulkSimCandidateGenerator struct {
 	playerClass        proto.Class
 	playerSpec         proto.Spec
 	playerCanDualWield bool
+	playerIsEnchanter  bool
 	baseEquipment      core.Equipment
 	selectedByBulkSlot map[BulkSimItemSlot][]bulkSimCandidateOption
 	groupedPairsBySlot map[BulkSimItemSlot][][2]bulkSimCandidateOption
 	frozenItems        map[BulkSimItemSlot]*core.Item
+	frozenSlots        map[BulkSimItemSlot]proto.ItemSlot // The slot each frozen ring or trinket is worn in.
 	frozenWeaponSlot   proto.ItemSlot
 	frozenWeaponItem   *core.Item
 	weaponTypeFilters  map[proto.ItemSlot][]proto.WeaponType
 	copyCounts         map[itemSpecCacheKey]int
+	weaponCombos       [][2]*bulkSimCandidateOption
 }
 
 func newBulkSimCandidateGenerator(request *proto.BulkSimRequest, player *proto.Player) (*bulkSimCandidateGenerator, error) {
@@ -35,18 +37,25 @@ func newBulkSimCandidateGenerator(request *proto.BulkSimRequest, player *proto.P
 		return nil, err
 	}
 
+	isEnchanter := player.GetProfession1() == proto.Profession_Enchanting || player.GetProfession2() == proto.Profession_Enchanting
+	return newBulkSimCandidateGeneratorForSpec(request.GetBulkSettings(), player.GetClass(), playerSpec, isEnchanter, core.ProtoToEquipment(player.GetEquipment()))
+}
+
+func newBulkSimCandidateGeneratorForSpec(settings *proto.BulkSettings, playerClass proto.Class, playerSpec proto.Spec, isEnchanter bool, equipment core.Equipment) (*bulkSimCandidateGenerator, error) {
 	generator := &bulkSimCandidateGenerator{
-		settings:           request.GetBulkSettings(),
-		playerClass:        player.GetClass(),
+		settings:           settings,
+		playerClass:        playerClass,
 		playerSpec:         playerSpec,
 		playerCanDualWield: core.SpecCanDualWieldCapabilities[playerSpec],
-		baseEquipment:      core.ProtoToEquipment(player.GetEquipment()),
+		playerIsEnchanter:  isEnchanter,
+		baseEquipment:      equipment,
 		selectedByBulkSlot: make(map[BulkSimItemSlot][]bulkSimCandidateOption),
 		groupedPairsBySlot: make(map[BulkSimItemSlot][][2]bulkSimCandidateOption),
 		frozenItems:        make(map[BulkSimItemSlot]*core.Item),
+		frozenSlots:        make(map[BulkSimItemSlot]proto.ItemSlot),
 		weaponTypeFilters: map[proto.ItemSlot][]proto.WeaponType{
-			proto.ItemSlot_ItemSlotMainHand: request.GetBulkSettings().GetFreezeMainhandWeaponSlots(),
-			proto.ItemSlot_ItemSlotOffHand:  request.GetBulkSettings().GetFreezeOffhandWeaponSlots(),
+			proto.ItemSlot_ItemSlotMainHand: settings.GetFreezeMainhandWeaponSlots(),
+			proto.ItemSlot_ItemSlotOffHand:  settings.GetFreezeOffhandWeaponSlots(),
 		},
 	}
 
@@ -58,6 +67,7 @@ func newBulkSimCandidateGenerator(request *proto.BulkSimRequest, player *proto.P
 	if err := generator.validateGroupedSlots(); err != nil {
 		return nil, err
 	}
+	generator.weaponCombos = generator.getAllWeaponCombos()
 
 	return generator, nil
 }
@@ -74,23 +84,20 @@ func (generator *bulkSimCandidateGenerator) validateGroupedSlots() error {
 	return nil
 }
 
-func (generator *bulkSimCandidateGenerator) buildCandidates() ([]*proto.BulkGearCandidate, error) {
+func (generator *bulkSimCandidateGenerator) buildCandidates() []*proto.BulkGearCandidate {
 	rawCombinations := generator.rawCombinationsCount()
+	table := generator.newCombinationTable()
 	// Never reserve the whole raw space: it is an unbounded product over the bulk slots,
 	// so a few extra selections take it past anything that can be allocated for. Append
 	// grows geometrically from here anyway.
 	candidates := make([]*proto.BulkGearCandidate, 0, min(rawCombinations, maxBulkCandidatePreallocation))
 	for comboIdx := 0; comboIdx < rawCombinations; comboIdx++ {
-		gear, err := generator.buildGearForCombo(comboIdx)
-		if err != nil {
-			return nil, err
-		}
 		candidates = append(candidates, &proto.BulkGearCandidate{
 			Index: int32(len(candidates)),
-			Gear:  gear,
+			Gear:  table.gear(comboIdx),
 		})
 	}
-	return candidates, nil
+	return candidates
 }
 
 func (generator *bulkSimCandidateGenerator) initFrozenSettings() {
@@ -99,6 +106,7 @@ func (generator *bulkSimCandidateGenerator) initFrozenSettings() {
 		if item != nil && item.ID != 0 {
 			itemCopy := *item
 			generator.frozenItems[BulkSimItemSlotFinger] = &itemCopy
+			generator.frozenSlots[BulkSimItemSlotFinger] = proto.ItemSlot(slot)
 		}
 	}
 	if slot := generator.settings.GetFreezeTrinketSlot(); slot == int32(proto.ItemSlot_ItemSlotTrinket1) || slot == int32(proto.ItemSlot_ItemSlotTrinket2) {
@@ -106,6 +114,7 @@ func (generator *bulkSimCandidateGenerator) initFrozenSettings() {
 		if item != nil && item.ID != 0 {
 			itemCopy := *item
 			generator.frozenItems[BulkSimItemSlotTrinket] = &itemCopy
+			generator.frozenSlots[BulkSimItemSlotTrinket] = proto.ItemSlot(slot)
 		}
 	}
 	if slot := generator.settings.GetFreezeWeaponSlot(); slot == int32(proto.ItemSlot_ItemSlotMainHand) || slot == int32(proto.ItemSlot_ItemSlotOffHand) {
@@ -130,6 +139,7 @@ func (generator *bulkSimCandidateGenerator) initSelectedItems() error {
 		equippedCounts[buildItemSpecFingerprintKey(equippedItem.ToItemSpecProto())]++
 	}
 
+	weaponSelected := false
 	for _, selectedItem := range generator.settings.GetItems() {
 		if selectedItem == nil || selectedItem.GetId() == 0 {
 			continue
@@ -154,11 +164,9 @@ func (generator *bulkSimCandidateGenerator) initSelectedItems() error {
 		option := bulkSimCandidateOption{
 			spec: googleProto.Clone(selectedItem).(*proto.ItemSpec),
 			item: core.NewItem(core.ItemSpec{
-				ID:                 selectedItem.GetId(),
-				RandomSuffix:       selectedItem.GetRandomSuffix(),
-				Enchant:            selectedItem.GetEnchant(),
-				Gems:               slices.Clone(selectedItem.GetGems()),
-				WeaponTypeOverride: selectedItem.GetWeaponTypeOverride(),
+				ID:           selectedItem.GetId(),
+				RandomSuffix: selectedItem.GetRandomSuffix(),
+				Enchant:      selectedItem.GetEnchant(),
 			}),
 		}
 
@@ -177,15 +185,20 @@ func (generator *bulkSimCandidateGenerator) initSelectedItems() error {
 			}
 			addedBulkSlots[bulkSlot] = struct{}{}
 			generator.selectedByBulkSlot[bulkSlot] = append(generator.selectedByBulkSlot[bulkSlot], option)
+			if isHandWeaponBulkSlot(bulkSlot) {
+				weaponSelected = true
+			}
 		}
 	}
 
+	// Swapping the worn weapons between the hands is a choice only once a weapon is selected;
+	// otherwise each stays in the hand it is worn in.
 	for slot := proto.ItemSlot_ItemSlotHead; slot < core.NumItemSlots; slot++ {
 		equippedItem := equippedItemsBySlot[slot]
 		if equippedItem == nil {
 			continue
 		}
-		bulkSlot := getBulkItemSlotFromSlot(slot, generator.playerCanDualWield)
+		bulkSlot := getBulkItemSlotFromSlot(slot, generator.playerCanDualWield && weaponSelected)
 		generator.selectedByBulkSlot[bulkSlot] = append(generator.selectedByBulkSlot[bulkSlot], bulkSimCandidateOption{
 			spec: equippedItem.ToItemSpecProto(),
 			item: *equippedItem,
@@ -196,11 +209,12 @@ func (generator *bulkSimCandidateGenerator) initSelectedItems() error {
 	for bulkSlot, options := range generator.selectedByBulkSlot {
 		generator.selectedByBulkSlot[bulkSlot] = dedupeCandidateOptions(options)
 	}
+	generator.initEnchantVariants()
 	return nil
 }
 
-// canStackTwoCopies reports whether both of an item's slots can hold it at once, which is what
-// makes a same-item combo (two identical rings, or one weapon in each hand) a valid input.
+// Whether both of an item's slots can hold it at once, which is what makes a same-item combo (two
+// identical rings, or one weapon in each hand) a valid input.
 func canStackTwoCopies(item core.Item, playerCanDualWield bool) bool {
 	if item.Unique || item.LimitCategory != 0 {
 		return false
@@ -229,8 +243,8 @@ func (generator *bulkSimCandidateGenerator) initCopyCounts() {
 	}
 }
 
-// hasTwoCopies reports whether this item may occupy both of its slots at once: the item allows it
-// and the batch actually holds two copies.
+// Whether this item may occupy both of its slots at once: the item allows it and the batch
+// actually holds two copies.
 func (generator *bulkSimCandidateGenerator) hasTwoCopies(option bulkSimCandidateOption, item core.Item) bool {
 	return canStackTwoCopies(item, generator.playerCanDualWield) && generator.copyCounts[buildItemSpecKey(option.spec)] >= 2
 }
@@ -256,17 +270,27 @@ func (generator *bulkSimCandidateGenerator) initGroupedSlotPairs() {
 				if frozenItem.LimitCategory != 0 && frozenItem.LimitCategory == option.item.LimitCategory {
 					continue
 				}
-				pairs = append(pairs, [2]bulkSimCandidateOption{{spec: frozenSpec, item: *frozenItem}, option})
+				frozenOption := bulkSimCandidateOption{spec: frozenSpec, item: *frozenItem}
+				// A frozen item stays in the slot it is worn in: replaceItem takes the enchant from that slot.
+				if generator.frozenSlots[bulkSlot] == BulkSimItemSlotToItemSlotPairs[bulkSlot][1] {
+					pairs = append(pairs, [2]bulkSimCandidateOption{option, frozenOption})
+				} else {
+					pairs = append(pairs, [2]bulkSimCandidateOption{frozenOption, option})
+				}
 			}
 		} else {
 			pairs = make([][2]bulkSimCandidateOption, 0, len(options)*(len(options)-1)/2)
 			for i := 0; i < len(options); i++ {
 				// Wearing two copies of the same item is a valid input, but only when two copies
 				// were actually selected.
-				if generator.hasTwoCopies(options[i], options[i].item) {
+				twoCopies := generator.hasTwoCopies(options[i], options[i].item)
+				if twoCopies {
 					pairs = append(pairs, [2]bulkSimCandidateOption{options[i], options[i]})
 				}
 				for j := i + 1; j < len(options); j++ {
+					if !twoCopies && candidateOptionsShareItem(options[i], options[j]) {
+						continue
+					}
 					if options[i].item.Unique && options[i].item.ID == options[j].item.ID {
 						continue
 					}
@@ -299,7 +323,7 @@ func saturatingCombinationsMul(rawCombinations int, factor int) int {
 }
 
 func (generator *bulkSimCandidateGenerator) rawCombinationsCount() int {
-	rawCombinations := len(generator.getAllWeaponCombos())
+	rawCombinations := len(generator.weaponCombos)
 	if rawCombinations == 0 {
 		rawCombinations = 1
 	}
@@ -317,43 +341,48 @@ func (generator *bulkSimCandidateGenerator) rawCombinationsCount() int {
 	return rawCombinations
 }
 
-func (generator *bulkSimCandidateGenerator) buildGearForCombo(comboIdx int) (*proto.EquipmentSpec, error) {
-	gear := generator.baseEquipment
-	slotItems, err := generator.populateItemsForCombo(comboIdx)
-	if err != nil {
-		return nil, err
-	}
-
-	for slot, option := range slotItems {
-		existingItem := gear.GetItemBySlot(slot)
-		if existingItem != nil && existingItem.ID != 0 {
-			gear[slot] = replaceItem(*existingItem, option)
-		} else {
-			gear[slot] = createSelectedItem(option)
-		}
-	}
-
-	if mh := gear.GetItemBySlot(proto.ItemSlot_ItemSlotMainHand); mh != nil && mh.HandType == proto.HandType_HandTypeTwoHand {
-		gear[proto.ItemSlot_ItemSlotOffHand] = core.Item{}
-	}
-
-	return gear.ToEquipmentSpecProto(), nil
+type slotItem struct {
+	slot proto.ItemSlot
+	spec core.ItemSpec
 }
 
-func (generator *bulkSimCandidateGenerator) populateItemsForCombo(comboIdx int) (map[proto.ItemSlot]bulkSimCandidateOption, error) {
-	itemsBySlot := make(map[proto.ItemSlot]bulkSimCandidateOption)
+// Every part of a candidate, resolved once: the baseline items, and per mixed-radix digit of the
+// combination index the slots each choice fills. A choice resolves the same way in every
+// combination, as its carry-over enchant comes from the baseline item in its slot.
+type combinationTable struct {
+	base   core.EquipmentSpec
+	digits [][][]slotItem
+}
 
-	allWeaponPairs := generator.getAllWeaponCombos()
-	if len(allWeaponPairs) > 0 {
-		weaponPairIdx := comboIdx % len(allWeaponPairs)
-		comboIdx = comboIdx / len(allWeaponPairs)
-		weaponPair := allWeaponPairs[weaponPairIdx]
-		if weaponPair[0] != nil {
-			itemsBySlot[proto.ItemSlot_ItemSlotMainHand] = *weaponPair[0]
+func (generator *bulkSimCandidateGenerator) newCombinationTable() combinationTable {
+	var table combinationTable
+	for slot, item := range generator.baseEquipment {
+		table.base[slot] = generator.slotSpec(proto.ItemSlot(slot), item)
+	}
+	if generator.baseEquipment[proto.ItemSlot_ItemSlotMainHand].HandType == proto.HandType_HandTypeTwoHand {
+		table.base[proto.ItemSlot_ItemSlotOffHand] = core.ItemSpec{}
+	}
+
+	if len(generator.weaponCombos) > 0 {
+		choices := make([][]slotItem, 0, len(generator.weaponCombos))
+		for _, combo := range generator.weaponCombos {
+			mainHand := generator.baseEquipment[proto.ItemSlot_ItemSlotMainHand]
+			if combo[0] != nil {
+				mainHand = generator.resolveItem(proto.ItemSlot_ItemSlotMainHand, *combo[0])
+			}
+			offHand := generator.baseEquipment[proto.ItemSlot_ItemSlotOffHand]
+			if combo[1] != nil {
+				offHand = generator.resolveItem(proto.ItemSlot_ItemSlotOffHand, *combo[1])
+			}
+			if mainHand.HandType == proto.HandType_HandTypeTwoHand {
+				offHand = core.Item{}
+			}
+			choices = append(choices, []slotItem{
+				{slot: proto.ItemSlot_ItemSlotMainHand, spec: itemSpecOf(mainHand)},
+				{slot: proto.ItemSlot_ItemSlotOffHand, spec: itemSpecOf(offHand)},
+			})
 		}
-		if weaponPair[1] != nil {
-			itemsBySlot[proto.ItemSlot_ItemSlotOffHand] = *weaponPair[1]
-		}
+		table.digits = append(table.digits, choices)
 	}
 
 	for _, bulkSlot := range bulkSimNonWeaponOrder {
@@ -361,25 +390,68 @@ func (generator *bulkSimCandidateGenerator) populateItemsForCombo(comboIdx int) 
 		if len(options) == 0 {
 			continue
 		}
-
 		if bulkSlot == BulkSimItemSlotFinger || bulkSlot == BulkSimItemSlotTrinket {
-			pairs := generator.groupedPairsBySlot[bulkSlot]
-			if len(pairs) == 0 {
-				return nil, fmt.Errorf("at least 2 items must be selected for grouped bulk slot %d", bulkSlot)
-			}
-			pairIdx := comboIdx % len(pairs)
-			comboIdx = comboIdx / len(pairs)
 			slots := BulkSimItemSlotToItemSlotPairs[bulkSlot]
-			itemsBySlot[slots[0]] = pairs[pairIdx][0]
-			itemsBySlot[slots[1]] = pairs[pairIdx][1]
+			pairs := generator.groupedPairsBySlot[bulkSlot]
+			choices := make([][]slotItem, 0, len(pairs))
+			for _, pair := range pairs {
+				choices = append(choices, []slotItem{
+					{slot: slots[0], spec: generator.slotSpec(slots[0], generator.resolveItem(slots[0], pair[0]))},
+					{slot: slots[1], spec: generator.slotSpec(slots[1], generator.resolveItem(slots[1], pair[1]))},
+				})
+			}
+			table.digits = append(table.digits, choices)
 			continue
 		}
-
-		optionIdx := comboIdx % len(options)
-		comboIdx = comboIdx / len(options)
 		slot := BulkSimItemSlotToSingleItemSlot[bulkSlot]
-		itemsBySlot[slot] = options[optionIdx]
+		choices := make([][]slotItem, 0, len(options))
+		for _, option := range options {
+			choices = append(choices, []slotItem{{slot: slot, spec: itemSpecOf(generator.resolveItem(slot, option))}})
+		}
+		table.digits = append(table.digits, choices)
+	}
+	return table
+}
+
+func (generator *bulkSimCandidateGenerator) resolveItem(slot proto.ItemSlot, option bulkSimCandidateOption) core.Item {
+	if existing := generator.baseEquipment[slot]; existing.ID != 0 {
+		return replaceItem(existing, option)
+	}
+	return createSelectedItem(option)
+}
+
+func itemSpecOf(item core.Item) core.ItemSpec {
+	return core.ItemSpec{ID: item.ID, RandomSuffix: item.RandomSuffix.ID, Enchant: item.Enchant.EffectID}
+}
+
+// A ring enchant needs Enchanting: without it both ring slots come out unenchanted, the baseline's
+// and a selected ring's own enchant included.
+func (generator *bulkSimCandidateGenerator) slotSpec(slot proto.ItemSlot, item core.Item) core.ItemSpec {
+	spec := itemSpecOf(item)
+	if !generator.playerIsEnchanter && (slot == proto.ItemSlot_ItemSlotFinger1 || slot == proto.ItemSlot_ItemSlotFinger2) {
+		spec.Enchant = 0
+	}
+	return spec
+}
+
+// Builds the gear for one combination index. Its item specs share one backing array, so a
+// candidate costs a fixed handful of allocations.
+func (table *combinationTable) gear(comboIdx int) *proto.EquipmentSpec {
+	items := table.base
+	for _, choices := range table.digits {
+		for _, placed := range choices[comboIdx%len(choices)] {
+			items[placed.slot] = placed.spec
+		}
+		comboIdx /= len(choices)
 	}
 
-	return itemsBySlot, nil
+	specs := make([]proto.ItemSpec, len(items))
+	gear := &proto.EquipmentSpec{Items: make([]*proto.ItemSpec, len(items))}
+	for slot, item := range items {
+		specs[slot].Id = item.ID
+		specs[slot].RandomSuffix = item.RandomSuffix
+		specs[slot].Enchant = item.Enchant
+		gear.Items[slot] = &specs[slot]
+	}
+	return gear
 }

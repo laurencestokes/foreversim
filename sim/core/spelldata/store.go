@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
@@ -29,15 +28,16 @@ import (
 var spells = []Spell{}
 
 // Talent curve values by spell id, as [effect position][rank - 1]. The effect is at the position
-// EffectN counts by, not at the client's EffectIndex, which has gaps. A trait talent states one spell
-// and its per-rank numbers live here rather than on ranks of their own.
+// EffectN counts by, not at the game files' EffectIndex, which has gaps. A trait talent states one
+// spell and its per-rank numbers live here rather than on ranks of their own.
 var curves = map[int32][][]float64{}
 
 // Every row as a pointer, in the same order as spells, so All hands out a view without rebuilding it.
 var all []*Spell
 
 // The spells a server-side handler casts off a given spell, which no effect of it states. The
-// client's own columns are left as it states them, and Drivers and Triggered read these beside them.
+// game files' own columns are left as they state them, and Drivers and Triggered read these beside
+// them.
 var handTriggers = map[int32][]int32{}
 
 // Which spells reach a given spell: every effect that triggers it, every handler that casts it, and
@@ -92,11 +92,6 @@ func addDriver(triggered int32, driver int32) {
 		return
 	}
 	drivers[triggered] = append(ids, driver)
-}
-
-// Core reads a spell's family mask by id through this: the sim's own spells mostly carry none.
-func init() {
-	core.ClientClassFlags = func(id int32) core.ClassFlags { return Find(id).ClassFlags }
 }
 
 // The row for an id, or Nil when the store does not carry it. Nil reads as zeroes rather than

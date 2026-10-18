@@ -1,13 +1,8 @@
-import type { ControlledConfig, InputConfig } from '@ui-kit/input';
-
-/**
- * Data for creating a boolean picker (checkbox).
- */
-export interface BooleanPickerConfig<ModObject> extends InputConfig<ModObject, boolean> {
-	id: string;
+export interface BooleanPickerOptions {
+	/** Label first, checkbox last. */
 	reverse?: boolean;
+	/** Draws the box with a danger border and marks the checkbox `aria-invalid`. */
+	invalid?: boolean;
+	/** Ids of extra text that describes the checkbox, such as an sr-only note; a field `description` is added to them. */
+	'aria-describedby'?: string;
 }
-
-export type ControlledBooleanPickerConfig<ModObject> = ControlledConfig<ModObject, boolean> & { id: string; reverse?: boolean };
-
-export type AnyBooleanPickerConfig<ModObject> = BooleanPickerConfig<ModObject> | ControlledBooleanPickerConfig<ModObject>;

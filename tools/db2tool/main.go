@@ -1,13 +1,14 @@
-// db2tool extracts World of Warcraft client data into tools/database/wowsims.db.
+// db2tool extracts data from the World of Warcraft game files into tools/database/wowsims.db.
 //
-// The default mode reads the local install named by the settings' BaseDir:
+// The default mode reads the local install named by the settings' BaseDir, or
+// by --basedir when given:
 // .build.info picks the build, files come from local CASC
 // (root → encoding → .idx → data.NNN → BLTE), .dbd definitions and the
-// community listfile are fetched/cached over plain HTTPS. The client's
+// community listfile are fetched/cached over plain HTTPS. The game files'
 // DBCache.bin hotfixes for the extracted build are applied to the decoded
 // rows; --dbcache <file> pins specific cache files instead of the default
 // scan and --no-hotfixes disables the overlay. Encrypted sections are
-// decrypted with every TACT key the client ships, the server pushed into
+// decrypted with every TACT key the game files ship, the server pushed into
 // DBCache.bin, or the community list carries (--keys <file>, default
 // tools/db2tool/TACTKeys.txt, refreshed from wowdev/TACTKeys).
 //
@@ -45,9 +46,11 @@ func main() {
 type options struct {
 	settingsFile string
 	databaseFile string
+	baseDir      string   // overrides the settings' BaseDir when set
 	db2Dir       string   // offline mode only
 	dbdDir       string   // offline mode override
 	buildNumber  uint32   // nonzero → offline mode
+	buildArg     string   // the --build value as given, recorded as the game version in offline mode
 	dbCaches     []string // explicit DBCache files, overriding the default scan
 	noHotfixes   bool     // skip hotfix application entirely
 	keyFile      string   // community TACT key list; empty → tools/db2tool/TACTKeys.txt
@@ -77,6 +80,8 @@ func parseArgs(args []string) (options, error) {
 			opts.settingsFile, err = next()
 		case "--output", "-output", "-o":
 			opts.databaseFile, err = next()
+		case "--basedir":
+			opts.baseDir, err = next()
 		case "--db2dir":
 			opts.db2Dir, err = next()
 		case "--dbddir":
@@ -109,6 +114,7 @@ func parseArgs(args []string) (options, error) {
 					return opts, fmt.Errorf("invalid --build %q: want a build number like 68571 or a version like 5.5.4.68571", v)
 				}
 				opts.buildNumber = uint32(b)
+				opts.buildArg = v
 			}
 		default:
 			return opts, fmt.Errorf("unknown argument %q", args[i])
@@ -147,6 +153,9 @@ func run(args []string) error {
 	if len(settings.Tables) == 0 {
 		return fmt.Errorf("settings file lists no Tables")
 	}
+	if opts.baseDir != "" {
+		settings.Settings.BaseDir = opts.baseDir
+	}
 
 	// The tool home is resolved from the working directory, which must be the
 	// repo root — the same invariant gen_db already has (its ./tools/... and
@@ -164,12 +173,18 @@ func run(args []string) error {
 	}
 
 	var buildNumber uint32
+	var version string
 	var openTable func(tableName string) (*wdc.Table, error)
 	var build *tact.Build // local-CASC and CDN modes only
 
 	if opts.buildNumber != 0 {
 		// Offline mode: pre-extracted .db2 files.
 		buildNumber = opts.buildNumber
+		version = opts.buildArg
+		if !strings.Contains(version, ".") {
+			fmt.Printf("Warning: BuildInfo records the game build as %q; pass the full version, such as 1.60.1.70170, so it matches an install or CDN extraction\n",
+				version)
+		}
 		db2Dir := opts.db2Dir
 		if db2Dir == "" {
 			db2Dir = filepath.Join(toolHome, "dbfilesclient")
@@ -191,6 +206,7 @@ func run(args []string) error {
 			return err
 		}
 		buildNumber = build.BuildNumber
+		version = build.Entry.Version
 		source := "local install"
 		if opts.cdn {
 			source = opts.region + " CDN"
@@ -245,7 +261,7 @@ func run(args []string) error {
 		}
 	}
 
-	// Hotfixes: overlay the client's DBCache.bin records on every decoded
+	// Hotfixes: overlay the game files' DBCache.bin records on every decoded
 	// table. Only a cache for this exact build applies; having none is not an
 	// error. --dbcache pins specific cache files (deterministic runs); with no
 	// override, local-CASC mode scans tools/db2tool/caches plus
@@ -278,6 +294,13 @@ func run(args []string) error {
 		case hotfixReader == nil && opts.buildNumber == 0:
 			fmt.Fprintf(os.Stderr, "db2tool: warning: no DBCache.bin for build %d found under %s or %s; continuing without the overlay\n", buildNumber, settings.Settings.BaseDir, filepath.Join(toolHome, "caches"))
 		}
+	}
+	var hotfixPush int32
+	if hotfixReader != nil {
+		hotfixPush = hotfixReader.HighestPush()
+		fmt.Printf("Hotfixes: build %d up to push %d\n", buildNumber, hotfixPush)
+	} else {
+		fmt.Printf("Hotfixes: none applied for build %d\n", buildNumber)
 	}
 
 	// decodeTable opens a table, decodes it against its definition for this
@@ -312,7 +335,7 @@ func run(args []string) error {
 		return table, sqlite.TableDef{Name: tableName, Def: def, Version: version}, decoded, nil
 	}
 
-	// TACT keys: the client's own TactKey/TactKeyLookup tables (with any
+	// TACT keys: the game files' own TactKey/TactKeyLookup tables (with any
 	// pushed keys the hotfix overlay adds) plus the community list. Only the
 	// local-CASC and CDN modes can use them: offline .db2 files were already
 	// written with their encrypted chunks zero-filled.
@@ -334,7 +357,7 @@ func run(args []string) error {
 			return err
 		}
 		build.Keys = keys
-		fmt.Printf("TACT keys: %d loaded (%d from the client and its hotfixes, %d more from %s)\n", keys.Len(), fromClient, community, keyPath)
+		fmt.Printf("TACT keys: %d loaded (%d from the game files and their hotfixes, %d more from %s)\n", keys.Len(), fromClient, community, keyPath)
 	}
 
 	type loaded struct {
@@ -369,6 +392,9 @@ func run(args []string) error {
 		if err := sqlite.InsertRows(db, t.def, t.decoded); err != nil {
 			return err
 		}
+	}
+	if err := sqlite.WriteBuildInfo(db, version, settings.Settings.Product, hotfixPush); err != nil {
+		return err
 	}
 
 	fmt.Println("Processing completed.")

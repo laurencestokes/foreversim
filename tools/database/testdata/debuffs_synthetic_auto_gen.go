@@ -27,7 +27,7 @@ func SynthThunderClapValue(talentPoints int32) float64 {
 func SynthThunderClapDuration(talentPoints int32) time.Duration {
 	return synthThunderClapMeta.Duration(talentPoints)
 }
-func SynthThunderClapAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+func NewSpellDataSynthThunderClapAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newDebuff(unit, synthThunderClapMeta, isPlayer, talentPoints)
 }
 
@@ -47,7 +47,7 @@ func SynthSunderArmorValue(talentPoints int32) float64 {
 func SynthSunderArmorDuration(talentPoints int32) time.Duration {
 	return synthSunderArmorMeta.Duration(talentPoints)
 }
-func SynthSunderArmorAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+func NewSpellDataSynthSunderArmorAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newDebuff(unit, synthSunderArmorMeta, isPlayer, talentPoints)
 }
 
@@ -68,7 +68,7 @@ func SynthExposeArmorValue(talentPoints int32) float64 {
 func SynthExposeArmorDuration(talentPoints int32) time.Duration {
 	return synthExposeArmorMeta.Duration(talentPoints)
 }
-func SynthExposeArmorAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+func NewSpellDataSynthExposeArmorAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newDebuff(unit, synthExposeArmorMeta, isPlayer, talentPoints)
 }
 
@@ -88,24 +88,32 @@ func SynthCurseOfElementsValue(talentPoints int32) float64 {
 func SynthCurseOfElementsDuration(talentPoints int32) time.Duration {
 	return synthCurseOfElementsMeta.Duration(talentPoints)
 }
-func SynthCurseOfElementsAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+func NewSpellDataSynthCurseOfElementsAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newDebuff(unit, synthCurseOfElementsMeta, isPlayer, talentPoints)
 }
 
 // Judgement of the Crusader
-// func SynthJudgementOfTheCrusaderAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura // judgement_of_the_crusader: spell 20303 states no aura effect the parse attaches: effect 1 A_MOD_DAMAGE_TAKEN(14) misc 2
+// func NewSpellDataSynthJudgementOfTheCrusaderAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura // judgement_of_the_crusader: spell 20303 states no aura effect the parse attaches: effect 1 A_MOD_DAMAGE_TAKEN(14) misc 2
+
+// The generated debuffs by the spell they read.
+var debuffMetas = map[int32]*Meta{
+	11581:   synthThunderClapMeta,
+	11597:   synthSunderArmorMeta,
+	11198:   synthExposeArmorMeta,
+	1311680: synthCurseOfElementsMeta,
+}
 
 func applyGeneratedDebuffs(target *core.Unit, debuffs *proto.Debuffs, raid *proto.Raid) {
 	if debuffs.ThunderClap {
-		core.MakePermanent(SynthThunderClapAura(target, false, 0))
+		core.MakePermanent(NewSpellDataSynthThunderClapAura(target, false, 0))
 	}
 	if debuffs.SunderArmor {
 		driveSynthSunderArmor(target, debuffs, raid)
 	}
 	if debuffs.ExposeArmor {
-		core.MakePermanent(SynthExposeArmorAura(target, false, 0))
+		core.MakePermanent(NewSpellDataSynthExposeArmorAura(target, false, 0))
 	}
 	if debuffs.CurseOfElements {
-		core.MakePermanent(SynthCurseOfElementsAura(target, false, 0))
+		core.MakePermanent(NewSpellDataSynthCurseOfElementsAura(target, false, 0))
 	}
 }

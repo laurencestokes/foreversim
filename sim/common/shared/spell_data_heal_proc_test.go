@@ -13,7 +13,7 @@ import (
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-// Recovery 8721's rows: the equip aura 1248761 and the 5% E_HEAL_PCT heal 1248759 it casts. The aura
+// Recovery 8721's rows: the equip aura 1248761 and the E_HEAL_PCT heal 1248759 it casts. The aura
 // carries the hint its grant 1248760 states, "when you are Parried or Dodged".
 const (
 	recoveryTrigger int32 = 1248761
@@ -54,8 +54,9 @@ func swingHealed(sim *core.Simulation, caster *testCaster, outcome core.HitOutco
 
 func stepPast(t *testing.T, sim *core.Simulation, until time.Duration) {
 	t.Helper()
-	sim.AddPendingAction(core.NewDelayedAction(core.DelayedActionOptions{DoAt: until, OnAction: func(*core.Simulation) {}}))
-	for steps := 0; sim.CurrentTime < until; steps++ {
+	reached := false
+	sim.AddPendingAction(core.NewDelayedAction(core.DelayedActionOptions{DoAt: until, OnAction: func(*core.Simulation) { reached = true }}))
+	for steps := 0; !reached; steps++ {
 		if steps > 10000 {
 			t.Fatalf("the sim did not reach %v", until)
 		}
@@ -63,12 +64,15 @@ func stepPast(t *testing.T, sim *core.Simulation, until time.Duration) {
 	}
 }
 
-// Recovery heals the wearer for 5% of its maximum health when the target dodges or parries the
-// wearer's melee attack. A landed swing does not proc it, nor does the wearer dodging an attack it
-// takes, and a second avoided swing inside the 10 s ProcCategoryRecovery heals nothing.
+// Recovery heals the wearer for its row's share of its maximum health when the target dodges or
+// parries the wearer's melee attack. A landed swing does not proc it, nor does the wearer dodging an
+// attack it takes, and a second avoided swing inside the trigger's ProcCategoryRecovery heals nothing.
 func TestRecoveryHealsWhenTheWearersAttackIsDodgedOrParried(t *testing.T) {
 	sim, caster, heal := newHealProcSim(t, 990971, 990972, recoveryHeal, 0)
-	want := 0.05 * caster.MaxHealth()
+	share := spelldata.MustFind(recoveryHeal).ProcHealEffect().Percent()
+	needAmount(t, "1248759's share of maximum health", share)
+	lockout := spelldata.MustFind(recoveryTrigger).ICD()
+	want := share * caster.MaxHealth()
 
 	if got := swingHealed(sim, caster, core.OutcomeHit, 100); got != 0 {
 		t.Errorf("a landed swing healed %v, want nothing", got)
@@ -83,15 +87,15 @@ func TestRecoveryHealsWhenTheWearersAttackIsDodgedOrParried(t *testing.T) {
 	}
 
 	if got := swingHealed(sim, caster, core.OutcomeDodge, 0); math.Abs(got-want) > 1e-6 {
-		t.Fatalf("a dodged swing healed %v, want 5%% of %v, %v", got, caster.MaxHealth(), want)
+		t.Fatalf("a dodged swing healed %v, want %v of %v, %v", got, share, caster.MaxHealth(), want)
 	}
 	procTime := sim.CurrentTime
 
 	if got := swingHealed(sim, caster, core.OutcomeParry, 0); got != 0 {
-		t.Errorf("a parried swing inside the 10 s lockout healed %v, want nothing", got)
+		t.Errorf("a parried swing inside the %v lockout healed %v, want nothing", lockout, got)
 	}
 
-	stepPast(t, sim, procTime+10*time.Second)
+	stepPast(t, sim, procTime+lockout)
 	if got := swingHealed(sim, caster, core.OutcomeParry, 0); math.Abs(got-want) > 1e-6 {
 		t.Errorf("a parried swing after the lockout healed %v, want %v", got, want)
 	}
@@ -105,7 +109,9 @@ func TestRecoveryHealsWhenTheWearersAttackIsDodgedOrParried(t *testing.T) {
 // is not flagged, so a flagged copy stands in for the rows that are.
 func TestProcHealCritsUnlessTheRowRulesItOut(t *testing.T) {
 	sim, caster, heal := newHealProcSim(t, 990973, 990974, recoveryHeal, 100)
-	want := 0.05 * caster.MaxHealth() * heal.CritDamageMultiplier(nil)
+	share := spelldata.MustFind(recoveryHeal).ProcHealEffect().Percent()
+	needAmount(t, "1248759's share of maximum health", share)
+	want := share * caster.MaxHealth() * heal.CritDamageMultiplier(nil)
 	if got := swingHealed(sim, caster, core.OutcomeDodge, 0); math.Abs(got-want) > 1e-6 {
 		t.Errorf("at 100%% spell crit the heal was %v, want the critical %v", got, want)
 	}
@@ -113,7 +119,7 @@ func TestProcHealCritsUnlessTheRowRulesItOut(t *testing.T) {
 	editRow(t, recoveryHeal, func(s *spelldata.Spell) { s.Attr[dbcenums.ATTR_INDEX_EX_2] |= dbcenums.ATTR_EX_2_CANT_CRIT })
 
 	sim, caster, _ = newHealProcSim(t, 990975, 990976, recoveryHeal, 100)
-	want = 0.05 * caster.MaxHealth()
+	want = share * caster.MaxHealth()
 	if got := swingHealed(sim, caster, core.OutcomeDodge, 0); math.Abs(got-want) > 1e-6 {
 		t.Errorf("a heal whose row cannot crit healed %v at 100%% spell crit, want %v", got, want)
 	}
@@ -129,13 +135,13 @@ func TestProcHealRollsAStatedAmount(t *testing.T) {
 	}
 
 	sim, caster, _ := newHealProcSim(t, 990977, 990978, fixedHeal, 0)
-	low, high := effect.Min(caster.Level), effect.Max(caster.Level)
+	low, high := effect.Min(), effect.Max()
 	if got := swingHealed(sim, caster, core.OutcomeDodge, 0); got < low || got > high {
 		t.Errorf("the heal was %v, want %v to %v", got, low, high)
 	}
 }
 
-// Julie's Blessing 8348, Julie's Dagger 6660's heal: A_PERIODIC_HEAL 13 on the caster every 2 s for 12 s.
+// Julie's Blessing 8348, Julie's Dagger 6660's heal: A_PERIODIC_HEAL on the caster.
 const julieHot int32 = 8348
 
 // Edits the store's row of a spell for the test, restoring it afterwards. The effects are copied so
@@ -165,10 +171,11 @@ func healedUntil(t *testing.T, sim *core.Simulation, caster *testCaster, start, 
 	return caster.CurrentHealth() - before
 }
 
-// The HoT lands nothing when it is applied, then heals the wearer 13 every 2 s until its 12 s run out:
-// six ticks, 78 in all, measured as the spell's periodic healing.
+// The HoT lands nothing when it is applied, then heals the wearer its row's amount every period until
+// its duration runs out, measured as the spell's periodic healing.
 func TestProcHotTicksItsAmountEveryPeriodOnTheWearer(t *testing.T) {
 	sim, caster, hot := newHealProcSim(t, 990979, 990980, julieHot, 0)
+	per, period, ticks := ticksOf(t, spelldata.MustFind(julieHot))
 
 	if got := swingHealed(sim, caster, core.OutcomeDodge, 0); got != 0 {
 		t.Errorf("applying the HoT healed %v, want nothing until the first tick", got)
@@ -178,22 +185,22 @@ func TestProcHotTicksItsAmountEveryPeriodOnTheWearer(t *testing.T) {
 		t.Fatalf("the proc did not apply the HoT to the wearer")
 	}
 
-	for tick := 1; tick <= 6; tick++ {
-		if got := healedUntil(t, sim, caster, start, time.Duration(tick)*2*time.Second); got != 13 {
-			t.Errorf("tick %d healed %v, want 13", tick, got)
+	for tick := 1; tick <= ticks; tick++ {
+		if got := healedUntil(t, sim, caster, start, time.Duration(tick)*period); got != per {
+			t.Errorf("tick %d healed %v, want %v", tick, got, per)
 		}
 	}
 	if hot.SelfHot().IsActive() {
-		t.Errorf("the HoT is still up after its 12 s")
+		t.Errorf("the HoT is still up after its %d ticks", ticks)
 	}
-	if got := healedUntil(t, sim, caster, start, 14*time.Second); got != 0 {
+	if got := healedUntil(t, sim, caster, start, time.Duration(ticks+1)*period); got != 0 {
 		t.Errorf("the HoT healed %v after it ran out, want nothing", got)
 	}
 
 	metrics := hot.SpellMetrics[caster.UnitIndex]
-	if metrics.Ticks != 6 || metrics.CritTicks != 0 || metrics.TotalHealing != 78 {
-		t.Errorf("metrics = %d ticks, %d crit ticks, %v healing; want 6, 0, 78",
-			metrics.Ticks, metrics.CritTicks, metrics.TotalHealing)
+	if want := per * float64(ticks); metrics.Ticks != int32(ticks) || metrics.CritTicks != 0 || metrics.TotalHealing != want {
+		t.Errorf("metrics = %d ticks, %d crit ticks, %v healing; want %d, 0, %v",
+			metrics.Ticks, metrics.CritTicks, metrics.TotalHealing, ticks, want)
 	}
 }
 
@@ -203,16 +210,17 @@ func TestProcHotTicksOnTheHealingPowerOfTheTick(t *testing.T) {
 	editRow(t, julieHot, func(s *spelldata.Spell) { s.Effects[0].SPCoef = 1 })
 	sim, caster, _ := newHealProcSim(t, 990981, 990982, julieHot, 0)
 	caster.AddStatsDynamic(sim, stats.Stats{stats.HealingPower: -caster.GetStat(stats.HealingPower)})
+	per, period, _ := ticksOf(t, spelldata.MustFind(julieHot))
 
 	swingHealed(sim, caster, core.OutcomeDodge, 0)
 	start := sim.CurrentTime
-	if got := healedUntil(t, sim, caster, start, 2*time.Second); got != 13 {
-		t.Errorf("the first tick at no healing power healed %v, want 13", got)
+	if got := healedUntil(t, sim, caster, start, period); got != per {
+		t.Errorf("the first tick at no healing power healed %v, want %v", got, per)
 	}
 
 	caster.AddStatsDynamic(sim, stats.Stats{stats.HealingPower: 100})
-	if got := healedUntil(t, sim, caster, start, 4*time.Second); got != 113 {
-		t.Errorf("the tick after gaining 100 healing power healed %v, want 113", got)
+	if got := healedUntil(t, sim, caster, start, 2*period); got != per+100 {
+		t.Errorf("the tick after gaining 100 healing power healed %v, want %v", got, per+100)
 	}
 }
 
@@ -222,19 +230,20 @@ func TestProcHotCritsOnlyWhereTheRowLetsItsTicksCrit(t *testing.T) {
 	editRow(t, julieHot, func(s *spelldata.Spell) {
 		s.Attr[dbcenums.ATTR_INDEX_EX_8] &^= dbcenums.ATTR_EX_8_PERIODIC_CAN_CRIT
 	})
+	per, period, _ := ticksOf(t, spelldata.MustFind(julieHot))
 	sim, caster, hot := newHealProcSim(t, 990983, 990984, julieHot, 100)
 	swingHealed(sim, caster, core.OutcomeDodge, 0)
-	if got := healedUntil(t, sim, caster, sim.CurrentTime, 2*time.Second); got != 13 {
-		t.Errorf("an unflagged tick at 100%% spell crit healed %v, want 13", got)
+	if got := healedUntil(t, sim, caster, sim.CurrentTime, period); got != per {
+		t.Errorf("an unflagged tick at 100%% spell crit healed %v, want %v", got, per)
 	}
 
 	editRow(t, julieHot, func(s *spelldata.Spell) {
 		s.Attr[dbcenums.ATTR_INDEX_EX_8] |= dbcenums.ATTR_EX_8_PERIODIC_CAN_CRIT
 	})
 	sim, caster, hot = newHealProcSim(t, 990985, 990986, julieHot, 100)
-	want := 13 * hot.CritDamageMultiplier(nil)
+	want := per * hot.CritDamageMultiplier(nil)
 	swingHealed(sim, caster, core.OutcomeDodge, 0)
-	if got := healedUntil(t, sim, caster, sim.CurrentTime, 2*time.Second); math.Abs(got-want) > 1e-6 {
+	if got := healedUntil(t, sim, caster, sim.CurrentTime, period); math.Abs(got-want) > 1e-6 {
 		t.Errorf("a tick that can crit healed %v at 100%% spell crit, want the critical %v", got, want)
 	}
 	if got := hot.SpellMetrics[caster.UnitIndex].CritTicks; got != 1 {
@@ -246,35 +255,47 @@ func TestProcHotCritsOnlyWhereTheRowLetsItsTicksCrit(t *testing.T) {
 	})
 	sim, caster, _ = newHealProcSim(t, 990987, 990988, julieHot, 100)
 	swingHealed(sim, caster, core.OutcomeDodge, 0)
-	if got := healedUntil(t, sim, caster, sim.CurrentTime, 2*time.Second); got != 13 {
-		t.Errorf("a tick whose row cannot crit healed %v at 100%% spell crit, want 13", got)
+	if got := healedUntil(t, sim, caster, sim.CurrentTime, period); got != per {
+		t.Errorf("a tick whose row cannot crit healed %v at 100%% spell crit, want %v", got, per)
 	}
 }
 
 // A second proc while the HoT runs starts it over: the ticks already landed stay landed and a full
-// 12 s of ticks follows the second proc. 1248761's 10 s lockout is the earliest it can come.
+// run of ticks follows the second proc. 1248761's lockout is the earliest it can come; copies of the
+// rows fix a lockout that ends while the HoT still runs.
 func TestProcHotStartsOverOnASecondProc(t *testing.T) {
+	editRow(t, recoveryTrigger, func(s *spelldata.Spell) { s.ICDMs = 10000 })
+	editRow(t, julieHot, func(s *spelldata.Spell) {
+		s.DurationMs = 12000
+		s.Effects[0].PeriodMs = 2000
+	})
+	per, period, ticks := ticksOf(t, spelldata.MustFind(julieHot))
+	duration := time.Duration(ticks) * period
+	lockout := spelldata.MustFind(recoveryTrigger).ICD()
+	before := int(lockout / period)
 	sim, caster, hot := newHealProcSim(t, 990989, 990990, julieHot, 0)
 	swingHealed(sim, caster, core.OutcomeDodge, 0)
 	start := sim.CurrentTime
 
-	if got := healedUntil(t, sim, caster, start, 10*time.Second); got != 5*13 {
-		t.Fatalf("the first 10 s healed %v, want five ticks, %v", got, 5*13)
+	if got, want := healedUntil(t, sim, caster, start, lockout), per*float64(before); got != want {
+		t.Fatalf("the first %v healed %v, want %d ticks, %v", lockout, got, before, want)
 	}
 	swingHealed(sim, caster, core.OutcomeDodge, 0)
 	restart := sim.CurrentTime
 
-	if got := healedUntil(t, sim, caster, start, 13*time.Second); got != 13 || !hot.SelfHot().IsActive() {
-		t.Errorf("past the first application's 12 s the HoT healed %v and is up: %v; want 13 and up",
-			got, hot.SelfHot().IsActive())
+	pastFirstEnd := duration + period/2
+	pastFirst := int((pastFirstEnd - lockout) / period)
+	if got, want := healedUntil(t, sim, caster, start, pastFirstEnd), per*float64(pastFirst); got != want || !hot.SelfHot().IsActive() {
+		t.Errorf("past the first application's end the HoT healed %v since the second proc and is up: %v; want %v and up",
+			got, hot.SelfHot().IsActive(), want)
 	}
-	if got := healedUntil(t, sim, caster, restart, 12*time.Second); got != 5*13 {
-		t.Errorf("the rest of the second application healed %v, want %v", got, 5*13)
+	if got, want := healedUntil(t, sim, caster, restart, duration), per*float64(ticks-pastFirst); got != want {
+		t.Errorf("the rest of the second application healed %v, want %v", got, want)
 	}
 	if hot.SelfHot().IsActive() {
-		t.Errorf("the HoT is still up 12 s after the second proc")
+		t.Errorf("the HoT is still up %v after the second proc", duration)
 	}
-	if got := hot.SpellMetrics[caster.UnitIndex].Ticks; got != 11 {
-		t.Errorf("ticks = %d, want 5 before the second proc and 6 after", got)
+	if got := hot.SpellMetrics[caster.UnitIndex].Ticks; got != int32(before+ticks) {
+		t.Errorf("ticks = %d, want %d before the second proc and %d after", got, before, ticks)
 	}
 }

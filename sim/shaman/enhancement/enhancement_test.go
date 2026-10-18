@@ -3,13 +3,9 @@ package enhancement
 import (
 	"testing"
 
-	"github.com/wowsims/forever/sim/arenalib"
-	"github.com/wowsims/forever/sim/common"
+	"github.com/wowsims/forever/sim/common" // imported to get item effects included.
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
-	"github.com/wowsims/forever/sim/core/simsignals"
-	"github.com/wowsims/forever/sim/core/stats"
-	"github.com/wowsims/forever/sim/shaman"
 )
 
 func init() {
@@ -20,37 +16,27 @@ func init() {
 func TestEnhancement(t *testing.T) {
 	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator([]core.CharacterSuiteConfig{
 		{
-			Class:      proto.Class_ClassShaman,
-			Race:       proto.Race_RaceTroll,
-			OtherRaces: []proto.Race{proto.Race_RaceOrc, proto.Race_RaceDwarf},
-			SpecOptions: core.SpecOptionsCombo{Label: "Standard", SpecOptions: &proto.Player_EnhancementShaman{
-				EnhancementShaman: &proto.EnhancementShaman{
-					Options: &proto.EnhancementShaman_Options{
-						SyncType:    proto.ShamanSyncType_Auto,
-						ImbueOh:     proto.ShamanImbue_WindfuryWeapon,
-						ImbueOhSwap: proto.ShamanImbue_WindfuryWeapon,
-						ClassOptions: &proto.ShamanOptions{
-							ImbueMh:        proto.ShamanImbue_WindfuryWeapon,
-							ImbueMhSwap:    proto.ShamanImbue_WindfuryWeapon,
-							ShieldProcrate: 0.0,
-						},
-					},
-				},
-			}},
-			// Arcanite Reaper alone, as Retribution: the generated item database does not carry the
-			// Forever gear our sim tests with, and a naked shaman never casts Stormstrike or procs
-			// Windfury, Flurry or Elemental Weapons.
-			GearSet:  core.GearSetCombo{Label: "Weapon", GearSet: WeaponOnly},
-			Talents:  DefaultTalents,
-			Rotation: core.GetAplRotation("../../../ui/specs/shaman/enhancement/apls", "forever"),
+			Class:       proto.Class_ClassShaman,
+			Race:        proto.Race_RaceOrc,
+			OtherRaces:  []proto.Race{proto.Race_RaceTroll},
+			SpecOptions: core.SpecOptionsCombo{Label: "Windfury", SpecOptions: imbueOptions(proto.ShamanImbue_WindfuryWeapon)},
+			OtherSpecOptions: []core.SpecOptionsCombo{
+				{Label: "Flametongue", SpecOptions: imbueOptions(proto.ShamanImbue_FlametongueWeapon)},
+				{Label: "Frostbrand", SpecOptions: imbueOptions(proto.ShamanImbue_FrostbrandWeapon)},
+				{Label: "Rockbiter", SpecOptions: imbueOptions(proto.ShamanImbue_RockbiterWeapon)},
+			},
+			GearSet:     testingBuild.GearSet,
+			Talents:     DefaultTalents,
+			Consumables: DefaultConsumables,
+			Profession1: proto.Profession_Engineering,
+			Profession2: proto.Profession_Leatherworking,
+			Rotation:    testingBuild.Rotation,
 			ItemFilter: core.ItemFilter{
 				WeaponTypes: []proto.WeaponType{
 					proto.WeaponType_WeaponTypeAxe,
-					proto.WeaponType_WeaponTypeDagger,
-					proto.WeaponType_WeaponTypeFist,
 					proto.WeaponType_WeaponTypeMace,
-					proto.WeaponType_WeaponTypeOffHand,
 				},
+				HandTypes: []proto.HandType{proto.HandType_HandTypeTwoHand},
 				ArmorType: proto.ArmorType_ArmorTypeMail,
 				RangedWeaponTypes: []proto.RangedWeaponType{
 					proto.RangedWeaponType_RangedWeaponTypeTotem,
@@ -60,85 +46,35 @@ func TestEnhancement(t *testing.T) {
 	}))
 }
 
-var WeaponOnly = &proto.EquipmentSpec{
-	Items: []*proto.ItemSpec{
-		{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
-		{Id: 12784}, // Arcanite Reaper
-	},
-}
-
-// The community build our Forever sim ranks Enhancement with.
-const DefaultTalents = "5505301-053030031005112251"
-
-// Stormstrike (17364, aura 271) raises only its caster's Lightning Bolt, Chain Lightning and Earth
-// Shock, and only one of those spends the charge.
-func TestStormstrikeOnlyBoostsCastersBoltsAndEarthShock(t *testing.T) {
-	sim := core.NewSim(&proto.RaidSimRequest{
-		SimOptions: &proto.SimOptions{RandomSeed: 1},
-		Raid: &proto.Raid{Parties: []*proto.Party{{Buffs: &proto.PartyBuffs{}, Players: []*proto.Player{{
-			Name: "Shaman", Class: proto.Class_ClassShaman, Race: proto.Race_RaceOrc, TalentsString: DefaultTalents,
-			Equipment: &proto.EquipmentSpec{}, Buffs: &proto.IndividualBuffs{},
-			Spec: &proto.Player_EnhancementShaman{EnhancementShaman: &proto.EnhancementShaman{
-				Options: &proto.EnhancementShaman_Options{ClassOptions: &proto.ShamanOptions{}},
-			}},
-			Rotation: &proto.APLRotation{Type: proto.APLRotation_TypeAPL},
-		}}}}},
-		Encounter: core.MakeSingleTargetEncounter(0),
-	}, simsignals.CreateSignals())
-	sim.Reset()
-
-	sham := sim.Raid.Parties[0].Players[0].(shaman.ShamanAgent).GetShaman()
-	target := sham.CurrentTarget
-	table := sham.AttackTables[target.UnitIndex]
-	debuff := sham.StormStrikeDebuffAuras.Get(target)
-	earthShockBase := sham.EarthShock.TargetDamageMultiplier(sim, table, false)
-
-	debuff.Activate(sim)
-	debuff.SetStacks(sim, debuff.MaxStacks)
-	if got := sham.EarthShock.TargetDamageMultiplier(sim, table, false) / earthShockBase; got != 1.2 {
-		t.Errorf("Earth Shock multiplier under Stormstrike = %v, want 1.2", got)
-	}
-	if got := target.PseudoStats.SchoolDamageTakenMultiplier[stats.SchoolIndexNature]; got != 1 {
-		t.Errorf("target takes %v Nature damage from everyone, want 1", got)
-	}
-
-	sham.FrostShock.CalcAndDealDamage(sim, target, 100, sham.FrostShock.OutcomeAlwaysHit)
-	if !debuff.IsActive() {
-		t.Fatal("Frost Shock spent the Stormstrike charge")
-	}
-	sham.EarthShock.CalcAndDealDamage(sim, target, 100, sham.EarthShock.OutcomeAlwaysHit)
-	if debuff.IsActive() {
-		t.Error("Earth Shock did not spend the Stormstrike charge")
-	}
-}
-
-// The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
-func TestArena(t *testing.T) {
-	arenalib.Run(t, arenaSpec)
-}
-
-// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
-func TestRaceArena(t *testing.T) {
-	arenalib.RunRaceArena(t, arenaSpec)
-}
-
-var arenaSpec = arenalib.Spec{
-	Dir:   "enhancement_shaman",
-	UI:    "shaman/enhancement",
-	Class: proto.Class_ClassShaman,
-	Race:  proto.Race_RaceDwarf,
-	SpecOptions: &proto.Player_EnhancementShaman{EnhancementShaman: &proto.EnhancementShaman{
-		Options: &proto.EnhancementShaman_Options{
-			SyncType:     proto.ShamanSyncType_Auto,
-			ImbueOh:      proto.ShamanImbue_WindfuryWeapon,
-			ClassOptions: &proto.ShamanOptions{ImbueMh: proto.ShamanImbue_WindfuryWeapon},
+func imbueOptions(imbue proto.ShamanImbue) *proto.Player_EnhancementShaman {
+	return &proto.Player_EnhancementShaman{
+		EnhancementShaman: &proto.EnhancementShaman{
+			Options: &proto.EnhancementShaman_Options{
+				ClassOptions: &proto.ShamanOptions{
+					ImbueMh: imbue,
+				},
+			},
 		},
-	}},
-	Role: arenalib.Melee,
-	// Windfury Weapon is the shaman casting on their own weapons, not a totem somebody drops.
-	ClassImbues: arenalib.ClassImbues{Windfury: true},
-	// The page plays forever.apl.json; the Flame Shock rotation is a build arena comparison.
-	RaceBuilds: map[string]arenalib.RaceBuild{
-		"Enhancement 16/35/0": {Rotation: "forever"},
-	},
+	}
+}
+
+// The Testing build's gear, talents and rotation.
+var testingBuild = core.GetTestBuildFromJSON(proto.Class_ClassShaman, "../../../ui/specs/shaman/enhancement/builds", "testing",
+	core.ItemFilter{}, nil, nil)
+
+var DefaultTalents = testingBuild.Talents
+
+// The UI's Enhancement defaults: Major Mana Potion, Flask of Supreme Power, Smoked Desert Dumplings,
+// Demonic Rune, the Owl, Sages, Greater Mageblood, Nature Power, Greater Arcane, Cunning and Ferocity
+// elixirs, Winterfall Firewater, EZ-Thro Dark Bomb, Goblin Sapper Charge, and Elemental Sharpening Stone
+// on the main hand beside the shaman's imbue.
+var DefaultConsumables = &proto.ConsumesSpec{
+	ResourcePotId: 13444,
+	FlaskId:       13512,
+	FoodId:        20452,
+	ConjuredId:    12662,
+	ElixirIds:     []int32{250337, 250338, 250341, 250343, 13454, 12820, 250328, 250350},
+	ExplosiveId:   260817,
+	ExtraIds:      []int32{10646},
+	MhImbueId:     18262,
 }

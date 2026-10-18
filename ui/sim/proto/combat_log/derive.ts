@@ -190,12 +190,11 @@ export function buildResourceGroups(logs: Array<CombatLog>): Record<ResourceType
 type UnmatchedGained = { gained: AuraLog; stacks: Array<AuraStacksLog> };
 
 export function buildAuraUptimes(logs: Array<CombatLog>, entity: Entity, encounterDuration: number): Array<AuraUptimeLog> {
-	// openEntries preserves the same append-only order as the old flat unmatchedGainedLogs
-	// array; openByKey buckets its indices by equalsIgnoringTag identity so a fade/stacks event
+	// openEntries is append-only, in log order; openByKey buckets its indices by equalsIgnoringTag identity so a fade/stacks event
 	// finds its match in O(1) instead of rescanning every still-open aura. Within a bucket an
 	// exact-tag match wins over the earliest open instance: the same spell id can be open under
-	// two tags at once (Steady Focus and its counter share 53224), which master's
-	// `equals(x) || equalsIgnoringTag(x)` predicate collapsed into the tag-blind half.
+	// two tags at once (Steady Focus and its counter share 53224), which an
+	// `equals(x) || equalsIgnoringTag(x)` predicate would collapse into the tag-blind half.
 	const openEntries: Array<UnmatchedGained | null> = [];
 	const openByKey = new Map<string, Array<number>>();
 	const uptimeLogs: Array<AuraUptimeLog> = [];
@@ -218,8 +217,8 @@ export function buildAuraUptimes(logs: Array<CombatLog>, entity: Entity, encount
 		const exact = indices.findIndex(index => openEntries[index]!.gained.actionId!.equals(actionId));
 		return { indices, pos: exact >= 0 ? exact : 0 };
 	};
-	// Mutates the matched entry in place without removing it, mirroring the old code's
-	// unmatchedGainedLogs[idx].stacks.push - a stacks-change log doesn't close the aura.
+	// Mutates the matched entry in place without removing it - a stacks-change log doesn't close
+	// the aura.
 	const peekOpen = (actionId: ActionId): UnmatchedGained | null => {
 		const found = findOpen(actionId);
 		return found ? openEntries[found.indices[found.pos]] : null;
@@ -406,6 +405,58 @@ function buildCastLog(
 	};
 }
 
+// Log timestamps have two decimals, so two travel times of one flight can read up to 0.02 sec apart.
+const TRAVEL_TIME_TOLERANCE = 0.025;
+
+// A spell still in flight when its next cast completes lands in that next cast's window. Arcane
+// Missiles under Missile Barrage fires every 0.5 sec, and at 20 yards each missile flies 1 sec, so
+// the first two missiles of a channel show no hit and the last shows three. The hits that share a
+// timestamp are one landing, and here the k-th landing goes to the k-th completed cast.
+//
+// Pairing by order is used only where the windows fail, when one window holds landings at two
+// timestamps. It holds only for a steady flight time, so this returns null unless every cast
+// completes at its own timestamp and every landing comes the same time after its cast. That keeps
+// the windows for two casts at one timestamp (Thorns on two attackers) and for one action from
+// several sources (the melee of several targets). It is also null when a cast is left without a
+// landing it would have made before the log ends.
+function pairHitsInFlight(castsCompleted: Array<CastCompletedLog>, damageLogs: Array<DamageLog>, endTime: number): Array<Array<DamageLog>> | null {
+	const landings = groupDuplicateTimestamps(damageLogs.filter(log => !log.tick));
+	if (landings.length === 0 || landings.length > castsCompleted.length) return null;
+
+	for (let i = 1; i < castsCompleted.length; i++) {
+		if (castsCompleted[i].timestamp <= castsCompleted[i - 1].timestamp) return null;
+	}
+
+	// Counted as buildCastLogs' windows take them: a landing goes to the last cast completed at or
+	// before it, and the first cast also takes every landing before it.
+	let crowdedWindow = false;
+	let windowIdx = 0;
+	let landingsInWindow = 0;
+	for (const landing of landings) {
+		const landedAt = landing[0].timestamp;
+		while (windowIdx + 1 < castsCompleted.length && landedAt >= castsCompleted[windowIdx + 1].timestamp) {
+			windowIdx++;
+			landingsInWindow = 0;
+		}
+		if (++landingsInWindow > 1) crowdedWindow = true;
+	}
+	if (!crowdedWindow) return null;
+
+	let minTravel = Infinity;
+	let maxTravel = -Infinity;
+	for (let i = 0; i < landings.length; i++) {
+		minTravel = Math.min(minTravel, landings[i][0].timestamp - castsCompleted[i].timestamp);
+		maxTravel = Math.max(maxTravel, landings[i][0].timestamp - castsCompleted[i].timestamp);
+	}
+	if (minTravel <= 0 || maxTravel - minTravel > TRAVEL_TIME_TOLERANCE) return null;
+
+	for (let i = landings.length; i < castsCompleted.length; i++) {
+		if (castsCompleted[i].timestamp + minTravel < endTime) return null;
+	}
+
+	return castsCompleted.map((_, i) => landings[i] ?? []);
+}
+
 export function buildCastLogs(logs: Array<CombatLog>): Array<CastLog> {
 	// One classification pass instead of five full scans of the same array.
 	const castBeganLogs: Array<CastBeganLog> = [];
@@ -439,6 +490,8 @@ export function buildCastLogs(logs: Array<CombatLog>): Array<CastLog> {
 	const damageLogsByAbility = bucket(damageLogs, log => toBucketKey(log.actionId!));
 	const autoDelayLogsByAbility = bucket(autoDelayLogs, log => toBucketKey(log.actionId!));
 
+	const endTime = logs.length > 0 ? logs[logs.length - 1].timestamp : 0;
+
 	const castLogs: Array<CastLog> = [];
 	Object.keys(castBeganLogsByAbility).forEach(bucketKey => {
 		const abilityCastsBegan = castBeganLogsByAbility[bucketKey]!;
@@ -446,13 +499,14 @@ export function buildCastLogs(logs: Array<CombatLog>): Array<CastLog> {
 		const abilityCastsCancelled = castCancelledLogsByAbility[bucketKey];
 		const abilityDamage = damageLogsByAbility[bucketKey];
 		const abilityAutoDelay = autoDelayLogsByAbility[bucketKey];
+		const hitsInFlight = abilityCastsCompleted && abilityDamage ? pairHitsInFlight(abilityCastsCompleted, abilityDamage, endTime) : null;
 
 		let ddIdx = 0;
 		let adIdx = 0;
 		let castSkipIdx = 0;
 		// abilityCastsCancelled is in the same log order as abilityCastsBegan, and each cbLog's
 		// cancel window starts where the previous one's ended - a monotonic cursor never needs to
-		// revisit a candidate the old per-cbLog .find() had already passed.
+		// revisit a candidate an earlier cbLog already passed.
 		let cancelCursor = 0;
 		for (let cbIdx = 0; cbIdx < abilityCastsBegan.length; cbIdx++) {
 			const cbLog = abilityCastsBegan[cbIdx];
@@ -475,19 +529,24 @@ export function buildCastLogs(logs: Array<CombatLog>): Array<CastLog> {
 			// completed log at all.
 			let ccLog: CastCompletedLog | null = null;
 			let nextCcLog: CastCompletedLog | null = null;
+			const ccIdx = cbIdx + castSkipIdx;
 			if (cCancelLog) {
 				castSkipIdx--;
 			} else if (abilityCastsCompleted) {
-				const ccIdx = cbIdx + castSkipIdx;
 				if (ccIdx < abilityCastsCompleted.length) ccLog = abilityCastsCompleted[ccIdx];
 				if (ccIdx + 1 < abilityCastsCompleted.length) nextCcLog = abilityCastsCompleted[ccIdx + 1];
 			}
 
-			// Find all damage dealt logs between the cur and next cast completed logs.
+			// Find all damage dealt logs between the cur and next cast completed logs: only the ticks
+			// when the hits are paired in flight.
 			const ddLogs: Array<DamageLog> = [];
 			while (!cCancelLog && abilityDamage && ddIdx < abilityDamage.length && (!nextCcLog || abilityDamage[ddIdx].timestamp < nextCcLog.timestamp)) {
-				ddLogs.push(abilityDamage[ddIdx]);
+				if (!hitsInFlight || abilityDamage[ddIdx].tick) ddLogs.push(abilityDamage[ddIdx]);
 				ddIdx++;
+			}
+			if (hitsInFlight && ccLog) {
+				ddLogs.push(...hitsInFlight[ccIdx]);
+				ddLogs.sort((a, b) => a.timestamp - b.timestamp);
 			}
 			// At most one auto-delay log per cast; the next one inside this cast's window.
 			const nextCbLog = abilityCastsBegan[cbIdx + 1];

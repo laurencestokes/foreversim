@@ -1,8 +1,7 @@
-import { Class, HandType, ItemSlot, ItemType, WeaponType } from '@generated/proto/common';
-import { UIEnchant as Enchant, UIGem as Gem, UIItem as Item } from '@generated/proto/ui';
+import { Class, ItemSlot } from '@generated/proto/common';
+import { UIEnchant as Enchant, UIItem as Item } from '@generated/proto/ui';
 import i18n from '@i18n/config';
-import { translateWeaponType } from '@i18n/localization';
-import { Phase, SortDirection } from '@sim/constants/other';
+import { SortDirection } from '@sim/constants/other';
 import { useSimHost } from '@sim/context/SimHostContext';
 import { useSimStore } from '@sim/hooks/useSimStore';
 import { useStoreSubscribe } from '@sim/hooks/useStoreSubscribe';
@@ -11,22 +10,23 @@ import type { EquippedItem } from '@sim/proto/equipped_item';
 import { subscribeSimField } from '@sim/state/subscriptions';
 import { BooleanPicker } from '@ui-kit/BooleanPicker';
 import { Button } from '@ui-kit/Button';
-import { EnumPicker } from '@ui-kit/EnumPicker';
-import { Icon } from '@ui-kit/Icon';
-import { SearchBar } from '@ui-kit/SearchBar';
+import { ChoiceField } from '@ui-kit/ChoiceField';
+import { SearchField } from '@ui-kit/TextField';
 import { Tooltip } from '@ui-kit/Tooltip';
 import { VirtualList } from '@ui-kit/VirtualList';
 import clsx from 'clsx';
+import type { ReactNode } from 'react';
 import { useCallback, useId, useMemo, useRef, useState } from 'react';
 
 import { applyFavourite, isItemFavourited } from '../../model/favourites';
 import { getItemIdByItemType } from '../../model/item_ids';
 import { matchesSearch } from '../../model/item_search';
-import { defaultSortBy, ItemListSortBy, sortItemIdxs } from '../../model/item_sort';
-import { getTranslatedTabLabel, type ItemDataFields, type ItemListType, SelectorModalTabs } from '../../types';
+import { defaultSortBy, ItemListSortBy, sortItemIdxs, tabSortsByEP } from '../../model/item_sort';
+import { type ItemDataFields, type ItemListType, SelectorModalTabs } from '../../types';
 import { FiltersMenu } from '../FiltersMenu';
+import { ItemListHeaderRow } from './ItemListHeaderRow';
 import { ItemListRow } from './ItemListRow';
-import { columnHeaderLabel, removeButtonLabel, type SelectorTab } from './utils';
+import { removeButtonLabel, type SelectorTab } from './utils';
 
 const ROW_HEIGHT = 56;
 const ROW_CLASS = clsx(
@@ -34,6 +34,95 @@ const ROW_CLASS = clsx(
 	'hover:bg-gray-800 data-[stripe=even]:not-hover:bg-table-odd data-[stripe=odd]:not-hover:bg-table-even',
 	'[&_[data-active]_.ui-selector-modal-list-item-icon]:outline-2 [&_[data-active]_.ui-selector-modal-list-item-icon]:outline-success',
 );
+
+type FilterFlag = 'oneHandedWeapons' | 'twoHandedWeapons' | 'showAllEnchants';
+
+const phaseOptions = () => [
+	{ value: 1, label: i18n.t('common.phases.1') },
+	{ value: 2, label: i18n.t('common.phases.2') },
+	{ value: 3, label: i18n.t('common.phases.3') },
+	{ value: 4, label: i18n.t('common.phases.4') },
+	{ value: 5, label: i18n.t('common.phases.5') },
+];
+
+export interface ItemListToggle {
+	id: string;
+	testId: string;
+	label: string;
+	value: boolean;
+	onChange: (value: boolean) => void;
+}
+
+export interface ItemListToolbarViewProps {
+	search: string;
+	onSearchChange: (search: string) => void;
+	/** The filters dialog. The filters button renders only beside one. */
+	filtersMenu?: ReactNode;
+	onOpenFilters?: () => void;
+	phase: number;
+	onPhaseChange: (phase: number) => void;
+	toggles: ReadonlyArray<ItemListToggle>;
+	/** The remove button renders only beside one. */
+	remove?: { label: string; onClick: () => void };
+}
+
+export const ItemListToolbarView = ({
+	search,
+	onSearchChange,
+	filtersMenu,
+	onOpenFilters,
+	phase,
+	onPhaseChange,
+	toggles,
+	remove,
+}: ItemListToolbarViewProps) => {
+	return (
+		<div className="ui-selector-modal-filters mb-(--modal-padding) flex items-center [&>*:not(:last-child)]:mr-2">
+			<SearchField
+				value={search}
+				onChange={onSearchChange}
+				placeholder={i18n.t('common.search')}
+				inputClassName="max-w-48"
+				inputTestId="selector-modal-search"
+			/>
+			{filtersMenu !== undefined && (
+				<>
+					<Button data-testid="selector-modal-filters-button" onClick={onOpenFilters}>
+						{i18n.t('gear_tab.gear_picker.filters_button')}
+					</Button>
+					{filtersMenu}
+				</>
+			)}
+			<div className="min-w-28" data-testid="selector-modal-phase-selector">
+				<ChoiceField options={phaseOptions()} value={phase} onChange={onPhaseChange} />
+			</div>
+			{toggles.map(toggle => (
+				<BooleanPicker
+					key={toggle.id}
+					id={toggle.id}
+					testId={toggle.testId}
+					label={toggle.label}
+					layout="inline"
+					value={toggle.value}
+					onChange={toggle.onChange}
+				/>
+			))}
+			{remove && (
+				<Button variant="danger" className="-mt-2 mr-4 -mb-2 ml-auto" data-testid="selector-modal-remove-button" onClick={remove.onClick}>
+					{remove.label}
+				</Button>
+			)}
+		</div>
+	);
+};
+
+const toggle = (name: string, label: string, value: boolean, onChange: (value: boolean) => void): ItemListToggle => ({
+	id: `show-${name}-selector`,
+	testId: `selector-modal-show-${name}`,
+	label,
+	value,
+	onChange,
+});
 
 export interface ItemListProps {
 	tab: SelectorTab;
@@ -45,17 +134,14 @@ export const ItemList = ({ tab, slot, equippedItem }: ItemListProps) => {
 	const host = useSimHost();
 	const player = host.player;
 	const sim = player.sim;
-	const { label, itemData, computeEP, equippedToItem, onRemove, socketColor } = tab;
+	const { label, itemData, computeEP, equippedToItem, onRemove } = tab;
 
 	const [search, setSearch] = useState('');
-	const [sortBy, setSortBy] = useState(() => defaultSortBy(slot));
+	const [sortBy, setSortBy] = useState(() => defaultSortBy(label, slot));
 	const [sortDirection, setSortDirection] = useState(SortDirection.DESC);
 	const listRef = useRef<HTMLDivElement>(null);
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const tooltipId = useId();
-	const searchId = useId();
-	const phaseId = useId();
-	const weaponTypeOverrideId = useId();
 
 	const filters = useStoreSubscribe(subscribeSimField(sim, 'filters'), () => sim.getFilters());
 	const phase = useSimStore('phase');
@@ -71,22 +157,30 @@ export const ItemList = ({ tab, slot, equippedItem }: ItemListProps) => {
 			idxs = player.filterItemData(idxs, index => itemData[index].item as unknown as Item, slot);
 		} else if (label === SelectorModalTabs.Enchants) {
 			idxs = player.filterEnchantData(idxs, index => itemData[index].item as unknown as Enchant, slot, currentEquippedItem);
-		} else if (label === SelectorModalTabs.Gem1 || label === SelectorModalTabs.Gem2 || label === SelectorModalTabs.Gem3) {
-			idxs = player.filterGemData(idxs, index => itemData[index].item as unknown as Gem, slot, socketColor);
 		}
 
-		idxs = idxs.filter(index => itemData[index].phase <= phase && matchesSearch(search, itemData[index], npcId => sim.db.getNpc(npcId)?.name));
+		idxs = idxs.filter(
+			index =>
+				itemData[index].phase <= phase &&
+				matchesSearch(
+					search,
+					itemData[index],
+					npcId => sim.db.getNpc(npcId)?.name,
+					factionId => sim.db.getRepFaction(factionId)?.name,
+				),
+		);
 		return sortItemIdxs(idxs, itemData, { sortBy, sortDirection, computeEP, isFavourited });
 		// `filters` is named here even though the body never reads it: `player.filterItemData` and
-		// `player.filterGemData` reach `sim.getFilters()` internally, so a filter change has to
+		// `player.filterEnchantData` reach `sim.getFilters()` internally, so a filter change has to
 		// rebuild this. The lint calls it unnecessary; deleting it leaves correctness resting on
 		// `isFavourited` happening to close over `filters` too.
 		// oxlint-disable-next-line react-hooks/exhaustive-deps
-	}, [itemData, player, sim, slot, label, socketColor, phase, search, sortBy, sortDirection, computeEP, isFavourited, filters]);
+	}, [itemData, player, sim, slot, label, phase, search, sortBy, sortDirection, computeEP, isFavourited, filters]);
 
+	const showEPOptions = tabSortsByEP(label, slot);
 	const equipped = equippedToItem(equippedItem);
 	const equippedId = getItemIdByItemType(label, equipped);
-	const equippedEP = equipped !== null && equipped !== undefined ? computeEP(equipped) : null;
+	const equippedEP = showEPOptions && equipped !== null && equipped !== undefined ? computeEP(equipped) : null;
 
 	const sort = (next: ItemListSortBy) => {
 		setSortDirection(current => (sortBy === next ? 1 - current : SortDirection.DESC));
@@ -99,206 +193,48 @@ export const ItemList = ({ tab, slot, equippedItem }: ItemListProps) => {
 		sim.setFilters(next);
 	};
 
-	const showEPOptions = ![ItemSlot.ItemSlotTrinket1, ItemSlot.ItemSlotTrinket2].includes(slot);
+	const setFilterFlag = (field: FilterFlag) => (value: boolean) => {
+		const next = sim.getFilters();
+		next[field] = value;
+		sim.setFilters(next);
+	};
+
 	const showWeaponOptions =
 		label === SelectorModalTabs.Items &&
 		(slot === ItemSlot.ItemSlotMainHand || (slot === ItemSlot.ItemSlotOffHand && player.getClass() === Class.ClassWarrior));
 
-	// Main-hand and off-hand weapons only -- not held off-hands or shields, which aren't a "type"
-	// in the sense Sword/Axe/Mace Specialization and friends care about.
-	const weaponTypeOverrideExcluded: ReadonlyArray<WeaponType> = [WeaponType.WeaponTypeOffHand, WeaponType.WeaponTypeShield];
-	const showWeaponTypeOverride =
-		label === SelectorModalTabs.Items &&
-		(slot === ItemSlot.ItemSlotMainHand || slot === ItemSlot.ItemSlotOffHand) &&
-		equippedItem?.item.type === ItemType.ItemTypeWeapon &&
-		!weaponTypeOverrideExcluded.includes(equippedItem.item.weaponType);
-
-	const weaponTypeOverrideOptions = useMemo(() => {
-		if (!showWeaponTypeOverride || !equippedItem) return [];
-		// Relabel within the weapon's own hand: a two-hander only to the types the class wields
-		// two-handed, a one-hander only to types that come one-handed (never a polearm or a staff).
-		const twoHandOnly: ReadonlyArray<WeaponType> = [WeaponType.WeaponTypePolearm, WeaponType.WeaponTypeStaff];
-		const isTwoHander = equippedItem.item.handType === HandType.HandTypeTwoHand;
-		return [
-			{
-				name: i18n.t('gear_tab.gear_picker.weapon_type_override.as_item', { type: translateWeaponType(equippedItem.item.weaponType) }),
-				value: WeaponType.WeaponTypeUnknown,
-			},
-			...player
-				.getPlayerClass()
-				.weaponTypes.filter(ewt => (isTwoHander ? ewt.canUseTwoHand : !twoHandOnly.includes(ewt.weaponType)))
-				.map(ewt => ewt.weaponType)
-				.filter(weaponType => !weaponTypeOverrideExcluded.includes(weaponType))
-				.map(weaponType => ({ name: translateWeaponType(weaponType), value: weaponType })),
-		];
-		// oxlint-disable-next-line react-hooks/exhaustive-deps
-	}, [showWeaponTypeOverride, equippedItem, player]);
+	const toggles = [
+		showWeaponOptions &&
+			toggle('1h-weapons', i18n.t('settings_tab.other.show_1h_weapons.label'), filters.oneHandedWeapons, setFilterFlag('oneHandedWeapons')),
+		showWeaponOptions &&
+			toggle('2h-weapons', i18n.t('settings_tab.other.show_2h_weapons.label'), filters.twoHandedWeapons, setFilterFlag('twoHandedWeapons')),
+		label === SelectorModalTabs.Enchants &&
+			toggle('all-enchants', i18n.t('settings_tab.other.show_all_enchants.label'), filters.showAllEnchants, setFilterFlag('showAllEnchants')),
+		showEPOptions && toggle('ep-values', i18n.t('settings_tab.other.show_ep_values.label'), showEPValues, value => sim.setShowEPValues(value)),
+	].filter((entry): entry is ItemListToggle => !!entry);
 
 	return (
 		<>
-			<div className="ui-selector-modal-filters mb-(--modal-padding) flex items-center [&>*:not(:last-child)]:mr-2">
-				<SearchBar
-					value={search}
-					onChange={setSearch}
-					placeholder={i18n.t('common.search')}
-					className="max-w-48"
-					id={searchId}
-					inputTestId="selector-modal-search"
-					grow={false}
-				/>
-				{label === SelectorModalTabs.Items && (
-					<>
-						<Button data-testid="selector-modal-filters-button" onClick={() => setFiltersOpen(true)}>
-							{i18n.t('gear_tab.gear_picker.filters_button')}
-						</Button>
-						<FiltersMenu slot={slot} open={filtersOpen} onOpenChange={setFiltersOpen} />
-					</>
-				)}
-				<div className="min-w-28" data-testid="selector-modal-phase-selector">
-					<EnumPicker
-						modObject={sim}
-						config={{
-							id: phaseId,
-							extraClassNames: ['mb-0'],
-							values: [Phase.Launch, Phase.Tier1, Phase.Tier2, Phase.Tier3].map(value => ({ name: i18n.t(`common.phases.${value}`), value })),
-							storeField: 'sim:phase',
-							getValue: subject => subject.getPhase(),
-							setValue: (subject, newValue) => subject.setPhase(newValue),
-						}}
-					/>
-				</div>
-				{showWeaponOptions && (
-					<div data-testid="selector-modal-show-1h-weapons">
-						<BooleanPicker
-							modObject={sim}
-							config={{
-								id: 'show-1h-weapons-selector',
-								extraClassNames: ['mb-0'],
-								label: i18n.t('settings_tab.other.show_1h_weapons.label'),
-								layout: 'inline',
-								storeField: 'sim:filters',
-								getValue: subject => subject.getFilters().oneHandedWeapons,
-								setValue: (subject, newValue) => {
-									const next = subject.getFilters();
-									next.oneHandedWeapons = newValue;
-									subject.setFilters(next);
-								},
-							}}
-						/>
-					</div>
-				)}
-				{showWeaponOptions && (
-					<div data-testid="selector-modal-show-2h-weapons">
-						<BooleanPicker
-							modObject={sim}
-							config={{
-								id: 'show-2h-weapons-selector',
-								extraClassNames: ['mb-0'],
-								label: i18n.t('settings_tab.other.show_2h_weapons.label'),
-								layout: 'inline',
-								storeField: 'sim:filters',
-								getValue: subject => subject.getFilters().twoHandedWeapons,
-								setValue: (subject, newValue) => {
-									const next = subject.getFilters();
-									next.twoHandedWeapons = newValue;
-									subject.setFilters(next);
-								},
-							}}
-						/>
-					</div>
-				)}
-				{showWeaponTypeOverride && (
-					<div className="min-w-40" data-testid="selector-modal-weapon-type-override">
-						<EnumPicker
-							modObject={player}
-							config={{
-								id: weaponTypeOverrideId,
-								extraClassNames: ['mb-0'],
-								label: i18n.t('gear_tab.gear_picker.weapon_type_override.label'),
-								labelTooltip: i18n.t('gear_tab.gear_picker.weapon_type_override.tooltip'),
-								layout: 'inline',
-								storeField: 'gear',
-								values: weaponTypeOverrideOptions,
-								getValue: subject => subject.getEquippedItem(slot)?.weaponTypeOverride ?? WeaponType.WeaponTypeUnknown,
-								setValue: (subject, newValue) => {
-									const current = subject.getEquippedItem(slot);
-									if (current) subject.equipItem(slot, current.withWeaponTypeOverride(newValue));
-								},
-							}}
-						/>
-					</div>
-				)}
-				{label.startsWith('Gem') && (
-					<div data-testid="selector-modal-show-matching-gems">
-						<BooleanPicker
-							modObject={sim}
-							config={{
-								id: 'show-matching-gems-selector',
-								extraClassNames: ['mb-0'],
-								label: i18n.t('settings_tab.other.show_matching_gems.label'),
-								layout: 'inline',
-								storeField: 'sim:filters',
-								getValue: subject => subject.getFilters().matchingGemsOnly,
-								setValue: (subject, newValue) => {
-									const next = subject.getFilters();
-									next.matchingGemsOnly = newValue;
-									subject.setFilters(next);
-								},
-							}}
-						/>
-					</div>
-				)}
-				{showEPOptions && (
-					<div data-testid="selector-modal-show-ep-values">
-						<BooleanPicker
-							modObject={sim}
-							config={{
-								id: 'show-ep-values-selector',
-								extraClassNames: ['mb-0'],
-								label: i18n.t('settings_tab.other.show_ep_values.label'),
-								layout: 'inline',
-								storeField: 'ui:showEPValues',
-								getValue: subject => subject.getShowEPValues(),
-								setValue: (subject, newValue) => subject.setShowEPValues(newValue),
-							}}
-						/>
-					</div>
-				)}
-				<Button variant="danger" className="-mt-2 mr-4 -mb-2 ml-auto" data-testid="selector-modal-remove-button" onClick={onRemove}>
-					{removeButtonLabel(label, key => i18n.t(key))}
-				</Button>
-			</div>
-			<div className="mr-4 flex justify-between gap-4 pr-2 text-md max-xl:mr-0" data-testid="selector-modal-list-labels">
-				{label === SelectorModalTabs.Items && (
-					<h6 className="w-12 cursor-pointer select-none" data-testid="ilvl-label" onClick={() => sort(ItemListSortBy.ILVL)}>
-						{i18n.t('gear_tab.gear_picker.table_headers.ilvl')}
-					</h6>
-				)}
-				<h6 className="mr-2 flex-1" data-testid="item-label">
-					{columnHeaderLabel(label, getTranslatedTabLabel)}
-				</h6>
-				{label === SelectorModalTabs.Items && (
-					<h6 className="w-64" data-testid="source-label">
-						{i18n.t('gear_tab.gear_picker.table_headers.source')}
-					</h6>
-				)}
-				<h6
-					className="float-right flex w-24 cursor-pointer items-center select-none"
-					data-testid="ep-label"
-					style={{ display: showEPValues ? undefined : 'none' }}
-					onClick={() => sort(ItemListSortBy.EP)}>
-					<span>EP</span>
-					<Icon name="plus-minus" size="2xs" />
-					<Button iconOnly aria-label={i18n.t('gear_tab.gear_picker.ep_tooltip')} className="ml-1" data-tooltip-id={`${tooltipId}-ep`}>
-						<Icon name="question-circle" style="regular" size="lg" />
-					</Button>
-				</h6>
-				<h6 className="w-8" data-testid="favorite-label" />
-				{label === SelectorModalTabs.Items && <h6 className="w-8" data-testid="compare-label" />}
-			</div>
+			<ItemListToolbarView
+				search={search}
+				onSearchChange={setSearch}
+				filtersMenu={label === SelectorModalTabs.Items ? <FiltersMenu slot={slot} open={filtersOpen} onOpenChange={setFiltersOpen} /> : undefined}
+				onOpenFilters={() => setFiltersOpen(true)}
+				phase={phase}
+				onPhaseChange={next => sim.setPhase(next)}
+				toggles={toggles}
+				remove={onRemove && { label: removeButtonLabel(label, key => i18n.t(key)), onClick: onRemove }}
+			/>
+			<ItemListHeaderRow
+				label={label}
+				ep={showEPOptions ? { showValues: showEPValues, tooltipId: `${tooltipId}-ep` } : undefined}
+				sortBy={sortBy}
+				sortDirection={sortDirection}
+				onSort={sort}
+			/>
 			<div
 				ref={listRef}
-				className="mb-0 max-h-[60vh] w-full overflow-x-hidden overflow-y-scroll p-0"
+				className="mb-0 h-[65dvh] w-full overflow-x-hidden overflow-y-scroll p-0"
 				data-testid="selector-modal-list"
 				data-hide-ep={!showEPValues ? '' : undefined}
 				tabIndex={0}>
@@ -313,10 +249,8 @@ export const ItemList = ({ tab, slot, equippedItem }: ItemListProps) => {
 							<ItemListRow
 								itemData={row}
 								label={label}
-								slot={slot}
 								active={row.id === equippedId}
-								equippedEP={equippedEP}
-								itemEP={computeEP(row.item)}
+								ep={showEPOptions ? { ep: computeEP(row.item), equippedEP } : undefined}
 								favourited={isFavourited(row)}
 								favouriteTooltipId={`${tooltipId}-favourite`}
 								compareTooltipId={`${tooltipId}-compare`}
@@ -331,12 +265,18 @@ export const ItemList = ({ tab, slot, equippedItem }: ItemListProps) => {
 			<Tooltip
 				id={`${tooltipId}-favourite`}
 				render={({ activeAnchor }) =>
-					(activeAnchor as HTMLElement | null)?.dataset.favourited === 'true' ? 'Remove from favorites' : 'Add to favorites'
+					(activeAnchor as HTMLElement | null)?.dataset.favourited === 'true'
+						? i18n.t('gear_tab.gear_picker.row_actions.remove_favorite')
+						: i18n.t('gear_tab.gear_picker.row_actions.add_favorite')
 				}
 			/>
 			<Tooltip
 				id={`${tooltipId}-compare`}
-				render={({ activeAnchor }) => ((activeAnchor as HTMLElement | null)?.dataset.inBatch === 'true' ? 'Remove from Batch Sim' : 'Add to Batch Sim')}
+				render={({ activeAnchor }) =>
+					(activeAnchor as HTMLElement | null)?.dataset.inBatch === 'true'
+						? i18n.t('gear_tab.gear_picker.row_actions.remove_from_batch')
+						: i18n.t('gear_tab.gear_picker.row_actions.add_to_batch')
+				}
 			/>
 		</>
 	);

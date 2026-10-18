@@ -5,22 +5,25 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/buffs"
-	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
 // How close to running out the warrior's own shout has to be before recasting it is worth a global.
 const ShoutExpirationThreshold = time.Second * 3
 
-func (warrior *Warrior) registerBattleShout() {
-	battleShoutRank := spellData.BattleShout.Highest()
+var battleShoutRank = spellData.BattleShout.Highest()
 
-	// A warrior that shouts builds a copy of its own; one that shouts nothing gets the
-	// isPlayer=false constructor, whose aura is the party's external copy.
+func (warrior *Warrior) registerBattleShout() {
+	// A warrior that shouts builds its own copy. One that never shouts gets the
+	// isPlayer=false constructor, whose aura is the raid's external copy, and the
+	// raid's Battle Shout state sets what that copy is worth.
 	castsOwnShout := warrior.UseBattleShout
 
-	// Three pieces of Battlegear of Wrath add a flat 30 to the shout this warrior makes, both to
-	// what its copy applies and to what it bids for the category.
+	// Three pieces of Battlegear of Wrath add a flat 30 to the shout. HasBsT2 is
+	// set by the user or by the set worn at the start. The set is worth the 30 on
+	// the shout this warrior makes, so it raises what that copy applies and what
+	// the cast is worth to the category together.
 	battleShoutBase := buffs.BattleShoutValue(0)
 	battleShoutValue := battleShoutBase
 	shoutsWithTheSet := castsOwnShout && warrior.HasBsT2
@@ -29,63 +32,53 @@ func (warrior *Warrior) registerBattleShout() {
 	}
 
 	auras := warrior.NewAllyAuraArray(func(unit *core.Unit) *core.Aura {
-		// The party's Battle Shout registers the external copy before this runs, and that copy
+		// The raid's Battle Shout registers the external copy before this runs, and that copy
 		// keeps the build phase it was registered with.
-		partyShout := !castsOwnShout && unit.GetAuraByID(core.ActionID{SpellID: battleShoutRank.ID}.WithTag(-1)) != nil
+		raidShout := !castsOwnShout && unit.GetAuraByID(core.ActionID{SpellID: battleShoutRank.ID}.WithTag(-1)) != nil
 
-		// Booming Voice widens the radius and cuts the cost (registerBoomingVoice), so the aura takes no talent points.
-		aura := buffs.BattleShoutAura(unit, castsOwnShout, 0)
+		// Booming Voice widens the radius and lowers the cost only, so the aura takes no talent points.
+		aura := buffs.NewSpellDataBattleShoutAura(unit, castsOwnShout, 0)
 		if shoutsWithTheSet {
-			core.AddGeneratedFlatBonus(aura, stats.AttackPower, battleShoutBase, buffs.BattleShoutT2Bonus)
+			buffs.AddGeneratedFlatBonus(aura, stats.AttackPower, battleShoutBase, buffs.BattleShoutT2Bonus)
 		}
-		if !partyShout {
+		if !raidShout {
 			aura.BuildPhase = core.Ternary(castsOwnShout, core.CharacterBuildPhaseBuffs, core.CharacterBuildPhaseNone)
 		}
 		return aura
 	})
+
+	// What holds the Battle Shout category decides whether shouting is worth a
+	// global. Nothing there and the cast puts the buff up. This warrior's own
+	// copy there and the cast only refreshes it, which is worth a global once it
+	// is about to run out. Anything else has to be outbid first - a warrior
+	// without the set would otherwise keep recasting a 139 shout the category
+	// turns away while an external 169 one is up.
 	battleShoutCategory := warrior.GetExclusiveEffectCategory(buffs.BattleShoutCategory)
 
-	warrior.BattleShout = warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: battleShoutRank.ID},
-		ClassSpellMask: SpellMaskBattleShout,
-		SpellSchool:    battleShoutRank.SpellSchool(),
-		Flags:          core.SpellFlagAPL | core.SpellFlagHelpful,
-		ProcMask:       core.ProcMaskEmpty,
+	config := spelldata.SpellConfig(&warrior.Unit, battleShoutRank, spelldata.Flags(core.SpellFlagAPL))
+	config.ProcMask = core.ProcMaskEmpty
+	config.ThreatMultiplier = 1
+	// TODO: Manual review needed -- spell 25289 carries no threat effect; none is modelled until
+	// measured in game.
+	config.FlatThreatBonus = 0
 
-		RageCost: core.RageCostOptions{
-			Cost: int32(battleShoutRank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: battleShoutRank.GCD(),
-			},
-			IgnoreHaste: true,
-		},
+	config.ExtraCastCondition = func(sim *core.Simulation, _ *core.Unit) bool {
+		active := battleShoutCategory.GetActiveEffect()
+		if active == nil {
+			return true
+		}
+		if active.Aura == auras.Get(&warrior.Unit) {
+			return active.Aura.RemainingDuration(sim) <= ShoutExpirationThreshold
+		}
+		return battleShoutValue >= active.Priority
+	}
 
-		ThreatMultiplier: 1,
-		// TODO: Manual review needed -- spell 25289 carries no threat effect; none is modelled until
-		// measured in game.
-		FlatThreatBonus: battleShoutRank.FindEffect(dbcenums.E_THREAT, 0, 0).Average(core.CharacterLevel),
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealOutcome(sim, target, spell.OutcomeAlwaysHit)
+		auras.ActivateAllPlayers(sim)
+	}
 
-		// Battle Shout is a single-aura exclusive category. Nothing there and the cast puts the buff
-		// up; this warrior's own copy there is only worth refreshing as it runs out; anything else
-		// (the party buff) has to be outbid first, or casting would only burn rage every GCD.
-		ExtraCastCondition: func(sim *core.Simulation, _ *core.Unit) bool {
-			active := battleShoutCategory.GetActiveEffect()
-			if active == nil {
-				return true
-			}
-			if active.Aura == auras.Get(&warrior.Unit) {
-				return active.Aura.RemainingDuration(sim) <= ShoutExpirationThreshold
-			}
-			return battleShoutValue >= active.Priority
-		},
+	config.RelatedAuraArrays = auras.ToMap()
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealOutcome(sim, target, spell.OutcomeAlwaysHit)
-			auras.ActivateAllPlayers(sim)
-		},
-
-		RelatedAuraArrays: auras.ToMap(),
-	})
+	warrior.BattleShout = warrior.RegisterSpell(config)
 }

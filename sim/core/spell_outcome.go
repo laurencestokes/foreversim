@@ -86,6 +86,17 @@ func (spell *Spell) outcomeMagicHitAndCrit(sim *Simulation, result *SpellResult,
 	}
 }
 
+// Rolls the hand's weapon miss, which physical and ranged hit lower, then the caster's spell crit, for the
+// spell's own crit multiplier: a wand shot.
+func (spell *Spell) OutcomeRangedHitAndMagicCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	roll := sim.RandomFloat("White Hit Table")
+	chance := 0.0
+
+	if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) {
+		spell.outcomeMagicCrit(sim, result, attackTable, true)
+	}
+}
+
 func (spell *Spell) OutcomeMagicCrit(sim *Simulation, result *SpellResult, at *AttackTable) {
 	spell.outcomeMagicCrit(sim, result, at, true)
 }
@@ -158,27 +169,17 @@ func (spell *Spell) OutcomeTickMagicHitNoHitCounter(sim *Simulation, result *Spe
 }
 
 func (spell *Spell) OutcomeTickPhysicalCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
-	// Serpent Sting is Nature on the ranged table: its ticks roll physical crit but can still be
-	// partially resisted, so count those like the magic ticks do.
-	isPartialResist := result.DidResist()
 	if spell.PhysicalCritCheck(sim, attackTable) {
 		result.Outcome = OutcomeCrit
 		result.Damage *= spell.CritDamageMultiplier(attackTable)
 		spell.SpellMetrics[result.Target.UnitIndex].CritTicks++
-		if isPartialResist {
-			spell.SpellMetrics[result.Target.UnitIndex].ResistedCritTicks++
-		}
 	} else {
 		result.Outcome = OutcomeHit
 		spell.SpellMetrics[result.Target.UnitIndex].Ticks++
-		if isPartialResist {
-			spell.SpellMetrics[result.Target.UnitIndex].ResistedTicks++
-		}
 	}
 }
 
-// A tick of a dot that has already landed: it can crit but does not roll to hit again. Classic
-// dots test hit once, when applied (the Forever beta log has no SPELL_PERIODIC_MISSED at all).
+// A tick of a damage over time whose hit was rolled when it was applied: only the spell crit.
 func (spell *Spell) OutcomeTickMagicCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
 	isPartialResist := result.DidResist()
 	if spell.MagicCritCheck(sim, result.Target) {
@@ -456,15 +457,12 @@ func (spell *Spell) outcomeMeleeSpecialBlockAndCrit(sim *Simulation, result *Spe
 	if spell.Unit.PseudoStats.InFrontOfTarget {
 		roll := sim.RandomFloat("White Hit Table")
 		chance := 0.0
-
-		if !result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) &&
-			!result.applyAttackTableBlock(spell, attackTable, roll, &chance) {
-			result.applyAttackTableHit(spell, countHits)
+		if result.applyAttackTableBlock(spell, attackTable, roll, &chance) {
+			return
 		}
-	} else {
-		if !result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) {
-			result.applyAttackTableHit(spell, countHits)
-		}
+	}
+	if !result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) {
+		result.applyAttackTableHit(spell, countHits)
 	}
 }
 
@@ -574,7 +572,7 @@ func (spell *Spell) outcomeEnemyMeleeWhite(sim *Simulation, result *SpellResult,
 }
 
 func (spell *Spell) GetPhysicalMissChance(attackTable *AttackTable) float64 {
-	missChance := attackTable.BaseMissChance - spell.PhysicalHitChance(attackTable)
+	missChance := attackTable.Hand(spell).BaseMissChance - spell.PhysicalHitChance(attackTable)
 
 	if spell.Unit.AutoAttacks.IsDualWielding && !spell.Unit.PseudoStats.DisableDWMissPenalty {
 		missChance += 0.19
@@ -595,7 +593,7 @@ func (result *SpellResult) applyAttackTableMiss(spell *Spell, attackTable *Attac
 }
 
 func (result *SpellResult) applyAttackTableMissNoDWPenalty(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
-	missChance := attackTable.BaseMissChance - spell.PhysicalHitChance(attackTable)
+	missChance := attackTable.Hand(spell).BaseMissChance - spell.PhysicalHitChance(attackTable)
 	*chance = max(0, missChance)
 
 	if roll < *chance {
@@ -608,7 +606,7 @@ func (result *SpellResult) applyAttackTableMissNoDWPenalty(spell *Spell, attackT
 }
 
 func (result *SpellResult) applyAttackTableBlock(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
-	*chance += result.Target.GetTotalBlockChanceAsDefender(attackTable)
+	*chance += result.Target.GetTotalBlockChanceAsDefender(spell, attackTable)
 	if roll < *chance {
 		isPartialResist := result.DidResist()
 		result.Outcome |= OutcomeBlock
@@ -624,10 +622,11 @@ func (result *SpellResult) applyAttackTableBlock(spell *Spell, attackTable *Atta
 		}
 		// Physical abilities tagged with "Completely Blocked" are fully blocked every time
 		if spell.Flags.Matches(SpellFlagBinary) {
-			result.Damage = 0
+			result.BlockedDamage = result.Damage
 		} else {
-			result.Damage = max(0, result.Damage-result.Target.BlockDamageReduction())
+			result.BlockedDamage = min(result.Damage, result.Target.BlockDamageReduction())
 		}
+		result.Damage -= result.BlockedDamage
 		return true
 	}
 	return false
@@ -662,12 +661,13 @@ func (result *SpellResult) applyAttackTableParry(spell *Spell, attackTable *Atta
 }
 
 func (result *SpellResult) applyAttackTableGlance(sim *Simulation, spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
-	*chance += attackTable.BaseGlanceChance
+	hand := attackTable.Hand(spell)
+	*chance += hand.BaseGlanceChance
 
 	if roll < *chance {
 		result.Outcome = OutcomeGlance
 		spell.SpellMetrics[result.Target.UnitIndex].Glances++
-		result.Damage *= attackTable.GlanceMultiplier + attackTable.GlanceSpread*(2*sim.RandomFloat("Glance Damage")-1)
+		result.Damage *= hand.GlanceMultiplierMin + sim.RandomFloat("Glance Roll")*(hand.GlanceMultiplierMax-hand.GlanceMultiplierMin)
 		return true
 	}
 	return false
@@ -719,7 +719,7 @@ func (result *SpellResult) applyAttackTableHit(spell *Spell, countHits bool) {
 }
 
 func (result *SpellResult) applyEnemyAttackTableMiss(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
-	missChance := result.Target.GetTotalChanceToBeMissedAsDefender(attackTable) - spell.Unit.GetStat(stats.PhysicalHitPercent)/100
+	missChance := result.Target.GetTotalChanceToBeMissedAsDefender(spell, attackTable) - spell.Unit.GetStat(stats.PhysicalHitPercent)/100
 
 	if spell.Unit.AutoAttacks.IsDualWielding && !spell.Unit.PseudoStats.DisableDWMissPenalty {
 		missChance += 0.19
@@ -740,17 +740,20 @@ func (result *SpellResult) applyEnemyAttackTableBlock(sim *Simulation, spell *Sp
 		return false
 	}
 
-	*chance += result.Target.GetTotalBlockChanceAsDefender(attackTable)
+	*chance += result.Target.GetTotalBlockChanceAsDefender(spell, attackTable)
 	if roll < *chance {
 		result.Outcome |= OutcomeBlock
 		spell.SpellMetrics[result.Target.UnitIndex].Blocks++
 
 		if result.Target.Blockhandler != nil {
+			beforeBlock := result.Damage
 			result.Target.Blockhandler(sim, spell, result)
+			result.BlockedDamage = beforeBlock - result.Damage
 			return true
 		}
 
-		result.Damage = max(0, result.Damage-result.Target.BlockDamageReduction())
+		result.BlockedDamage = min(result.Damage, result.Target.BlockDamageReduction())
+		result.Damage -= result.BlockedDamage
 
 		return true
 	}
@@ -794,7 +797,7 @@ func (result *SpellResult) applyEnemyAttackTableCrit(spell *Spell, attackTable *
 	if spell.ProcMask.Matches(ProcMaskRanged) {
 		critPercent += spell.Unit.stats[stats.RangedCritPercent]
 	}
-	*chance += getCritChance(critPercent/100-attackTable.MeleeCritSuppression, result.Target)
+	*chance += getCritChance(critPercent/100-attackTable.Hand(spell).MeleeCritSuppression, result.Target)
 
 	if roll < *chance {
 		isPartialResist := result.DidResist()
@@ -866,24 +869,33 @@ func (spell *Spell) OutcomeExpectedPhysicalCrit(_ *Simulation, result *SpellResu
 }
 
 func (spell *Spell) OutcomeExpectedMeleeWhite(_ *Simulation, result *SpellResult, attackTable *AttackTable) {
+	hand := attackTable.Hand(spell)
 	missChance := spell.GetPhysicalMissChance(attackTable)
-	dodgeChance := TernaryFloat64(spell.Flags.Matches(SpellFlagCannotBeDodged), 0, max(0, attackTable.BaseDodgeChance-spell.DodgeParrySuppression()-spell.Unit.PseudoStats.DodgeReduction))
-	parryChance := TernaryFloat64(spell.Unit.PseudoStats.InFrontOfTarget, max(0, attackTable.BaseParryChance-spell.DodgeParrySuppression()), 0)
-	glanceChance := attackTable.BaseGlanceChance
-	blockChance := TernaryFloat64(spell.Unit.PseudoStats.InFrontOfTarget, attackTable.BaseBlockChance, 0)
+	dodgeChance := TernaryFloat64(spell.Flags.Matches(SpellFlagCannotBeDodged), 0, max(0, hand.BaseDodgeChance-spell.DodgeParrySuppression()-spell.Unit.PseudoStats.DodgeReduction))
+	parryChance := TernaryFloat64(spell.Unit.PseudoStats.InFrontOfTarget, max(0, hand.BaseParryChance-spell.DodgeParrySuppression()), 0)
+	glanceChance := hand.BaseGlanceChance
+	blockChance := TernaryFloat64(spell.Unit.PseudoStats.InFrontOfTarget, hand.BaseBlockChance, 0)
 	whiteCritCap := 1.0 - missChance - dodgeChance - parryChance - glanceChance - blockChance
 	critChance := min(spell.PhysicalCritChance(attackTable), whiteCritCap)
-	averageMultiplier := 1.0 - missChance - dodgeChance - parryChance + (spell.CritDamageMultiplier(attackTable)-1)*critChance - glanceChance*(1.0-attackTable.GlanceMultiplier) - (blockChance * (result.Target.BlockDamageReduction() / result.Damage))
+	averageMultiplier := 1.0 - missChance - dodgeChance - parryChance + (spell.CritDamageMultiplier(attackTable)-1)*critChance - glanceChance*(1.0-(hand.GlanceMultiplierMin+hand.GlanceMultiplierMax)/2) - blockChance*result.blockedFraction()
 	result.Damage *= averageMultiplier
 }
 
 func (spell *Spell) OutcomeExpectedMeleeWeaponSpecialHitAndCrit(_ *Simulation, result *SpellResult, attackTable *AttackTable) {
-	missChance := max(0, attackTable.BaseMissChance-spell.PhysicalHitChance(attackTable))
-	dodgeChance := TernaryFloat64(spell.Flags.Matches(SpellFlagCannotBeDodged), 0, max(0, attackTable.BaseDodgeChance-spell.DodgeParrySuppression()-spell.Unit.PseudoStats.DodgeReduction))
-	parryChance := TernaryFloat64(spell.Unit.PseudoStats.InFrontOfTarget, max(0, attackTable.BaseParryChance-spell.DodgeParrySuppression()), 0)
-	blockChance := TernaryFloat64(spell.Unit.PseudoStats.InFrontOfTarget, attackTable.BaseBlockChance, 0)
+	hand := attackTable.Hand(spell)
+	missChance := max(0, hand.BaseMissChance-spell.PhysicalHitChance(attackTable))
+	dodgeChance := TernaryFloat64(spell.Flags.Matches(SpellFlagCannotBeDodged), 0, max(0, hand.BaseDodgeChance-spell.DodgeParrySuppression()-spell.Unit.PseudoStats.DodgeReduction))
+	parryChance := TernaryFloat64(spell.Unit.PseudoStats.InFrontOfTarget, max(0, hand.BaseParryChance-spell.DodgeParrySuppression()), 0)
+	blockChance := TernaryFloat64(spell.Unit.PseudoStats.InFrontOfTarget, hand.BaseBlockChance, 0)
 	critChance := spell.PhysicalCritChance(attackTable)
-	averageMultiplier := (1.0 - missChance - dodgeChance - parryChance) * (1.0 + (spell.CritDamageMultiplier(attackTable)-1)*critChance)
-	averageMultiplier -= (((spell.CritDamageMultiplier(attackTable) - 1) * critChance) * (blockChance * (result.Target.BlockDamageReduction() / result.Damage)))
+	averageMultiplier := (1.0-missChance-dodgeChance-parryChance-blockChance)*(1.0+(spell.CritDamageMultiplier(attackTable)-1)*critChance) +
+		blockChance*(1.0-result.blockedFraction())
 	result.Damage *= averageMultiplier
+}
+
+func (result *SpellResult) blockedFraction() float64 {
+	if result.Damage <= 0 {
+		return 0
+	}
+	return min(result.Target.BlockDamageReduction(), result.Damage) / result.Damage
 }

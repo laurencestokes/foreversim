@@ -32,7 +32,7 @@ func SynthManaSpringValue(talentPoints int32) float64 {
 func SynthManaSpringDuration(talentPoints int32) time.Duration {
 	return synthManaSpringMeta.Duration(talentPoints)
 }
-func SynthManaSpringAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+func NewSpellDataSynthManaSpringAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newBuff(unit, synthManaSpringMeta, isPlayer, talentPoints)
 }
 
@@ -55,7 +55,7 @@ func SynthManaTideDuration(talentPoints int32) time.Duration {
 func SynthManaTideCooldown() time.Duration {
 	return synthManaTideMeta.Cooldown()
 }
-func SynthManaTideAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+func NewSpellDataSynthManaTideAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newBuff(unit, synthManaTideMeta, isPlayer, talentPoints)
 }
 
@@ -72,7 +72,7 @@ func SynthBlessingOfKingsValue(talentPoints int32) float64 {
 func SynthBlessingOfKingsDuration(talentPoints int32) time.Duration {
 	return synthBlessingOfKingsMeta.Duration(talentPoints)
 }
-func SynthBlessingOfKingsAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+func NewSpellDataSynthBlessingOfKingsAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newBuff(unit, synthBlessingOfKingsMeta, isPlayer, talentPoints)
 }
 
@@ -92,7 +92,7 @@ func SynthBattleShoutValue(talentPoints int32) float64 {
 func SynthBattleShoutDuration(talentPoints int32) time.Duration {
 	return synthBattleShoutMeta.Duration(talentPoints)
 }
-func SynthBattleShoutAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+func NewSpellDataSynthBattleShoutAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newBuff(unit, synthBattleShoutMeta, isPlayer, talentPoints)
 }
 
@@ -117,7 +117,7 @@ func SynthDevotionAuraValue(talentPoints int32) float64 {
 func SynthDevotionAuraDuration(talentPoints int32) time.Duration {
 	return synthDevotionAuraMeta.Duration(talentPoints)
 }
-func SynthDevotionAuraAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+func NewSpellDataSynthDevotionAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newBuff(unit, synthDevotionAuraMeta, isPlayer, talentPoints)
 }
 
@@ -138,7 +138,7 @@ func SynthFrostResistanceAuraValue(talentPoints int32) float64 {
 func SynthFrostResistanceAuraDuration(talentPoints int32) time.Duration {
 	return synthFrostResistanceAuraMeta.Duration(talentPoints)
 }
-func SynthFrostResistanceAuraAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+func NewSpellDataSynthFrostResistanceAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newBuff(unit, synthFrostResistanceAuraMeta, isPlayer, talentPoints)
 }
 
@@ -155,13 +155,11 @@ func SynthFrostResistanceTotemValue(talentPoints int32) float64 {
 func SynthFrostResistanceTotemDuration(talentPoints int32) time.Duration {
 	return synthFrostResistanceTotemMeta.Duration(talentPoints)
 }
-func SynthFrostResistanceTotemAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+func NewSpellDataSynthFrostResistanceTotemAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newBuff(unit, synthFrostResistanceTotemMeta, isPlayer, talentPoints)
 }
 
 // Innervates
-// Left out: effect 1 A_MOD_MANA_REGEN_INTERRUPT(134) misc 0
-// Left out: effect 2 A_MOD_POWER_REGEN_PERCENT(110) misc 0
 var SynthInnervatesCategory = "Innervate"
 var synthInnervatesSpell = spelldata.MustFind(29166)
 var synthInnervatesMeta = &Meta{
@@ -170,13 +168,16 @@ var synthInnervatesMeta = &Meta{
 	Category: SynthInnervatesCategory,
 }
 
+func SynthInnervatesValue(talentPoints int32) float64 {
+	return synthInnervatesMeta.Value(talentPoints)
+}
 func SynthInnervatesDuration(talentPoints int32) time.Duration {
 	return synthInnervatesMeta.Duration(talentPoints)
 }
 func SynthInnervatesCooldown() time.Duration {
 	return synthInnervatesMeta.Cooldown()
 }
-func SynthInnervatesAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+func NewSpellDataSynthInnervatesAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newBuff(unit, synthInnervatesMeta, isPlayer, talentPoints)
 }
 
@@ -198,11 +199,11 @@ func SynthPowerInfusionsDuration(talentPoints int32) time.Duration {
 func SynthPowerInfusionsCooldown() time.Duration {
 	return synthPowerInfusionsMeta.Cooldown()
 }
-func SynthPowerInfusionsAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+func NewSpellDataSynthPowerInfusionsAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newBuff(unit, synthPowerInfusionsMeta, isPlayer, talentPoints)
 }
 
-// func SynthAbsentAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura // totem_twisting, KindFlag: the client has no row for it
+// func NewSpellDataSynthAbsentAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura // totem_twisting, KindFlag: the game files have no row for it
 
 // Atiesh - Mage
 var synthAtieshMageSpell = spelldata.MustFind(28142)
@@ -217,7 +218,7 @@ func SynthAtieshMageValue(talentPoints int32) float64 {
 func SynthAtieshMageDuration(talentPoints int32) time.Duration {
 	return synthAtieshMageMeta.Duration(talentPoints)
 }
-func SynthAtieshMageAura(unit *core.Unit, isPlayer bool, talentPoints int32, count float64) *core.Aura {
+func NewSpellDataSynthAtieshMageAura(unit *core.Unit, isPlayer bool, talentPoints int32, count float64) *core.Aura {
 	return newItemCountBuff(unit, synthAtieshMageMeta, isPlayer, count)
 }
 
@@ -238,31 +239,31 @@ func SynthThornsValue(talentPoints int32) float64 {
 func SynthThornsDuration(talentPoints int32) time.Duration {
 	return synthThornsMeta.Duration(talentPoints)
 }
-func SynthThornsAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
+func NewSpellDataSynthThornsAura(unit *core.Unit, isPlayer bool, talentPoints int32) *core.Aura {
 	return newDamageShield(unit, synthThornsMeta, isPlayer, talentPoints)
 }
 
 func applyGeneratedBuffs(char *core.Character, raid *proto.RaidBuffs, party *proto.PartyBuffs, individual *proto.IndividualBuffs) {
 	if party.ManaSpringTotem != proto.TristateEffect_TristateEffectMissing {
-		core.MakePermanent(SynthManaSpringAura(&char.Unit, false, core.GetTristateValueInt32(party.ManaSpringTotem, 0, 5)))
+		standTotem(char, synthManaSpringSpell, NewSpellDataSynthManaSpringAura, core.GetTristateValueInt32(party.ManaSpringTotem, 0, 5))
 	}
 	if party.ManaTideTotems > 0 {
 		driveSynthManaTide(char, party)
 	}
 	if individual.GreaterBlessingOfKings {
-		core.MakePermanent(SynthBlessingOfKingsAura(&char.Unit, false, 0))
+		core.MakePermanent(NewSpellDataSynthBlessingOfKingsAura(&char.Unit, false, 0))
 	}
-	if party.BattleShout != proto.TristateEffect_TristateEffectMissing {
-		driveSynthBattleShout(char, party)
+	if raid.BattleShout != proto.TristateEffect_TristateEffectMissing {
+		driveSynthBattleShout(char, raid)
 	}
 	if party.DevotionAura {
-		core.MakePermanent(SynthDevotionAuraAura(&char.Unit, false, 0))
+		core.MakePermanent(NewSpellDataSynthDevotionAura(&char.Unit, false, 0))
 	}
 	if raid.FrostResistanceAura {
-		core.MakePermanent(SynthFrostResistanceAuraAura(&char.Unit, false, 0))
+		core.MakePermanent(NewSpellDataSynthFrostResistanceAura(&char.Unit, false, 0))
 	}
 	if raid.FrostResistanceTotem {
-		core.MakePermanent(SynthFrostResistanceTotemAura(&char.Unit, false, 0))
+		standTotem(char, synthFrostResistanceTotemSpell, NewSpellDataSynthFrostResistanceTotemAura, 0)
 	}
 	if individual.Innervates > 0 {
 		driveSynthInnervates(char, individual)
@@ -273,7 +274,7 @@ func applyGeneratedBuffs(char *core.Character, raid *proto.RaidBuffs, party *pro
 	if party.AtieshMage > 0 {
 		driveSynthAtieshMage(char, party)
 	}
-	if raid.Thorns {
-		core.MakePermanent(SynthThornsAura(&char.Unit, false, 0))
+	if individual.Thorns {
+		core.MakePermanent(NewSpellDataSynthThornsAura(&char.Unit, false, 0))
 	}
 }

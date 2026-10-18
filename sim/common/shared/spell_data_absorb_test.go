@@ -2,16 +2,19 @@ package shared
 
 import (
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
+	"github.com/wowsims/forever/sim/core/stats"
 )
 
-// Mark of Resolution 17759's on-use: ItemEffect casts 21956, A_SCHOOL_ABSORB 780 with Misc 1
-// (Physical) on the caster for 10 s, on a 5 min cooldown in category 2554 for 10 s.
+// Mark of Resolution 17759's on-use spell 21956, A_SCHOOL_ABSORB with Misc 1 (Physical) on the caster.
+// The test trinkets carrying it run on a cooldown and in a category of the tests' own.
 const (
 	resolutionSpell    int32 = 21956
 	resolutionCategory int32 = 2554
@@ -21,10 +24,23 @@ func resolutionOnUse() *proto.ItemEffect {
 	return testOnUse(resolutionSpell, 300000, resolutionCategory, 10000)
 }
 
-// 21956 states a 0.6 spread around its 780. The tests that count the shield down read the 780 alone.
+// 21956 states a spread around its amount. The tests that count the shield down read the amount alone.
 func withoutSpread(t *testing.T, spellID int32) {
 	t.Helper()
 	editRow(t, spellID, func(s *spelldata.Spell) { s.Effects[0].Variance = 0 })
+}
+
+// The amount the row's absorb effect shields for, once its spread is gone, after checking the effect
+// absorbs Physical and not Fire, which the tests below hit it with.
+func physicalAbsorb(t *testing.T, spellID int32) float64 {
+	t.Helper()
+	withoutSpread(t, spellID)
+	effect := spelldata.MustFind(spellID).AbsorbEffect()
+	schools := core.SpellSchool(effect.Misc)
+	if !schools.Matches(core.SpellSchoolPhysical) || schools.Matches(core.SpellSchoolFire) || effect.Average() <= 0 {
+		t.Fatalf("%d absorbs %v of %v, want an amount of Physical alone", spellID, effect.Average(), schools)
+	}
+	return effect.Average()
 }
 
 // What is left of a hit of the school once the wearer's absorbs have taken their share.
@@ -45,11 +61,12 @@ func absorbAura(t *testing.T, caster *testCaster, row int32, sourceID int32) *co
 	return aura
 }
 
-// The shield takes 780 off the physical damage the wearer takes: a hit of 1000 lands for 220, and the
-// shield it used up is gone. A fire hit before it is not absorbed and leaves the shield whole.
+// The shield takes the row's amount off the physical damage the wearer takes: a hit of twice that
+// lands for the other half, and the shield it used up is gone. A fire hit before it is not absorbed
+// and leaves the shield whole.
 func TestOnUseAbsorbTakesPhysicalDamageOffItsShield(t *testing.T) {
 	const itemID int32 = 991201
-	withoutSpread(t, resolutionSpell)
+	amount := physicalAbsorb(t, resolutionSpell)
 	sim, caster := newOnUseSim(t, NewSpellDataAbsorbOnUse, map[int32]*proto.ItemEffect{itemID: resolutionOnUse()})
 	spell := onUseSpell(t, caster, itemID)
 	shield := absorbAura(t, caster, resolutionSpell, itemID)
@@ -64,51 +81,56 @@ func TestOnUseAbsorbTakesPhysicalDamageOffItsShield(t *testing.T) {
 		t.Fatalf("using the item put up no shield")
 	}
 
-	if got := takenAfterAbsorbs(sim, caster, core.SpellSchoolFire, 1000); got != 1000 {
-		t.Errorf("a fire hit of 1000 landed for %v, want all of it", got)
+	if got := takenAfterAbsorbs(sim, caster, core.SpellSchoolFire, 2*amount); got != 2*amount {
+		t.Errorf("a fire hit of %v landed for %v, want all of it", 2*amount, got)
 	}
-	if got := takenAfterAbsorbs(sim, caster, core.SpellSchoolPhysical, 1000); got != 220 {
-		t.Errorf("a physical hit of 1000 landed for %v, want 220 past the 780 shield", got)
+	if got := takenAfterAbsorbs(sim, caster, core.SpellSchoolPhysical, 2*amount); got != amount {
+		t.Errorf("a physical hit of %v landed for %v, want %v past the row's %v shield", 2*amount, got, amount, amount)
 	}
 	if shield.IsActive() {
-		t.Errorf("the shield is still up after absorbing its 780")
+		t.Errorf("the shield is still up after absorbing its %v", amount)
 	}
 	if got := takenAfterAbsorbs(sim, caster, core.SpellSchoolPhysical, 100); got != 100 {
 		t.Errorf("a physical hit after the shield broke landed for %v, want all 100", got)
 	}
 }
 
-// Unused, the shield drops at the end of its 10 s and absorbs nothing after.
+// Unused, the shield drops at the end of the row's duration and absorbs nothing after.
 func TestOnUseAbsorbExpiresWithItsRow(t *testing.T) {
 	const itemID int32 = 991202
-	withoutSpread(t, resolutionSpell)
+	physicalAbsorb(t, resolutionSpell)
+	duration := spelldata.MustFind(resolutionSpell).Duration()
 	sim, caster := newOnUseSim(t, NewSpellDataAbsorbOnUse, map[int32]*proto.ItemEffect{itemID: resolutionOnUse()})
 	shield := absorbAura(t, caster, resolutionSpell, itemID)
 
 	onUseSpell(t, caster, itemID).Cast(sim, &caster.Unit)
 	start := sim.CurrentTime
 
-	stepPast(t, sim, start+10*time.Second-time.Millisecond)
+	stepPast(t, sim, start+duration-time.Millisecond)
 	if !shield.IsActive() {
-		t.Fatalf("the shield dropped before its 10 s")
+		t.Fatalf("the shield dropped before the row's %v", duration)
 	}
-	stepPast(t, sim, start+10*time.Second+time.Millisecond)
+	stepPast(t, sim, start+duration+time.Millisecond)
 	if shield.IsActive() {
-		t.Errorf("the shield is still up after its 10 s")
+		t.Errorf("the shield is still up after the row's %v", duration)
 	}
 	if got := takenAfterAbsorbs(sim, caster, core.SpellSchoolPhysical, 100); got != 100 {
 		t.Errorf("a physical hit after the shield expired landed for %v, want all 100", got)
 	}
 }
 
-// The item's own 5 min cooldown, and its category's 10 s that a second item in category 2554 waits out.
+// The item's own cooldown, and its category's that a second item in the category waits out, as the
+// on-use effects state them.
 func TestOnUseAbsorbRunsOnTheItemsCooldownAndCategory(t *testing.T) {
 	const markID, otherID int32 = 991203, 991204
+	markEffect := resolutionOnUse()
 	sim, caster := newOnUseSim(t, NewSpellDataAbsorbOnUse, map[int32]*proto.ItemEffect{
-		markID:  resolutionOnUse(),
-		otherID: testOnUse(resolutionSpell, 60000, resolutionCategory, 10000),
+		markID:  markEffect,
+		otherID: testOnUse(resolutionSpell, 60000, resolutionCategory, markEffect.GetOnUse().CategoryCooldownMs),
 	})
 	mark, other := onUseSpell(t, caster, markID), onUseSpell(t, caster, otherID)
+	cooldown := core.DurationFromMillis(markEffect.GetOnUse().CooldownMs)
+	categoryCooldown := core.DurationFromMillis(markEffect.GetOnUse().CategoryCooldownMs)
 
 	mark.Cast(sim, &caster.Unit)
 	start := sim.CurrentTime
@@ -116,38 +138,87 @@ func TestOnUseAbsorbRunsOnTheItemsCooldownAndCategory(t *testing.T) {
 		t.Errorf("an item sharing category %d could be used while the mark's category cooldown runs", resolutionCategory)
 	}
 
-	stepPast(t, sim, start+10*time.Second)
+	stepPast(t, sim, start+categoryCooldown)
 	if !offCooldown(sim, other) {
-		t.Errorf("an item sharing category %d could not be used once the 10 s ran out", resolutionCategory)
+		t.Errorf("an item sharing category %d could not be used once its %v ran out", resolutionCategory, categoryCooldown)
 	}
-	if got := mark.CD.ReadyAt(); got != start+5*time.Minute {
-		t.Errorf("the mark is ready again at %v, want 5 min after its use at %v", got, start)
+	if got := mark.CD.ReadyAt(); got != start+cooldown {
+		t.Errorf("the mark is ready again at %v, want %v after its use at %v", got, cooldown, start)
 	}
 }
 
-// With the row's spread the shield rolls within 780 * (1 -/+ 0.6/2).
+// With the row's spread the shield rolls within its effect's ends.
 func TestOnUseAbsorbRollsTheRowsSpread(t *testing.T) {
 	const itemID int32 = 991205
 	effect := spelldata.MustFind(resolutionSpell).AbsorbEffect()
 	sim, caster := newOnUseSim(t, NewSpellDataAbsorbOnUse, map[int32]*proto.ItemEffect{itemID: resolutionOnUse()})
-	low, high := effect.Min(caster.Level), effect.Max(caster.Level)
+	low, high := effect.Min(), effect.Max()
 	if low == high {
 		t.Fatalf("%d states no spread", resolutionSpell)
 	}
 
 	onUseSpell(t, caster, itemID).Cast(sim, &caster.Unit)
-	if absorbed := 2000 - takenAfterAbsorbs(sim, caster, core.SpellSchoolPhysical, 2000); absorbed < low || absorbed > high {
+	if absorbed := 2*high - takenAfterAbsorbs(sim, caster, core.SpellSchoolPhysical, 2*high); absorbed < low || absorbed > high {
 		t.Errorf("the shield absorbed %v, want %v to %v", absorbed, low, high)
 	}
 }
 
-// Enchant Chest - Absorption 8220: its equip aura 1249072 rolls 25% on a melee hit taken, at most once
-// every 5 s, and casts 1249073, A_SCHOOL_ABSORB 50 physical until used up. A copy of the trigger
-// rolling 100% stands in, so every hit taken outside the lockout procs.
+// Blazing Emblem 2802's on-use casts 13744, A_SCHOOL_ABSORB of Fire beside A_MOD_RESISTANCE of Fire for
+// the row's duration; its effect entry carries the resistance as a stat. The resistance is up with the
+// shield and stays while a hit eats part of it; the hit that uses the shield up removes it, resistance
+// and all.
+func TestOnUseAbsorbCarriesTheStatsItsEffectStates(t *testing.T) {
+	const itemID, emblemSpell int32 = 991208, 13744
+	withoutSpread(t, emblemSpell)
+	row := spelldata.MustFind(emblemSpell)
+	amount, resistance := row.AbsorbEffect().Average(), row.FirstAura(dbcenums.A_MOD_RESISTANCE).Average()
+	if amount <= 0 || resistance <= 0 {
+		t.Fatalf("%d states %v absorbed and %v resistance, want both", emblemSpell, amount, resistance)
+	}
+	emblem := testOnUse(emblemSpell, 600000, 0, 0)
+	emblem.EffectDurationMs = row.DurationMs
+	emblem.ScalingOptions = map[int32]*proto.ScalingItemEffectProperties{
+		0: {Stats: map[int32]float64{int32(proto.Stat_StatFireResistance): resistance}},
+	}
+	sim, caster := newOnUseSim(t, NewSpellDataAbsorbOnUse, map[int32]*proto.ItemEffect{itemID: emblem})
+	shield := absorbAura(t, caster, emblemSpell, itemID)
+	fireResistance := func() float64 { return caster.GetStat(stats.FireResistance) }
+	base := fireResistance()
+
+	onUseSpell(t, caster, itemID).Cast(sim, &caster.Unit)
+	if got := fireResistance() - base; !shield.IsActive() || got != resistance {
+		t.Fatalf("the shield is up %v with %v Fire resistance, want up with the entry's %v", shield.IsActive(), got, resistance)
+	}
+
+	first := amount * 3 / 4
+	if got := takenAfterAbsorbs(sim, caster, core.SpellSchoolFire, first); got != 0 {
+		t.Errorf("a fire hit of %v landed for %v, want none of it", first, got)
+	}
+	if got := fireResistance() - base; got != resistance {
+		t.Errorf("with %v of the shield left the wearer has %v Fire resistance, want %v", amount-first, got, resistance)
+	}
+
+	second := amount - first + 100
+	if got := takenAfterAbsorbs(sim, caster, core.SpellSchoolFire, second); math.Abs(got-100) > 1e-9 {
+		t.Errorf("a fire hit of %v landed for %v, want 100 past the %v left", second, got, amount-first)
+	}
+	if got := fireResistance() - base; shield.IsActive() || got != 0 {
+		t.Errorf("the used-up shield is up %v with %v Fire resistance, want gone with none", shield.IsActive(), got)
+	}
+}
+
+// Enchant Chest - Absorption 8220: its equip aura 1249072 rolls a chance on a melee hit taken, at most
+// once per its internal cooldown, and casts 1249073, A_SCHOOL_ABSORB of Physical until used up. A copy
+// of the trigger rolling 100% stands in, so every hit taken outside the lockout procs.
 func TestAbsorbProcShieldsTheWearerOnAMeleeHitTaken(t *testing.T) {
 	const chestID, enchantID int32 = 991206, 991207
 	const trigger, absorb int32 = 1249072, 1249073
 	editRow(t, trigger, func(s *spelldata.Spell) { s.ProcChance = 100 })
+	amount := physicalAbsorb(t, absorb)
+	lockout := spelldata.MustFind(trigger).ICD()
+	if lockout <= 0 {
+		t.Fatalf("%d states no internal cooldown", trigger)
+	}
 
 	core.AddToDatabase(&proto.SimDatabase{
 		Items: []*proto.SimItem{{Id: chestID, Name: "Test Chest", Type: proto.ItemType_ItemTypeChest,
@@ -176,44 +247,48 @@ func TestAbsorbProcShieldsTheWearerOnAMeleeHitTaken(t *testing.T) {
 	if !shield.IsActive() {
 		t.Fatalf("a melee hit taken put up no shield")
 	}
-	if got := takenAfterAbsorbs(sim, caster, core.SpellSchoolFire, 100); got != 100 {
-		t.Errorf("a fire hit landed for %v, want all 100", got)
+	if got := takenAfterAbsorbs(sim, caster, core.SpellSchoolFire, 2*amount); got != 2*amount {
+		t.Errorf("a fire hit of %v landed for %v, want all of it", 2*amount, got)
 	}
-	if got := takenAfterAbsorbs(sim, caster, core.SpellSchoolPhysical, 100); got != 50 {
-		t.Errorf("a physical hit of 100 landed for %v, want 50 past the shield", got)
+	if got := takenAfterAbsorbs(sim, caster, core.SpellSchoolPhysical, 2*amount); got != amount {
+		t.Errorf("a physical hit of %v landed for %v, want %v past the row's shield", 2*amount, got, amount)
 	}
 	procTime := sim.CurrentTime
 
 	struck()
 	if shield.IsActive() {
-		t.Errorf("a hit inside the 5 s lockout put the shield back up")
+		t.Errorf("a hit inside the row's %v lockout put the shield back up", lockout)
 	}
 
-	stepPast(t, sim, procTime+5*time.Second)
+	stepPast(t, sim, procTime+lockout)
 	struck()
 	if !shield.IsActive() {
 		t.Errorf("a hit after the lockout put up no shield")
 	}
 }
 
-// Uther's Strength 11302's equip aura 8397 states 2% on effect 1 and 4 in its ProcChance column. The
-// item's proc rolls the column; a class spell stating both, Hack and Slash 13960 (5% on its effect, 1
-// in the column), is not an item proc and keeps the effect's.
+// Uther's Strength 11302's equip aura 8397 states one chance on an effect and another in its ProcChance
+// column. The item's proc rolls the column; a class spell stating both, Hack and Slash 13960, is not an
+// item proc and keeps the effect's.
 func TestItemProcRollsTheColumnOverAnEffectsChance(t *testing.T) {
 	_, caster := newOnUseSim(t, NewSpellDataAbsorbOnUse, nil)
-	uther := spelldata.MustFind(8397)
-	if got := uther.StatedChance(); got != 0.02 {
-		t.Fatalf("8397 states %v on its effect, want 0.02", got)
-	}
+	column := func(s *spelldata.Spell) float64 { return float64(s.ProcChance) / 100 }
 
+	uther := spelldata.MustFind(8397)
+	if uther.StatedChance() == column(uther) || uther.StatedChance() <= 0 {
+		t.Fatalf("8397 states %v on its effect and %v in its column, want two chances", uther.StatedChance(), column(uther))
+	}
 	config := spellDataProcListener(&caster.Character, SpellDataProc{Name: "Uther's Strength", ItemID: 11302, TriggerSpellID: 8397},
-		effectSource{id: 11302}, uther, nil)
-	if config.ProcChance != 0.04 || config.DPM != nil {
-		t.Errorf("the proc rolls %v (manager %v), want the column's 0.04", config.ProcChance, config.DPM != nil)
+		effectSource{id: 11302}, uther)
+	if config.ProcChance != column(uther) || config.DPM != nil {
+		t.Errorf("the proc rolls %v (manager %v), want the column's %v", config.ProcChance, config.DPM != nil, column(uther))
 	}
 
 	hackAndSlash := spelldata.MustFind(13960)
-	if got := spelldata.ProcTrigger(&caster.Character, hackAndSlash, nil).ProcChance; got != 0.05 {
-		t.Errorf("a class spell's trigger rolls %v, want its effect's 0.05 over its column's 1", got)
+	if hackAndSlash.StatedChance() == column(hackAndSlash) || hackAndSlash.StatedChance() <= 0 {
+		t.Fatalf("13960 states %v on its effect and %v in its column, want two chances", hackAndSlash.StatedChance(), column(hackAndSlash))
+	}
+	if got := spelldata.ProcTrigger(&caster.Character, hackAndSlash, nil).ProcChance; got != hackAndSlash.StatedChance() {
+		t.Errorf("a class spell's trigger rolls %v, want its effect's %v over its column's %v", got, hackAndSlash.StatedChance(), column(hackAndSlash))
 	}
 }

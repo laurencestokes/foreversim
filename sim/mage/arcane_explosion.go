@@ -2,37 +2,22 @@ package mage
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+// Only the highest rank is registered: the mage casts the rank configured here, not every rank
+// spellData.ArcaneExplosion lists.
 func (mage *Mage) registerArcaneExplosionSpell() {
-	arcaneExplosionRank := spellData.ArcaneExplosion.Highest()
+	mage.registerArcaneExplosionRank(spellData.ArcaneExplosion.Len(), spellData.ArcaneExplosion.Highest())
+}
 
-	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: arcaneExplosionRank.ID},
-		SpellSchool:    arcaneExplosionRank.SpellSchool(),
-		DefenseType:    arcaneExplosionRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: MageSpellArcaneExplosion,
-		MaxRange:       pointBlankRadius,
+func (mage *Mage) registerArcaneExplosionRank(_ int32, rank *spelldata.Spell) {
+	config := spelldata.SpellConfig(&mage.Unit, rank, spelldata.Magic(core.ProcMaskSpellDamage))
+	config.ClassSpellMask = MageSpellArcaneExplosion
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(arcaneExplosionRank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: arcaneExplosionRank.GCD(),
-			},
-		},
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealAoeDamageWithVariance(sim, spell.OutcomeMagicHitAndCrit, rollDamage(rank.DamageEffect()))
+	}
 
-		DamageMultiplier: 1,
-		BonusCoefficient: arcaneExplosionRank.DamageEffect().Coeff(),
-		ThreatMultiplier: 1,
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealAoeDamageWithVariance(sim, spell.OutcomeMagicHitAndCrit, func(sim *core.Simulation, _ *core.Spell) float64 {
-				return arcaneExplosionRank.DamageEffect().Roll(sim, core.CharacterLevel)
-			})
-		},
-	})
+	mage.RegisterSpell(config)
 }

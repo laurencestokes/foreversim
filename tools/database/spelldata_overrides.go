@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"math"
+	"slices"
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
@@ -10,9 +11,9 @@ import (
 )
 
 // Writes the hand-supplied values onto the rows before they are rendered, so the sim reads one
-// number per field instead of a client number a call site patches. Every failure below stops the
-// whole generation: a row the client has since caught up with, or one that names a spell the store
-// does not carry, is a number that has stopped being true and has to be looked at rather than
+// number per field instead of a game files number a call site patches. Every failure below stops the
+// whole generation: a row the game files have since caught up with, or one that names a spell the
+// store does not carry, is a number that has stopped being true and has to be looked at rather than
 // written.
 func applyOverrides(rows []storeSpell, list []overrides.Override) error {
 	byID := map[int32]*storeSpell{}
@@ -63,19 +64,30 @@ func applyOverride(s *storeSpell, o overrides.Override) error {
 		s.ProcChanceSource, s.ProcChanceEffect = procChancePPM, 0
 
 	case overrides.FlatThreat:
-		for i := range s.Effects {
-			if IsThreatEffect(s.Effects[i].Type) {
-				return fmt.Errorf("spell %d now states threat on effect %d, so its hand-supplied flat threat is stale",
-					s.ID, s.Effects[i].Index)
-			}
-		}
-		s.FlatThreat = o.Value
+		return applyFlatThreatOverride(s, o.Value)
+
+	case overrides.ThreatPerSpellLevel:
+		return applyFlatThreatOverride(s, o.Value*float64(s.SpellLevel))
 
 	case overrides.APCoefDirect:
-		return applyAPCoefOverride(s, o, s.directEffect())
+		return applyAPCoefOverride(s, o, s.directEffect(), "direct")
 
 	case overrides.APCoefPeriodic:
-		return applyAPCoefOverride(s, o, s.periodicEffect())
+		return applyAPCoefOverride(s, o, s.periodicEffect(), "periodic")
+
+	case overrides.APCoefThreat:
+		return applyAPCoefOverride(s, o, s.threatEffect(), "threat")
+
+	case overrides.SPCoefDirect:
+		e := s.directEffect()
+		if e == nil {
+			return fmt.Errorf("spell %d has no direct effect to carry a spell-power coefficient", s.ID)
+		}
+		if e.SPCoef != 0 {
+			return fmt.Errorf("spell %d now states %v spell power on its direct effect, so its hand-supplied coefficient is stale",
+				s.ID, e.SPCoef)
+		}
+		e.SPCoef = o.Value
 
 	case overrides.ProcChancePct:
 		if s.tooltipStatesChance {
@@ -96,8 +108,27 @@ func applyOverride(s *storeSpell, o overrides.Override) error {
 		}
 		s.DurationMs = int32(o.Value)
 
+	case overrides.ICDMs:
+		if s.ICDMs != 0 {
+			return fmt.Errorf("spell %d now states an internal cooldown of %d ms, so its hand-supplied one is stale",
+				s.ID, s.ICDMs)
+		}
+		s.ICDMs = int32(o.Value)
+
 	case overrides.Hint:
 		s.ProcHint = core.ProcHint(o.Value)
+
+	case overrides.StatMask:
+		i := slices.IndexFunc(s.Effects, func(e storeEffect) bool { return e.Aura == dbcenums.A_MOD_TOTAL_STAT_PERCENTAGE })
+		if i < 0 {
+			return fmt.Errorf("spell %d has no A_MOD_TOTAL_STAT_PERCENTAGE effect to carry a stat mask", s.ID)
+		}
+		e := &s.Effects[i]
+		if e.Misc != 0 || e.Misc2 != 0 {
+			return fmt.Errorf("spell %d now states misc %d and %d on its stat percentage, so its hand-supplied stat mask is stale",
+				s.ID, e.Misc, e.Misc2)
+		}
+		e.Misc2 = int32(o.Value)
 
 	default:
 		return fmt.Errorf("spell %d carries an override of unknown field %d", s.ID, uint8(o.Field))
@@ -105,23 +136,37 @@ func applyOverride(s *storeSpell, o overrides.Override) error {
 	return nil
 }
 
-func applyAPCoefOverride(s *storeSpell, o overrides.Override, e *storeEffect) error {
+func applyFlatThreatOverride(s *storeSpell, threat float64) error {
+	if e := s.threatEffect(); e != nil {
+		return fmt.Errorf("spell %d now states threat on effect %d, so its hand-supplied flat threat is stale",
+			s.ID, e.Index)
+	}
+	if s.FlatThreat != 0 {
+		return fmt.Errorf("spell %d carries two flat threat overrides", s.ID)
+	}
+	s.FlatThreat = threat
+	return nil
+}
+
+func applyAPCoefOverride(s *storeSpell, o overrides.Override, e *storeEffect, role string) error {
 	if e == nil {
-		return fmt.Errorf("spell %d has no %s effect to carry an attack-power coefficient", s.ID, apRoleOf(o.Field))
+		return fmt.Errorf("spell %d has no %s effect to carry an attack-power coefficient", s.ID, role)
 	}
 	if e.APCoef != 0 {
 		return fmt.Errorf("spell %d now states %v attack power on its %s effect, so its hand-supplied coefficient is stale",
-			s.ID, e.APCoef, apRoleOf(o.Field))
+			s.ID, e.APCoef, role)
 	}
 	e.APCoef = o.Value
 	return nil
 }
 
-func apRoleOf(field overrides.Field) string {
-	if field == overrides.APCoefPeriodic {
-		return "periodic"
+func (s *storeSpell) threatEffect() *storeEffect {
+	for i := range s.Effects {
+		if IsThreatEffect(s.Effects[i].Type) {
+			return &s.Effects[i]
+		}
 	}
-	return "direct"
+	return nil
 }
 
 // The effect an override means by "direct": the damage or heal the cast itself does. A damage

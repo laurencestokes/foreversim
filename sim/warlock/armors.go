@@ -3,23 +3,21 @@ package warlock
 import (
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
-	"github.com/wowsims/forever/sim/core/stats"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// The client ships Demon Skin and Demon Armor and no Fel Armor, so the Fel Armor option buffs
-// nothing. Demonic Aegis raises both halves by 15% a point (1235316).
+// Demon Armor (11735), parsed from its row: armor and Shadow resistance. Its in-combat health regen is left
+// out by the parse. Demonic Aegis raises every amount it states.
 func (warlock *Warlock) registerArmors() {
-	rank := spellData.DemonArmor.Highest()
-	aegis := spellData.DemonicAegis.MultiplierAt(warlock.Talents.DemonicAegis)
+	rankedSpell := spellData.DemonArmor.ByID(11735)
 
-	armorBonus := rank.EffectN(1).Average(core.CharacterLevel) * aegis
-	shadowResBonus := rank.EffectN(2).Average(core.CharacterLevel) * aegis
+	opts := []spelldata.ParseOpt{}
+	if warlock.Talents.DemonicAegis > 0 {
+		opts = append(opts, spelldata.Count(1+spellData.DemonicAegis.Rank(warlock.Talents.DemonicAegis).EffectN(1).Percent()))
+	}
 
-	warlock.DemonArmor = warlock.RegisterAura(core.Aura{
-		Label:    "Demon Armor",
-		ActionID: core.ActionID{SpellID: rank.ID},
-		Duration: core.NeverExpires,
-	}).AttachStatBuff(stats.Armor, armorBonus).AttachStatBuff(stats.ShadowResistance, shadowResBonus)
+	warlock.DemonArmor = warlock.RegisterAura(spelldata.AuraConfig(rankedSpell))
+	spelldata.ParseEffects(&warlock.Character, warlock.DemonArmor, rankedSpell, opts...)
 
 	if warlock.Options.Armor == proto.WarlockOptions_DemonArmor {
 		core.MakePermanent(warlock.DemonArmor)

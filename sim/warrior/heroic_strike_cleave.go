@@ -2,147 +2,88 @@ package warrior
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Heroic Strike and Cleave carry the client's On Next Swing attribute (Attributes 0x4 on 25286 and
-// 20569, which Bloodthirst and Mortal Strike lack), so both queue onto the next main hand swing
-// instead of firing as instant specials.
+var heroicStrikeRank = spellData.HeroicStrike.Highest()
+
+var cleaveRank = spellData.Cleave.Highest()
+var cleaveTargets = int32(cleaveRank.DamageEffect().ChainTargets)
+
 func (warrior *Warrior) registerHeroicStrike() {
-	heroicStrikeRank := spellData.HeroicStrike.Highest()
-	heroicStrikeBaseDamage := heroicStrikeRank.DamageEffect().Average(core.CharacterLevel)
+	config := spelldata.SpellConfig(&warrior.Unit, heroicStrikeRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
+	config.Flags &^= core.SpellFlagAPL
 
-	spell := warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: heroicStrikeRank.ID},
-		SpellSchool:    heroicStrikeRank.SpellSchool(),
-		DefenseType:    heroicStrikeRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskMeleeMH,
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagNoOnCastComplete,
-		ClassSpellMask: SpellMaskHeroicStrike,
-		MaxRange:       core.MaxMeleeRange,
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		baseDamage := heroicStrikeRank.WeaponStrike(sim, spell, warrior.MHWeaponDamage(sim, spell.MeleeAttackPower(target)), 0)
+		result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
 
-		RageCost: core.RageCostOptions{
-			Cost:   int32(heroicStrikeRank.Cost()),
-			Refund: heroicStrikeRank.MissRefund(),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				NonEmpty: true,
-			},
-		},
+		if !result.Landed() {
+			spell.IssueRefund(sim)
+		}
+	}
 
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-		// Not in the client table (no E_THREAT effect), so the Classic rank 9 value stays ours.
-		FlatThreatBonus: 173,
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			baseDamage := heroicStrikeBaseDamage + warrior.MHWeaponDamage(sim, spell.MeleeAttackPower(target))
-			result := warrior.calcQueuedSwing(sim, spell, target, baseDamage)
-
-			if !result.Landed() {
-				spell.IssueRefund(sim)
-			}
-
-			spell.DealDamage(sim, result)
-			if warrior.curQueueAura != nil {
-				warrior.curQueueAura.Deactivate(sim)
-			}
-		},
-	})
-	warrior.makeQueueSpellsAndAura(spell)
+	warrior.HeroicStrike = warrior.RegisterSpell(config)
+	warrior.makeQueueSpellsAndAura(warrior.HeroicStrike)
 }
 
 func (warrior *Warrior) registerCleave() {
-	cleaveRank := spellData.Cleave.Highest()
-	cleaveBaseDamage := cleaveRank.DamageEffect().Average(core.CharacterLevel)
+	config := spelldata.SpellConfig(&warrior.Unit, cleaveRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
+	config.Flags &^= core.SpellFlagAPL
 
-	const maxTargets int32 = 2
-	results := make(core.SpellResultSlice, 0, maxTargets)
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		baseDamage := cleaveRank.WeaponStrike(sim, spell, warrior.MHWeaponDamage(sim, spell.MeleeAttackPower(target)), 0)
+		results := spell.CalcCleaveDamage(sim, target, cleaveTargets, baseDamage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
 
-	spell := warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: cleaveRank.ID},
-		SpellSchool:    cleaveRank.SpellSchool(),
-		DefenseType:    cleaveRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskMeleeMH,
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagNoOnCastComplete,
-		ClassSpellMask: SpellMaskCleave,
-		MaxRange:       core.MaxMeleeRange,
-
-		RageCost: core.RageCostOptions{
-			Cost:   int32(cleaveRank.Cost()),
-			Refund: cleaveRank.MissRefund(),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				NonEmpty: true,
-			},
-		},
-
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-		// Not in the client table (no E_THREAT effect), so the Classic rank 5 value stays ours.
-		FlatThreatBonus: 100,
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			results = results[:0]
-			numTargets := min(maxTargets, sim.Environment.ActiveTargetCount())
-			for range numTargets {
-				baseDamage := cleaveBaseDamage + warrior.MHWeaponDamage(sim, spell.MeleeAttackPower(target))
-				results = append(results, warrior.calcQueuedSwing(sim, spell, target, baseDamage))
-				target = sim.Environment.NextActiveTargetUnit(target)
-			}
-
+		// The flat threat is the cleave's total, split between the targets it lands on.
+		if landed := results.NumLandedHits(); landed > 1 {
+			flatThreat := spell.FlatThreatBonus
+			spell.FlatThreatBonus /= float64(landed)
 			for _, result := range results {
-				spell.DealDamage(sim, result)
+				result.Threat = spell.ThreatFromDamage(sim, result.Outcome, result.Damage, warrior.AttackTables[result.Target.UnitIndex])
 			}
+			spell.FlatThreatBonus = flatThreat
+		}
+		spell.DealBatchedAoeDamage(sim)
+		if !results[0].Landed() {
+			spell.IssueRefund(sim)
+		}
+	}
 
-			if warrior.curQueueAura != nil {
-				warrior.curQueueAura.Deactivate(sim)
-			}
-		},
-	})
-	warrior.makeQueueSpellsAndAura(spell)
+	warrior.Cleave = warrior.RegisterSpell(config)
+	warrior.makeQueueSpellsAndAura(warrior.Cleave)
 }
 
-// Heroic Strike and Cleave replace the main hand swing but roll on the special attack table, so they
-// skip the dual wield miss penalty. The penalty flag is character wide, so it is only lifted for the
-// swing itself: an off-hand auto that lands while the queue is up still pays it.
-func (warrior *Warrior) calcQueuedSwing(sim *core.Simulation, spell *core.Spell, target *core.Unit, baseDamage float64) *core.SpellResult {
-	warrior.PseudoStats.DisableDWMissPenalty = true
-	result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
-	warrior.PseudoStats.DisableDWMissPenalty = false
-	return result
-}
-
-func (warrior *Warrior) makeQueueSpellsAndAura(srcSpell *core.Spell) *core.Spell {
+// Heroic Strike and Cleave go off on the next main-hand swing (ON_NEXT_SWING in the game files): the
+// APL casts the tag 1 spell, which queues the attack after the Queue Delay, and the next swing, extra
+// attacks included, casts it in the swing's place. One attack is queued at a time, and a swing the
+// rage no longer covers drops the queue.
+func (warrior *Warrior) makeQueueSpellsAndAura(srcSpell *core.Spell) {
 	isQueueQueued := false
 
 	queueAura := warrior.RegisterAura(core.Aura{
 		Label:    "HS/Cleave Queue Aura-" + srcSpell.ActionID.String(),
 		ActionID: srcSpell.ActionID.WithTag(1),
 		Duration: core.NeverExpires,
-		OnReset: func(aura *core.Aura, sim *core.Simulation) {
+		OnReset: func(_ *core.Aura, _ *core.Simulation) {
 			isQueueQueued = false
 		},
-		OnGain: func(aura *core.Aura, sim *core.Simulation) {
-			if warrior.curQueueAura != nil {
-				warrior.curQueueAura.Deactivate(sim)
-			}
+		OnGain: func(aura *core.Aura, _ *core.Simulation) {
 			warrior.curQueueAura = aura
 			warrior.curQueuedAutoSpell = srcSpell
 		},
-		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
+		OnExpire: func(_ *core.Aura, _ *core.Simulation) {
 			warrior.curQueueAura = nil
 			warrior.curQueuedAutoSpell = nil
 		},
 	})
 
-	return warrior.RegisterSpell(core.SpellConfig{
+	warrior.RegisterSpell(core.SpellConfig{
 		ActionID:    srcSpell.ActionID.WithTag(1),
-		SpellSchool: core.SpellSchoolPhysical,
+		SpellSchool: srcSpell.SpellSchool,
 		DefenseType: srcSpell.DefenseType,
 		ProcMask:    core.ProcMaskEmpty,
-		Flags:       core.SpellFlagMeleeMetrics | core.SpellFlagAPL | core.SpellFlagNoMetrics,
+		Flags:       core.SpellFlagAPL | core.SpellFlagNoMetrics,
 
 		Cast: core.CastConfig{
 			DefaultCast: core.Cast{
@@ -150,40 +91,41 @@ func (warrior *Warrior) makeQueueSpellsAndAura(srcSpell *core.Spell) *core.Spell
 			},
 		},
 
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
+		ExtraCastCondition: func(sim *core.Simulation, _ *core.Unit) bool {
 			return warrior.curQueueAura == nil &&
 				!isQueueQueued &&
 				warrior.CurrentRage() >= srcSpell.Cost.GetCurrentCost() &&
-				warrior.Hardcast.Expires <= sim.CurrentTime &&
 				warrior.queuedRealismICD.IsReady(sim)
 		},
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			if warrior.queuedRealismICD.IsReady(sim) {
-				isQueueQueued = true
-				warrior.queuedRealismICD.Use(sim)
-				sim.AddPendingAction(&core.PendingAction{
-					NextActionAt: sim.CurrentTime + warrior.queuedRealismICD.Duration,
-					OnAction: func(sim *core.Simulation) {
-						queueAura.Activate(sim)
-						isQueueQueued = false
-					},
-				})
+		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
+			if warrior.queuedRealismICD.Duration == 0 {
+				queueAura.Activate(sim)
+				return
 			}
+
+			isQueueQueued = true
+			warrior.queuedRealismICD.Use(sim)
+			sim.AddPendingAction(&core.PendingAction{
+				NextActionAt: sim.CurrentTime + warrior.queuedRealismICD.Duration,
+				OnAction: func(sim *core.Simulation) {
+					queueAura.Activate(sim)
+					isQueueQueued = false
+				},
+			})
 		},
 	})
 }
 
-// Swaps the main hand swing for the queued Heroic Strike or Cleave, or drops the queue when it can
-// no longer be paid for.
 func (warrior *Warrior) TryHSOrCleave(sim *core.Simulation, mhSwingSpell *core.Spell) *core.Spell {
-	if !warrior.curQueueAura.IsActive() {
+	if warrior.curQueueAura == nil {
 		return mhSwingSpell
 	}
 
-	if !warrior.curQueuedAutoSpell.CanCast(sim, warrior.CurrentTarget) {
-		warrior.curQueueAura.Deactivate(sim)
+	queued := warrior.curQueuedAutoSpell
+	warrior.curQueueAura.Deactivate(sim)
+	if !queued.CanCast(sim, warrior.CurrentTarget) {
 		return mhSwingSpell
 	}
 
-	return warrior.curQueuedAutoSpell
+	return queued
 }

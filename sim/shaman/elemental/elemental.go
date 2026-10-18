@@ -29,9 +29,7 @@ func NewElementalShaman(character *core.Character, options *proto.Player) *Eleme
 	selfBuffs := shaman.SelfBuffs{
 		ShieldProcrate: eleOptions.ClassOptions.ShieldProcrate,
 		ImbueMH:        eleOptions.ClassOptions.ImbueMh,
-		ImbueOH:        proto.ShamanImbue_NoImbue,
 		ImbueMHSwap:    eleOptions.ClassOptions.ImbueMhSwap,
-		ImbueOHSwap:    proto.ShamanImbue_NoImbue,
 	}
 
 	ele := &ElementalShaman{
@@ -49,9 +47,6 @@ func NewElementalShaman(character *core.Character, options *proto.Player) *Eleme
 
 func (eleShaman *ElementalShaman) Initialize() {
 	eleShaman.Shaman.Initialize()
-
-	// eleShaman.RegisterFlametongueImbue(eleShaman.GetImbueProcMask(proto.ShamanImbue_FlametongueWeapon))
-	// eleShaman.RegisterWindfuryImbue(eleShaman.GetImbueProcMask(proto.ShamanImbue_WindfuryWeapon))
 }
 
 func (ele *ElementalShaman) AddRaidBuffs(raidBuffs *proto.RaidBuffs) {

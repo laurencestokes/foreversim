@@ -2,42 +2,29 @@ package mage
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// spellData.FireBlast holds the seven trainer ranks, 2136 to 10199. The client also carries 400616
-// to 400623, the copies the Season of Discovery rune passive Overheat (400615) swaps onto the action
-// bar. Overheat is an Engrave grant with no place in Forever, and the generator drops its stand-ins.
+// spellData.FireBlast holds the seven trainer ranks, 2136 to 10199.
+// The game files also carry 400616 to 400623, the copies the Season of Discovery rune passive
+// Overheat (400615) swaps onto the action bar. Overheat is an Engrave grant with no place in
+// Forever, and the generator drops its stand-ins.
+
+// Only the highest rank is registered: the mage casts the rank configured here, not every rank
+// spellData.FireBlast lists.
 func (mage *Mage) registerFireBlastSpell() {
-	fireBlastRank := spellData.FireBlast.Highest()
+	mage.registerFireBlastRank(spellData.FireBlast.Len(), spellData.FireBlast.Highest())
+}
 
-	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: fireBlastRank.ID},
-		SpellSchool:    fireBlastRank.SpellSchool(),
-		DefenseType:    fireBlastRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: MageSpellFireBlast,
-		MaxRange:       float64(fireBlastRank.MaxRange),
+func (mage *Mage) registerFireBlastRank(_ int32, rank *spelldata.Spell) {
+	damage := rank.DamageEffect()
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(fireBlastRank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: fireBlastRank.GCD(),
-			},
-			CD: core.Cooldown{
-				Timer:    mage.NewTimer(),
-				Duration: max(fireBlastRank.Cooldown(), fireBlastRank.CategoryCooldown()),
-			},
-		},
+	config := spelldata.SpellConfig(&mage.Unit, rank, spelldata.Magic(core.ProcMaskSpellDamage))
+	config.ClassSpellMask = MageSpellFireBlast
 
-		DamageMultiplier: 1,
-		BonusCoefficient: fireBlastRank.DamageEffect().Coeff(),
-		ThreatMultiplier: 1,
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealDamage(sim, target, damage.Average(), spell.OutcomeMagicHitAndCrit)
+	}
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, fireBlastRank.DamageEffect().Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-		},
-	})
+	mage.RegisterSpell(config)
 }

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// Masks taken from the client rows named in each case.
+// Masks taken from the game files rows named in each case.
 func TestDecodeProcTypeMask(t *testing.T) {
 	cases := []struct {
 		name               string
@@ -16,6 +16,8 @@ func TestDecodeProcTypeMask(t *testing.T) {
 		outcome            HitOutcome
 		requireDamageDealt bool
 		unsupported        []string
+
+		requireDamageComponent bool
 	}{
 		{
 			name:               "Lightning Shield, every direct hit taken",
@@ -177,6 +179,43 @@ func TestDecodeProcTypeMask(t *testing.T) {
 			outcome:  OutcomeParry,
 		},
 		{
+			name:     "Vindication, melee hits restricted to damaging ones",
+			mask:     [2]uint32{0x14, 0},
+			hint:     ProcHintDamage,
+			callback: CallbackOnSpellHitDealt,
+			procMask: ProcMaskMeleeWhiteHit | ProcMaskMeleeSpecial,
+			outcome:  OutcomeLanded,
+
+			requireDamageComponent: true,
+		},
+		{
+			name:     "Talisman of Ascendance, damage or healing spells",
+			mask:     [2]uint32{0x15550, 0},
+			hint:     ProcHintHeals | ProcHintDamage,
+			callback: CallbackOnSpellHitDealt | CallbackOnHealDealt,
+			procMask: ProcMaskMeleeSpecial | ProcMaskRangedAuto | ProcMaskRangedSpecial | ProcMaskSpellDamage | ProcMaskSpellHealing,
+			outcome:  OutcomeLanded,
+
+			requireDamageComponent: true,
+		},
+		{
+			name:     "the harmful-spell bit alone with damage wording, still a cast",
+			mask:     [2]uint32{0x10000, 0},
+			hint:     ProcHintDamage,
+			callback: CallbackOnCastComplete,
+			procMask: ProcMaskSpellDamage,
+			outcome:  OutcomeEmpty,
+		},
+		{
+			name:               "Enrage, damage wording beside a taken mask",
+			mask:               [2]uint32{0x222A8, 0},
+			hint:               ProcHintDamage,
+			callback:           CallbackOnSpellHitTaken,
+			procMask:           ProcMaskMeleeWhiteHit | ProcMaskMeleeSpecial | ProcMaskRangedAuto | ProcMaskRangedSpecial | ProcMaskSpellDamage,
+			outcome:            OutcomeLanded,
+			requireDamageDealt: true,
+		},
+		{
 			name:               "a word-1 bit",
 			mask:               [2]uint32{0, 0x4},
 			outcome:            OutcomeLanded,
@@ -199,6 +238,9 @@ func TestDecodeProcTypeMask(t *testing.T) {
 		}
 		if info.RequireDamageDealt != tc.requireDamageDealt {
 			t.Errorf("%s: RequireDamageDealt = %v, want %v", tc.name, info.RequireDamageDealt, tc.requireDamageDealt)
+		}
+		if info.RequireDamageComponent != tc.requireDamageComponent {
+			t.Errorf("%s: RequireDamageComponent = %v, want %v", tc.name, info.RequireDamageComponent, tc.requireDamageComponent)
 		}
 		if !slices.Equal(info.Unsupported, tc.unsupported) {
 			t.Errorf("%s: Unsupported = %v, want %v", tc.name, info.Unsupported, tc.unsupported)

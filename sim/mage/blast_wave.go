@@ -2,45 +2,26 @@ package mage
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+// Only the highest rank is registered: the mage casts the rank configured here, not every rank
+// spellData.BlastWave lists.
 func (mage *Mage) registerBlastWaveSpell() {
-	if !mage.Talents.BlastWave {
-		return
+	mage.registerBlastWaveRank(spellData.BlastWave.Len(), spellData.BlastWave.Highest())
+}
+
+// The daze (effect 2) does nothing to a boss.
+func (mage *Mage) registerBlastWaveRank(_ int32, rank *spelldata.Spell) {
+	// Binary: a spell with a non-damage effect (the daze) is resisted whole or not at all, which the
+	// row does not state.
+	config := spelldata.SpellConfig(&mage.Unit, rank,
+		spelldata.Magic(core.ProcMaskSpellDamage), spelldata.Flags(core.SpellFlagBinary))
+	config.ClassSpellMask = MageSpellBlastWave
+
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealAoeDamageWithVariance(sim, spell.OutcomeMagicHitAndCrit, rollDamage(rank.DamageEffect()))
 	}
 
-	blastWaveRank := spellData.BlastWave.Highest()
-
-	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: blastWaveRank.ID},
-		Flags:          core.SpellFlagAPL | core.SpellFlagBinary,
-		SpellSchool:    blastWaveRank.SpellSchool(),
-		DefenseType:    blastWaveRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		ClassSpellMask: MageSpellBlastWave,
-		MaxRange:       pointBlankRadius,
-
-		BonusCoefficient: blastWaveRank.DamageEffect().Coeff(),
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(blastWaveRank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: blastWaveRank.GCD(),
-			},
-			CD: core.Cooldown{
-				Timer:    mage.NewTimer(),
-				Duration: max(blastWaveRank.Cooldown(), blastWaveRank.CategoryCooldown()),
-			},
-		},
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealAoeDamageWithVariance(sim, spell.OutcomeMagicHitAndCrit, func(sim *core.Simulation, _ *core.Spell) float64 {
-				return blastWaveRank.DamageEffect().Roll(sim, core.CharacterLevel)
-			})
-		},
-	})
+	mage.RegisterSpell(config)
 }

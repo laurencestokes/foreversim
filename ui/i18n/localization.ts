@@ -1,7 +1,7 @@
 import {
 	AreaType,
 	ArmorType,
-	ItemQuality,
+	CreatureFamily,
 	ItemSlot,
 	MobType,
 	Profession,
@@ -10,6 +10,7 @@ import {
 	RangedWeaponType,
 	SpellSchool,
 	Stat,
+	WeaponSkill,
 	WeaponType,
 } from '@generated/proto/common';
 import { ResourceType } from '@generated/proto/spell';
@@ -28,6 +29,7 @@ import {
 	getArmorTypeI18nKey,
 	getBulkSlotI18nKey,
 	getClassI18nKey,
+	getCreatureFamilyI18nKey,
 	getMobTypeI18nKey,
 	getPresetConfigurationCategoryI18nKey,
 	getProfessionI18nKey,
@@ -39,8 +41,8 @@ import {
 	getSpecI18nKey,
 	getStatusI18nKey,
 	getTargetInputI18nKey,
+	getWeaponSkillI18nKey,
 	getWeaponTypeI18nKey,
-	itemQualityI18nKeys,
 	protoStatNameI18nKeys,
 	pseudoStatI18nKeys,
 	resourceTypeI18nKeys,
@@ -97,6 +99,12 @@ export const translateMobType = (mobType: MobType): string => {
 	});
 };
 
+export const translateCreatureFamily = (creatureFamily: CreatureFamily): string => {
+	return i18n.t(`common.creature_families.${getCreatureFamilyI18nKey(creatureFamily)}`, {
+		defaultValue: CreatureFamily[creatureFamily],
+	});
+};
+
 export const translateAreaType = (areaType: AreaType): string => {
 	return i18n.t(`common.area_types.${getAreaTypeI18nKey(areaType)}`, {
 		defaultValue: AreaType[areaType],
@@ -141,15 +149,15 @@ export const translateRangedWeaponType = (rangedWeaponType: RangedWeaponType): s
 	});
 };
 
-export const translateResourceType = (resourceType: ResourceType): string => {
-	return i18n.t(`common.resource_types.${resourceTypeI18nKeys[resourceType] || ResourceType[resourceType].toLowerCase()}`, {
-		defaultValue: ResourceType[resourceType],
+export const translateWeaponSkill = (weaponSkill: WeaponSkill): string => {
+	return i18n.t(`common.weapon_skills.${getWeaponSkillI18nKey(weaponSkill)}`, {
+		defaultValue: WeaponSkill[weaponSkill],
 	});
 };
 
-export const translateItemQuality = (itemQuality: ItemQuality): string => {
-	return i18n.t(`common.item_qualities.${itemQualityI18nKeys[itemQuality] || ItemQuality[itemQuality].toLowerCase()}`, {
-		defaultValue: ItemQuality[itemQuality],
+export const translateResourceType = (resourceType: ResourceType): string => {
+	return i18n.t(`common.resource_types.${resourceTypeI18nKeys[resourceType] || ResourceType[resourceType].toLowerCase()}`, {
+		defaultValue: ResourceType[resourceType],
 	});
 };
 
@@ -187,7 +195,7 @@ export const translatePlayerSpec = (playerSpec: PlayerSpec<any>): string => {
  */
 
 // The spec page template is identical for every spec (see ui/index_template.html),
-// so class/spec are no longer baked in as data-class/data-spec attributes; derive
+// so class/spec are not baked in as data-class/data-spec attributes; derive
 // them from the URL the same way ui/app/spec_entry.ts derives its spec module key
 // ('/forever/warrior/arms/' -> ['warrior', 'arms']). Data attributes are kept as a
 // fallback for any caller that isn't served from a real spec URL.
@@ -237,13 +245,16 @@ export const updateSimPageMetadata = (): void => {
 
 	const { className, specName } = classSpecInfo;
 
+	// Hunter, Mage, Rogue and Warlock have one spec, which has no name of its own.
+	const spec = i18n.t(`specs.${classNameToClassKey(className)}.${specName.toLowerCase()}`, { ns: 'character', defaultValue: '' });
 	const translationData = {
 		class: translateClass(className),
-		spec: translateSpec(className, specName),
+		spec,
 	};
+	const suffix = spec ? '' : '_class';
 
-	document.title = i18n.t('sim.title', translationData);
-	setMetaDescription(i18n.t('sim.description', translationData));
+	document.title = i18n.t(`sim.title${suffix}`, translationData);
+	setMetaDescription(i18n.t(`sim.description${suffix}`, translationData));
 };
 
 export const translateItemLabel = (itemLabel: string): string => {

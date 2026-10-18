@@ -91,7 +91,7 @@ func resolverRows() []Spell {
 			MaxStack:              5,
 			Effects: []Effect{
 				{SpellID: 800, Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_PERIODIC_DAMAGE,
-					BasePoints: 70, PPL: 1, SpellLevel: 50, PeriodMs: 3000, SPCoef: 0.1, Target: [2]dbcenums.ImplicitTarget{6, 0}},
+					BasePoints: 70, PPL: 1, BaseLevel: 50, PeriodMs: 3000, SPCoef: 0.1, Target: [2]dbcenums.ImplicitTarget{6, 0}},
 			},
 			Powers: []Power{{Type: 1, Cost: 100}},
 		},
@@ -151,7 +151,7 @@ func TestSpellConfigFromARow(t *testing.T) {
 	}
 }
 
-// A rank the client does not state answers 0, which is what the APL UI reads as "no ranks".
+// A rank the game files do not state answers 0, which is what the APL UI reads as "no ranks".
 func TestSpellConfigRank(t *testing.T) {
 	withRows(t, resolverRows())
 
@@ -171,7 +171,7 @@ func TestSpellConfigBleedMultipliers(t *testing.T) {
 
 	config := SpellConfig(testUnit(), Find(800))
 	if config.DamageMultiplier != 1 || config.ThreatMultiplier != 1 {
-		t.Errorf("multipliers = %v damage, %v threat, want 1 and 1 off the client's bleed mechanic",
+		t.Errorf("multipliers = %v damage, %v threat, want 1 and 1 off the game files' bleed mechanic",
 			config.DamageMultiplier, config.ThreatMultiplier)
 	}
 	if config := SpellConfig(testUnit(), Find(100)); config.DamageMultiplier != 0 {
@@ -184,14 +184,14 @@ func TestSpellConfigRageCostAndRefund(t *testing.T) {
 
 	rage := SpellConfig(testUnit(), Find(100)).RageCost
 	if rage.Cost != 30 {
-		t.Errorf("rage cost = %d, want 30 off the client's 0-1000 bar", rage.Cost)
+		t.Errorf("rage cost = %d, want 30 off the game files' 0-1000 bar", rage.Cost)
 	}
 	if rage.Refund != 0.8 {
 		t.Errorf("rage refund = %v, want 0.8", rage.Refund)
 	}
 
 	if refund := SpellConfig(testUnit(), Find(200)).RageCost.Refund; refund != 0 {
-		t.Errorf("rage refund without the client's flag = %v, want 0", refund)
+		t.Errorf("rage refund without the game files' flag = %v, want 0", refund)
 	}
 }
 
@@ -293,7 +293,7 @@ func TestSpellConfigBothCooldowns(t *testing.T) {
 	}
 }
 
-// Only the client's global cooldown category spends the GCD.
+// Only the game files' global cooldown category spends the GCD.
 func TestSpellConfigGCDGate(t *testing.T) {
 	withRows(t, resolverRows())
 
@@ -322,7 +322,7 @@ func TestSpellConfigMarksACostedOffGCDCastNonEmpty(t *testing.T) {
 }
 
 // Haste shortens a cast and its GCD by school, not by the hit table the row files the spell under:
-// the client's shouts are physical spells with the magic defense type.
+// the game files' shouts are physical spells with the magic defense type.
 func TestSpellConfigIgnoreHasteFollowsTheSchool(t *testing.T) {
 	withRows(t, resolverRows())
 
@@ -405,6 +405,35 @@ func TestSpellConfigMagicOption(t *testing.T) {
 	}
 }
 
+func TestSpellConfigNoThreatRow(t *testing.T) {
+	withRows(t, []Spell{{
+		ID: 1100, Name: "Silent Bolt", School: 8, DefenseType: 1,
+		Attr:    [17]uint32{dbcenums.ATTR_INDEX_EX_1: dbcenums.ATTR_EX_1_NO_THREAT},
+		Effects: []Effect{{SpellID: 1100, Type: dbcenums.E_SCHOOL_DAMAGE, BasePoints: 100, Target: [2]dbcenums.ImplicitTarget{6, 0}}},
+	}})
+
+	if got := SpellConfig(testUnit(), Find(1100), Magic(core.ProcMaskSpellDamage)).ThreatMultiplier; got != 0 {
+		t.Errorf("Magic threat multiplier = %v, want 0 on a row with ATTR_EX_1_NO_THREAT", got)
+	}
+	if got := SpellConfig(testUnit(), Find(1100), Melee(core.ProcMaskMeleeMHSpecial)).ThreatMultiplier; got != 0 {
+		t.Errorf("Melee threat multiplier = %v, want 0 on a row with ATTR_EX_1_NO_THREAT", got)
+	}
+}
+
+func TestSpellConfigAreaAroundACasterOrPointHasNoRange(t *testing.T) {
+	centres := []dbcenums.ImplicitTarget{dbcenums.TARGET_DEST_CASTER, dbcenums.TARGET_SRC_CASTER, dbcenums.TARGET_DEST_DEST}
+	for _, centre := range centres {
+		withRows(t, []Spell{{
+			ID: 1200, Name: "Nova", School: 4, DefenseType: 1, MaxRange: 30,
+			Effects: []Effect{{SpellID: 1200, Type: dbcenums.E_SCHOOL_DAMAGE, BasePoints: 100,
+				Target: [2]dbcenums.ImplicitTarget{centre, dbcenums.TARGET_UNIT_DEST_AREA_ENEMY}}},
+		}})
+		if got := SpellConfig(testUnit(), Find(1200)).MaxRange; got != 0 {
+			t.Errorf("max range of area damage centred on target %d = %v, want 0", centre, got)
+		}
+	}
+}
+
 func TestSpellConfigProcFlagsAndTag(t *testing.T) {
 	withRows(t, resolverRows())
 	config := SpellConfig(testUnit(), Find(100), Proc(), Flags(core.SpellFlagIgnoreResists), Tag(2))
@@ -437,5 +466,34 @@ func TestSpellConfigProcLeavesTheRotation(t *testing.T) {
 	want := core.SpellFlagMeleeMetrics | core.SpellFlagPassiveSpell | core.SpellFlagNoOnCastComplete
 	if config.Flags != want {
 		t.Errorf("flags = %v, want %v", config.Flags, want)
+	}
+}
+
+// SpellEquippedItems and the not-in-combat attribute go into the cast requirement: Spearing Strike
+// 1310222's two-handers in the main hand, Shield Bash 1672's shield, Charge 11578's out of combat.
+// Armor that is not a shield asks nothing of a cast.
+func TestSpellConfigCastRequirementFromEquipment(t *testing.T) {
+	twoHanders := int32(dbcenums.ITEM_SUBCLASS_BIT_WEAPON_2H_AXE | dbcenums.ITEM_SUBCLASS_BIT_WEAPON_MACE_2H |
+		dbcenums.ITEM_SUBCLASS_BIT_WEAPON_POLEARM | dbcenums.ITEM_SUBCLASS_BIT_WEAPON_SWORD_2H | dbcenums.ITEM_SUBCLASS_BIT_WEAPON_STAFF)
+	withRows(t, []Spell{
+		{ID: 2, Name: "Leather", EquipClass: dbcenums.ITEM_CLASS_ARMOR, EquipSubclass: 0x4},
+		{ID: 1672, Name: "Shield Bash", EquipClass: dbcenums.ITEM_CLASS_ARMOR, EquipSubclass: dbcenums.ITEM_SUBCLASS_BIT_ARMOR_SHIELD},
+		{ID: 11578, Name: "Charge", Attr: [17]uint32{dbcenums.ATTR_INDEX_BASE: dbcenums.ATTR_NOT_IN_COMBAT}},
+		{ID: 1310222, Name: "Spearing Strike", EquipClass: dbcenums.ITEM_CLASS_WEAPON, EquipSubclass: twoHanders,
+			Attr: [17]uint32{dbcenums.ATTR_INDEX_EX_3: dbcenums.ATTR_EX_3_REQ_MAIN_HAND}},
+	})
+
+	for _, c := range []struct {
+		id   int32
+		want core.CastRequirement
+	}{
+		{1310222, core.CastRequirement{Weapon: core.EquipRequirement{SubclassMask: twoHanders, Hand: core.ProcMaskMeleeMH}}},
+		{1672, core.CastRequirement{Shield: true}},
+		{11578, core.CastRequirement{NotInCombat: true}},
+		{2, core.CastRequirement{}},
+	} {
+		if got := SpellConfig(testUnit(), Find(c.id)).CastRequirement; got != c.want {
+			t.Errorf("%s's cast requirement = %+v, want %+v", Find(c.id).Name, got, c.want)
+		}
 	}
 }

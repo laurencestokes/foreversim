@@ -3,8 +3,8 @@
 // encrypted-section skip path (no TACT keys).
 // Copyright (c) 2020 wowdev. MIT License — see tools/db2tool/NOTICES.md.
 
-// Package wdc decodes WDC5 .db2 client tables into rows shaped by a .dbd
-// definition, and overlays the client's XFTH DBCache hotfix records onto them.
+// Package wdc decodes WDC5 .db2 game files tables into rows shaped by a .dbd
+// definition, and overlays the game files' XFTH DBCache hotfix records onto them.
 package wdc
 
 import (

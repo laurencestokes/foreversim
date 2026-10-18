@@ -56,7 +56,7 @@ type stackingAura struct {
 //
 // For example: Blackened Naaru Sliver is the canonical case: the item's effect triggers 45040 Battle Trance,
 // a 20s aura that grants nothing, which in turn triggers 45041 Combat Insight - 10 stacks of
-// attack power with no duration of its own, because the client drops it when the window ends.
+// attack power with no duration of its own, because in game it drops when the window ends.
 // resolveStatsSpell walks straight past the container to reach the stats, so the container has
 // to be recovered by walking the chain a second time.
 func buildStackingAura(rootSpellID, statsSpellID, itemLevel int) *stackingAura {
@@ -217,7 +217,7 @@ func (w *chainWalker) resolveTriggered(spellID int, matches func(*spelldata.Spel
 		return s.ID
 	}
 	for _, se := range effects {
-		if se.EffectTriggerSpell == 0 {
+		if !se.CastsItsTrigger() {
 			continue
 		}
 		if found := w.resolveTriggered(se.EffectTriggerSpell, matches); found != 0 {

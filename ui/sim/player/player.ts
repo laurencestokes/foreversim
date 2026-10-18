@@ -10,11 +10,9 @@ import { APLRotation, APLRotation_Type as APLRotationType, SimpleRotation } from
 import { IndividualBuffs } from '@generated/proto/buffs';
 import {
 	Class,
-	ConsumableType,
 	ConsumesSpec,
 	Cooldowns,
 	Faction,
-	GemColor,
 	HandType,
 	HealingModel,
 	ItemRandomSuffix,
@@ -26,47 +24,44 @@ import {
 	Stat,
 	UnitReference,
 	UnitStats,
+	WeaponSkill,
+	WeaponSkillValue,
 } from '@generated/proto/common';
 import { SimDatabase } from '@generated/proto/db';
-import {
-	DungeonDifficulty,
-	RaidFilterOption,
-	SourceFilterOption,
-	UIEnchant as Enchant,
-	UIGem as Gem,
-	UIItem as Item,
-	UIItem_FactionRestriction,
-} from '@generated/proto/ui';
+import { DungeonDifficulty, RaidFilterOption, SourceFilterOption, UIEnchant as Enchant, UIItem as Item, UIItem_FactionRestriction } from '@generated/proto/ui';
 
 import * as Mechanics from '../constants/mechanics';
 import { CURRENT_API_VERSION } from '../constants/other';
 import { SimSettingCategories } from '../constants/sim_settings';
 import type { PresetEpWeights } from '../presets/types';
 import { ActionId } from '../proto/action_id';
+import { addPartyBuffItems } from '../proto/buff_items';
 import { Database } from '../proto/database';
-import { EquippedItem, getWeaponDpsStatsBySlot } from '../proto/equipped_item';
+import { enchantWeaponDamageEP, EquippedItem, getWeaponDpsStatsBySlot } from '../proto/equipped_item';
 import { Gear, ItemSwapGear } from '../proto/gear';
-import { gemMatchesSocket, isUnrestrictedGem } from '../proto/gems';
-import { canEquipEnchant, canEquipItem, enchantAppliesToItem, getMetaGemEffectEP, isPVPItem } from '../proto/items';
-import { migrateOldProto, ProtoConversionMap } from '../proto/proto_migration';
+import { canEquipEnchant, canEquipItem, enchantAppliesToItem, isPVPItem } from '../proto/items';
 import { specTypeFunctions, withSpec } from '../proto/spec_functions';
 import type { ClassOptions, ClassSpecs, SpecClasses, SpecOptions, SpecRotation, SpecTalents, SpecTypeFunctions } from '../proto/spec_types';
 import { Stats, UnitStat } from '../proto/stats';
 import { AL_CATEGORY_HARD_MODE, emptyUnitReference, getTalentTreePoints, newUnitReference, raceToFaction } from '../proto/utils';
 import { MAX_PARTY_SIZE, Party } from '../raid/party';
 import { Raid } from '../raid/raid';
-import { CONJURED_CONFIG, relevantConsumableOptions } from '../settings/conjured';
+import { ConsumableSlot, isEnchantRelevantFor, relevantConsumableIds } from '../settings/consumables';
 import { ItemSwapSettings } from '../settings/item_swap_settings';
-import { Sim } from '../sim';
+import { Sim, type StatWeightsOptions } from '../sim';
 import { batch } from '../state/batch';
 import { deleteKeyed, patchKeyed, PLAYER_FIELDS, PlayerField, PlayerSlice, seedKeyed, zeroVersions } from '../state/sim_store';
-import { playerTalentStringToProto } from '../talents/factory';
-import { omitDeep, stringComparator } from '../utils/collections';
-import { sum } from '../utils/math';
+import { playerBrokenTalentNames, playerTalentStringToProto } from '../talents/factory';
+import { arrayEquals, omitDeep, stringComparator } from '../utils/collections';
 import { WorkerProgressCallback } from '../workers/worker_pool';
 import { PlayerClass } from './player_class';
 import { PlayerSpec } from './player_spec';
 import { PlayerSpecs } from './specs';
+
+export const MAX_WEAPON_SKILL = Mechanics.CHARACTER_LEVEL * 5;
+
+export const weaponSkillValue = (weaponSkills: ReadonlyArray<WeaponSkillValue>, skill: WeaponSkill): number =>
+	weaponSkills.find(entry => entry.skill == skill)?.value ?? MAX_WEAPON_SKILL;
 
 export interface AuraStats {
 	data: AuraStatsProto;
@@ -76,6 +71,23 @@ export interface SpellStats {
 	data: SpellStatsProto;
 	id: ActionId;
 }
+
+/**
+ * Drops the rank from every id no other entry shares at another rank, so only a spell the sim
+ * registers at several ranks reads "(Rank N)" and gets a rank submenu. Entries are the same spell
+ * when they share the base name and the tag.
+ */
+const dropLoneRanks = <T extends { id: ActionId }>(entries: Array<T>): Array<T> => {
+	const keyOf = (id: ActionId) => `${id.baseName}|${id.tag}`;
+	const ranks = new Map<string, Set<number>>();
+	for (const { id } of entries) {
+		if (!id.hasRank) continue;
+		const key = keyOf(id);
+		if (!ranks.has(key)) ranks.set(key, new Set());
+		ranks.get(key)!.add(id.rank);
+	}
+	return entries.map(entry => (entry.id.hasRank && ranks.get(keyOf(entry.id))!.size < 2 ? { ...entry, id: entry.id.withoutRank() } : entry));
+};
 
 export class UnitMetadata {
 	private name: string;
@@ -117,8 +129,8 @@ export class UnitMetadata {
 
 		await Promise.all([...newSpells, ...newAuras].map(newSpell => newSpell.id.fill().then(newId => (newSpell.id = newId))));
 
-		newSpells = newSpells.sort((a, b) => stringComparator(a.id.name, b.id.name));
-		newAuras = newAuras.sort((a, b) => stringComparator(a.id.name, b.id.name));
+		newSpells = dropLoneRanks(newSpells).sort((a, b) => stringComparator(a.id.name, b.id.name));
+		newAuras = dropLoneRanks(newAuras).sort((a, b) => stringComparator(a.id.name, b.id.name));
 
 		let anyUpdates = false;
 		if (metadata.name != this.name) {
@@ -203,8 +215,8 @@ export interface SpecConfigData<SpecType extends Spec> extends PlayerConfig<Spec
 	// Override for required talent rows. If unset, all rows [0..5] are required.
 	requiredTalentRows?: number[];
 	epStats: Array<Stat>;
+	epPseudoStats?: Array<PseudoStat>;
 	consumableStats?: Array<Stat>;
-	gemStats?: Array<Stat>;
 	// Per-spec override for the default EP ratios; must be exactly numEpRatios long.
 	epRatios?: Array<number>;
 	displayStats?: Array<UnitStat>;
@@ -221,7 +233,7 @@ export function registerSpecConfig<SpecType extends Spec>(spec: SpecType, config
 	SPEC_CONFIGS[spec] = config;
 }
 
-export function getSpecConfig<SpecType extends Spec>(spec: SpecType): PlayerConfig<SpecType> {
+function getSpecConfig<SpecType extends Spec>(spec: SpecType): PlayerConfig<SpecType> {
 	const config = SPEC_CONFIGS[spec] as PlayerConfig<SpecType>;
 	if (!config) {
 		throw new Error('No config registered for Spec: ' + spec);
@@ -256,9 +268,11 @@ export class Player<SpecType extends Spec> {
 	readonly hiddenMCDs: Array<number>;
 
 	private itemEPCache = new Array<Map<string, number>>();
-	private gemEPCache = new Map<number, number>();
-	private randomSuffixEPCache = new Map<number, number>();
+	private randomSuffixEPCache = new Map<string, number>();
 	private enchantEPCache = new Map<number, number>();
+	// The potions and conjured items getConsumes(true) lists, by the spec, class, race and
+	// professions they were worked out for.
+	private relevantConsumablesCache: { key: string; db: Database; potions: Array<number>; conjuredItems: Array<number> } | null = null;
 	private talents: SpecTalents<SpecType> | null = null;
 	private specConfig: SpecConfigData<SpecType>;
 
@@ -299,7 +313,13 @@ export class Player<SpecType extends Spec> {
 
 	// Item-swap fields share one version counter (ItemSwapSettings facade).
 	patchItemSwap(patch: { itemSwapEnabled?: boolean; itemSwapGear?: ItemSwapGear; itemSwapBonusStats?: Stats }) {
-		this.write(patch, ['itemSwap']);
+		// The swap weapons' stone imbues are corrected in the same write as the swap gear, as setGear does for the main weapons.
+		const adjustedConsumes = patch.itemSwapGear?.adjustSwapImbues(this.slice().consumables);
+		if (adjustedConsumes && adjustedConsumes !== this.slice().consumables) {
+			this.write({ ...patch, consumables: adjustedConsumes }, ['itemSwap', 'consumables']);
+		} else {
+			this.write(patch, ['itemSwap']);
+		}
 	}
 
 	getItemSwapField<F extends 'itemSwapEnabled' | 'itemSwapGear' | 'itemSwapBonusStats'>(field: F): PlayerSlice[F] {
@@ -322,6 +342,8 @@ export class Player<SpecType extends Spec> {
 			race: this.playerClass.races[0],
 			profession1: 0,
 			profession2: 0,
+			prof1Rank: 0,
+			prof2Rank: 0,
 			buffs: IndividualBuffs.create(),
 			consumables: ConsumesSpec.create(),
 			bonusStats: new Stats(),
@@ -332,6 +354,7 @@ export class Player<SpecType extends Spec> {
 			channelClipDelay: 0,
 			inFrontOfTarget: false,
 			distanceFromTarget: 0,
+			weaponSkills: [],
 			healingModel: HealingModel.create(),
 			epWeights: new Stats(),
 			epRatios: new Array<number>(Player.numEpRatios).fill(0),
@@ -494,21 +517,14 @@ export class Player<SpecType extends Spec> {
 		return this.sim.db.getItems(slot).filter(item => canEquipItem(item, this.playerSpec, slot));
 	}
 
-	// Returns all random suffixes that this player would be interested in for the given base item.
+	// Returns all random suffixes the given base item can roll.
 	getRandomSuffixes(item: Item): Array<ItemRandomSuffix> {
-		return item.randomSuffixOptions
-			.map(id => this.sim.db.getRandomSuffixById(id))
-			.filter((suffix): suffix is ItemRandomSuffix => !!suffix && this.computeRandomSuffixEP(suffix) > 0);
+		return item.randomSuffixOptions.map(id => this.sim.db.getRandomSuffixById(id)).filter((suffix): suffix is ItemRandomSuffix => !!suffix);
 	}
 
 	// Returns all enchants that this player can wear in the given slot.
 	getEnchants(slot: ItemSlot): Array<Enchant> {
 		return this.sim.db.getEnchants(slot).filter(enchant => canEquipEnchant(enchant, this.playerSpec, this.hasProfession(Profession.Enchanting)));
-	}
-
-	// Returns all gems that this player can wear of the given color.
-	getGems(socketColor?: GemColor): Array<Gem> {
-		return this.sim.db.getGems(socketColor);
 	}
 
 	getEpWeights(): Stats {
@@ -518,7 +534,6 @@ export class Player<SpecType extends Spec> {
 	setEpWeights(newEpWeights: Stats) {
 		this.patch('epWeights', newEpWeights);
 
-		this.gemEPCache = new Map();
 		this.enchantEPCache = new Map();
 		this.randomSuffixEPCache = new Map();
 		for (let i = 0; i < ItemSlot.ItemSlotRanged + 1; ++i) {
@@ -571,8 +586,9 @@ export class Player<SpecType extends Spec> {
 		epPseudoStats: Array<PseudoStat>,
 		epReferenceStat: Stat,
 		onProgress: WorkerProgressCallback,
+		options?: StatWeightsOptions,
 	): Promise<StatWeightsResult> {
-		return await this.sim.statWeights(this, epStats, epPseudoStats, epReferenceStat, onProgress);
+		return await this.sim.statWeights(this, epStats, epPseudoStats, epReferenceStat, onProgress, options);
 	}
 
 	getCurrentStats(): PlayerStats {
@@ -631,7 +647,7 @@ export class Player<SpecType extends Spec> {
 	}
 	setProfession1(newProfession: Profession) {
 		if (newProfession != this.getProfession1()) {
-			this.patch('profession1', newProfession);
+			this.write({ profession1: newProfession, prof1Rank: 0 }, ['profession1', 'prof1Rank']);
 		}
 	}
 	getProfession2(): Profession {
@@ -639,7 +655,7 @@ export class Player<SpecType extends Spec> {
 	}
 	setProfession2(newProfession: Profession) {
 		if (newProfession != this.getProfession2()) {
-			this.patch('profession2', newProfession);
+			this.write({ profession2: newProfession, prof2Rank: 0 }, ['profession2', 'prof2Rank']);
 		}
 	}
 	getProfessions(): Array<Profession> {
@@ -651,8 +667,16 @@ export class Player<SpecType extends Spec> {
 			this.setProfession2(newProfessions[1] || Profession.ProfessionUnknown);
 		});
 	}
-	hasProfession(prof: Profession): boolean {
-		return this.getProfessions().includes(prof);
+	// Skill ranks in profession1 and profession2; 0 is the maximum.
+	setProfessionRanks(prof1Rank: number, prof2Rank: number) {
+		const current = this.slice();
+		const changed = [...(prof1Rank != current.prof1Rank ? ['prof1Rank' as const] : []), ...(prof2Rank != current.prof2Rank ? ['prof2Rank' as const] : [])];
+		if (changed.length) this.write({ prof1Rank, prof2Rank }, changed);
+	}
+	hasProfession(prof: Profession, rank = 0): boolean {
+		const { profession1, profession2, prof1Rank, prof2Rank } = this.slice();
+		const meets = (held: number, heldRank: number) => held == prof && prof != Profession.ProfessionUnknown && (heldRank == 0 || heldRank >= rank);
+		return meets(profession1, prof1Rank) || meets(profession2, prof2Rank);
 	}
 
 	getFaction(): Faction {
@@ -673,26 +697,31 @@ export class Player<SpecType extends Spec> {
 
 	getConsumes(forSimming?: boolean): ConsumesSpec {
 		if (forSimming) {
-			const epStats = [...(this.specConfig.consumableStats ?? []), ...this.specConfig.epStats];
-			const dbPotions = this.sim.db.getConsumablesByTypeAndStats(ConsumableType.ConsumableTypePotion, epStats);
-			const dbConjured = relevantConsumableOptions(CONJURED_CONFIG, this.specConfig)
-				.filter(option => (option.showWhen ? option.showWhen(this) : true))
-				.map(option => option.value);
-			return ConsumesSpec.create({
-				...this.slice().consumables,
-				potions: dbPotions.map(p => p.id),
-				conjuredItems: dbConjured,
-			});
+			const db = this.sim.db;
+			const { prof1Rank, prof2Rank } = this.slice();
+			const key = [this.getSpec(), this.getClass(), this.getRace(), this.getProfession1(), this.getProfession2(), prof1Rank, prof2Rank].join(':');
+			let cache = this.relevantConsumablesCache;
+			if (cache?.key !== key || cache.db !== db) {
+				const consumables = db.getConsumables();
+				cache = this.relevantConsumablesCache = {
+					key,
+					db,
+					potions: relevantConsumableIds(consumables, ConsumableSlot.Potion, this, db),
+					conjuredItems: relevantConsumableIds(consumables, ConsumableSlot.Conjured, this, db),
+				};
+			}
+			return ConsumesSpec.create({ ...this.slice().consumables, potions: [...cache.potions], conjuredItems: [...cache.conjuredItems] });
 		}
 		// Make a defensive copy
 		return ConsumesSpec.clone(this.slice().consumables);
 	}
 
 	setConsumes(newConsumes: ConsumesSpec) {
-		if (ConsumesSpec.equals(this.slice().consumables, newConsumes)) return;
+		const adjustedConsumes = this.itemSwapSettings.getGear().adjustSwapImbues(this.getGear().adjustImbues(newConsumes));
+		if (ConsumesSpec.equals(this.slice().consumables, adjustedConsumes)) return;
 
 		// Make a defensive copy
-		this.patch('consumables', ConsumesSpec.clone(newConsumes));
+		this.patch('consumables', ConsumesSpec.clone(adjustedConsumes));
 	}
 
 	equipItem(slot: ItemSlot, newItem: EquippedItem | null) {
@@ -832,6 +861,10 @@ export class Player<SpecType extends Spec> {
 		};
 	}
 
+	isDualWielding(): boolean {
+		return (this.getGear().getEquippedItem(ItemSlot.ItemSlotOffHand)?.item.weaponSpeed ?? 0) > 0;
+	}
+
 	getMeleeCritCapInfo(): MeleeCritCapInfo {
 		const currentStats = this.slice().currentStats;
 		const debuffStats = this.getDebuffStats();
@@ -841,19 +874,16 @@ export class Player<SpecType extends Spec> {
 		const meleeCrit = (currentStats.finalStats?.pseudoStats[PseudoStat.PseudoStatMeleeCritPercent] || 0) + debuffCrit;
 		const meleeHit = (currentStats.finalStats?.pseudoStats[PseudoStat.PseudoStatMeleeHitPercent] || 0) + debuffHit;
 		const expertise = currentStats.finalStats?.pseudoStats[PseudoStat.PseudoStatExpertisePercent] || 0;
-		const targetLevel = this.sim.encounter.primaryTarget.level;
-		const critSuppression = { 68: 0, 70: 0, 71: 1, 72: 2, 73: 4.8 }[targetLevel] ?? 0;
-		const hitSuppression = { 68: 0, 70: 0, 71: 0, 72: 0, 73: 1 }[targetLevel] ?? 0;
-		const glancing = { 68: 0, 70: 6, 71: 12, 72: 18, 73: 24 }[targetLevel] ?? 0;
+		const critSuppression = currentStats.finalStats?.pseudoStats[PseudoStat.PseudoStatMeleeCritSuppressionPercent] || 0;
+		const glancing = currentStats.finalStats?.pseudoStats[PseudoStat.PseudoStatMainHandGlancePercent] || 0;
 
-		const oneHandHitCap = ({ 68: 4, 70: 5, 71: 6, 72: 7, 73: 8 }[targetLevel] ?? 4) + hitSuppression;
+		const oneHandHitCap = currentStats.finalStats?.pseudoStats[PseudoStat.PseudoStatMainHandMissPercent] || 0;
 		// DW Penalty is a fixed 19%
 		const dualWieldHitCap = oneHandHitCap + 19;
-		const hasOffhandWeapon = this.getGear().getEquippedItem(ItemSlot.ItemSlotOffHand)?.item.weaponSpeed !== undefined;
-		// Due to warrior HS bug, hit cap for crit cap calculation should be 8% instead of 27%
-		const meleeHitCap = hasOffhandWeapon && this.getClass() != Class.ClassWarrior ? dualWieldHitCap : oneHandHitCap;
-		const dodgeCap = { 68: 4, 70: 5, 71: 5.5, 72: 6, 73: 6.5 }[targetLevel] ?? 4;
-		const parryCap = this.getInFrontOfTarget() ? ({ 68: 4, 70: 5, 71: 5.5, 72: 6, 73: 14 }[targetLevel] ?? 4) : 0;
+		const hasOffhandWeapon = this.isDualWielding();
+		const meleeHitCap = hasOffhandWeapon ? dualWieldHitCap : oneHandHitCap;
+		const dodgeCap = currentStats.finalStats?.pseudoStats[PseudoStat.PseudoStatMainHandDodgePercent] || 0;
+		const parryCap = this.getInFrontOfTarget() ? currentStats.finalStats?.pseudoStats[PseudoStat.PseudoStatMainHandParryPercent] || 0 : 0;
 		const expertiseCap = dodgeCap + parryCap;
 
 		const remainingMeleeHitCap = Math.max(meleeHitCap - meleeHit, 0.0);
@@ -1001,6 +1031,11 @@ export class Player<SpecType extends Spec> {
 		this.patch('talentsString', newTalentsString);
 	}
 
+	// Talents whose points the tier or prerequisite above them do not allow. The sim still applies them, so a build can be tested without a talent it depends on.
+	getBrokenTalentNames(): Array<string> {
+		return playerBrokenTalentNames(this.playerSpec, this.getTalentsString());
+	}
+
 	getTalentTreePoints(): Array<number> {
 		return getTalentTreePoints(this.getTalentsString());
 	}
@@ -1071,6 +1106,27 @@ export class Player<SpecType extends Spec> {
 		this.patch('distanceFromTarget', newDistanceFromTarget);
 	}
 
+	getWeaponSkills(): Array<WeaponSkillValue> {
+		return this.slice().weaponSkills.map(entry => WeaponSkillValue.clone(entry));
+	}
+
+	setWeaponSkills(newWeaponSkills: Array<WeaponSkillValue>) {
+		const current = this.slice().weaponSkills;
+		const sorted = newWeaponSkills.map(entry => WeaponSkillValue.clone(entry)).sort((a, b) => a.skill - b.skill);
+		if (arrayEquals(sorted, current, WeaponSkillValue.equals)) return;
+
+		this.patch('weaponSkills', sorted);
+	}
+
+	getWeaponSkill(skill: WeaponSkill): number {
+		return weaponSkillValue(this.slice().weaponSkills, skill);
+	}
+
+	setWeaponSkill(skill: WeaponSkill, value: number) {
+		const others = this.slice().weaponSkills.filter(entry => entry.skill != skill);
+		this.setWeaponSkills(value == MAX_WEAPON_SKILL ? others : [...others, WeaponSkillValue.create({ skill, value })]);
+	}
+
 	setDefaultHealingParams(hm: HealingModel) {
 		const boss = this.sim.encounter.primaryTarget;
 		const dualWield = boss.dualWield;
@@ -1123,49 +1179,33 @@ export class Player<SpecType extends Spec> {
 		return stats.computeEP(this.getEpWeights());
 	}
 
-	computeGemEP(gem: Gem): number {
-		if (this.gemEPCache.has(gem.id)) {
-			return this.gemEPCache.get(gem.id)!;
-		}
-
-		const epFromStats = this.computeStatsEP(new Stats(gem.stats));
-		const epFromEffect = getMetaGemEffectEP(this.playerSpec, gem, this.getEpWeights());
-		let bonusEP = 0;
-		// unique items are slightly worse than non-unique because you can have only one.
-		if (gem.unique) {
-			bonusEP -= 0.01;
-		}
-
-		const ep = epFromStats + epFromEffect + bonusEP;
-		this.gemEPCache.set(gem.id, ep);
-		return ep;
-	}
-
 	computeEnchantEP(enchant: Enchant, weaponSpeed = 0, epPerWeaponDps = 0): number {
 		let ep = this.enchantEPCache.get(enchant.effectId);
 		if (ep === undefined) {
 			ep = this.computeStatsEP(new Stats(enchant.stats, enchant.pseudoStats));
 			this.enchantEPCache.set(enchant.effectId, ep);
 		}
-
-		// Flat weapon damage is worth the DPS it adds at the enchanted weapon's speed, as a weapon's own damage is.
-		if (enchant.weaponDamage && weaponSpeed) {
-			ep += (enchant.weaponDamage / weaponSpeed) * epPerWeaponDps;
-		}
-		return ep;
+		return ep + enchantWeaponDamageEP(enchant, weaponSpeed, epPerWeaponDps);
 	}
 
 	computeWeaponDpsEP(slot: ItemSlot): number {
 		return this.computeStatsEP(getWeaponDpsStatsBySlot(1, slot));
 	}
 
-	computeRandomSuffixEP(randomSuffix: ItemRandomSuffix): number {
-		if (this.randomSuffixEPCache.has(randomSuffix.id)) {
-			return this.randomSuffixEPCache.get(randomSuffix.id)!;
-		}
+	isEnchantRelevant(enchant: Enchant): boolean {
+		return isEnchantRelevantFor(enchant, this.getSpecConfig());
+	}
 
-		const ep = this.computeStatsEP(new Stats(randomSuffix.stats));
-		this.randomSuffixEPCache.set(randomSuffix.id, ep);
+	// The suffix's stats are allocations per 10000 of the item's random property points, rounded per stat
+	// the way they equip; its pseudo stats are flat.
+	computeRandomSuffixEP(randomSuffix: ItemRandomSuffix, randPropPoints: number): number {
+		const key = `${randomSuffix.id}:${randPropPoints}`;
+		let ep = this.randomSuffixEPCache.get(key);
+		if (ep === undefined) {
+			const stats = randomSuffix.stats.map(allocation => Math.round((allocation * randPropPoints) / 10000));
+			ep = this.computeStatsEP(new Stats(stats, randomSuffix.pseudoStats));
+			this.randomSuffixEPCache.set(key, ep);
+		}
 		return ep;
 	}
 
@@ -1184,7 +1224,11 @@ export class Player<SpecType extends Spec> {
 		// For random suffix items, use the suffix option with the highest EP for the purposes of ranking items in the picker.
 		let maxSuffixEP = 0;
 		if (item.randomSuffixOptions.length) {
-			const suffixEPs = equippedItem.item.randomSuffixOptions.map(id => this.computeRandomSuffixEP(this.sim.db.getRandomSuffixById(id)! || 0));
+			const { randomSuffixOptions, randPropPoints } = equippedItem.item;
+			const suffixEPs = randomSuffixOptions.map(id => {
+				const suffix = this.sim.db.getRandomSuffixById(id);
+				return suffix ? this.computeRandomSuffixEP(suffix, randPropPoints) : 0;
+			});
 			maxSuffixEP = Math.max(...suffixEPs);
 		}
 
@@ -1194,34 +1238,6 @@ export class Player<SpecType extends Spec> {
 		if (item.unique) {
 			ep -= 0.01;
 		}
-
-		// Compare whether its better to match sockets + get socket bonus, or just use best gems.
-		const bestGemEPNotMatchingSockets = sum(
-			item.gemSockets.map(socketColor => {
-				const gems = this.sim.db.getGems(socketColor).filter(gem => isUnrestrictedGem(gem, this.sim.getPhase()));
-				if (gems.length > 0) {
-					return Math.max(...gems.map(gem => this.computeGemEP(gem)));
-				} else {
-					return 0;
-				}
-			}),
-		);
-
-		const bestGemEPMatchingSockets =
-			sum(
-				item.gemSockets.map(socketColor => {
-					const gems = this.sim.db
-						.getGems(socketColor)
-						.filter(gem => isUnrestrictedGem(gem, this.sim.getPhase()) && gemMatchesSocket(gem, socketColor));
-					if (gems.length > 0) {
-						return Math.max(...gems.map(gem => this.computeGemEP(gem)));
-					} else {
-						return 0;
-					}
-				}),
-			) + this.computeStatsEP(new Stats(item.socketBonus));
-
-		ep += Math.max(bestGemEPMatchingSockets, bestGemEPNotMatchingSockets);
 
 		this.itemEPCache[slot].set(cacheKey, ep);
 		return ep;
@@ -1256,15 +1272,13 @@ export class Player<SpecType extends Spec> {
 	};
 
 	static readonly RAID_IDS: Partial<Record<RaidFilterOption, number>> = {
-		[RaidFilterOption.RaidKara]: 3457,
-		[RaidFilterOption.RaidGruul]: 3923,
-		[RaidFilterOption.RaidMag]: 3836,
-		[RaidFilterOption.RaidTK]: 3845,
-		[RaidFilterOption.RaidSSC]: 3607,
-		[RaidFilterOption.RaidMH]: 3606,
-		[RaidFilterOption.RaidBT]: 3959,
-		[RaidFilterOption.RaidZA]: 3805,
-		[RaidFilterOption.RaidSWP]: 4075,
+		[RaidFilterOption.RaidMC]: 2717,
+		[RaidFilterOption.RaidOny]: 2159,
+		[RaidFilterOption.RaidBWL]: 2677,
+		[RaidFilterOption.RaidZG]: 1977,
+		[RaidFilterOption.RaidAQ20]: 3429,
+		[RaidFilterOption.RaidAQ40]: 3428,
+		[RaidFilterOption.RaidNaxx]: 3456,
 	};
 
 	filterItemData<T>(itemData: Array<T>, getItemFunc: (val: T) => Item, slot: ItemSlot): Array<T> {
@@ -1397,7 +1411,8 @@ export class Player<SpecType extends Spec> {
 			return enchantData;
 		}
 
-		//const filters = this.sim.getFilters();
+		const filters = this.sim.getFilters();
+		const equippedEffectId = currentEquippedItem.enchant?.effectId;
 
 		return enchantData.filter(enchantElem => {
 			const enchant = getEnchantFunc(enchantElem);
@@ -1406,28 +1421,7 @@ export class Player<SpecType extends Spec> {
 				return false;
 			}
 
-			return true;
-		});
-	}
-
-	filterGemData<T>(gemData: Array<T>, getGemFunc: (val: T) => Gem, slot: ItemSlot, socketColor: GemColor): Array<T> {
-		const filters = this.sim.getFilters();
-
-		const isJewelcrafting = this.hasProfession(Profession.Jewelcrafting);
-		return gemData.filter(gemElem => {
-			const gem = getGemFunc(gemElem);
-			if (!isJewelcrafting && gem.requiredProfession == Profession.Jewelcrafting) {
-				return false;
-			}
-
-			if (filters.matchingGemsOnly && !gemMatchesSocket(gem, socketColor)) {
-				return false;
-			}
-
-			// MoP drops gems whose positive stats are all outside the spec's EP/gem stat list. TBC
-			// does not: a meta's effect is not in its stat block at all, and the per-spec
-			// allowlist was found to hide gems people wanted. Every gem that reaches here is kept.
-			return true;
+			return filters.showAllEnchants || enchant.effectId === equippedEffectId || this.isEnchantRelevant(enchant);
 		});
 	}
 
@@ -1442,7 +1436,9 @@ export class Player<SpecType extends Spec> {
 	private toDatabase(): SimDatabase {
 		const dbGear = this.getGear().toDatabase(this.sim.db);
 		const dbItemSwapGear = this.itemSwapSettings.getGear().toDatabase(this.sim.db);
-		return Database.mergeSimDatabases(dbGear, dbItemSwapGear);
+		const database = Database.mergeSimDatabases(dbGear, dbItemSwapGear);
+		addPartyBuffItems(database, this.sim.db, this.getParty()?.getBuffs());
+		return database;
 	}
 
 	toProto(forExport?: boolean, forSimming?: boolean, exportCategories?: Array<SimSettingCategories>): PlayerProto {
@@ -1488,10 +1484,13 @@ export class Player<SpecType extends Spec> {
 				race: this.getRace(),
 				profession1: this.getProfession1(),
 				profession2: this.getProfession2(),
+				prof1Rank: this.slice().prof1Rank,
+				prof2Rank: this.slice().prof2Rank,
 				reactionTimeMs: this.getReactionTime(),
 				channelClipDelayMs: this.getChannelClipDelay(),
 				inFrontOfTarget: this.getInFrontOfTarget(),
 				distanceFromTarget: this.getDistanceFromTarget(),
+				weaponSkills: this.getWeaponSkills(),
 				healingModel: this.getHealingModel(),
 			});
 			player = withSpec(this.getSpec(), player, this.getSpecOptions());
@@ -1505,9 +1504,7 @@ export class Player<SpecType extends Spec> {
 	}
 
 	fromProto(proto: PlayerProto, includeCategories?: Array<SimSettingCategories>) {
-		// Fix potential out-of-date protos before importing
 		batch(() => {
-			Player.updateProtoVersion(proto);
 			const loadCategory = (cat: SimSettingCategories) => !includeCategories || includeCategories.length == 0 || includeCategories.includes(cat);
 			if (loadCategory(SimSettingCategories.Gear)) {
 				this.setGear(proto.equipment ? this.sim.db.lookupEquipmentSpec(proto.equipment) : new Gear({}));
@@ -1540,10 +1537,12 @@ export class Player<SpecType extends Spec> {
 				this.setRace(proto.race);
 				this.setProfession1(proto.profession1);
 				this.setProfession2(proto.profession2);
+				this.setProfessionRanks(proto.prof1Rank, proto.prof2Rank);
 				this.setReactionTime(proto.reactionTimeMs);
 				this.setChannelClipDelay(proto.channelClipDelayMs);
 				this.setInFrontOfTarget(proto.inFrontOfTarget);
 				this.setDistanceFromTarget(proto.distanceFromTarget);
+				this.setWeaponSkills(proto.weaponSkills);
 				this.setHealingModel(proto.healingModel || HealingModel.create());
 			}
 			if (loadCategory(SimSettingCategories.External)) {
@@ -1573,54 +1572,12 @@ export class Player<SpecType extends Spec> {
 				}),
 			);
 			this.setBonusStats(new Stats());
+			this.setWeaponSkills([]);
 		});
 	}
 
 	getBaseDefense(): number {
 		return Mechanics.CHARACTER_LEVEL * 5;
-	}
-
-	static updateProtoVersion(playerProto: PlayerProto) {
-		if (!(playerProto.apiVersion < CURRENT_API_VERSION)) {
-			return;
-		}
-
-		const conversionMap: ProtoConversionMap<PlayerProto> = new Map([
-			[
-				12,
-				(oldProto: PlayerProto) => {
-					oldProto.apiVersion = 13;
-
-					// v12: ret paladin useConsecrate(bool) -> consecrationRank(int32).
-					if (playerProto.spec?.oneofKind === 'retributionPaladin') {
-						const jsonStr = playerProto.rotation?.simple?.specRotationJson;
-						if (jsonStr) {
-							try {
-								const parsed = JSON.parse(jsonStr);
-
-								if (parsed.useConsecrate) {
-									parsed.consecrationRank = 6;
-								}
-
-								delete parsed.useConsecrate;
-
-								playerProto.rotation!.simple!.specRotationJson = JSON.stringify(parsed);
-							} catch {
-								// Malformed JSON - nothing to migrate.
-							}
-						}
-					}
-
-					return oldProto;
-				},
-			],
-		]);
-
-		// Run the migration utility using the above map.
-		migrateOldProto<PlayerProto>(playerProto, playerProto.apiVersion, conversionMap);
-
-		// Flag the version as up-to-date once all migrations are done.
-		playerProto.apiVersion = CURRENT_API_VERSION;
 	}
 
 	getSpecConfig(): SpecConfigData<SpecType> {

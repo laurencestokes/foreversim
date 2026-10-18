@@ -1,11 +1,8 @@
 package druid
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
-	"github.com/wowsims/forever/sim/core/stats"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 func (druid *Druid) registerBalanceTalents() {
@@ -40,109 +37,47 @@ func (druid *Druid) registerBalanceTalents() {
 	// Moonkin Form implemented in forms.go
 }
 
-func (druid *Druid) applyMoonfury() {
-	if druid.Talents.Moonfury == 0 {
-		return
-	}
-
-	// Forever states Moonfury as +2% damage a rank to the Arcane|Nature schools (mask 72) rather
-	// than as a spell modifier: a separate multiplier on all Arcane and Nature damage.
-	multiplier := spellData.Moonfury.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_DONE, 72).MultiplierAt(druid.Talents.Moonfury)
-	druid.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexArcane] *= multiplier
-	druid.PseudoStats.SchoolDamageDealtMultiplier[stats.SchoolIndexNature] *= multiplier
+// Wrath's cast time and mana cost.
+func (druid *Druid) applyImprovedWrath() {
+	druid.parseTalent(druid.Talents.ImprovedWrath, spellData.ImprovedWrath)
 }
 
+// Periodic damage and healing on the spells its class flags name: Moonfire, Insect Swarm, Rip, Rake,
+// Pounce, Lacerate, Entangling Roots, Rejuvenation, Regrowth and Wild Growth, and Swiftmend's heal.
+func (druid *Druid) applyGenesis() {
+	druid.parseTalent(druid.Talents.Genesis, spellData.Genesis)
+}
+
+// The mana cost of the damaging spells.
 func (druid *Druid) applyMoonglow() {
-	if druid.Talents.Moonglow == 0 {
-		return
-	}
-
-	druid.AddStaticMod(core.SpellModConfig{
-		// The client's mask (7340807) is Wrath, Moonfire, Starfire, Insect Swarm, Hurricane and Nature's
-		// Grasp ("your damaging spells"): not Moonkin Form, Innervate or the heals.
-		ClassMask:  DruidSpellMoonfire | DruidSpellStarfire | DruidSpellWrath | DruidSpellInsectSwarm | DruidSpellHurricane,
-		Kind:       core.SpellMod_PowerCost_Pct_Add,
-		FloatValue: spellData.Moonglow.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(druid.Talents.Moonglow),
-	})
+	druid.parseTalent(druid.Talents.Moonglow, spellData.Moonglow)
 }
 
-// Forever replaces the cast time reduction on the next cast with a short haste buff.
-func (druid *Druid) applyNaturesGrace() {
-	if !druid.Talents.NaturesGrace {
-		return
-	}
-
-	triggered := spellData.NaturesGraceTriggered.Highest()
-	hasteMultiplier := 1 + triggered.Effect(dbcenums.A_MOD_CASTING_SPEED_NOT_STACK, 0).BaseValue()/100
-
-	// Effect 1 also cuts the global cooldown by 10% ("reducing your global cooldown by $m1%"), on top
-	// of the haste. The client's mask (7604215/67108864) is every druid spell but the forms, Innervate,
-	// Lifebloom and the cat and bear abilities. Every spell in it has the default 1.5 sec GCD, so the
-	// percentage is taken off that.
-	gcdReduction := time.Duration(float64(core.GCDDefault) * triggered.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_GLOBAL_COOLDOWN)).Percent())
-
-	aura := druid.RegisterAura(core.Aura{
-		Label:    "Nature's Grace",
-		ActionID: core.ActionID{SpellID: triggered.ID},
-		Duration: triggered.Duration(),
-		OnGain: func(_ *core.Aura, sim *core.Simulation) {
-			druid.MultiplyCastSpeed(sim, hasteMultiplier)
-		},
-		OnExpire: func(_ *core.Aura, sim *core.Simulation) {
-			druid.MultiplyCastSpeed(sim, 1/hasteMultiplier)
-		},
-	}).AttachSpellMod(core.SpellModConfig{
-		Kind: core.SpellMod_GlobalCooldown_Flat,
-		ClassMask: DruidSpellEntanglingRoots | DruidSpellFaerieFire | DruidSpellHurricane | DruidSpellInsectSwarm |
-			DruidSpellMoonfire | DruidSpellStarfire | DruidSpellThorns | DruidSpellWrath | DruidSpellHealingTouch |
-			DruidSpellRegrowth | DruidSpellRejuvenation | DruidSpellTranquility | DruidSpellMarkOfTheWild,
-		TimeValue: gcdReduction,
-	})
-
-	druid.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Nature's Grace Trigger",
-		ActionID:           core.ActionID{SpellID: spellData.NaturesGrace.Highest().ID},
-		Callback:           core.CallbackOnSpellHitDealt,
-		ClassSpellMask:     DruidDamagingSpells,
-		Outcome:            core.OutcomeCrit,
-		TriggerImmediately: true,
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			aura.Activate(sim)
-		},
-	})
+// Moonfire's crit chance, and the damage of its hit and of its dot.
+func (druid *Druid) applyImprovedMoonfire() {
+	druid.parseTalent(druid.Talents.ImprovedMoonfire, spellData.ImprovedMoonfire)
 }
 
-func (druid *Druid) applyVengeance() {
-	if druid.Talents.Vengeance == 0 {
-		return
-	}
-
-	druid.AddStaticMod(core.SpellModConfig{
-		ClassMask:  DruidDamagingSpells,
-		Kind:       core.SpellMod_CritMultiplier_Flat,
-		FloatValue: spellData.Vengeance.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_CRIT_DAMAGE_BONUS)).FractionAt(druid.Talents.Vengeance),
-	})
+// Nature's Majesty is spell and melee critical strike chance, in every form.
+func (druid *Druid) applyNaturesMajesty() {
+	druid.parseTalent(druid.Talents.NaturesMajesty, spellData.NaturesMajesty)
 }
 
-// Nature's Reach: 16819 adds 2/4% hit, and 10/20% to the range of every spell its class mask reaches
-// (Wrath, Starfire, Moonfire, Insect Swarm, Hurricane, Faerie Fire, Entangling Roots, Thorns). The sim's
-// range mod is flat yards, so the share is taken of each spell's own range as it registers.
+// The range of the Balance spells, and spell and melee hit.
 func (druid *Druid) applyNaturesReach() {
-	if druid.Talents.NaturesReach == 0 {
+	druid.parseTalent(druid.Talents.NaturesReach, spellData.NaturesReach)
+}
+
+// Entangling Roots' damage: the sim does not cast Entangling Roots, as the bosses it fights cannot be rooted.
+func (druid *Druid) applyImprovedEntanglingRoots() {
+}
+
+// The duration of Moonfire, Rejuvenation, Regrowth and Insect Swarm.
+func (druid *Druid) applyNaturesSplendor() {
+	if !druid.Talents.NaturesSplendor {
 		return
 	}
-
-	share := spellData.NaturesReach.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_RANGE)).FractionAt(druid.Talents.NaturesReach)
-	druid.OnSpellRegistered(func(spell *core.Spell) {
-		if spell.Matches(DruidSpellWrath | DruidSpellStarfire | DruidSpellMoonfireInitial | DruidSpellMoonfireDoT |
-			DruidSpellInsectSwarm | DruidSpellHurricane | DruidSpellFaerieFire | DruidSpellEntanglingRoots | DruidSpellThorns) {
-			spell.MaxRange *= 1 + share
-		}
-	})
-
-	hit := spellData.NaturesReach.Effect(dbcenums.A_MOD_HIT_CHANCE, 0).ValueAt(druid.Talents.NaturesReach)
-	druid.AddStat(stats.PhysicalHitPercent, hit)
-	druid.AddStat(stats.SpellHitPercent, spellData.NaturesReach.Effect(dbcenums.A_MOD_SPELL_HIT_CHANCE, 0).ValueAt(druid.Talents.NaturesReach))
+	spelldata.ParseStatic(&druid.Character, spellData.NaturesSplendor.Highest())
 }
 
 func (druid *Druid) applyInsectSwarm() {
@@ -153,149 +88,92 @@ func (druid *Druid) applyInsectSwarm() {
 	druid.registerInsectSwarmSpell()
 }
 
-func (druid *Druid) applyImprovedMoonfire() {
-	if druid.Talents.ImprovedMoonfire == 0 {
-		return
-	}
-
-	// 5% a point damage increase to Moonfire and its DoT.
-	druid.AddStaticMod(core.SpellModConfig{
-		ClassMask:  DruidSpellMoonfire,
-		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.ImprovedMoonfire.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(druid.Talents.ImprovedMoonfire),
-	})
-
-	// 5% a point chance to crit with Moonfire.
-	druid.AddStaticMod(core.SpellModConfig{
-		ClassMask:  DruidSpellMoonfire,
-		Kind:       core.SpellMod_BonusCrit_Percent,
-		FloatValue: spellData.ImprovedMoonfire.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CRITICAL_CHANCE)).ValueAt(druid.Talents.ImprovedMoonfire),
-	})
+// The crit damage bonus of the Arcane and Nature spells.
+func (druid *Druid) applyVengeance() {
+	druid.parseTalent(druid.Talents.Vengeance, spellData.Vengeance)
 }
 
-// Improved Wrath, new in Forever: 0.1 sec off the cast and 10% off the cost a rank.
-func (druid *Druid) applyImprovedWrath() {
-	if druid.Talents.ImprovedWrath == 0 {
-		return
-	}
-
-	druid.AddStaticMod(core.SpellModConfig{
-		ClassMask: DruidSpellWrath,
-		Kind:      core.SpellMod_CastTime_Flat,
-		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedWrath.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CASTING_TIME)).ValueAt(druid.Talents.ImprovedWrath)),
-	})
-
-	druid.AddStaticMod(core.SpellModConfig{
-		ClassMask:  DruidSpellWrath,
-		Kind:       core.SpellMod_PowerCost_Pct_Add,
-		FloatValue: spellData.ImprovedWrath.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(druid.Talents.ImprovedWrath),
-	})
-}
-
-// Genesis, new in Forever: +1% periodic damage and healing a rank.
-func (druid *Druid) applyGenesis() {
-	if druid.Talents.Genesis == 0 {
-		return
-	}
-
-	// Client 1223081's mask includes the bleeds (Rake, Rip, Lacerate) and not Lifebloom.
-	druid.AddStaticMod(core.SpellModConfig{
-		ClassMask:  DruidSpellDoT | DruidSpellRake | DruidSpellRip | DruidSpellLacerate | DruidSpellRejuvenation | DruidSpellRegrowth,
-		Kind:       core.SpellMod_DotDamageDone_Pct,
-		FloatValue: spellData.Genesis.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DOT)).FractionAt(druid.Talents.Genesis),
-	})
-}
-
-// Nature's Majesty, new in Forever: +2% critical strike chance a rank.
-func (druid *Druid) applyNaturesMajesty() {
-	if druid.Talents.NaturesMajesty == 0 {
-		return
-	}
-
-	crit := spellData.NaturesMajesty.Effect(dbcenums.A_MOD_CRIT_PCT, 0).ValueAt(druid.Talents.NaturesMajesty)
-	druid.AddStat(stats.SpellCritPercent, crit)
-	druid.AddStat(stats.PhysicalCritPercent, crit)
-}
-
-// applyImprovedEntanglingRoots implements Improved Entangling Roots, new in Forever.
-//
-// TODO: not modelled - the client states a duration modifier on a spell the sim does not cast.
-func (druid *Druid) applyImprovedEntanglingRoots() {
-	if druid.Talents.ImprovedEntanglingRoots == 0 {
-		return
-	}
-}
-
-// Moonfire ticks every 3 sec and Insect Swarm every 2 sec, so the added duration is one extra tick
-// on each. The talent has no generated ladder, so the extra tick is the sim's client-read value.
-func (druid *Druid) applyNaturesSplendor() {
-	if !druid.Talents.NaturesSplendor {
-		return
-	}
-
-	druid.AddStaticMod(core.SpellModConfig{
-		ClassMask: DruidSpellDoT,
-		Kind:      core.SpellMod_DotNumberOfTicks_Flat,
-		IntValue:  1,
-	})
-}
-
-// Improved Starfire, new in Forever: 0.1 sec off the cast a rank. The stun proc is not modelled.
+// Starfire's cast time. Its second effect, the chance to stun, is reported as skipped: a stun does
+// nothing to the targets the sim fights.
 func (druid *Druid) applyImprovedStarfire() {
-	if druid.Talents.ImprovedStarfire == 0 {
-		return
-	}
-
-	druid.AddStaticMod(core.SpellModConfig{
-		ClassMask: DruidSpellStarfire,
-		Kind:      core.SpellMod_CastTime_Flat,
-		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedStarfire.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CASTING_TIME)).ValueAt(druid.Talents.ImprovedStarfire)),
-	})
+	druid.parseTalent(druid.Talents.ImprovedStarfire, spellData.ImprovedStarfire)
 }
 
-// applyOvergrowth implements Overgrowth, new in Forever.
-//
-// Not modelled: 17245 lets Entangling Roots hold 1/2 more targets; the sim casts no roots.
+// More targets for Entangling Roots, which the sim does not cast: the bosses it fights cannot be rooted.
 func (druid *Druid) applyOvergrowth() {
-	if druid.Talents.Overgrowth == 0 {
-		return
-	}
 }
 
-// Eclipse, new in Forever: every Wrath banks charges that each shorten one Starfire cast.
+var naturesGraceBuff = spellData.NaturesGraceTriggered.Highest()
+
+// A non-periodic spell crit grants cast speed and a shorter global cooldown for 3 seconds.
+func (druid *Druid) applyNaturesGrace() {
+	if !druid.Talents.NaturesGrace {
+		return
+	}
+
+	aura := druid.RegisterAura(spelldata.AuraConfig(naturesGraceBuff))
+	spelldata.ParseEffects(&druid.Character, aura, naturesGraceBuff)
+
+	trigger := spelldata.ProcTrigger(&druid.Character, spellData.NaturesGrace.Highest(),
+		func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+			aura.Activate(sim)
+		})
+	// The tooltip's "cast" hint decodes to a cast trigger, but it asks for a crit, which is known
+	// only once the hit resolves. The direct hit and heal callbacks leave the periodic ones out. The
+	// buff comes a spell batch after the crit, so a cast that starts as the crit lands, such as the
+	// one queued behind a Starfire, is not hasted.
+	trigger.Name = "Nature's Grace - Trigger"
+	trigger.Callback = core.CallbackOnSpellHitDealt | core.CallbackOnHealDealt
+	trigger.Outcome = core.OutcomeCrit
+
+	druid.MakeProcTriggerAura(trigger)
+}
+
+var eclipseBuff = spellData.EclipseTriggered.Highest()
+
+// "Your Wrath spell reduces the cast time of your next $s3 Starfire spells by ${$m2/-1000}.2 sec.
+// Stores up to $408255u charges." The talent's effects are dummies, so the charges each Wrath grants
+// (effect 3) and the cast time taken off each Starfire (effect 2, the one with a rank curve) are read
+// by hand, and the buff row supplies the duration and the charge cap.
 func (druid *Druid) applyEclipse() {
 	if druid.Talents.Eclipse == 0 {
 		return
 	}
 
-	triggered := spellData.EclipseTriggered.Highest()
-	// The client's curve is 0.17 / 0.33 / 0.5 sec.
-	castTimeReduction := time.Millisecond * time.Duration(spellData.Eclipse.EffectAt(2).ValueAt(druid.Talents.Eclipse))
-	const chargesPerWrath = 2
+	rank := spellData.Eclipse.Rank(druid.Talents.Eclipse)
+	chargesPerWrath := int32(rank.EffectN(3).BaseValue())
 
-	druid.EclipseAura = druid.RegisterAura(core.Aura{
-		Label:     "Eclipse",
-		ActionID:  core.ActionID{SpellID: triggered.ID},
-		Duration:  triggered.Duration(),
-		MaxStacks: 4,
-	}).AttachSpellMod(core.SpellModConfig{
-		ClassMask: DruidSpellStarfire,
-		Kind:      core.SpellMod_CastTime_Flat,
-		TimeValue: castTimeReduction,
+	aura := druid.RegisterAura(spelldata.AuraConfig(eclipseBuff))
+	aura.AttachSpellMod(core.SpellModConfig{
+		ClassFlags: spellData.Starfire.Highest().ClassFlags,
+		Kind:       core.SpellMod_CastTime_Flat,
+		TimeValue:  rank.EffectN(2).TimeValue(),
 	})
+	aura.OnCastComplete = func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
+		if spellData.Starfire.Contains(spell) {
+			aura.RemoveStack(sim)
+		}
+	}
 
-	core.MakePermanent(druid.RegisterAura(core.Aura{
-		Label: "Eclipse Trigger",
-		OnCastComplete: func(_ *core.Aura, sim *core.Simulation, spell *core.Spell) {
-			switch {
-			case spell.Matches(DruidSpellWrath):
-				druid.EclipseAura.Activate(sim)
-				druid.EclipseAura.AddStacks(sim, chargesPerWrath)
-			case spell.Matches(DruidSpellStarfire):
-				if druid.EclipseAura.IsActive() {
-					druid.EclipseAura.RemoveStack(sim)
-				}
-			}
-		},
-	}))
+	// Each Wrath whose hit roll lands grants the charges with its cast result, at its cast, so a
+	// Starfire queued behind it takes one. A miss or a full resist grants none.
+	trigger := spelldata.ProcTrigger(&druid.Character, rank,
+		func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+			aura.Activate(sim)
+			aura.AddStacks(sim, chargesPerWrath)
+		})
+	trigger.Name = "Eclipse - Trigger"
+	trigger.Callback = core.CallbackOnCastResult
+	trigger.Outcome = core.OutcomeLanded
+	trigger.TriggerImmediately = true
+	trigger.ClassFlags = spellData.Wrath.Highest().ClassFlags
+	trigger.ExtraCondition = func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
+		return spellData.Wrath.Contains(spell)
+	}
+	druid.MakeProcTriggerAura(trigger)
+}
+
+// Arcane and Nature damage done.
+func (druid *Druid) applyMoonfury() {
+	druid.parseTalent(druid.Talents.Moonfury, spellData.Moonfury)
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -19,12 +20,14 @@ type SpellConfig struct {
 	DefenseType    DefenseType
 	ProcMask       ProcMask
 	Flags          SpellFlag
-	MissileSpeed   float64
 	BaseCost       float64
 	MetricSplits   int
 	ClassSpellMask int64
 	ClassFlags     ClassFlags
 	Rank           int32
+
+	MissileSpeed       float64
+	MissileMinDuration time.Duration
 
 	ManaCost   ManaCostOptions
 	EnergyCost EnergyCostOptions
@@ -50,12 +53,15 @@ type SpellConfig struct {
 	DamageMultiplierAdditive float64
 	CritMultiplierAdditive   float64 // Additive extra crit damage %
 
-	BonusBaseDamage  float64 // Certain items can increase the base damage of a spell e.g. https://www.wowhead.com/forever/item=28248/totem-of-the-void
-	BonusCoefficient float64 // EffectBonusCoefficient in SpellEffect client DB table, "SP mod" on Wowhead (not necessarily shown there even if > 0)
+	BonusBaseDamage       float64 // Certain items can increase the base damage of a spell e.g. https://www.wowhead.com/forever/item=28248/totem-of-the-void
+	BonusCoefficient      float64 // EffectBonusCoefficient in the game files' SpellEffect table, "SP mod" on Wowhead (not necessarily shown there even if > 0)
+	DirectVariance        float64 // EffectVariance of a spell-school hit or a heal: the direct amount, power included, lands within ±DirectVariance/2 of itself.
+	TakenBonusCoefficient float64 // The coefficient the target's flat school bonus is taken at by a spell that sets no BonusCoefficient because its spell power goes through a weapon percent.
 
 	ThreatMultiplier float64
 
-	FlatThreatBonus float64
+	FlatThreatBonus     float64
+	ThreatAPCoefficient float64
 
 	// Performs the actions of this spell.
 	ApplyEffects ApplySpellResults
@@ -71,6 +77,8 @@ type SpellConfig struct {
 	RelatedAuraArrays LabeledAuraArrays
 	RelatedDotSpell   *Spell
 	RelatedSelfBuff   *Aura
+
+	Source ActionSource // Left unset, registration fills in the phase it runs in.
 }
 
 type Spell struct {
@@ -87,7 +95,7 @@ type Spell struct {
 	SchoolIndex stats.SchoolIndex
 
 	// Decides the base crit multiplier (1.5 for Magic, 2.0 for Melee and Ranged) and which
-	// SpellMods with a DefenseType filter apply. Taken from the SpellCategories client table.
+	// SpellMods with a DefenseType filter apply. Taken from the game files' SpellCategories table.
 	// A spell left at DefenseTypeNone panics if it ever tries to crit.
 	DefenseType DefenseType
 
@@ -101,12 +109,14 @@ type Spell struct {
 	// should be a unique bit
 	ClassSpellMask int64
 
-	// The client's SpellClassOptions: the family and mask bit its talents name this spell by.
+	// The game files' SpellClassOptions: the family and mask bit its talents name this spell by.
 	ClassFlags ClassFlags
 
 	// Speed in yards/second. Spell missile speeds can be found in the game data.
 	// Example: https://wow.tools/dbc/?dbc=spellmisc&build=3.4.0.44996
 	MissileSpeed float64
+	// The shortest the missile flies, however close the target: a spell with no speed flies this long.
+	MissileMinDuration time.Duration
 
 	ResourceMetrics *ResourceMetrics
 	healthMetrics   []*ResourceMetrics
@@ -122,6 +132,7 @@ type Spell struct {
 	hasCastRequirement bool
 	casterAuras        []*Aura
 	excludeCasterAuras []*Aura
+	equipment          *Equipment
 
 	// Optional range constraints. If supplied, these are used to modify the ExtraCastCondition above to additionally check for DistanceFromTarget.
 	MinRange     float64
@@ -137,9 +148,13 @@ type Spell struct {
 	// Performs a cast of this spell.
 	castFn CastSuccessFunc
 
+	hitRanges      []*hitRanges
+	splitHitRanges [][]*hitRanges
+
 	SpellMetrics      []SpellMetrics
 	splitSpellMetrics [][]SpellMetrics // Used to split metrics by some condition.
 	casts             int              // Sum of casts on all targets, for efficient CPM calculation
+	lastAppliedAt     time.Duration    // When the spell last applied its effects; -NeverExpires if not yet this iteration.
 
 	// Performs the actions of this spell.
 	ApplyEffects ApplySpellResults
@@ -147,36 +162,41 @@ type Spell struct {
 	// Optional field. Calculates expected average damage.
 	expectedInitialDamageInternal ExpectedDamageCalculator
 	expectedTickDamageInternal    ExpectedDamageCalculator
+	expecting                     bool // While an expected-damage call runs: DirectVariance does not roll.
 
 	// The current or most recent cast data.
 	CurCast Cast
-
-	// The client's SPELLMOD_NOT_LOSE_CASTING_TIME: a chance, on top of the caster's own, that a hit
-	// taken does not push this spell's cast back.
-	PushbackResist float64
 
 	BonusHitPercent          float64
 	BonusCritPercent         float64
 	BonusSpellDamage         float64
 	BonusExpertisePercent    float64
 	CastTimeMultiplier       float64
-	CdMultiplier             float64
+	CdMultiplier             float64       // The product of the nonzero cooldown multiplier mods; CooldownMultiplier reads it.
+	cdMultiplierZeroes       int32         // Active cooldown multiplier mods of 0 or below, which remove the cooldown and cannot be divided back out.
+	cdFlatDeficit            time.Duration // How far the flat cooldown mods take the cooldown below 0, where CD.Duration stops.
+	GCDMultiplier            float64       // Scales DefaultCast.GCD, after the flat GCD mods and before haste and the GCD minimum; 1 = unmodified. Fed by SpellMod_GlobalCooldown_Pct.
+	unscaledGCD              time.Duration // DefaultCast.GCD is rewritten from this on every GCD mod, so a direct write there is lost.
+	RangeMultiplier          float64       // Scales MaxRange, after the flat range mods; 1 = unmodified. Fed by SpellMod_Range_Pct.
 	DamageMultiplier         float64
 	DamageMultiplierAdditive float64
-	// Added to DamageMultiplierAdditive on direct hits only. Unlike that bucket this one is 0
-	// when nothing feeds it.
+	// Added to DamageMultiplierAdditive on direct hits and direct heals only. Unlike that bucket
+	// this one is 0 when nothing feeds it.
 	DirectDamageMultiplierAdditive float64
+	DirectDamageMultiplier         float64 // Multiplies direct hits and direct heals only, 1 = unmodified. Fed by SpellMod_DirectDamageDone_Pct.
 	CritMultiplierPct              float64 // Multiplies the base crit multiplier, 1 = unmodified. Fed by SpellMod_CritMultiplier_Pct.
 	CritMultiplierAdditive         float64 // Additive critical damage bonus
 
-	BonusBaseDamage  float64 // Certain items can increase the base damage of a spell e.g. https://www.wowhead.com/forever/item=28248/totem-of-the-void
-	BonusCoefficient float64 // EffectBonusCoefficient in SpellEffect client DB table, "SP mod" on Wowhead (not necessarily shown there even if > 0)
+	BonusBaseDamage       float64 // Certain items can increase the base damage of a spell e.g. https://www.wowhead.com/forever/item=28248/totem-of-the-void
+	BonusCoefficient      float64 // EffectBonusCoefficient in the game files' SpellEffect table, "SP mod" on Wowhead (not necessarily shown there even if > 0)
+	DirectVariance        float64 // EffectVariance of a spell-school hit or a heal: the direct amount, power included, lands within ±DirectVariance/2 of itself.
+	TakenBonusCoefficient float64 // The coefficient the target's flat school bonus is taken at by a spell that sets no BonusCoefficient because its spell power goes through a weapon percent.
 
 	// Multiplier for all threat generated by this effect.
 	ThreatMultiplier float64
 
-	// Adds a fixed amount of threat to this spell, before multipliers.
-	FlatThreatBonus float64
+	FlatThreatBonus     float64 // Adds a fixed amount of threat to this spell, before multipliers.
+	ThreatAPCoefficient float64 // Adds this share of the caster's attack power to the flat threat bonus, before multipliers.
 
 	resultCache SpellResultCache
 	resultSlice SpellResultSlice
@@ -191,6 +211,8 @@ type Spell struct {
 	RelatedAuraArrays LabeledAuraArrays
 	RelatedDotSpell   *Spell
 	RelatedSelfBuff   *Aura
+
+	Source ActionSource
 }
 
 func (unit *Unit) OnSpellRegistered(handler SpellRegisteredHandler) {
@@ -239,6 +261,10 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 		}
 	}
 
+	if config.Source == SourceUnset {
+		config.Source = unit.currentSource()
+	}
+
 	spell := &Spell{
 		ActionID:       config.ActionID,
 		Rank:           config.Rank,
@@ -247,9 +273,11 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 		DefenseType:    config.DefenseType,
 		ProcMask:       config.ProcMask,
 		Flags:          config.Flags,
-		MissileSpeed:   config.MissileSpeed,
 		ClassSpellMask: config.ClassSpellMask,
 		ClassFlags:     config.ClassFlags,
+
+		MissileSpeed:       config.MissileSpeed,
+		MissileMinDuration: config.MissileMinDuration,
 
 		DefaultCast:        config.Cast.DefaultCast,
 		CD:                 config.Cast.CD,
@@ -272,22 +300,32 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 		BonusExpertisePercent:    config.BonusExpertisePercent,
 		CastTimeMultiplier:       1,
 		CdMultiplier:             1,
+		GCDMultiplier:            1,
+		RangeMultiplier:          1,
+		unscaledGCD:              config.Cast.DefaultCast.GCD,
 		DamageMultiplier:         config.DamageMultiplier,
 		DamageMultiplierAdditive: config.DamageMultiplierAdditive,
+		DirectDamageMultiplier:   1,
 		CritMultiplierPct:        1,
 		CritMultiplierAdditive:   config.CritMultiplierAdditive,
 
-		BonusBaseDamage:  config.BonusBaseDamage,
-		BonusCoefficient: config.BonusCoefficient,
+		BonusBaseDamage:       config.BonusBaseDamage,
+		BonusCoefficient:      config.BonusCoefficient,
+		DirectVariance:        config.DirectVariance,
+		TakenBonusCoefficient: config.TakenBonusCoefficient,
 
-		ThreatMultiplier: config.ThreatMultiplier,
-		FlatThreatBonus:  config.FlatThreatBonus,
+		ThreatMultiplier:    config.ThreatMultiplier,
+		FlatThreatBonus:     config.FlatThreatBonus,
+		ThreatAPCoefficient: config.ThreatAPCoefficient,
 
 		splitSpellMetrics: make([][]SpellMetrics, max(1, config.MetricSplits)),
+		splitHitRanges:    make([][]*hitRanges, max(1, config.MetricSplits)),
 
 		RelatedAuraArrays: config.RelatedAuraArrays,
 		RelatedDotSpell:   config.RelatedDotSpell,
 		RelatedSelfBuff:   config.RelatedSelfBuff,
+
+		Source: config.Source,
 
 		charges:      config.Charges,
 		MaxCharges:   config.Charges,
@@ -297,22 +335,7 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 		resultSlice: make(SpellResultSlice, 0, 1),
 	}
 
-	switch {
-	case spell.SpellSchool.Matches(SpellSchoolPhysical):
-		spell.SchoolIndex = stats.SchoolIndexPhysical
-	case spell.SpellSchool.Matches(SpellSchoolArcane):
-		spell.SchoolIndex = stats.SchoolIndexArcane
-	case spell.SpellSchool.Matches(SpellSchoolFire):
-		spell.SchoolIndex = stats.SchoolIndexFire
-	case spell.SpellSchool.Matches(SpellSchoolFrost):
-		spell.SchoolIndex = stats.SchoolIndexFrost
-	case spell.SpellSchool.Matches(SpellSchoolHoly):
-		spell.SchoolIndex = stats.SchoolIndexHoly
-	case spell.SpellSchool.Matches(SpellSchoolNature):
-		spell.SchoolIndex = stats.SchoolIndexNature
-	case spell.SpellSchool.Matches(SpellSchoolShadow):
-		spell.SchoolIndex = stats.SchoolIndexShadow
-	}
+	spell.SchoolIndex = spell.SpellSchool.MultiplierSchool().SchoolIndex()
 
 	if config.ManaCost.BaseCostPercent != 0 || config.ManaCost.FlatCost != 0 {
 		spell.Cost = newManaCost(spell, config.ManaCost)
@@ -369,7 +392,7 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 		spell.MaxRange = config.MaxRange
 		oldExtraCastCondition := spell.ExtraCastCondition
 		spell.ExtraCastCondition = func(sim *Simulation, target *Unit) bool {
-			if ((spell.MinRange != 0) && (spell.Unit.DistanceFromTarget < spell.MinRange)) || ((spell.MaxRange != 0) && (spell.Unit.DistanceFromTarget > spell.MaxRange)) {
+			if ((spell.MinRange != 0) && (spell.Unit.DistanceFromTarget < spell.MinRange)) || ((spell.MaxRange != 0) && (spell.Unit.DistanceFromTarget > spell.MaxRange*spell.RangeMultiplier)) {
 				/*if sim.Log != nil {
 					sim.Log("Cannot cast spell %s, out of range!", spell.ActionID)
 				}*/
@@ -433,7 +456,14 @@ func (spell *Spell) CurDot() *Dot {
 	return spell.dots.Get(spell.Unit.CurrentTarget)
 }
 func (spell *Spell) AOEDot() *Dot {
+	if spell.aoeDot == nil && spell.RelatedDotSpell != nil {
+		return spell.RelatedDotSpell.AOEDot()
+	}
 	return spell.aoeDot
+}
+
+func (spell *Spell) hasDot(target *Unit) bool {
+	return spell.Dot(target) != nil || spell.aoeDot != nil
 }
 func (spell *Spell) Hot(target *Unit) *Dot {
 	if spell.dots == nil {
@@ -518,9 +548,14 @@ func (spell *Spell) finalize() {
 		spell.splitSpellMetrics[i] = make([]SpellMetrics, len(spell.Unit.Env.AllUnits))
 	}
 	spell.SpellMetrics = spell.splitSpellMetrics[0]
+	for i := range spell.splitHitRanges {
+		spell.splitHitRanges[i] = make([]*hitRanges, len(spell.Unit.Env.AllUnits))
+	}
+	spell.hitRanges = spell.splitHitRanges[0]
 
 	if spell.hasCastRequirement {
 		spell.resolveCasterAuras()
+		spell.equipment = spell.Unit.playerEquipment()
 	}
 
 	// Set the "static" "default" cost here
@@ -536,6 +571,7 @@ func (spell *Spell) reset(sim *Simulation) {
 		}
 	}
 	spell.casts = 0
+	spell.lastAppliedAt = -NeverExpires
 	if spell.rechargeTimer != nil {
 		spell.rechargeTimer.Cancel(sim)
 		spell.rechargeTimer = nil
@@ -545,6 +581,7 @@ func (spell *Spell) reset(sim *Simulation) {
 
 func (spell *Spell) SetMetricsSplit(splitIdx int32) {
 	spell.SpellMetrics = spell.splitSpellMetrics[splitIdx]
+	spell.hitRanges = spell.splitHitRanges[splitIdx]
 	spell.ActionID.Tag = splitIdx
 
 	// Also set the tag on any dots to have them line up in the timeline
@@ -570,11 +607,42 @@ func (spell *Spell) doneIteration() {
 	}
 
 	if len(spell.splitSpellMetrics) == 1 {
-		spell.Unit.Metrics.addSpellMetrics(spell, spell.ActionID, spell.SpellMetrics)
+		spell.Unit.Metrics.addSpellMetrics(spell, spell.ActionID, spell.SpellMetrics, spell.hitRanges)
 	} else {
 		for i, spellMetrics := range spell.splitSpellMetrics {
-			spell.Unit.Metrics.addSpellMetrics(spell, spell.ActionID.WithTag(int32(i)), spellMetrics)
+			spell.Unit.Metrics.addSpellMetrics(spell, spell.ActionID.WithTag(int32(i)), spellMetrics, spell.splitHitRanges[i])
 		}
+	}
+}
+
+func (spell *Spell) rangesToRecord(target *Unit, value float64) *hitRanges {
+	if value <= 0 || spell.Flags.Matches(SpellFlagNoMetrics) {
+		return nil
+	}
+	hr := spell.hitRanges[target.UnitIndex]
+	if hr == nil {
+		hr = &hitRanges{}
+		spell.hitRanges[target.UnitIndex] = hr
+	}
+	return hr
+}
+
+func (spell *Spell) recordHit(target *Unit, kind proto.HitKind, value float64) {
+	if hr := spell.rangesToRecord(target, value); hr != nil {
+		hr.kinds[kind].add(value)
+	}
+}
+
+// Credits an absorbed or applied amount to the spell's shielding total and its shield range.
+func (spell *Spell) RecordShielding(target *Unit, amount float64) {
+	spell.SpellMetrics[target.UnitIndex].TotalShielding += amount
+	spell.recordHit(target, proto.HitKind_HitKindShield, amount)
+}
+
+// Feeds the named range in this spell's details, for values the hit kinds do not cover.
+func (spell *Spell) RecordCustomMetric(target *Unit, key string, value float64) {
+	if hr := spell.rangesToRecord(target, value); hr != nil {
+		hr.customRange(key).add(value)
 	}
 }
 
@@ -586,6 +654,14 @@ func (spell *Spell) HealthMetrics(target *Unit) *ResourceMetrics {
 		spell.healthMetrics[target.UnitIndex] = target.NewHealthMetrics(spell.ActionID)
 	}
 	return spell.healthMetrics[target.UnitIndex]
+}
+
+// The multiplier a cast applies to the spell's cooldown: 0 while a mod removes the cooldown.
+func (spell *Spell) CooldownMultiplier() float64 {
+	if spell.cdMultiplierZeroes > 0 {
+		return 0
+	}
+	return spell.CdMultiplier
 }
 
 func (spell *Spell) ReadyAt() time.Duration {
@@ -606,26 +682,7 @@ func (spell *Spell) TimeToReady(sim *Simulation) time.Duration {
 // Returns whether a call to Cast() would be successful, without actually
 // doing a cast.
 func (spell *Spell) CanCast(sim *Simulation, target *Unit) bool {
-	if spell == nil {
-		return false
-	}
-
-	if !spell.CanCompleteCast(sim, target, false) {
-		return false
-	}
-
-	if spell.Flags.Matches(SpellFlagSwapped) {
-		//if sim.Log != nil {
-		//	sim.Log("Cant cast because of item swap")
-		//}
-		return false
-	}
-
-	// While moving only instant casts are possible
-	if spell.Flags&SpellFlagCanCastWhileMoving == 0 && spell.DefaultCast.CastTime > 0 && spell.Unit.Moving {
-		//if sim.Log != nil {
-		//	sim.Log("Cant cast because moving")
-		//}
+	if !spell.canStart(sim, target) {
 		return false
 	}
 
@@ -651,17 +708,38 @@ func (spell *Spell) CanCast(sim *Simulation, target *Unit) bool {
 		return false
 	}
 
-	// Spell uses charges but has none
-	if spell.MaxCharges > 0 && spell.charges == 0 {
-		return false
-	}
-
-	return true
+	return spell.meetsCost(sim, false)
 }
 
-// Returns whether the spell being cast can be completed.
-// Example: Metamorphosis drains 4 Demonic Fury every second.
-// This means at the end of the cast you could end up not meeting the casting requirements.
+// The checks casting and queueing share ahead of their timer checks. While moving only instant casts
+// are possible.
+func (spell *Spell) canStart(sim *Simulation, target *Unit) bool {
+	return spell != nil && spell.CanCompleteCast(sim, target, false) &&
+		!spell.Flags.Matches(SpellFlagSwapped) &&
+		(spell.Flags&SpellFlagCanCastWhileMoving != 0 || spell.DefaultCast.CastTime == 0 || !spell.Unit.Moving) &&
+		(spell.MaxCharges == 0 || spell.charges > 0)
+}
+
+// The cost check runs after the other checks of its caller. A mana cost failure on a spell castable now
+// marks the rotation pass as waiting on mana; one during the GCD, a cast or the spell's cooldown, of an
+// off-GCD spell or inside the spell queue window, does not.
+func (spell *Spell) meetsCost(sim *Simulation, logCastFailure bool) bool {
+	if spell.Cost == nil || spell.Cost.MeetsRequirement(sim, spell) {
+		return true
+	}
+	unit := spell.Unit
+	if _, ok := spell.Cost.ResourceCostImpl.(*ManaCost); ok &&
+		unit.GCD.IsReady(sim) && unit.Hardcast.Expires <= sim.CurrentTime && spell.IsReady(sim) {
+		unit.costBlocked = true
+	}
+	if logCastFailure {
+		return spell.castFailureHelper(sim, spell.Cost.CostFailureReason(sim, spell))
+	}
+	return false
+}
+
+// Returns whether the spell being cast can be completed, its cost aside: the unit and target may no longer
+// qualify by the end of the cast.
 func (spell *Spell) CanCompleteCast(sim *Simulation, target *Unit, logCastFailure bool) bool {
 	if !spell.Unit.IsEnabled() {
 		if logCastFailure {
@@ -692,7 +770,7 @@ func (spell *Spell) CanCompleteCast(sim *Simulation, target *Unit, logCastFailur
 	}
 
 	if spell.hasCastRequirement {
-		if reason, _ := spell.castRequirementFailure(); reason != "" {
+		if reason, _ := spell.castRequirementFailure(sim, target); reason != "" {
 			if logCastFailure {
 				return spell.castFailureHelper(sim, reason)
 			}
@@ -708,18 +786,6 @@ func (spell *Spell) CanCompleteCast(sim *Simulation, target *Unit, logCastFailur
 			return spell.castFailureHelper(sim, "extra spell condition")
 		}
 		return false
-	}
-
-	if spell.Cost != nil {
-		if !spell.Cost.MeetsRequirement(sim, spell) {
-			//if sim.Log != nil {
-			//	sim.Log("Cant cast because of resource cost")
-			//}
-			if logCastFailure {
-				return spell.castFailureHelper(sim, spell.Cost.CostFailureReason(sim, spell))
-			}
-			return false
-		}
 	}
 
 	return true
@@ -756,6 +822,7 @@ func (spell *Spell) SkipCastAndApplyEffects(sim *Simulation, target *Unit) {
 func (spell *Spell) applyEffects(sim *Simulation, target *Unit) {
 	spell.SpellMetrics[target.UnitIndex].Casts++
 	spell.casts++
+	spell.lastAppliedAt = sim.CurrentTime
 
 	// Not sure if we want to split this flag into its own?
 	// Both are used to optimize away unneccesery calls and 99%
@@ -765,6 +832,11 @@ func (spell *Spell) applyEffects(sim *Simulation, target *Unit) {
 	}
 
 	spell.ApplyEffects(sim, target, spell)
+
+	if spell == spell.Unit.rotationCast.spell {
+		spell.Unit.endRotationCast()
+		spell.Unit.Wand.castCompleted(sim, spell)
+	}
 }
 
 func (spell *Spell) ApplyAOEThreatIgnoreMultipliers(threatAmount float64) {
@@ -773,31 +845,36 @@ func (spell *Spell) ApplyAOEThreatIgnoreMultipliers(threatAmount float64) {
 	}
 }
 func (spell *Spell) ApplyAOEThreat(threatAmount float64) {
-	spell.ApplyAOEThreatIgnoreMultipliers(threatAmount * spell.Unit.PseudoStats.ThreatMultiplier)
+	spell.ApplyAOEThreatIgnoreMultipliers(threatAmount * spell.unitThreatMultiplier())
+}
+
+func (spell *Spell) unitThreatMultiplier() float64 {
+	return spell.Unit.PseudoStats.ThreatMultiplier * spell.Unit.PseudoStats.SchoolThreatMultiplier[spell.SchoolIndex]
 }
 
 func (spell *Spell) finalizeExpectedDamage(result *SpellResult) {
 	result.inUse = false
 }
-func (spell *Spell) ExpectedInitialDamage(sim *Simulation, target *Unit) float64 {
-	result := spell.expectedInitialDamageInternal(sim, target, spell, false)
+func (spell *Spell) expectedDamage(sim *Simulation, target *Unit, calculator ExpectedDamageCalculator, useSnapshot bool) float64 {
+	spell.expecting = true
+	result := calculator(sim, target, spell, useSnapshot)
+	spell.expecting = false
 	spell.finalizeExpectedDamage(result)
 	return result.Damage
+}
+func (spell *Spell) ExpectedInitialDamage(sim *Simulation, target *Unit) float64 {
+	return spell.expectedDamage(sim, target, spell.expectedInitialDamageInternal, false)
 }
 func (spell *Spell) ExpectedTickDamage(sim *Simulation, target *Unit) float64 {
-	result := spell.expectedTickDamageInternal(sim, target, spell, false)
-	spell.finalizeExpectedDamage(result)
-	return result.Damage
+	return spell.expectedDamage(sim, target, spell.expectedTickDamageInternal, false)
 }
 func (spell *Spell) ExpectedTickDamageFromCurrentSnapshot(sim *Simulation, target *Unit) float64 {
-	result := spell.expectedTickDamageInternal(sim, target, spell, true)
-	spell.finalizeExpectedDamage(result)
-	return result.Damage
+	return spell.expectedDamage(sim, target, spell.expectedTickDamageInternal, true)
 }
 
 // The damage multiplier of a critical strike. The base comes from the DefenseType: spells crit
-// for 150%, melee and ranged attacks for 200%. Multiplicative modifiers (the 3% meta gems, the
-// slaying talents on the attack table, SpellMod_CritMultiplier_Pct) scale that base; additive
+// for 150%, melee and ranged attacks for 200%. Multiplicative modifiers (the slaying
+// talents on the attack table, SpellMod_CritMultiplier_Pct) scale that base; additive
 // ones (Ruin, Impale, SpellMod_CritMultiplier_Flat) scale only the bonus part above 100%.
 // https://web.archive.org/web/20081014064638/http://elitistjerks.com/f31/t12595-relentless_earthstorm_diamond_-_melee_only/p4/
 func (spell *Spell) CritDamageMultiplier(at *AttackTable) float64 {
@@ -818,15 +895,11 @@ func (spell *Spell) CritDamageMultiplier(at *AttackTable) float64 {
 	return (base*spell.CritMultiplierPct*spell.Unit.PseudoStats.CritDamageMultiplier*tableMultiplier-1)*(spell.CritMultiplierAdditive+1) + 1
 }
 
-// Time until either the cast is finished or the spell's own GCD is ready again, whichever is
-// longer, hasted the way Cast hastes them (so a 1 sec totem GCD or an off-GCD spell reads right).
+// Time until either the cast is finished or GCD is ready again, whichever is longer
 func (spell *Spell) EffectiveCastTime() time.Duration {
-	cast := spell.DefaultCast
-	if !spell.IgnoreHaste {
-		cast.GCD = spell.Unit.ApplyCastSpeed(cast.GCD)
-		cast.CastTime = spell.Unit.ApplyCastSpeedForSpell(cast.CastTime, spell)
-	}
-	return cast.EffectiveTime()
+	// TODO: this is wrong for spells like shadowfury, that have a GCD of less than 1s
+	return max(spell.Unit.SpellGCD(),
+		spell.Unit.ApplyCastSpeedForSpell(spell.DefaultCast.EffectiveTime(), spell))
 }
 
 // Time until the cast is finished (ignoring GCD)
@@ -836,10 +909,9 @@ func (spell *Spell) CastTime() time.Duration {
 
 func (spell *Spell) TravelTime() time.Duration {
 	if spell.MissileSpeed == 0 {
-		return 0
-	} else {
-		return time.Duration(float64(time.Second) * spell.Unit.DistanceFromTarget / spell.MissileSpeed)
+		return spell.MissileMinDuration
 	}
+	return max(spell.MissileMinDuration, time.Duration(float64(time.Second)*spell.Unit.DistanceFromTarget/spell.MissileSpeed))
 }
 
 // Returns true if the given mask matches the spell mask
@@ -850,6 +922,12 @@ func (spell *Spell) Matches(mask int64) bool {
 // Returns true if the given class flags name this spell
 func (spell *Spell) MatchesFlags(f ClassFlags) bool {
 	return f.Matches(spell.ClassFlags)
+}
+
+// Whether a modifier or trigger restricted to these class flags reaches the spell: zero flags mean
+// every spell.
+func (f ClassFlags) Reaches(spell *Spell) bool {
+	return f.IsZero() || spell.MatchesFlags(f)
 }
 
 // Handles computing the cost of spells and checking whether the Unit
@@ -874,11 +952,15 @@ type SpellCost struct {
 	FlatModifier            int32   // Flat value added to base cost before pct mods
 	PercentModifier         float64 // Multiplier for cost, as of MoP a float
 	AdditivePercentModifier float64 // Additive pct cost bucket: defaults to 1, additive pct mods sum into it
+	percentModifierZeroes   int32   // Active percent cost mods of -100% or lower; the cost is 0 while any is active.
 	spell                   *Spell
 	ResourceCostImpl
 }
 
 func (sc *SpellCost) ApplyCostModifiers(cost int32) float64 {
+	if sc.percentModifierZeroes > 0 {
+		return 0
+	}
 	spell := sc.spell
 	cost = max(0, cost+sc.FlatModifier)
 	cost = max(0, cost*spell.Unit.PseudoStats.SpellCostPercentModifier/100)

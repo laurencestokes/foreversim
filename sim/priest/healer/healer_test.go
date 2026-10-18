@@ -19,17 +19,15 @@ func init() {
 // path the UI's stats request takes.
 func TestHealerPriest(t *testing.T) {
 	var generators []core.TestGenerator
-	// Naked and one talent build per preset: the generated item database does not carry the Forever
-	// gear our sim plans with, and gives the rest TBC-shaped stats.
-	for _, build := range []struct{ name, talents string }{{"holy-19-32-0", HolyTalents}, {"discipline-35-16-0", DisciplineTalents}} {
+	for _, gearSet := range []string{"preraid"} {
 		player := core.WithSpec(
 			&proto.Player{
 				Class:         proto.Class_ClassPriest,
 				Race:          proto.Race_RaceDwarf,
-				Equipment:     &proto.EquipmentSpec{},
+				Equipment:     core.GetGearSet("../../../ui/specs/priest/healer/gear_sets", gearSet).GearSet,
 				Consumables:   FullConsumes,
 				Buffs:         core.FullIndividualBuffs,
-				TalentsString: build.talents,
+				TalentsString: StandardTalents,
 				Profession1:   proto.Profession_Tailoring,
 				Profession2:   proto.Profession_Enchanting,
 				Rotation:      &proto.APLRotation{Type: proto.APLRotation_TypeAPL},
@@ -37,7 +35,7 @@ func TestHealerPriest(t *testing.T) {
 			PlayerOptions,
 		)
 		generators = append(generators, &core.SingleCharacterStatsTestGenerator{
-			Name: build.name,
+			Name: gearSet,
 			Request: &proto.ComputeStatsRequest{
 				Raid: core.SinglePlayerRaidProto(player, core.FullPartyBuffs, core.FullRaidBuffs, core.FullDebuffs),
 			},
@@ -46,12 +44,13 @@ func TestHealerPriest(t *testing.T) {
 	core.RunTestSuite(t, t.Name(), generators)
 }
 
-// ui/specs/priest/healer/presets.ts.
-var HolyTalents = "005203031302-2350510323000053"
-var DisciplineTalents = "005203031325101531-03505003"
+// The Holy preset from ui/specs/priest/healer/presets.ts.
+var StandardTalents = "00520101133-33505003030121531"
 
-// The UI sets no consumables for this spec (the TBC flask, food and potion are not in the Forever client).
-var FullConsumes = &proto.ConsumesSpec{}
+var FullConsumes = &proto.ConsumesSpec{
+	FoodId:        250066, // Soaring Pamplona
+	ResourcePotId: 13444,  // Major Mana Potion
+}
 
 var PlayerOptions = &proto.Player_HealerPriest{
 	HealerPriest: &proto.HealerPriest{

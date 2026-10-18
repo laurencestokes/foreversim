@@ -1,17 +1,42 @@
-import { GemSocket, ItemCellAnchor } from '@features/gear/components/ItemCell';
+import { EquippedItemIcon } from '@features/gear/components/ItemCell';
+import { useEquippedItemWowheadDataset } from '@features/gear/hooks/useEquippedItemWowheadDataset';
 import { useOpenSelectorModal } from '@features/gear/hooks/useSelectorModal';
-import { getEmptySlotIconUrl } from '@features/gear/model/empty_slot_icons';
 import { SelectorModalTabs } from '@features/gear/types';
 import type { ItemSlot } from '@generated/proto/common';
 import { translateSlotName } from '@i18n/localization';
 import { useSimHost } from '@sim/context/SimHostContext';
+import { useActionId } from '@sim/hooks/useActionId';
 import { usePlayerStore } from '@sim/hooks/usePlayerStore';
-import { useActionId } from '@ui-kit/hooks/useActionId';
-import { useEquippedItemWowheadDataset } from '@ui-kit/hooks/useEquippedItemWowheadDataset';
-import clsx from 'clsx';
+import type { WowheadDatasetProps } from '@sim/hooks/useWowheadDataset';
+import type { EquippedItem } from '@sim/proto/equipped_item';
 import { useMemo } from 'react';
 
 import { createItemSwapGearData } from '../../model/gear_data';
+
+export interface ItemSwapIconViewProps {
+	slot: ItemSlot;
+	/** The swap item in the slot; `null` draws the slot's empty art. */
+	item: EquippedItem | null;
+	iconUrl: string;
+	name: string;
+	href: string;
+	/** The swap item's wowhead tooltip, on the icon. */
+	wowhead?: WowheadDatasetProps;
+	onOpen: () => void;
+}
+
+export const ItemSwapIconView = ({ slot, item, iconUrl, name, href, wowhead, onOpen }: ItemSwapIconViewProps) => (
+	<EquippedItemIcon
+		slot={slot}
+		item={item}
+		iconUrl={iconUrl}
+		href={href}
+		wowhead={wowhead}
+		onOpen={onOpen}
+		label={name || translateSlotName(slot) || undefined}
+		className="focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-link"
+	/>
+);
 
 export interface ItemSwapIconProps {
 	slot: ItemSlot;
@@ -27,35 +52,17 @@ export const ItemSwapIcon = ({ slot }: ItemSwapIconProps) => {
 	const actionId = useMemo(() => item?.asActionId(), [item]);
 	const { iconUrl, name, href } = useActionId(actionId);
 
-	const wowheadProps = useEquippedItemWowheadDataset(player, item);
+	const wowheadProps = useEquippedItemWowheadDataset(item);
 
 	return (
-		<div className="relative items-center" data-testid="icon-picker-root">
-			<ItemCellAnchor
-				className={clsx(
-					'ui-icon-picker-swatch size-16 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-link',
-					item ? 'filter-none' : 'grayscale',
-				)}
-				data-testid="icon-picker-button"
-				data-active={item ? '' : undefined}
-				role="button"
-				aria-label={name || translateSlotName(slot) || undefined}
-				href={href || undefined}
-				data-whtticon={item ? 'false' : undefined}
-				onActivate={() => openSelectorModal(slot, SelectorModalTabs.Items, createItemSwapGearData(player, slot))}
-				style={{ backgroundImage: `url('${(item && iconUrl) || getEmptySlotIconUrl(slot)}')` }}
-				{...wowheadProps}
-			/>
-			<div className="ui-item-picker-sockets-container" data-testid="item-picker-sockets-container">
-				{item?.allSocketColors().map((socketColor, gemIdx) => (
-					<GemSocket
-						key={gemIdx}
-						socketColor={socketColor}
-						gem={item.gems[gemIdx] ?? null}
-						className="focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-link"
-					/>
-				))}
-			</div>
-		</div>
+		<ItemSwapIconView
+			slot={slot}
+			item={item}
+			iconUrl={iconUrl}
+			name={name}
+			href={href}
+			wowhead={wowheadProps}
+			onOpen={() => openSelectorModal(slot, SelectorModalTabs.Items, createItemSwapGearData(player, slot))}
+		/>
 	);
 };

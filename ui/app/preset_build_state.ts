@@ -5,13 +5,13 @@ import i18n from '@i18n/config';
 import { translatePresetConfigurationCategory } from '@i18n/localization';
 import { PresetConfigurationCategory } from '@sim/constants/preset_categories';
 import { isEqualAPLRotation } from '@sim/proto/apl_utils';
+import { Stats } from '@sim/proto/stats';
 import type { IndividualSimHost } from '@sim/sim_host';
 
 import type { PresetBuild } from './preset_utils';
 
-// Keys the walk below must not name: `phase`/`group` are grouping metadata rather than settings
-// (TBC's picker lists them only because its exclusion list predates those two fields), and the
-// rest are re-added by their own rules so they read once rather than under two labels.
+// Keys the walk below must not name: `phase`/`group` are grouping metadata rather than settings,
+// and the rest are re-added by their own rules so they read once rather than under two labels.
 const NON_CATEGORY_BUILD_KEYS = ['name', 'encounter', 'settings', 'phase', 'group', 'epWeights', 'reforgeSettings'];
 
 /** The categories a build touches, as the chip tooltip lists them: de-duplicated and sorted. */
@@ -105,7 +105,7 @@ export function isBuildActive(
 		hasItemSwap =
 			settings?.playerOptions?.itemSwap === undefined ||
 			(!settings?.playerOptions?.enableItemSwap && !simUI.player.itemSwapSettings.getEnableItemSwap()) ||
-			ItemSwap.equals(stripItemSwapApiVersion(simUI.player.itemSwapSettings?.toProto()), stripItemSwapApiVersion(settings?.playerOptions?.itemSwap));
+			isEqualItemSwap(simUI.player.itemSwapSettings.toProto(), settings.playerOptions.itemSwap);
 		hasSpecOptions =
 			settings?.specOptions && Object.keys(settings.specOptions).length
 				? JSON.stringify(simUI.player.getSpecOptions()) == JSON.stringify(settings.specOptions)
@@ -139,11 +139,13 @@ export function isBuildActive(
 	);
 }
 
-/** Strips apiVersion from an ItemSwap and its nested UnitStats so preset comparisons aren't version-sensitive. */
-function stripItemSwapApiVersion(swap: ItemSwap | undefined): ItemSwap | undefined {
-	if (!swap) return swap;
-	return {
-		...swap,
-		prepullBonusStats: swap.prepullBonusStats ? { ...swap.prepullBonusStats, apiVersion: 0 } : swap.prepullBonusStats,
-	};
+/**
+ * Compares the items and the prepull bonus stats by value: the live swap always carries a prepull stats
+ * message, while a preset's JSON usually leaves it out, and neither apiVersion is part of the setting.
+ */
+function isEqualItemSwap(live: ItemSwap, preset: ItemSwap): boolean {
+	return (
+		ItemSwap.equals(ItemSwap.create({ items: live.items }), ItemSwap.create({ items: preset.items })) &&
+		Stats.fromProto(live.prepullBonusStats).equals(Stats.fromProto(preset.prepullBonusStats))
+	);
 }

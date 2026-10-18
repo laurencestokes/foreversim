@@ -11,104 +11,30 @@ func replaceItem(existing core.Item, option bulkSimCandidateOption) core.Item {
 	itemSpec := existing.ToItemSpecProto()
 	itemSpec.Id = option.spec.GetId()
 	itemSpec.RandomSuffix = option.spec.GetRandomSuffix()
-	// The override is a property of the candidate's own spec (like RandomSuffix), not
-	// something that should leak from the item being replaced: a plain database candidate
-	// has no override and should equip with its real type.
-	itemSpec.WeaponTypeOverride = option.spec.GetWeaponTypeOverride()
 
-	if !enchantAppliesToItem(itemSpec.GetEnchant(), option.item) {
+	if option.enchant != 0 {
+		itemSpec.Enchant = option.enchant
+	} else if !core.EnchantAppliesToItem(itemSpec.GetEnchant(), option.item) {
 		itemSpec.Enchant = 0
 	}
-	itemSpec.Gems = mergeGems(existing, option, option.item)
 
 	return core.NewItem(core.ItemSpec{
-		ID:                 itemSpec.GetId(),
-		RandomSuffix:       itemSpec.GetRandomSuffix(),
-		Enchant:            itemSpec.GetEnchant(),
-		Gems:               slices.Clone(itemSpec.GetGems()),
-		WeaponTypeOverride: itemSpec.GetWeaponTypeOverride(),
+		ID:           itemSpec.GetId(),
+		RandomSuffix: itemSpec.GetRandomSuffix(),
+		Enchant:      itemSpec.GetEnchant(),
 	})
 }
 
 func createSelectedItem(option bulkSimCandidateOption) core.Item {
+	enchant := option.spec.GetEnchant()
+	if option.enchant != 0 {
+		enchant = option.enchant
+	}
 	return core.NewItem(core.ItemSpec{
-		ID:                 option.spec.GetId(),
-		RandomSuffix:       option.spec.GetRandomSuffix(),
-		Enchant:            option.spec.GetEnchant(),
-		Gems:               slices.Clone(option.spec.GetGems()),
-		WeaponTypeOverride: option.spec.GetWeaponTypeOverride(),
+		ID:           option.spec.GetId(),
+		RandomSuffix: option.spec.GetRandomSuffix(),
+		Enchant:      enchant,
 	})
-}
-
-// Gems picked for the bulk item win; the replaced item's gems are re-homed into the sockets
-// still free, preferring a color match over mere eligibility. Gems with no room are dropped.
-func mergeGems(existing core.Item, option bulkSimCandidateOption, newItem core.Item) []int32 {
-	newGems := make([]int32, len(newItem.GemSockets))
-
-	for socketIdx, gemID := range option.spec.GetGems() {
-		if socketIdx >= len(newGems) {
-			break
-		}
-		newGems[socketIdx] = gemID
-	}
-
-	for gemIdx, gem := range existing.Gems {
-		if gemIdx >= len(existing.GemSockets) || gem.ID == 0 {
-			continue
-		}
-		socketIdx := firstFreeSocket(newItem.GemSockets, newGems, gem.Color, core.GemMatchesSocket)
-		if socketIdx == -1 {
-			socketIdx = firstFreeSocket(newItem.GemSockets, newGems, gem.Color, core.GemEligibleForSocket)
-		}
-		if socketIdx != -1 {
-			newGems[socketIdx] = gem.ID
-		}
-	}
-	return newGems
-}
-
-func firstFreeSocket(socketColors []proto.GemColor, gems []int32, gemColor proto.GemColor, accepts func(proto.GemColor, proto.GemColor) bool) int {
-	for socketIdx, socketColor := range socketColors {
-		if gems[socketIdx] == 0 && accepts(gemColor, socketColor) {
-			return socketIdx
-		}
-	}
-	return -1
-}
-
-func enchantAppliesToItem(effectID int32, item core.Item) bool {
-	if effectID == 0 {
-		return false
-	}
-	enchant := core.GetEnchantByEffectID(effectID)
-	if enchant == nil {
-		return false
-	}
-	if !core.CheckSliceOverlap(getEligibleEnchantSlots(*enchant), core.EligibleSlotsForItem(&item)) {
-		return false
-	}
-	if enchant.Type == proto.ItemType_ItemTypeRanged {
-		return item.RangedWeaponType == proto.RangedWeaponType_RangedWeaponTypeBow || item.RangedWeaponType == proto.RangedWeaponType_RangedWeaponTypeCrossbow || item.RangedWeaponType == proto.RangedWeaponType_RangedWeaponTypeGun
-	}
-	if item.RangedWeaponType != proto.RangedWeaponType_RangedWeaponTypeUnknown && item.RangedWeaponType != proto.RangedWeaponType_RangedWeaponTypeWand && enchant.Type != proto.ItemType_ItemTypeRanged {
-		return false
-	}
-	return true
-}
-
-func getEligibleEnchantSlots(enchant core.Enchant) []proto.ItemSlot {
-	types := append([]proto.ItemType{enchant.Type}, enchant.ExtraTypes...)
-	slots := make([]proto.ItemSlot, 0, len(types)*2)
-	for _, itemType := range types {
-		if typeSlots, ok := core.ItemTypeToSlotsMap[itemType]; ok {
-			slots = append(slots, typeSlots...)
-			continue
-		}
-		if itemType == proto.ItemType_ItemTypeWeapon {
-			slots = append(slots, proto.ItemSlot_ItemSlotMainHand, proto.ItemSlot_ItemSlotOffHand)
-		}
-	}
-	return slots
 }
 
 func canEquipItem(item core.Item, playerClass proto.Class, playerSpec proto.Spec, slot proto.ItemSlot) bool {

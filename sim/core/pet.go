@@ -25,17 +25,18 @@ type PetStatInheritance func(ownerStats stats.Stats) stats.Stats
 type PetSpeedInheritance func(sim *Simulation, ownerSpeedMultiplier float64)
 
 type PetConfig struct {
-	Name                            string
-	Owner                           *Character
-	BaseStats                       stats.Stats
-	StatInheritance                 PetStatInheritance
-	EnabledOnStart                  bool
-	IsGuardian                      bool
-	IsDynamic                       bool
-	HasDynamicMeleeSpeedInheritance bool
-	HasDynamicCastSpeedInheritance  bool
-	HasResourceRegenInheritance     bool
-	StartsAtOwnerDistance           bool
+	Name                             string
+	Owner                            *Character
+	BaseStats                        stats.Stats
+	StatInheritance                  PetStatInheritance
+	EnabledOnStart                   bool
+	IsGuardian                       bool
+	IsDynamic                        bool
+	HasDynamicMeleeSpeedInheritance  bool
+	HasDynamicRangedSpeedInheritance bool // The owner's ranged speed, as the pet's melee speed.
+	HasDynamicCastSpeedInheritance   bool
+	HasResourceRegenInheritance      bool
+	StartsAtOwnerDistance            bool
 }
 
 // Pet is an extension of Character, for any entity created by a player that can
@@ -51,24 +52,30 @@ type Pet struct {
 	OnPetEnable  OnPetEnable
 	OnPetDisable OnPetDisable
 
-	// Calculates inherited stats based on owner stats or stat changes.
-	statInheritance        PetStatInheritance
-	dynamicStatInheritance PetStatInheritance
-	inheritedStats         stats.Stats
-	pendingStatInheritance stats.Stats
-	statInheritanceAction  *PendingAction
+	enableEffects  []OnPetEnable
+	disableEffects []OnPetDisable
 
-	// A pet inherits its owner's melee speed and cast speed rather than
+	// How the owner's stats map to the pet's, what the pet holds from them now, and for a dynamic
+	// pet the refresh queued for the next pet heartbeat.
+	statInheritance       PetStatInheritance
+	inheritedStats        stats.Stats
+	statInheritanceAction *PendingAction
+
+	// A pet inherits its owner's melee, ranged and cast speed rather than
 	// having the haste aura applied to it.
-	dynamicMeleeSpeedInheritance  PetSpeedInheritance
-	inheritedMeleeSpeedMultiplier float64
-	dynamicCastSpeedInheritance   PetSpeedInheritance
-	inheritedCastSpeedMultiplier  float64
+	dynamicMeleeSpeedInheritance   PetSpeedInheritance
+	inheritedMeleeSpeedMultiplier  float64
+	dynamicRangedSpeedInheritance  PetSpeedInheritance
+	inheritedRangedSpeedMultiplier float64
+	dynamicCastSpeedInheritance    PetSpeedInheritance
+	inheritedCastSpeedMultiplier   float64
 
 	// If true the pet will automatically inherit the owner's stats
 	isDynamic bool
 	// If true the pet will automatically inherit the owner's melee speed
 	hasDynamicMeleeSpeedInheritance bool
+	// If true the owner's ranged speed becomes the pet's melee speed
+	hasDynamicRangedSpeedInheritance bool
 	// If true the pet will automatically inherit the owner's cast speed
 	hasDynamicCastSpeedInheritance bool
 	// If true the pet will automatically inherit the owner's regen speed multiplier
@@ -102,7 +109,8 @@ func NewPet(config PetConfig) Pet {
 
 				StatDependencyManager: stats.NewStatDependencyManager(),
 
-				ReactionTime: config.Owner.ReactionTime,
+				ReactionTime:    config.Owner.ReactionTime,
+				procChanceOwner: &config.Owner.Unit,
 
 				StartDistanceFromTarget: distanceFromTarget,
 				DistanceFromTarget:      distanceFromTarget,
@@ -112,16 +120,18 @@ func NewPet(config PetConfig) Pet {
 			PartyIndex: config.Owner.PartyIndex,
 			baseStats:  config.BaseStats,
 		},
-		Owner:                           config.Owner,
-		statInheritance:                 makeStatInheritanceFunc(config.StatInheritance),
-		isDynamic:                       config.IsDynamic,
-		hasDynamicMeleeSpeedInheritance: config.HasDynamicMeleeSpeedInheritance && config.IsDynamic,
-		inheritedMeleeSpeedMultiplier:   1,
-		hasDynamicCastSpeedInheritance:  config.HasDynamicCastSpeedInheritance && config.IsDynamic,
-		inheritedCastSpeedMultiplier:    1,
-		hasResourceRegenInheritance:     config.HasResourceRegenInheritance,
-		enabledOnStart:                  config.EnabledOnStart,
-		isGuardian:                      config.IsGuardian,
+		Owner:                            config.Owner,
+		statInheritance:                  makeStatInheritanceFunc(config.StatInheritance),
+		isDynamic:                        config.IsDynamic,
+		hasDynamicMeleeSpeedInheritance:  config.HasDynamicMeleeSpeedInheritance && config.IsDynamic,
+		inheritedMeleeSpeedMultiplier:    1,
+		hasDynamicRangedSpeedInheritance: config.HasDynamicRangedSpeedInheritance && config.IsDynamic,
+		inheritedRangedSpeedMultiplier:   1,
+		hasDynamicCastSpeedInheritance:   config.HasDynamicCastSpeedInheritance && config.IsDynamic,
+		inheritedCastSpeedMultiplier:     1,
+		hasResourceRegenInheritance:      config.HasResourceRegenInheritance,
+		enabledOnStart:                   config.EnabledOnStart,
+		isGuardian:                       config.IsGuardian,
 	}
 
 	pet.GCD = pet.NewTimer()
@@ -158,6 +168,17 @@ func (pet *Pet) inheritOwnerStats(sim *Simulation) {
 	pet.AddStatsDynamic(sim, pet.inheritedStats)
 }
 
+// Snapshots the owner's stats again: a dynamic pet at the pet heartbeat after its owner's stats
+// change, any other pet on its own schedule.
+func (pet *Pet) RefreshInheritedStats(sim *Simulation) {
+	inheritedStats := pet.statInheritance(pet.Owner.GetStats())
+	if inheritedStats == pet.inheritedStats {
+		return
+	}
+	pet.AddStatsDynamic(sim, inheritedStats.Subtract(pet.inheritedStats))
+	pet.inheritedStats = inheritedStats
+}
+
 func (pet *Pet) enableDynamicStats(sim *Simulation) {
 	if !pet.isDynamic {
 		return
@@ -168,29 +189,7 @@ func (pet *Pet) enableDynamicStats(sim *Simulation) {
 
 	pet.inheritOwnerStats(sim)
 	pet.Owner.DynamicStatsPets = append(pet.Owner.DynamicStatsPets, pet)
-	pet.dynamicStatInheritance = pet.statInheritance
-	pet.pendingStatInheritance = stats.Stats{}
-	pet.statInheritanceAction = &PendingAction{
-		Priority: ActionPriorityDOT,
-
-		OnAction: func(sim *Simulation) {
-			if pet.enabled {
-				pet.AddOwnerStats(sim, pet.pendingStatInheritance)
-			}
-
-			pet.pendingStatInheritance = stats.Stats{}
-		},
-	}
-}
-
-// Updates the stats for this pet in response to a stat change on the owner.
-// addedStats is the amount of stats added to the owner (will be negative if the
-// owner lost stats).
-func (pet *Pet) AddOwnerStats(sim *Simulation, addedStats stats.Stats) {
-	inheritedChange := pet.dynamicStatInheritance(addedStats)
-
-	pet.inheritedStats.AddInplace(&inheritedChange)
-	pet.AddStatsDynamic(sim, inheritedChange)
+	pet.statInheritanceAction = &PendingAction{Priority: ActionPriorityDOT, OnAction: pet.RefreshInheritedStats}
 }
 
 func (pet *Pet) resetInheritedOwnerStats(sim *Simulation) {
@@ -199,7 +198,7 @@ func (pet *Pet) resetInheritedOwnerStats(sim *Simulation) {
 }
 
 func (pet *Pet) resetDynamicStats(sim *Simulation) {
-	if pet.dynamicStatInheritance == nil || !pet.isDynamic {
+	if !pet.isDynamic {
 		return
 	}
 
@@ -209,9 +208,9 @@ func (pet *Pet) resetDynamicStats(sim *Simulation) {
 		panic("Pet not present in dynamic stats pet list!")
 	}
 
-	pet.dynamicStatInheritance = nil
+	// Drops a refresh still queued for the dismissed pet.
+	pet.statInheritanceAction.Cancel(sim)
 	pet.resetInheritedOwnerStats(sim)
-	pet.pendingStatInheritance = stats.Stats{}
 }
 
 func (pet *Pet) reset(sim *Simulation, agent PetAgent) {
@@ -244,6 +243,17 @@ func (pet *Pet) EnabledOnStart() bool {
 	return pet.enabledOnStart
 }
 
+// Runs enableEffect on every summon, after OnPetEnable, for a caller that does not own the pet.
+func (pet *Pet) RegisterEnableEffect(enableEffect OnPetEnable) {
+	pet.enableEffects = append(pet.enableEffects, enableEffect)
+}
+
+// Runs disableEffect on every dismiss, after OnPetDisable. The dismiss expires only the auras that
+// expire on their own, so this is where a permanent aura that should not outlast the pet comes off.
+func (pet *Pet) RegisterDisableEffect(disableEffect OnPetDisable) {
+	pet.disableEffects = append(pet.disableEffects, disableEffect)
+}
+
 // petAgent should be the PetAgent which embeds this Pet.
 func (pet *Pet) Enable(sim *Simulation, petAgent PetAgent) {
 	if pet.enabled {
@@ -266,6 +276,7 @@ func (pet *Pet) Enable(sim *Simulation, petAgent PetAgent) {
 	}
 	//reset current mana after applying stats
 	pet.manaBar.reset()
+	pet.manaBar.lastManaTick = sim.CurrentTime
 
 	//reset current health after applying stats
 	pet.healthBar.reset(sim)
@@ -277,9 +288,16 @@ func (pet *Pet) Enable(sim *Simulation, petAgent PetAgent) {
 	if pet.OnPetEnable != nil {
 		pet.OnPetEnable(sim)
 	}
+	for _, enableEffect := range pet.enableEffects {
+		enableEffect(sim)
+	}
 
 	if pet.hasDynamicMeleeSpeedInheritance {
 		pet.enableDynamicMeleeSpeed(sim)
+	}
+
+	if pet.hasDynamicRangedSpeedInheritance {
+		pet.enableDynamicRangedSpeed(sim)
 	}
 
 	if pet.hasDynamicCastSpeedInheritance {
@@ -377,6 +395,39 @@ func (pet *Pet) resetDynamicMeleeSpeed(sim *Simulation) {
 	pet.dynamicMeleeSpeedInheritance = nil
 }
 
+func (pet *Pet) enableDynamicRangedSpeed(sim *Simulation) {
+	if slices.Contains(pet.Owner.DynamicRangedSpeedPets, pet) {
+		panic("Pet already present in dynamic ranged speed pet list!")
+	}
+
+	if math.Abs(pet.inheritedRangedSpeedMultiplier-1) > 1e-14 {
+		panic(fmt.Sprintf("Pet ranged speed multiplier was not reset properly! Current inherited value = %.17f", pet.inheritedRangedSpeedMultiplier))
+	}
+
+	pet.dynamicRangedSpeedInheritance = func(sim *Simulation, ownerSpeedMultiplier float64) {
+		pet.inheritedRangedSpeedMultiplier *= ownerSpeedMultiplier
+		pet.MultiplyMeleeSpeed(sim, ownerSpeedMultiplier)
+	}
+
+	pet.dynamicRangedSpeedInheritance(sim, pet.Owner.PseudoStats.RangedSpeedMultiplier)
+	pet.Owner.DynamicRangedSpeedPets = append(pet.Owner.DynamicRangedSpeedPets, pet)
+}
+
+func (pet *Pet) resetDynamicRangedSpeed(sim *Simulation) {
+	if pet.dynamicRangedSpeedInheritance == nil {
+		return
+	}
+
+	if idx := slices.Index(pet.Owner.DynamicRangedSpeedPets, pet); idx != -1 {
+		pet.Owner.DynamicRangedSpeedPets = removeBySwappingToBack(pet.Owner.DynamicRangedSpeedPets, idx)
+	} else {
+		panic("Pet not present in dynamic ranged speed pet list!")
+	}
+
+	pet.dynamicRangedSpeedInheritance(sim, 1/pet.inheritedRangedSpeedMultiplier)
+	pet.dynamicRangedSpeedInheritance = nil
+}
+
 func (pet *Pet) enableDynamicCastSpeed(sim *Simulation) {
 	if slices.Contains(pet.Owner.DynamicCastSpeedPets, pet) {
 		panic("Pet already present in dynamic cast speed pet list!")
@@ -430,6 +481,7 @@ func (pet *Pet) Disable(sim *Simulation) {
 		pet.resetInheritedOwnerStats(sim)
 	}
 	pet.resetDynamicMeleeSpeed(sim)
+	pet.resetDynamicRangedSpeed(sim)
 	pet.resetDynamicCastSpeed(sim)
 	pet.CancelGCDTimer(sim)
 	pet.focusBar.disable(sim)
@@ -446,6 +498,9 @@ func (pet *Pet) Disable(sim *Simulation) {
 
 	if pet.OnPetDisable != nil {
 		pet.OnPetDisable(sim)
+	}
+	for _, disableEffect := range pet.disableEffects {
+		disableEffect(sim)
 	}
 
 	pet.auraTracker.expireAll(sim)

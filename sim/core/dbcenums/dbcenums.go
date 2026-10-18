@@ -1,4 +1,4 @@
-// Package dbcenums is the client's own spell enums: what an effect does, which aura it applies,
+// Package dbcenums is the game files' own spell enums: what an effect does, which aura it applies,
 // the attribute bits a spell carries and the proc bits its aura listens to.
 //
 // The package imports only the standard library, so every side can read the same definitions: the

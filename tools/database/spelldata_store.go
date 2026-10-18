@@ -13,7 +13,7 @@ import (
 
 // The store's rows as the generator builds them: the fields sim/core/spelldata.Spell, .Effect and
 // .Power carry, mirrored here rather than imported from that package, with the generator's own
-// bookkeeping alongside them and the JSON shape the captured client rows are read back in.
+// bookkeeping alongside them and the JSON shape the captured game files rows are read back in.
 //
 // The mirror is not what keeps a generated file that does not compile from stopping the generator
 // that rewrites it: this package imports the store for the item-proc routing in gen_effects.go, so
@@ -21,17 +21,18 @@ import (
 // the overlay gate in spelldata_write.go, which writes nothing until the sim compiles against the
 // rendered files.
 //
-// Every value is the client's own column, in the client's units - the conversions live in the
+// Every value is the game files' own column, in the game files' units - the conversions live in the
 // store's accessors - and the float fields are kept as the DB states them so the emitted number is
-// the one the client resolves its tooltip from.
+// the one the tooltip resolves from in game.
 type storeSpell struct {
 	ID   int32
 	Name string
 	Rank string
 
-	School core.SpellSchool
-	Speed  float64
-	Attr   [17]uint32
+	School      core.SpellSchool
+	Speed       float64
+	MinDuration float64
+	Attr        [17]uint32
 
 	SpellLevel, BaseLevel, MaxLevel int16
 
@@ -50,10 +51,10 @@ type storeSpell struct {
 	ProcFlags   [2]uint32
 	ICDMs       int32
 
-	// Procs per minute, which no client row states: it is here only when an override supplies it.
+	// Procs per minute, which no game files row states: it is here only when an override supplies it.
 	RPPM float64
 
-	// A flat threat bonus for a spell the client states no E_THREAT effect on, from an override.
+	// A flat threat bonus for a spell the game files state no E_THREAT effect on, from an override.
 	FlatThreat float64
 
 	// An area bonus, from an override.
@@ -89,8 +90,9 @@ type storeSpell struct {
 	ProcHint         core.ProcHint
 	SplitsDamage     bool
 
-	Effects []storeEffect
-	Powers  []storePower
+	Effects  []storeEffect
+	Powers   []storePower
+	Reagents []storeReagent
 
 	// The generator's own bookkeeping, which the store has no field for. The procs-per-minute id is
 	// what a PPM override is checked against, the tooltip flag what a proc chance override is, and
@@ -113,7 +115,7 @@ type storeEffect struct {
 
 	// The owning spell's SpellLevels, stamped on while the row is built so that the store's Average
 	// does not look its owner up. Never captured: it is derived from the captured Levels row.
-	SpellLevel, MaxLevel int16 `json:"-"`
+	BaseLevel, MaxLevel int16 `json:"-"`
 
 	SPCoef  float64
 	APCoef  float64
@@ -149,10 +151,15 @@ type storePower struct {
 	PerSecond          int32
 }
 
-// Every table the store reads, loaded once for the whole client database rather than per spell: the
-// closure walks the effects and descriptions of spells it has not selected yet, so the rows have to
-// be there before the set of wanted ids is known. Exported because storeInputs embeds it, which is
-// what writes the captured rows under these names.
+type storeReagent struct {
+	Item  int32
+	Count int16
+}
+
+// Every table the store reads, loaded once for the whole game files database rather than per spell:
+// the closure walks the effects and descriptions of spells it has not selected yet, so the rows
+// have to be there before the set of wanted ids is known. Exported because storeInputs embeds it,
+// which is what writes the captured rows under these names.
 type spellTables struct {
 	Names        map[int32]string
 	Subtexts     map[int32]string
@@ -172,9 +179,10 @@ type spellTables struct {
 	Requirements     map[int32]int32
 	Equipped         map[int32]equippedRow
 
-	Labels  map[int32][]int16
-	Powers  map[int32][]storePower
-	Effects map[int32][]storeEffect
+	Labels   map[int32][]int16
+	Powers   map[int32][]storePower
+	Reagents map[int32][]storeReagent
+	Effects  map[int32][]storeEffect
 
 	// The spell granting the enchant, by each enchant equip spell that answers a hit.
 	EnchantGrants map[int32]int32
@@ -193,6 +201,7 @@ type miscRow struct {
 	Speed                  float64
 	CastTimeMs, DurationMs int32
 	MinRange, MaxRange     float64
+	MinDuration            float64 `json:",omitempty"` // Stated on a few dozen rows, so the capture leaves the rest without it.
 }
 
 type levelsRow struct {
@@ -260,6 +269,7 @@ func newSpellTables() *spellTables {
 		Equipped:         map[int32]equippedRow{},
 		Labels:           map[int32][]int16{},
 		Powers:           map[int32][]storePower{},
+		Reagents:         map[int32][]storeReagent{},
 		Effects:          map[int32][]storeEffect{},
 		EnchantGrants:    map[int32]int32{},
 		EnchantChances:   map[int32]enchantChance{},
@@ -273,7 +283,7 @@ func loadSpellTables(db *sql.DB) (*spellTables, error) {
 	for _, load := range []func(*sql.DB) error{
 		t.loadNames, t.loadMisc, t.loadLevels, t.loadCooldowns, t.loadCategories, t.loadAuraOptions,
 		t.loadClassOptions, t.loadInterrupts, t.loadShapeshift, t.loadAuraRestrictions, t.loadTargetRestrictions,
-		t.loadCastingRequirements, t.loadEquippedItems, t.loadLabels, t.loadPowers, t.loadEffects,
+		t.loadCastingRequirements, t.loadEquippedItems, t.loadLabels, t.loadPowers, t.loadReagents, t.loadEffects,
 		t.loadEnchantGrants, t.loadEnchantChances,
 	} {
 		if err := load(db); err != nil {
@@ -290,16 +300,16 @@ func (t *spellTables) row(id int32) storeSpell {
 	s := storeSpell{ID: id, Name: t.Names[id], Rank: t.Subtexts[id]}
 
 	m := t.Misc[id]
-	s.School, s.Speed, s.Attr = m.School, m.Speed, m.Attr
+	s.School, s.Speed, s.MinDuration, s.Attr = m.School, m.Speed, m.MinDuration, m.Attr
 	s.CastTimeMs, s.DurationMs = m.CastTimeMs, m.DurationMs
 	s.MinRange, s.MaxRange = m.MinRange, m.MaxRange
 
-	// No SpellLevels row is the client's "no level scaling", which is the spell's own level at the
-	// cap and no maximum.
+	// No SpellLevels row is the game files' "no level scaling", which is the spell's own and base
+	// level at the cap and no maximum.
 	if l, ok := t.Levels[id]; ok {
 		s.SpellLevel, s.BaseLevel, s.MaxLevel = l.SpellLevel, l.BaseLevel, l.MaxLevel
 	} else {
-		s.SpellLevel = RankLevel
+		s.SpellLevel, s.BaseLevel = RankLevel, RankLevel
 	}
 
 	c := t.Cooldowns[id]
@@ -336,6 +346,7 @@ func (t *spellTables) row(id int32) storeSpell {
 	s.Labels = t.Labels[id]
 	s.RefIDs = t.referencedIDs(id)
 	s.Powers = t.Powers[id]
+	s.Reagents = t.Reagents[id]
 
 	// The effect's class mask is read against the owning spell's family: the mask words alone name
 	// nothing, since the same bit is a different spell in each family. The family is carried only
@@ -350,7 +361,7 @@ func (t *spellTables) row(id int32) storeSpell {
 		if !s.Effects[i].ClassFlags.IsZero() {
 			s.Effects[i].ClassFlags.Family = s.ClassFlags.Family
 		}
-		s.Effects[i].SpellLevel, s.Effects[i].MaxLevel = s.SpellLevel, s.MaxLevel
+		s.Effects[i].BaseLevel, s.Effects[i].MaxLevel = s.BaseLevel, s.MaxLevel
 	}
 
 	return s
@@ -392,7 +403,7 @@ func (t *spellTables) loadMisc(db *sql.DB) error {
 		       m.Attributes_15, m.Attributes_16,
 		       COALESCE(m.SchoolMask, 0), COALESCE(m.Speed, 0),
 		       COALESCE(ct.Base, 0), COALESCE(d.Duration, 0),
-		       COALESCE(r.RangeMin_0, 0), COALESCE(r.RangeMax_0, 0)
+		       COALESCE(r.RangeMin_0, 0), COALESCE(r.RangeMax_0, 0), COALESCE(m.MinDuration, 0)
 		FROM SpellMisc m
 		LEFT JOIN SpellCastTimes ct ON ct.ID = m.CastingTimeIndex
 		LEFT JOIN SpellDuration d ON d.ID = m.DurationIndex
@@ -407,7 +418,7 @@ func (t *spellTables) loadMisc(db *sql.DB) error {
 		for i := range attr {
 			dest = append(dest, &attr[i])
 		}
-		dest = append(dest, &school, &m.Speed, &m.CastTimeMs, &m.DurationMs, &m.MinRange, &m.MaxRange)
+		dest = append(dest, &school, &m.Speed, &m.CastTimeMs, &m.DurationMs, &m.MinRange, &m.MaxRange, &m.MinDuration)
 		if err := rows.Scan(dest...); err != nil {
 			return err
 		}
@@ -419,8 +430,8 @@ func (t *spellTables) loadMisc(db *sql.DB) error {
 	})
 }
 
-// A table the client states once per spell. A second row is an error rather than a silent overwrite:
-// the store would carry whichever came last.
+// A table the game files state once per spell. A second row is an error rather than a silent
+// overwrite: the store would carry whichever came last.
 func putOnce[V any](into map[int32]V, id int32, v V, rows string) error {
 	if _, dup := into[id]; dup {
 		return fmt.Errorf("spell %d has two %s", id, rows)
@@ -550,9 +561,8 @@ func (t *spellTables) loadShapeshift(db *sql.DB) error {
 	})
 }
 
-// The aura a spell needs on its caster to be cast, and the one that bars it, where the client states
-// neither as a form: Tiger's Fury names Cat Form here rather than in SpellShapeshift, whose row for
-// it is empty.
+// The aura a spell needs on its caster to be cast, and the one that bars it, where the game files
+// state neither as a form: Shifting Power names Cat Form here beside its SpellShapeshift mask.
 func (t *spellTables) loadAuraRestrictions(db *sql.DB) error {
 	return eachRow(db, `
 		SELECT SpellID, COALESCE(CasterAuraSpell, 0), COALESCE(ExcludeCasterAuraSpell, 0)
@@ -631,7 +641,7 @@ func (t *spellTables) loadLabels(db *sql.DB) error {
 	})
 }
 
-// Every bar the spell costs from, in the client's order, so Power(t) finds the one it asks for.
+// Every bar the spell costs from, in the game files' order, so Power(t) finds the one it asks for.
 func (t *spellTables) loadPowers(db *sql.DB) error {
 	return eachRow(db, `
 		SELECT SpellID, COALESCE(PowerType, 0), COALESCE(ManaCost, 0), COALESCE(ManaCostPerLevel, 0),
@@ -649,10 +659,28 @@ func (t *spellTables) loadPowers(db *sql.DB) error {
 	})
 }
 
+// Reagent and ReagentCount are JSON arrays of 8 slots, read in slot order; an empty slot is item 0.
+func (t *spellTables) loadReagents(db *sql.DB) error {
+	return eachRow(db, `
+		SELECT s.SpellID, item.value, count.value
+		FROM SpellReagents s, json_each(s.Reagent) item
+		JOIN json_each(s.ReagentCount) count ON count.key = item.key
+		WHERE item.value != 0 AND count.value != 0
+		ORDER BY s.SpellID, item.key`, func(rows *sql.Rows) error {
+		var id int32
+		var r storeReagent
+		if err := rows.Scan(&id, &r.Item, &r.Count); err != nil {
+			return err
+		}
+		t.Reagents[id] = append(t.Reagents[id], r)
+		return nil
+	})
+}
+
 // EffectMiscValue_0/_1, EffectSpellClassMask_0..3, EffectRadiusIndex_0 and ImplicitTarget_0/_1 are
 // generated columns over the JSON arrays, so each is named rather than reached through SELECT *.
 // RadiusMin and RadiusMax are SpellRadius' own columns: two radius rows state a Radius with no
-// maximum, and those read as zero here rather than as a radius the client does not state there.
+// maximum, and those read as zero here rather than as a radius the game files do not state there.
 func (t *spellTables) loadEffects(db *sql.DB) error {
 	return eachRow(db, `
 		SELECT e.SpellID, e.ID, e.EffectIndex, e.Effect, e.EffectAura,

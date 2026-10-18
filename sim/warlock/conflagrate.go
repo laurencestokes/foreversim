@@ -2,49 +2,35 @@ package warlock
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Conflagrate burns the Immolate on the target. Shadow and Flame's second effect (20% per point)
-// is the chance it survives, so at 5/5 Conflagrate stops consuming Immolate altogether.
+// Granted by the Conflagrate talent: ignites the warlock's own Immolate and consumes it, unless Shadow and
+// Flame keeps it burning. The 10 sec cooldown is the row's category cooldown.
 func (warlock *Warlock) registerConflagrate() {
-	rank := spellData.Conflagrate.Highest()
-	keepImmolateChance := spellData.ShadowAndFlame.EffectAt(2).FractionAt(warlock.Talents.ShadowAndFlame)
+	rankedSpell := spellData.Conflagrate.ByID(18932)
+	conflagrateHit := rankedSpell.DamageEffect()
 
-	warlock.Conflagrate = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    rank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: WarlockSpellConflagrate,
-		MaxRange:       float64(rank.MaxRange),
+	config := spelldata.SpellConfig(&warlock.Unit, rankedSpell, spelldata.Magic(core.ProcMaskSpellDamage))
+	config.ClassSpellMask = WarlockSpellConflagrate
 
-		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: rank.GCD(),
-			},
-			CD: core.Cooldown{
-				Timer:    warlock.NewTimer(),
-				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
-			},
-		},
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return warlock.Immolate.Dot(target).IsActive()
-		},
+	// Needs this warlock's Immolate on the target. Immolate registers after the talents, so it is read here.
+	config.ExtraCastCondition = func(_ *core.Simulation, target *core.Unit) bool {
+		return warlock.Immolate != nil && warlock.Immolate.Dot(target).IsActive()
+	}
 
-		DamageMultiplierAdditive: 1,
-		DamageMultiplier:         1,
-		ThreatMultiplier:         1,
-		BonusCoefficient:         rank.DamageEffect().Coeff(),
+	// Roll the damage and to hit, then consume the Immolate unless Shadow and Flame keeps it
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcAndDealDamage(sim, target, conflagrateHit.Average(), spell.OutcomeMagicHitAndCrit)
+		if result.Landed() && !sim.Proc(warlock.conflagrateKeepsImmolate, "Shadow and Flame") {
+			warlock.Immolate.Dot(target).Deactivate(sim)
+		}
+	}
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, rank.DamageEffect().Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
+	// Calculate expected damage from the row's average hit
+	config.ExpectedInitialDamage = func(sim *core.Simulation, target *core.Unit, spell *core.Spell, _ bool) *core.SpellResult {
+		return spell.CalcDamage(sim, target, conflagrateHit.Average(), spell.OutcomeExpectedMagicHitAndCrit)
+	}
 
-			dot := warlock.Immolate.Dot(target)
-			if dot.IsActive() && !sim.Proc(keepImmolateChance, "Shadow and Flame") {
-				dot.Deactivate(sim)
-			}
-		},
-	})
+	warlock.Conflagrate = warlock.RegisterSpell(config)
 }

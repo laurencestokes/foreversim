@@ -1,4 +1,8 @@
+import { EnchantType, EquipmentSpec, ItemSpec, ItemType } from '@generated/proto/common';
+import { SimDatabase, SimEnchant } from '@generated/proto/db';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { Database } from './database';
 
 // `Database.get` memoises its load in module scope, so every case resets the module registry to get
 // a fresh memo rather than sharing one across tests.
@@ -38,8 +42,8 @@ describe('Database.get', () => {
 		expect(fetchMock).toHaveBeenCalledTimes(3);
 	}, 30000);
 
-	// The regression this exists for: the memo used to hold the rejected promise for the page
-	// lifetime, so every later caller awaited the same failure and the app could not recover.
+	// A memo that held the rejected promise for the page lifetime would make every later caller
+	// await the same failure, and the app could not recover.
 	it('does not memoize a failure — a later call tries again and can succeed', async () => {
 		const fetchMock = vi.fn().mockRejectedValue(new Error('offline'));
 		vi.stubGlobal('fetch', fetchMock);
@@ -61,6 +65,22 @@ describe('Database.get', () => {
 		expect(fetchMock.mock.calls.length).toBeGreaterThan(attemptsWhileFailing);
 	}, 30000);
 
+	it('keeps the consumables of db.json when it merges the leftovers', async () => {
+		const bodies: Record<string, object> = {
+			'/forever/assets/database/db.json': { consumables: [{ id: 5, name: 'Potion' }], itemIcons: [{ id: 5, name: 'Potion', icon: 'inv_potion' }] },
+			'/forever/assets/database/leftover_db.json': { items: [{ id: 7, name: 'Grey Sword', scalingOptions: { 0: { ilvl: 5 } } }] },
+		};
+		const fetchMock = vi.fn((url: string) => Promise.resolve({ json: () => Promise.resolve(bodies[url]) }));
+		vi.stubGlobal('fetch', fetchMock);
+
+		const Database = await freshDatabase();
+		const db = await Database.loadLeftoversIfNecessary(EquipmentSpec.create({ items: [ItemSpec.create({ id: 7 })] }));
+
+		expect(fetchMock).toHaveBeenCalledWith('/forever/assets/database/leftover_db.json');
+		expect(db.getItemById(7)?.name).toBe('Grey Sword');
+		expect(db.getConsumable(5)?.name).toBe('Potion');
+	}, 30000);
+
 	it('shares one load between concurrent callers', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(okResponse());
 		vi.stubGlobal('fetch', fetchMock);
@@ -71,4 +91,35 @@ describe('Database.get', () => {
 		expect(a).toBe(b);
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	}, 30000);
+
+	it('returns every row of an effect id once, across the slots it fits', async () => {
+		const enchants = [
+			{
+				effectId: 1897,
+				itemId: 2,
+				name: 'Enchant 2H Weapon - Lesser Impact',
+				type: ItemType.ItemTypeWeapon,
+				enchantType: EnchantType.EnchantTypeTwoHand,
+			},
+			{ effectId: 1897, itemId: 3, name: 'Enchant Weapon - Superior Striking', type: ItemType.ItemTypeWeapon },
+			{ effectId: 849, itemId: 1, name: 'Enchant Cloak - Minor Agility', type: ItemType.ItemTypeBack },
+		];
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ enchants }) }));
+
+		const Database = await freshDatabase();
+		const db = await Database.get();
+
+		expect(db.getEnchantsByEffectId(1897).map(enchant => enchant.name)).toEqual([enchants[0].name, enchants[1].name]);
+	}, 30000);
+});
+
+describe('Database.mergeSimDatabases', () => {
+	it('keeps the enchant rows of one effect id that differ in type', () => {
+		const twoHand = SimEnchant.create({ effectId: 1897, type: ItemType.ItemTypeWeapon, enchantType: EnchantType.EnchantTypeTwoHand });
+		const oneHand = SimEnchant.create({ effectId: 1897, type: ItemType.ItemTypeWeapon });
+
+		const merged = Database.mergeSimDatabases(SimDatabase.create({ enchants: [twoHand] }), SimDatabase.create({ enchants: [oneHand, twoHand] }));
+
+		expect(merged.enchants).toEqual([twoHand, oneHand]);
+	});
 });

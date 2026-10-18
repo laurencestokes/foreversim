@@ -20,6 +20,14 @@ const (
 	ITEM_ENCHANTMENT_RELIC_EVIL       int = 12 // Scaling relic +ilevel, see enchant::initialize_relic
 )
 
+// ItemBonus.Type values of the rows a random suffix's bonus list carries.
+const (
+	ITEM_BONUS_STAT               int = 2  // Value_0 the ITEM_MOD stat, Value_1 its allocation per 10000 of the item's random property points.
+	ITEM_BONUS_SUFFIX             int = 5  // Value_0 the ItemNameDescription the item's name ends with.
+	ITEM_BONUS_ITEM_EFFECT        int = 23 // Value_0 the ItemEffect whose spell the item gains.
+	ITEM_BONUS_REDUCED_CASTER_DPS int = 54 // No value: a weapon with the list deals the REDUCED_CASTER_DPS share of its damage table.
+)
+
 const (
 	ITEM_SPELLTRIGGER_ON_USE          int = 0 // use after equip cooldown
 	ITEM_SPELLTRIGGER_ON_EQUIP        int = 1
@@ -29,7 +37,7 @@ const (
 	ITEM_SPELLTRIGGER_LEARN_SPELL_ID  int = 6
 )
 
-// The client's spell enums live in sim/core/dbcenums, which the sim reads as well. The aliases
+// The game files' spell enums live in sim/core/dbcenums, which the sim reads as well. The aliases
 // keep the field types of this package's rows spelled as its own.
 type SpellEffectType = dbcenums.SpellEffectType
 type EffectAuraType = dbcenums.EffectAuraType
@@ -93,8 +101,8 @@ func (raw ItemQuality) ToProto() proto.ItemQuality {
 const (
 	ITEM_CLASS_CONSUMABLE = iota
 	ITEM_CLASS_CONTAINER
-	ITEM_CLASS_WEAPON
-	ITEM_CLASS_GEM
+	ITEM_CLASS_WEAPON = dbcenums.ITEM_CLASS_WEAPON
+	ITEM_CLASS_GEM    = iota
 	ITEM_CLASS_ARMOR
 	ITEM_CLASS_REAGENT
 	ITEM_CLASS_PROJECTILE
@@ -208,6 +216,19 @@ const (
 	BANDAGE
 	OTHER
 	HERB
+	DEVICE ConsumableClass = 14
+)
+
+const (
+	TRADE_GOODS_EXPLOSIVES = 2
+	// The game files' shared cooldown category for explosives, 60 s.
+	EXPLOSIVES_SPELL_CATEGORY = 24
+	// The categories potions, food, drink and conjured items (healthstones, mana gems, runes, Thistle
+	// Tea) share their cooldown through.
+	POTION_SPELL_CATEGORY   = 4
+	FOOD_SPELL_CATEGORY     = 11
+	DRINK_SPELL_CATEGORY    = 59
+	CONJURED_SPELL_CATEGORY = 1153
 )
 
 // Power type in EffectMiscValue_0 of A_MOD_INCREASE_ENERGY. Only mana maps to a stat.
@@ -275,10 +296,10 @@ const (
 	ITEM_MOD_BLOCK_VALUE              = 48
 	ITEM_MOD_MAX                      = 49
 
-	// Indices above ITEM_MOD_MAX that the Forever client actually puts on items.
+	// Indices above ITEM_MOD_MAX that the Forever game files actually put on items.
 	// 50-56 are standard (wowdev.wiki/Stat_Types); 50 is already handled below.
 	// 83+ has no upstream definition -- the canonical enum stops at 74 -- so these
-	// were identified from self-labelling test items and enchant rows in the client.
+	// were identified from self-labelling test items and enchant rows in the game files.
 	ITEM_MOD_EXTRA_ARMOR       = 50
 	ITEM_MOD_FIRE_RESISTANCE   = 51
 	ITEM_MOD_FROST_RESISTANCE  = 52
@@ -294,6 +315,11 @@ const (
 	ITEM_MOD_FROST_DAMAGE  = 87
 	ITEM_MOD_SHADOW_DAMAGE = 88
 	ITEM_MOD_ARCANE_DAMAGE = 89
+
+	// Spell penetration on one school, in points of the target's resistance: 21516 Dagger of Spell
+	// Penetration - Fire 150 Resist (TEST) budgets 150 of 119, and 21518's Frost twin 150 of 121.
+	ITEM_MOD_FIRE_SPELL_PENETRATION  = 119
+	ITEM_MOD_FROST_SPELL_PENETRATION = 121
 
 	ITEM_MOD_ALL_RESISTANCES = 124
 )
@@ -315,8 +341,11 @@ const (
 	BloodElf Race = 1 << 9  // 512
 	Draenei  Race = 1 << 10 // 1024
 
-	AlliedRaces Race = Human | Dwarf | NightElf | Gnome | Draenei
-	HordeRaces  Race = Undead | Orc | Tauren | Troll | Goblin | BloodElf
+	HighOrderSkyborne  Race = 1 << 32
+	WindshaperSkyborne Race = 1 << 33
+
+	AlliedRaces Race = Human | Dwarf | NightElf | Gnome | Draenei | HighOrderSkyborne
+	HordeRaces  Race = Undead | Orc | Tauren | Troll | Goblin | BloodElf | WindshaperSkyborne
 )
 
 // Returns whether there is any overlap between the given masks.

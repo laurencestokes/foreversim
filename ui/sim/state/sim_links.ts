@@ -6,7 +6,6 @@ import pako from 'pako';
 
 import { SIM_CATEGORY_KEYS, SimSettingCategories } from '../constants/sim_settings';
 import { getEnumValues } from '../utils/collections';
-import { convertClassicSettingsBinary } from './classic_links';
 
 export const LINK_CATEGORY_PARAM = 'i';
 export const LINK_DEFAULT_CATEGORIES = getEnumValues(SimSettingCategories).filter(c => c != SimSettingCategories.UISettings) as Array<SimSettingCategories>;
@@ -39,14 +38,7 @@ export function tryParseUrlLocation(loc: UrlLocation): UrlParseData | null {
 	}
 
 	const settingsBytes = pako.inflate(bytes);
-	// A link from the classic-engine site (no api_version) is another proto: convert it.
-	let settings: IndividualSimSettings | null = null;
-	try {
-		settings = IndividualSimSettings.fromBinary(settingsBytes);
-	} catch {
-		// Master's field numbers can trip our reader; handled below.
-	}
-	if (!settings || !settings.apiVersion) settings = convertClassicSettingsBinary(settingsBytes);
+	const settings = IndividualSimSettings.fromBinary(settingsBytes);
 
 	let exportCategories = LINK_DEFAULT_CATEGORIES;
 	const urlParams = new URLSearchParams(loc.search);

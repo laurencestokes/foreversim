@@ -2,6 +2,7 @@ import { APLActionItemSwap_SwapSet } from '@generated/proto/apl';
 import { ActionID as ActionIdProto, ItemRandomSuffix, OtherAction } from '@generated/proto/common';
 import { ResourceType } from '@generated/proto/spell';
 import { IconData, UIItem as Item } from '@generated/proto/ui';
+import i18n from '@i18n/config';
 
 import { CHARACTER_LEVEL } from '../../constants/mechanics';
 import { Database } from '../database';
@@ -66,121 +67,108 @@ export class ActionId {
 			case OtherAction.OtherActionNone:
 				break;
 			case OtherAction.OtherActionWait:
-				baseName = 'Wait';
+				baseName = i18n.t('rotation_tab.apl.actions.wait.label');
 				iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_misc_pocketwatch_01.jpg';
 				break;
 			case OtherAction.OtherActionManaRegen:
-				name = 'Mana Tick';
+				name = i18n.t('common.action_names.mana_tick');
 				iconUrl = resourceTypeToIcon[ResourceType.ResourceTypeMana];
 				if (tag == 1) {
-					name += ' (Casting)';
+					name += ` (${i18n.t('common.action_tags.casting')})`;
 				} else if (tag == 2) {
-					name += ' (Not Casting)';
+					name += ` (${i18n.t('common.action_tags.not_casting')})`;
 				}
 				break;
 			case OtherAction.OtherActionEnergyRegen:
-				baseName = 'Energy Tick';
+				baseName = i18n.t('common.action_names.energy_tick');
 				iconUrl = resourceTypeToIcon[ResourceType.ResourceTypeEnergy];
 				break;
 			case OtherAction.OtherActionFocusRegen:
-				baseName = 'Focus Tick';
+				baseName = i18n.t('common.action_names.focus_tick');
 				iconUrl = resourceTypeToIcon[ResourceType.ResourceTypeFocus];
 				break;
 			case OtherAction.OtherActionManaGain:
-				baseName = 'Mana Gain';
+				baseName = i18n.t('common.action_names.mana_gain');
 				iconUrl = resourceTypeToIcon[ResourceType.ResourceTypeMana];
 				break;
 			case OtherAction.OtherActionRageGain:
-				baseName = 'Rage Gain';
+				baseName = i18n.t('common.action_names.rage_gain');
 				iconUrl = resourceTypeToIcon[ResourceType.ResourceTypeRage];
 				break;
 			case OtherAction.OtherActionAttack:
-				name = 'Attack';
 				iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_sword_04.jpg';
+				// A name handed in is a filled one: an extra attack's, from the spell that tagged it.
+				if (name) break;
+				name = i18n.t('common.action_names.attack');
 				if (this.tag == 1) {
-					name += ' (Main Hand)';
+					name += ` (${i18n.t('common.action_tags.main_hand')})`;
 				} else if (this.tag == 2) {
-					name += ' (Off Hand)';
-				} else if (this.tag == 11815) {
-					name += ' (Hand of Justice)';
-				} else if (this.tag == 12281) {
-					name += ' (Sword Specialization)';
-				} else if (this.tag == 25584) {
-					name += ' (Windfury)';
-				} else if (this.tag == 20182) {
-					name += ' (Reckoning)';
-				} else if (this.tag == 31332) {
-					name += ' (Blinkstrike)';
-				} else if (this.tag == 17257) {
-					name += ' (Magtheridon)';
-				} else if (this.tag == 21213) {
-					name += ' (Morrogrim Tidewalker)';
-				} else if (this.tag == 21213 + 18943) {
-					name += ' (Morrogrim Tidewalker) - Thrash';
-				} else if (this.tag == 21216) {
-					name += ' (Hydross the Unstable) - Frost';
-				} else if (this.tag == 21216 + 1) {
-					name += ' (Hydross the Unstable) - Nature';
-				} else if (this.tag == 17968) {
-					name += ' (Archimonde)';
+					name += ` (${i18n.t('common.action_tags.off_hand')})`;
+				} else if (this.tag == 10610) {
+					// Windfury Totem's swings, tagged with 10610, the spell that grants them.
+					name += ` (${i18n.t('common.action_tags.windfury')})`;
 				} else if (this.tag == 99999) {
-					name += ' (Boss)';
+					name += ` (${i18n.t('common.action_tags.boss')})`;
 				} else if (this.tag == 99998) {
-					name += ' (Add)';
+					name += ` (${i18n.t('common.action_tags.add')})`;
 				} else if (this.tag == 100000) {
-					name += ' (Custom Boss)';
+					name += ` (${i18n.t('common.action_tags.custom_boss')})`;
 				} else if (this.tag == 100000 + 1) {
-					name += ' (Custom Boss) - Thrash';
+					name += ` (${i18n.t('common.action_tags.custom_boss')}) - ${i18n.t('common.action_tags.thrash')}`;
 				}
 				break;
 			case OtherAction.OtherActionShoot:
-				name = 'Shoot';
+				name = i18n.t('common.action_names.shoot');
 				iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/ability_marksmanship.jpg';
 				break;
 			case OtherAction.OtherActionPet:
 				break;
 			case OtherAction.OtherActionRefund:
-				baseName = 'Refund';
+				baseName = i18n.t('common.action_names.refund');
 				iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_misc_coin_01.jpg';
 				break;
 			case OtherAction.OtherActionDamageTaken:
-				baseName = 'Damage Taken';
+				baseName = i18n.t('results_tab.details.columns.damage_taken');
 				iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_sword_04.jpg';
 				break;
 			case OtherAction.OtherActionHealingModel:
-				baseName = 'Incoming HPS';
+				baseName = i18n.t('settings_tab.other.incoming_hps.label');
 				iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/spell_holy_renew.jpg';
 				break;
-			case OtherAction.OtherActionPotion:
-				baseName = 'Potion';
+			case OtherAction.OtherActionResourcePotion:
+				baseName = i18n.t('settings_tab.consumables.potions.resource');
+				iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_potion_76.jpg';
+				break;
+			case OtherAction.OtherActionDefensivePotion:
+				baseName = i18n.t('settings_tab.consumables.potions.defensive');
+				iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_potion_69.jpg';
+				break;
+			case OtherAction.OtherActionOffensivePotion:
+				baseName = i18n.t('settings_tab.consumables.potions.offensive');
 				iconUrl = 'https://wow.zamimg.com/images/wow/icons/large/inv_alchemy_elixir_04.jpg';
 				break;
 			case OtherAction.OtherActionMove:
-				baseName = 'Moving';
+				baseName = i18n.t('common.action_names.moving');
 				iconUrl = 'https://wow.zamimg.com/images/wow/icons/medium/inv_boots_cloth_03.jpg';
 				break;
 			case OtherAction.OtherActionPrepull:
-				baseName = 'Prepull';
+				baseName = i18n.t('common.action_names.prepull');
 				iconUrl = 'https://wow.zamimg.com/images/wow/icons/medium/inv_misc_pocketwatch_02.jpg';
 				break;
 			case OtherAction.OtherActionEncounterStart:
-				baseName = 'Encounter Start';
+				baseName = i18n.t('common.action_names.encounter_start');
 				iconUrl = 'https://wow.zamimg.com/images/wow/icons/medium/achievement_faction_elders.jpg';
 				break;
 			case OtherAction.OtherActionItemSwap:
-				baseName = 'Item Swap: ';
-				if (this.tag == APLActionItemSwap_SwapSet.Main) {
-					baseName += 'Main';
-				} else {
-					baseName += 'Swapped';
-				}
+				baseName =
+					this.tag == APLActionItemSwap_SwapSet.Main ? i18n.t('common.action_names.item_swap_main') : i18n.t('common.action_names.item_swap_swapped');
 				iconUrl = 'https://wow.zamimg.com/images/wow/icons/medium/ability_dualwield.jpg';
 				break;
 		}
 		this.baseName = baseName ?? '';
 		this.name = (name || baseName) ?? '';
 		this.iconUrl = iconUrl ?? '';
-		if (this.name) this.name += this.rank ? ` (Rank ${this.rank})` : '';
+		if (this.name) this.name += this.rank ? ` (${i18n.t('common.action_tags.rank', { rank: this.rank })})` : '';
 		this.spellIdTooltipOverride = this.spellTooltipOverride?.spellId || null;
 	}
 
@@ -215,7 +203,7 @@ export class ActionId {
 	static makeItemUrl(id: number, randomSuffixId?: number): string {
 		const url = new URL(wowheadEntityUrl('item', id));
 		url.searchParams.set('level', String(CHARACTER_LEVEL));
-		url.searchParams.set('rand', String(randomSuffixId || 0));
+		if (randomSuffixId) url.searchParams.set('bonus', String(randomSuffixId));
 		return url.toString();
 	}
 	static makeSpellUrl(id: number, rank = 0, definitionId = 0): string {
@@ -233,13 +221,37 @@ export class ActionId {
 	static makeNpcUrl(id: number): string {
 		return wowheadEntityUrl('npc', id);
 	}
+	static makeFactionUrl(id: number): string {
+		return wowheadEntityUrl('faction', id);
+	}
 	static makeZoneUrl(id: number): string {
 		return wowheadEntityUrl('zone', id);
+	}
+
+	// An extra attack is a main-hand swing tagged with the spell that granted it, so its name comes
+	// from that spell rather than from a list kept by hand. A tag no spell answers keeps the bare name,
+	// and is remembered so it is not asked for again on every fill.
+	private static readonly extraAttackNames = new Map<number, Promise<string>>();
+	private async fillExtraAttack(): Promise<ActionId> {
+		let spellName = ActionId.extraAttackNames.get(this.tag);
+		if (!spellName) {
+			spellName = Database.getSpellIconData(this.tag).then(
+				data => data.name,
+				() => '',
+			);
+			ActionId.extraAttackNames.set(this.tag, spellName);
+		}
+		const name = await spellName;
+		if (!name) return this;
+		return new ActionId({ otherId: this.otherId, tag: this.tag, name: `${i18n.t('common.action_names.attack')} (${name})`, iconUrl: this.iconUrl });
 	}
 
 	// Returns an ActionId with the name and iconUrl fields filled.
 	// playerIndex is the optional index of the player to whom this ID corresponds.
 	async fill(playerIndex?: number): Promise<ActionId> {
+		if (this.otherId == OtherAction.OtherActionAttack && this.name == i18n.t('common.action_names.attack') && this.tag > 2) {
+			return this.fillExtraAttack();
+		}
 		if (this.name || this.iconUrl) {
 			return this;
 		}
@@ -256,154 +268,144 @@ export class ActionId {
 
 		switch (baseName) {
 			case 'Minor Speed':
-				name = 'Minor Run Speed (8%)';
+				name = i18n.t('common.action_names.minor_run_speed');
 				break;
 			case 'Arcane Missiles':
 				break;
 			case 'Arcane Blast':
 				if (tag == 1) {
-					name += ' (No Stacks)';
+					name += ` (${i18n.t('common.action_tags.no_stacks')})`;
 				} else if (tag == 2) {
-					name += ` (1 Stack)`;
+					name += ` (${i18n.t('common.action_tags.one_stack')})`;
 				} else if (tag > 2) {
-					name += ` (${tag - 1} Stacks)`;
+					name += ` (${i18n.t('common.action_tags.stacks', { stacks: tag - 1 })})`;
 				}
 				break;
 			case 'Hot Streak':
-				if (tag) name += ' (Crits)';
+				if (tag) name += ` (${i18n.t('common.action_tags.crits')})`;
 				break;
 			case 'Fireball':
 			case 'Flamestrike':
-				if (tag == 1) name += ' (Blast Wave)';
-				break;
+			case 'Frostfire Bolt':
 			case 'Pyroblast':
 			case 'Combustion':
-				if (tag) name += ' (DoT)';
+				if (tag) name += ` (${i18n.t('common.action_tags.dot')})`;
 				break;
 			case 'Evocation':
 				if (tag == 1) {
-					name += ' (1 Tick)';
+					name += ` (${i18n.t('common.action_tags.ticks', { ticks: 1 })})`;
 				} else if (tag == 2) {
-					name += ' (2 Tick)';
+					name += ` (${i18n.t('common.action_tags.ticks', { ticks: 2 })})`;
 				} else if (tag == 3) {
-					name += ' (3 Tick)';
+					name += ` (${i18n.t('common.action_tags.ticks', { ticks: 3 })})`;
 				} else if (tag == 4) {
-					name += ' (4 Tick)';
+					name += ` (${i18n.t('common.action_tags.ticks', { ticks: 4 })})`;
 				} else if (tag == 5) {
-					name += ' (5 Tick)';
+					name += ` (${i18n.t('common.action_tags.ticks', { ticks: 5 })})`;
 				}
 				break;
 			case 'Mind Flay':
 				if (tag == 1) {
-					name += ' (1 Tick)';
+					name += ` (${i18n.t('common.action_tags.ticks', { ticks: 1 })})`;
 				} else if (tag == 2) {
-					name += ' (2 Tick)';
+					name += ` (${i18n.t('common.action_tags.ticks', { ticks: 2 })})`;
 				} else if (tag == 3) {
-					name += ' (3 Tick)';
+					name += ` (${i18n.t('common.action_tags.ticks', { ticks: 3 })})`;
 				}
 				break;
 			case 'Mind Sear':
 				if (tag == 1) {
-					name += ' (1 Tick)';
+					name += ` (${i18n.t('common.action_tags.ticks', { ticks: 1 })})`;
 				} else if (tag == 2) {
-					name += ' (2 Tick)';
+					name += ` (${i18n.t('common.action_tags.ticks', { ticks: 2 })})`;
 				} else if (tag == 3) {
-					name += ' (3 Tick)';
+					name += ` (${i18n.t('common.action_tags.ticks', { ticks: 3 })})`;
 				} else if (tag == 77486) {
-					name += ' (Mastery)';
+					name += ` (${i18n.t('common.action_tags.mastery')})`;
 				}
 
+				break;
+			case 'Shoot':
+				if (tag == 1) name += ` (${i18n.t('common.action_tags.shot')})`;
 				break;
 			case 'Envenom':
 			case 'Eviscerate':
 			case 'Rupture':
 			case 'Slice and Dice':
 			case 'Expose Armor':
-				if (tag) name += ` (${tag} CP)`;
+				if (tag) name += ` (${i18n.t('common.action_tags.combo_points', { points: tag })})`;
 				break;
 			case 'Crimson Tempest':
 				if (tag == 7) {
-					name += ' (DoT)';
+					name += ` (${i18n.t('common.action_tags.dot')})`;
 				} else if (tag) {
-					name += ` (${tag} CP)`;
+					name += ` (${i18n.t('common.action_tags.combo_points', { points: tag })})`;
 				}
 				break;
-			case 'Deadly Poison VII':
 			case 'Wound Poison':
-			case 'Instant Poison VII':
 				if (tag == 1) {
-					name += ' (Shiv)';
-				}
-				break;
-			case 'Shadow Blades':
-				if (tag == 1) {
-					name = 'Shadow Blade';
-				} else if (tag == 2) {
-					name = 'Shadow Blade Off-hand';
+					name += ` (${i18n.t('common.action_tags.shiv')})`;
 				}
 				break;
 			case 'Bladestorm':
-			case 'Killing Spree':
 				if (tag == 1) {
-					name += ' (Main Hand)';
+					name += ` (${i18n.t('common.action_tags.main_hand')})`;
 				} else if (tag == 2) {
-					name += ' (Off Hand)';
-				}
-				break;
-			case 'Tricks of the Trade':
-				if (tag == 1) {
-					name += ' (Not Self)';
+					name += ` (${i18n.t('common.action_tags.off_hand')})`;
 				}
 				break;
 			case 'Mutilate':
 				if (tag == 0) {
-					name += ' (Cast)';
+					name += ` (${i18n.t('common.action_tags.cast')})`;
 				} else if (tag == 1) {
-					name += ' (Main Hand)';
+					name += ` (${i18n.t('common.action_tags.main_hand')})`;
 				} else if (tag == 2) {
-					name += ' (Off Hand)';
+					name += ` (${i18n.t('common.action_tags.off_hand')})`;
 				}
 				break;
-			case 'Wind Lash':
 			case 'Stormstrike':
-			case 'Stormblast':
 				if (tag == 0) {
-					name += ' (Cast)';
+					name += ` (${i18n.t('common.action_tags.cast')})`;
 				} else if (tag == 1) {
-					name += ' (Main Hand)';
+					name += ` (${i18n.t('common.action_tags.main_hand')})`;
 				} else if (tag == 2) {
-					name += ' (Off Hand)';
+					name += ` (${i18n.t('common.action_tags.off_hand')})`;
 				}
 				break;
 			case 'Chain Lightning':
 			case 'Lightning Bolt':
 			case 'Lava Burst':
 				if (tag == 6) {
-					name += ' (Overload)';
+					name += ` (${i18n.t('common.action_tags.overload')})`;
 				} else if (tag == 7) {
-					name += ' (Echo)';
+					name += ` (${i18n.t('common.action_tags.echo')})`;
 				} else if (tag == 8) {
-					name += ' (Echo Overload)';
+					name += ` (${i18n.t('common.action_tags.echo_overload')})`;
 				} else if (tag == 9) {
-					name += ' (Mastery)';
+					name += ` (${i18n.t('common.action_tags.mastery')})`;
 				} else if (tag == 10) {
-					name += ' (Haste)';
+					name += ` (${i18n.t('common.action_tags.haste')})`;
 				} else if (tag == 11) {
-					name += ' (Crit)';
+					name += ` (${i18n.t('common.action_tags.crit')})`;
 				} else if (tag == 12) {
-					name += ' (Agi)';
+					name += ` (${i18n.t('common.action_tags.agi')})`;
 				} else if (tag) {
-					name += ` (${tag} MW)`;
+					name += ` (${i18n.t('common.action_tags.maelstrom_weapon', { stacks: tag })})`;
 				}
 				break;
 			case 'Flame Shock':
 			case 'Earth Shock':
 			case 'Frost Shock':
-			case 'Fire Nova':
 				if (tag == 1) {
-					name += ' (DoT)';
+					name += ` (${i18n.t('common.action_tags.dot')})`;
 				} else if (tag == 7) {
-					name += ' (Echo)';
+					name += ` (${i18n.t('common.action_tags.echo')})`;
+				}
+				break;
+			case 'Fire Nova':
+				// The cast's hits report under its spell, tagged 1, so they share its row.
+				if (tag === 1) {
+					name += ` (${i18n.t('common.action_tags.damage')})`;
 				}
 				break;
 			case 'Fulmination':
@@ -411,35 +413,28 @@ export class ActionId {
 				break;
 			case 'Lightning Shield':
 				if (tag == 1) {
-					name += ' (Wasted)';
-				}
-				break;
-			case 'Windfury Totem Effect':
-				if (tag == 1) {
-					name += ' (Party Weapon Buff)';
+					name += ` (${i18n.t('common.action_tags.wasted')})`;
 				}
 				break;
 			case 'Moonfire':
 			case 'Sunfire':
 				if (tag == 1) {
-					name += ' (DoT)';
+					name += ` (${i18n.t('common.action_tags.dot')})`;
 				}
 				break;
 			// For targetted buffs, tag is the source player's raid index or -1 if none.
 			case 'Innervate':
-			case 'Focus Magic':
 			case 'Mana Tide Totem':
-			case 'Stormlash Totem':
 			case 'Unholy Frenzy':
 			case 'Power Infusion':
 				if (tag != -1) {
 					if (tag === playerIndex || playerIndex == undefined) {
-						name += ` (self)`;
+						name += ` (${i18n.t('common.action_tags.self')})`;
 					} else {
-						name += ` (from #${tag + 1})`;
+						name += ` (${i18n.t('common.action_tags.from_player', { number: tag + 1 })})`;
 					}
 				} else {
-					name += ' (raid)';
+					name += ` (${i18n.t('common.action_tags.raid')})`;
 				}
 				break;
 			case 'Berserking':
@@ -447,127 +442,85 @@ export class ActionId {
 					name += ` (${10 + (tag - 1) * 5}%)`;
 				}
 				break;
-			case 'Elemental Mastery':
-				if (this.spellId === 64701) {
-					name = `${name} (Buff)`;
-				} else {
-					name = `${name} (Instant)`;
-				}
-				break;
 			case 'Whirlwind':
 			case 'Windfury Weapon':
 			case 'Enchant Weapon - Crusader':
 				if (tag == 1) {
-					name += ' (Main Hand)';
+					name += ` (${i18n.t('common.action_tags.main_hand')})`;
 				} else if (tag == 2) {
-					name += ' (Off Hand)';
+					name += ` (${i18n.t('common.action_tags.off_hand')})`;
 				}
 				break;
 			case 'Heroic Strike':
 			case 'Cleave':
 			case 'Maul':
 				if (tag == 1) {
-					name += ' (Queue)';
+					name += ` (${i18n.t('common.action_tags.queue')})`;
 				}
 				break;
 			case 'Sweeping Strikes':
 				if (tag == 1) {
-					name += ' (Normalized)';
+					name += ` (${i18n.t('common.action_tags.normalized')})`;
 				}
 				break;
 			case 'Sunder Armor':
 				if (tag == 1) {
-					name += ' (Devastate)';
+					name += ` (${i18n.t('common.action_tags.devastate')})`;
 				}
 				break;
 			case 'Improved Berserker Rage':
 			case 'Improved Overpower':
 				name += ` (${tag}/2)`;
 				break;
-			case 'Seed of Corruption':
-				if (tag == 0) {
-					name += ' (DoT)';
-				} else if (tag == 1) {
-					name += ' (Instant)';
-				} else if (tag == 2) {
-					name += ' (Explosion)';
-				}
-				break;
-			case 'Improved Corruption and Immolate':
-				if (this.spellId === 37380) {
-					name = 'T4 4PC';
-				} else if (this.spellId === 37384) {
-					name = 'T5 4PC';
-				}
-				break;
-			case 'Improved Shadow Bolt and Incinerate':
-				if (this.spellId === 38393) {
-					name = 'T6 4PC';
-				}
-				break;
 			case 'Thunderfury':
 				if (tag == 1) {
-					name += ' (ST)';
+					name += ` (${i18n.t('common.action_tags.single_target')})`;
 				} else if (tag == 2) {
-					name += ' (MT)';
+					name += ` (${i18n.t('common.action_tags.multi_target')})`;
 				}
 				break;
 			case 'Devouring Plague':
 				if (tag == 1) {
-					name += ' (DoT)';
+					name += ` (${i18n.t('common.action_tags.dot')})`;
 					break;
 				} else if (tag == 2) {
-					name += ' (Heal)';
+					name += ` (${i18n.t('common.action_tags.heal')})`;
 					break;
 				}
 				if (tag == 77486) {
-					name += ' (Mastery)';
+					name += ` (${i18n.t('common.action_tags.mastery')})`;
 					break;
 				}
 			case 'Shadow Word: Death':
 				if (tag == 1) {
-					name += ' (No Orb)';
+					name += ` (${i18n.t('common.action_tags.no_orb')})`;
 				}
 			case 'Shadowfiend':
 				if (tag == 1) {
-					name += ' (Mana Restore)';
-				}
-			case 'Steady Focus':
-				if (tag == 2) {
-					name += ' (pre)';
+					name += ` (${i18n.t('common.action_tags.mana_restore')})`;
 				}
 				break;
 			case 'Immolate':
 				if (tag == 1) {
-					name += ' (DoT)';
-				}
-				break;
-			case 'Enchant Weapon - Mongoose':
-				if (tag == 1) {
-					name += ' (Main Hand)';
-				} else if (tag == 2) {
-					name += ' (Off Hand)';
-				} else if (tag == 3) {
-					name += ' (Spell)';
+					name += ` (${i18n.t('common.action_tags.dot')})`;
 				}
 				break;
 			case 'Vampiric Touch':
 			case 'Shadow Word: Pain':
 				if (tag == 77486) {
-					name += ' (Mastery)';
+					name += ` (${i18n.t('common.action_tags.mastery')})`;
 				}
 
 				break;
-			case 'Agony':
 			case 'Unstable Affliction':
 			case 'Corruption':
 				if (tag == 1) {
-					name += ' (Malefic)';
+					name += ` (${i18n.t('common.action_tags.malefic')})`;
 				}
 				break;
 			case 'Raptor Strike':
 				if (tag == 2) {
-					name += ' (Cooldown)';
+					name += ` (${i18n.t('common.action_tags.cooldown')})`;
 				}
 				break;
 			case 'Retribution Aura':
@@ -577,23 +530,54 @@ export class ActionId {
 				// player's own copy, tag 1 the copy an outside caster provides, and that copy's
 				// aura is the tag -1 this case names below.
 				if (tag === 1 || tag === 2) {
-					name += ' (Hit)';
+					name += ` (${i18n.t('common.action_tags.hit')})`;
 				} else if (tag === -1) {
-					name += ' (External)';
+					name += ` (${i18n.t('common.action_tags.external')})`;
+				}
+				break;
+			case 'Searing Totem':
+			case 'Magma Totem':
+			case 'Flametongue Totem':
+				// A totem's hits report under the totem's spell, tagged 1, so they share its row.
+				if (tag === 1) {
+					name += ` (${i18n.t('common.action_names.attack')})`;
+				} else if (tag === -1) {
+					name += ` (${i18n.t('common.action_tags.external')})`;
 				}
 				break;
 			case 'Dummy Spell':
 				if (tag === 100000) {
-					['Arcane', 'Fire', 'Frost', 'Holy', 'Shadow', 'Nature'].forEach((school, index) => {
+					[
+						i18n.t('common.spell_schools.arcane'),
+						i18n.t('common.spell_schools.fire'),
+						i18n.t('common.spell_schools.frost'),
+						i18n.t('common.spell_schools.holy'),
+						i18n.t('common.spell_schools.shadow'),
+						i18n.t('common.spell_schools.nature'),
+					].forEach((school, index) => {
 						if (tag === 100000 + index) {
 							name += ` (${school})`;
 						}
 					});
 				}
 				break;
+			case 'Penance':
+				if (tag === 1) {
+					name += ' (Heal)';
+				}
+				break;
+			case 'Hack and Slash':
+				if (tag == 1) {
+					name += ' (Axe/Sword)';
+				} else if (tag == 2) {
+					name += ' (Fist/Dagger)';
+				} else if (tag == 3) {
+					name += ' (Mace)';
+				}
+				break;
 			default:
 				if (tag === -1) {
-					name += ' (External)';
+					name += ` (${i18n.t('common.action_tags.external')})`;
 				} else if (tag) {
 					name += ' (??)';
 				}
@@ -680,6 +664,20 @@ export class ActionId {
 			iconUrl: this.iconUrl,
 			randomSuffixId: this.randomSuffixId,
 			rank: this.rank,
+		});
+	}
+
+	withoutRank(): ActionId {
+		return new ActionId({
+			itemId: this.itemId,
+			spellId: this.spellId,
+			otherId: this.otherId,
+			tag: this.tag,
+			baseName: this.baseName,
+			name: this.nameWithoutRank,
+			iconUrl: this.iconUrl,
+			randomSuffixId: this.randomSuffixId,
+			definitionId: this.definitionId,
 		});
 	}
 
@@ -818,7 +816,7 @@ export class ActionId {
 	}
 
 	get nameWithoutRank(): string {
-		return this.name.replace(/ \(Rank \d+\)/g, '');
+		return this.name.replace(rankSuffixPattern(), '');
 	}
 
 	get hasRank(): boolean {
@@ -826,23 +824,20 @@ export class ActionId {
 	}
 }
 
+// Matches the " (Rank N)" suffix the constructor appends, in the current locale's wording.
+const rankSuffixPattern = (): RegExp => {
+	const [before, after] = i18n.t('common.action_tags.rank', { rank: '\u0000' }).split('\u0000');
+	const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	const rank = after === undefined ? escape(before) : `${escape(before)}\\d+${escape(after)}`;
+	return new RegExp(` \\(${rank}\\)`, 'g');
+};
+
 type ActionIdOverride = { itemId?: number; spellId?: number };
 
 // Some items/spells have weird icons, so use this to show a different icon instead.
-const spellIdIconOverrides: Map<string, ActionIdOverride> = new Map([
-	[JSON.stringify({ spellId: 37212 }), { itemId: 29035 }], // Improved Wrath of Air Totem
-	[JSON.stringify({ spellId: 37223 }), { itemId: 29040 }], // Improved Strength of Earth Totem
-	[JSON.stringify({ spellId: 37447 }), { itemId: 30720 }], // Serpent-Coil Braid
-]);
+const spellIdIconOverrides: Map<string, ActionIdOverride> = new Map();
 
 const spellIdTooltipOverrides: Map<string, ActionIdOverride> = new Map([
-	[JSON.stringify({ spellId: 2818, tag: 2 }), { spellId: 113780 }], // Rogue - Deadly Poison - Hit
-
-	// Off-Hand attacks
-	[JSON.stringify({ spellId: 1329, tag: 2 }), { spellId: 27576 }], // Rogue - Mutilate Off-Hand
-	[JSON.stringify({ spellId: 17364, tag: 2 }), { spellId: 32176 }], // Shaman - Stormstrike Off-Hand
-	[JSON.stringify({ spellId: 1680, tag: 2 }), { spellId: 44949 }], // Warrior - Whirlwind Off-Hand
-
 	// Warrior
 	[JSON.stringify({ spellId: 12723, tag: 1 }), { spellId: 26654 }], // Sweeping Strikes (Normalized)
 ]);
@@ -850,102 +845,49 @@ const spellIdTooltipOverrides: Map<string, ActionIdOverride> = new Map([
 export const defaultTargetIcon = 'https://wow.zamimg.com/images/wow/icons/large/spell_shadow_metamorphosis.jpg';
 
 const petNameToActionId: Record<string, ActionId> = {
-	'Ancient Guardian': ActionId.fromSpellId(86698),
-	'Army of the Dead': ActionId.fromSpellId(42650),
-	Bloodworm: ActionId.fromSpellId(50452),
-	'Dire Beast Pet': ActionId.fromSpellId(120679),
-	Stampede: ActionId.fromSpellId(121818),
-	'Fallen Zandalari': ActionId.fromSpellId(138342),
-	'Flame Orb': ActionId.fromSpellId(82731),
-	'Frozen Orb': ActionId.fromSpellId(84721),
-	Gargoyle: ActionId.fromSpellId(49206),
-	Ghoul: ActionId.fromSpellId(46584),
-	'Greater Earth Elemental': ActionId.fromSpellId(2062),
-	'Greater Fire Elemental': ActionId.fromSpellId(2894),
-	'Primal Earth Elemental': ActionId.fromSpellId(2062),
-	'Primal Fire Elemental': ActionId.fromSpellId(2894),
-	'Mirror Image': ActionId.fromSpellId(55342),
 	Shadowfiend: ActionId.fromSpellId(34433),
-	Mindbender: ActionId.fromSpellId(123040),
-	'Spirit Wolf 1': ActionId.fromSpellId(51533),
-	'Spirit Wolf 2': ActionId.fromSpellId(51533),
-	Valkyr: ActionId.fromSpellId(71844),
-	'Tentacle of the Old Ones': ActionId.fromSpellId(107818),
-	Treant: ActionId.fromSpellId(33831),
-	'Water Elemental': ActionId.fromSpellId(31687),
 	Felhunter: ActionId.fromSpellId(691),
 	Imp: ActionId.fromSpellId(688),
 	Succubus: ActionId.fromSpellId(712),
 	Voidwalker: ActionId.fromSpellId(697),
 	Doomguard: ActionId.fromSpellId(18540),
 	Infernal: ActionId.fromSpellId(1122),
-	'Fel Imp': ActionId.fromSpellId(112866),
-	Shivarra: ActionId.fromSpellId(112868),
-	Observer: ActionId.fromSpellId(112869),
-	Voidlord: ActionId.fromSpellId(112867),
-	Terrorguard: ActionId.fromSpellId(112927),
-	Abyssal: ActionId.fromSpellId(112921),
-	'Grimoire: Imp': ActionId.fromSpellId(111859),
-	'Grimoire: Voidwalker': ActionId.fromSpellId(111895),
-	'Grimoire: Felhunter': ActionId.fromSpellId(111897),
-	'Grimoire: Succubus': ActionId.fromSpellId(111896),
-	Felguard: ActionId.fromSpellId(30146),
-	'Wild Imp': ActionId.fromSpellId(114592),
-	'Grimoire: Felguard': ActionId.fromSpellId(111898),
-	Wrathguard: ActionId.fromSpellId(112870),
-	'Xuen, The White Tiger': ActionId.fromSpellId(123904),
-	'Earth Spirit': ActionId.fromSpellId(138121),
-	'Storm Spirit': ActionId.fromSpellId(138122),
-	'Fire Spirit': ActionId.fromSpellId(138123),
+};
+
+// The owner's spell a pet is summoned by, for a pet the results list under that spell.
+export const petNameToSummonSpell: Record<string, string> = {
+	'Hawk 1': 'Summon Hawk',
+	'Hawk 2': 'Summon Hawk',
 };
 
 // https://wowhead.com/forever/hunter-pets
 const petNameToIcon: Record<string, string> = {
+	'Hawk 1': 'https://wow.zamimg.com/images/wow/icons/medium/spell_nature_ravenform.jpg',
+	'Hawk 2': 'https://wow.zamimg.com/images/wow/icons/medium/spell_nature_ravenform.jpg',
 	Bat: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_bat.jpg',
 	Bear: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_bear.jpg',
 	'Bird of Prey': 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_owl.jpg',
 	Boar: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_boar.jpg',
-	'Burning Treant': 'https://wow.zamimg.com/images/wow/icons/large/ability_druid_forceofnature.jpg',
 	'Carrion Bird': 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_vulture.jpg',
 	Cat: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_cat.jpg',
-	Chimaera: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_chimera.jpg',
 	'Core Hound': 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_corehound.jpg',
 	Crab: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_crab.jpg',
-	Crocolisk: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_crocolisk.jpg',
-	Devilsaur: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_devilsaur.jpg',
-	Dragonhawk: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_dragonhawk.jpg',
-	'Fallen Zandalari': 'https://wow.zamimg.com/images/wow/icons/large/spell_shadow_animatedead.jpg',
+	Crocilisk: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_crocolisk.jpg',
 	Felguard: 'https://wow.zamimg.com/images/wow/icons/large/spell_shadow_summonfelguard.jpg',
 	Felhunter: 'https://wow.zamimg.com/images/wow/icons/large/spell_shadow_summonfelhunter.jpg',
 	Infernal: 'https://wow.zamimg.com/images/wow/icons/large/spell_shadow_summoninfernal.jpg',
 	Doomguard: 'https://wow.zamimg.com/images/wow/icons/large/warlock_summon_doomguard.jpg',
-	'Ebon Imp': 'https://wow.zamimg.com/images/wow/icons/large/spell_nature_removecurse.jpg',
-	'Fiery Imp': 'https://wow.zamimg.com/images/wow/icons/large/ability_warlock_empoweredimp.jpg',
 	Gorilla: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_gorilla.jpg',
 	Hyena: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_hyena.jpg',
 	Imp: 'https://wow.zamimg.com/images/wow/icons/large/spell_shadow_summonimp.jpg',
-	Moth: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_moth.jpg',
-	'Nether Ray': 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_netherray.jpg',
-	Owl: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_owl.jpg',
 	Raptor: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_raptor.jpg',
-	Ravager: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_ravager.jpg',
-	Rhino: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_rhino.jpg',
 	Scorpid: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_scorpid.jpg',
-	Serpent: 'https://wow.zamimg.com/images/wow/icons/medium/spell_nature_guardianward.jpg',
-	Silithid: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_silithid.jpg',
 	Spider: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_spider.jpg',
-	'Shale Spider': 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_spider.jpg',
-	'Spirit Beast': 'https://wow.zamimg.com/images/wow/icons/medium/ability_druid_primalprecision.jpg',
-	'Spore Bat': 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_sporebat.jpg',
 	Succubus: 'https://wow.zamimg.com/images/wow/icons/large/spell_shadow_summonsuccubus.jpg',
 	Tallstrider: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_tallstrider.jpg',
-	Thunderhawk: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_windserpent.jpg',
 	Turtle: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_turtle.jpg',
-	'Warp Stalker': 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_warpstalker.jpg',
-	Wasp: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_wasp.jpg',
 	'Wind Serpent': 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_windserpent.jpg',
 	Wolf: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_wolf.jpg',
-	Worm: 'https://wow.zamimg.com/images/wow/icons/medium/ability_hunter_pet_worm.jpg',
 	Fox: 'https://wow.zamimg.com/images/wow/icons/medium/inv_misc_monstertail_07.jpg',
 };
 
@@ -966,6 +908,5 @@ export const resourceTypeToIcon: Record<ResourceType, string> = {
 
 // Use this to connect a buff row to a cast row in the timeline view
 export const buffAuraToSpellIdMap: Record<number, ActionId> = {
-	34471: ActionId.fromSpellId(19574), // Bestial Wrath -> The Beast Within
-	37198: ActionId.fromItemId(30447), // Blessing of Righteousness -> Tome of Fiery Redemption
+	15036: ActionId.fromSpellId(16387), // The party's Flametongue Totem, on the row of the totem's strikes
 };

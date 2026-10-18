@@ -1,4 +1,5 @@
 import { PseudoStat, Stat } from '@generated/proto/common';
+import i18n from '@i18n/config';
 import { UnitStat } from '@sim/proto/stats';
 
 import type { ExporterDefinition } from './types';
@@ -11,15 +12,16 @@ const STAT_NAMES: Record<Stat, string> = {
 	[Stat.StatSpirit]: 'spirit',
 	[Stat.StatMP5]: 'mp5',
 	[Stat.StatAttackPower]: 'attackPower',
-	[Stat.StatExpertiseRating]: 'expertiseRating',
+	[Stat.StatExpertiseRating]: 'expertise',
 	[Stat.StatMana]: 'mana',
 	[Stat.StatArmor]: 'armor',
 	[Stat.StatRangedAttackPower]: 'attackPower',
-	[Stat.StatDodgeRating]: 'dodgeRating',
-	[Stat.StatParryRating]: 'parryRating',
+	[Stat.StatDodgeRating]: 'dodge',
+	[Stat.StatParryRating]: 'parry',
 	[Stat.StatHealth]: 'health',
 	[Stat.StatBonusArmor]: 'armorBonus',
-	[Stat.StatHealingPower]: 'healingPower',
+	[Stat.StatArmorNoMods]: '',
+	[Stat.StatHealingPower]: 'healing',
 	[Stat.StatSpellDamage]: 'spellDamage',
 	[Stat.StatArcaneDamage]: 'arcaneDamage',
 	[Stat.StatFireDamage]: 'fireDamage',
@@ -28,23 +30,20 @@ const STAT_NAMES: Record<Stat, string> = {
 	[Stat.StatNatureDamage]: 'natureDamage',
 	[Stat.StatShadowDamage]: 'shadowDamage',
 	[Stat.StatPhysicalDamage]: 'physicalDamage',
-	[Stat.StatSpellHitRating]: 'spellHitRating',
-	[Stat.StatSpellCritRating]: 'spellCritRating',
-	[Stat.StatSpellHasteRating]: 'spellHasteRating',
-	[Stat.StatSpellPiercing]: 'spellPenetration',
+	[Stat.StatHitRating]: 'hit',
+	[Stat.StatCritRating]: 'crit',
+	[Stat.StatHasteRating]: 'haste',
+	[Stat.StatSpellPiercing]: 'spellPen',
 	[Stat.StatFeralAttackPower]: '',
-	[Stat.StatMeleeHitRating]: 'hitRating',
-	[Stat.StatMeleeCritRating]: 'critRating',
-	[Stat.StatMeleeHasteRating]: 'hasteRating',
-	[Stat.StatArmorPenetration]: 'armorPen',
+	[Stat.StatArmorPenetration]: '',
 	[Stat.StatDefenseRating]: 'defense',
 	[Stat.StatBlockRating]: 'block',
 	[Stat.StatBlockValue]: 'blockValueBonus',
-	[Stat.StatArcaneResistance]: 'arcaneResistance',
-	[Stat.StatFireResistance]: 'fireResistance',
-	[Stat.StatFrostResistance]: 'frostResistance',
-	[Stat.StatNatureResistance]: 'natureResistance',
-	[Stat.StatShadowResistance]: 'shadowResistance',
+	[Stat.StatArcaneResistance]: 'arcaneResist',
+	[Stat.StatFireResistance]: 'fireResist',
+	[Stat.StatFrostResistance]: 'frostResist',
+	[Stat.StatNatureResistance]: 'natureResist',
+	[Stat.StatShadowResistance]: 'shadowResist',
 };
 
 const PSEUDO_STAT_NAMES: Partial<Record<PseudoStat, string>> = {
@@ -54,8 +53,12 @@ const PSEUDO_STAT_NAMES: Partial<Record<PseudoStat, string>> = {
 
 const getName = (stat: UnitStat): string => (stat.isStat() ? STAT_NAMES[stat.getStat()] : (PSEUDO_STAT_NAMES[stat.getPseudoStat()] ?? ''));
 
+// Sixty Upgrades takes the ratings as a percent chance, so a per-rating weight is scaled to per-percent.
+// Its Forever mode has one hit and one crit that cover melee, ranged and spells, as the rating does.
+const getScale = (stat: UnitStat): number => (stat.isStat() ? (stat.convertPercentToRating(1) ?? 1) : 1);
+
 export const SIXTY_UPGRADES_EP_EXPORTER: ExporterDefinition = {
-	title: 'Sixty Upgrades EP Export',
+	title: i18n.t('export.sixty_upgrades_ep.title'),
 	allowDownload: true,
 	getData: host => {
 		const player = host.player;
@@ -65,7 +68,7 @@ export const SIXTY_UPGRADES_EP_EXPORTER: ExporterDefinition = {
 		const namesToWeights: Record<string, number> = {};
 		allUnitStats.forEach(stat => {
 			const statName = getName(stat);
-			const weight = epValues.getUnitStat(stat);
+			const weight = epValues.getUnitStat(stat) * getScale(stat);
 			if (weight == 0 || statName == '') {
 				return;
 			}
@@ -78,7 +81,7 @@ export const SIXTY_UPGRADES_EP_EXPORTER: ExporterDefinition = {
 		});
 
 		return (
-			`https://sixtyupgrades.com/tbc/ep/import?name=${encodeURIComponent(`${player.getPlayerSpec().friendlyName} Forever Sim Weights`)}` +
+			`https://sixtyupgrades.com/forever/ep/import?name=${encodeURIComponent(`${player.getPlayerSpec().friendlyName} WoWSims Weights`)}` +
 			Object.keys(namesToWeights)
 				.map(statName => `&${statName}=${namesToWeights[statName].toFixed(3)}`)
 				.join('')

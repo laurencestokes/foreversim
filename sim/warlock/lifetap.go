@@ -2,53 +2,41 @@ package warlock
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-// Life Tap is a plain mana gain, not damage: 11689 converts ($m1 (424) + Spirit) * (1 + Improved
-// Life Tap 18182) health into as much mana (the build 70009 tooltip states both sides that way), so
-// no damage done / taken modifier touches either side. The client flags every rank No Threat
-// (1.60.1.70205 SpellMisc Attributes[1] 0x400), so the mana adds no threat, the pet's share neither. Demonic Energies hands the pet a share of the restore (the talent's second effect,
-// 50% per point).
+// Converts the row's amount + Spirit of health into as much mana, 1:1, with Improved Life Tap raising
+// the mana alone.
+// Improved Life Tap's row is a dummy only this formula reads, so the talent is read here rather than parsed.
 func (warlock *Warlock) registerLifeTap() {
-	rank := spellData.LifeTap.Highest()
-	actionID := core.ActionID{SpellID: rank.ID}
-	baseAmount := rank.EffectN(1).Average(core.CharacterLevel)
-	manaMultiplier := 1 + spellData.ImprovedLifeTap.FractionAt(warlock.Talents.ImprovedLifeTap)
-	petManaShare := spellData.DemonicEnergies.EffectAt(2).FractionAt(warlock.Talents.DemonicEnergies)
+	rankedSpell := spellData.LifeTap.ByID(11689)
+	baseAmount := rankedSpell.EffectN(1).Average()
+	improvedLifeTapMult := 1 + spellData.ImprovedLifeTap.FractionAt(warlock.Talents.ImprovedLifeTap)
 
-	manaMetrics := warlock.NewManaMetrics(actionID)
-	manaMetrics.NoThreat = rank.NoThreat()
-	petManaMetrics := make(map[*WarlockPet]*core.ResourceMetrics, len(warlock.BasePets))
-	for _, pet := range warlock.BasePets {
-		petManaMetrics[pet] = pet.NewManaMetrics(actionID)
-		petManaMetrics[pet].NoThreat = rank.NoThreat()
+	manaMetrics := warlock.NewManaMetrics(core.ActionID{SpellID: rankedSpell.ID})
+
+	// Demonic Energies: the demon out gains a share of the mana
+	petManaMetrics := map[*WarlockPet]*core.ResourceMetrics{}
+	if warlock.lifeTapPetShare > 0 {
+		for _, pet := range warlock.demons() {
+			petManaMetrics[pet] = pet.NewManaMetrics(core.ActionID{SpellID: rankedSpell.ID})
+		}
 	}
 
-	warlock.LifeTap = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       actionID,
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    core.DefenseTypeMagic,
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: WarlockSpellLifeTap,
+	config := spelldata.SpellConfig(&warlock.Unit, rankedSpell, spelldata.Flags(core.SpellFlagAPL))
+	config.ClassSpellMask = WarlockSpellLifeTap
 
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: core.GCDDefault,
-			},
-		},
+	// Pay the health and gain the mana, both base + Spirit read at the cast
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
+		amount := baseAmount + warlock.GetStat(stats.Spirit)
+		warlock.RemoveHealth(sim, amount)
+		warlock.AddMana(sim, amount*improvedLifeTapMult, manaMetrics)
 
-		ThreatMultiplier: 1,
+		if pet := warlock.ActivePet; pet != nil && petManaMetrics[pet] != nil && pet.IsEnabled() {
+			pet.AddMana(sim, amount*improvedLifeTapMult*warlock.lifeTapPetShare, petManaMetrics[pet])
+		}
+	}
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			restore := (baseAmount + warlock.GetStat(stats.Spirit)) * manaMultiplier
-			warlock.RemoveHealth(sim, restore)
-			warlock.AddMana(sim, restore, manaMetrics)
-
-			if petManaShare > 0 && warlock.ActivePet != nil {
-				warlock.ActivePet.AddMana(sim, restore*petManaShare, petManaMetrics[warlock.ActivePet])
-			}
-		},
-	})
+	warlock.LifeTap = warlock.RegisterSpell(config)
 }

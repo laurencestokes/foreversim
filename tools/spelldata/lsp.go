@@ -14,9 +14,13 @@ import (
 const (
 	codeParseError     = -32700
 	codeMethodNotFound = -32601
+	codeInvalidParams  = -32602
 	codeInternalError  = -32603
 
 	messageTypeLog = 4
+
+	// The command a code action runs to pick the rank a Ladder.Each callback parameter hovers as.
+	setRankCommand = "wowsims-spelldata.setRank"
 )
 
 type rpcMessage struct {
@@ -48,6 +52,20 @@ type documentParams struct {
 		Text string `json:"text"`
 	} `json:"contentChanges"`
 	Position position `json:"position"`
+	Range    struct {
+		Start position `json:"start"`
+	} `json:"range"`
+	Context struct {
+		Only []string `json:"only"`
+	} `json:"context"`
+}
+
+// The argument of setRankCommand: the rank hovers in the document read for the callback parameter.
+type rankPick struct {
+	URI       string `json:"uri"`
+	Parameter string `json:"parameter"`
+	Function  string `json:"function"`
+	Rank      int32  `json:"rank"`
 }
 
 type position struct {
@@ -60,10 +78,11 @@ type lspServer struct {
 	ws       *workspace
 	trace    bool
 	shutdown bool
+	picks    *rankPicks
 }
 
 func serveLSP(in io.Reader, out io.Writer) (shutdownRequested bool, err error) {
-	server := &lspServer{out: out, ws: newWorkspace(), trace: true}
+	server := &lspServer{out: out, ws: newWorkspace(), trace: true, picks: &rankPicks{ranks: map[string]int32{}}}
 	reader := textproto.NewReader(bufio.NewReader(in))
 
 	for {
@@ -118,14 +137,18 @@ func (s *lspServer) handle(msg rpcMessage) {
 	case "initialize":
 		var params struct {
 			InitializationOptions struct {
-				Trace string `json:"trace"`
+				Trace     string `json:"trace"`
+				RankLinks bool   `json:"rankLinks"`
 			} `json:"initializationOptions"`
 		}
 		_ = json.Unmarshal(msg.Params, &params)
 		s.trace = params.InitializationOptions.Trace != "off"
+		s.picks.links = params.InitializationOptions.RankLinks
 		s.respond(msg.ID, map[string]any{
 			"capabilities": map[string]any{
-				"hoverProvider": true,
+				"hoverProvider":          true,
+				"codeActionProvider":     true,
+				"executeCommandProvider": map[string]any{"commands": []string{setRankCommand}},
 				"textDocumentSync": map[string]any{
 					"openClose": true,
 					"change":    2,
@@ -138,7 +161,24 @@ func (s *lspServer) handle(msg rpcMessage) {
 		s.shutdown = true
 		s.respond(msg.ID, nil, nil)
 
-	case "textDocument/didOpen", "textDocument/didChange", "textDocument/didClose", "textDocument/hover":
+	case "workspace/executeCommand":
+		var params struct {
+			Command   string            `json:"command"`
+			Arguments []json.RawMessage `json:"arguments"`
+		}
+		var pick rankPick
+		if err := json.Unmarshal(msg.Params, &params); err != nil || params.Command != setRankCommand || len(params.Arguments) != 1 {
+			s.respond(msg.ID, nil, &rpcError{Code: codeInvalidParams, Message: "the command is " + setRankCommand + " with one {uri, function, parameter, rank}"})
+			return
+		}
+		if err := json.Unmarshal(params.Arguments[0], &pick); err != nil {
+			s.respond(msg.ID, nil, &rpcError{Code: codeInvalidParams, Message: err.Error()})
+			return
+		}
+		s.picks.ranks[rankKey(pick.URI, pick.Function, pick.Parameter)] = pick.Rank
+		s.respond(msg.ID, nil, nil)
+
+	case "textDocument/didOpen", "textDocument/didChange", "textDocument/didClose", "textDocument/hover", "textDocument/codeAction":
 		var params documentParams
 		if err := json.Unmarshal(msg.Params, &params); err != nil {
 			if request {
@@ -166,6 +206,8 @@ func (s *lspServer) handle(msg rpcMessage) {
 			s.ws.update(uri, "", false)
 		case "textDocument/hover":
 			s.respond(msg.ID, s.hover(uri, params.Position), nil)
+		case "textDocument/codeAction":
+			s.respond(msg.ID, s.rankActions(uri, params.Range.Start, params.Context.Only), nil)
 		}
 
 	default:
@@ -182,12 +224,41 @@ func (s *lspServer) hover(uri string, at position) any {
 		return nil
 	}
 
-	markdown, trace, ok := s.ws.hover(text, at.Line, at.Character, uri)
+	markdown, trace, ok := s.ws.hover(text, at.Line, at.Character, uri, s.picks)
 	s.log(strings.Join(trace, "\n"))
 	if !ok {
 		return nil
 	}
 	return map[string]any{"contents": map[string]any{"kind": "markdown", "value": markdown}}
+}
+
+// A setRankCommand for each other rank of the Ladder.Each callback parameter a hover at the position
+// reads through. A request for some kinds of action gets none: Zed asks for kinds on save and runs
+// what comes back, and a bare command has no kind to filter it out.
+func (s *lspServer) rankActions(uri string, at position, only []string) []any {
+	actions := []any{}
+	if len(only) > 0 {
+		return actions
+	}
+	text, err := s.ws.text(uriPath(uri))
+	if err != nil {
+		return actions
+	}
+	rank, family, ok := s.ws.rankAt(text, at.Line, at.Character, uri, s.picks)
+	if !ok {
+		return actions
+	}
+	for n := int32(1); n <= family.ladder.Len(); n++ {
+		if n == rank.rank {
+			continue
+		}
+		actions = append(actions, map[string]any{
+			"title":     fmt.Sprintf("Hover %s as %s", rank.parameter, title(family.ladder.Rank(n))),
+			"command":   setRankCommand,
+			"arguments": []rankPick{{URI: uri, Parameter: rank.parameter, Function: rank.function, Rank: n}},
+		})
+	}
+	return actions
 }
 
 func (s *lspServer) log(message string) {

@@ -1,7 +1,7 @@
 # db2tool
 
-Extracts World of Warcraft client data into `tools/database/wowsims.db`, the
-SQLite database that `gen_db` consumes.
+Extracts data from the World of Warcraft game files into
+`tools/database/wowsims.db`, the SQLite database that `gen_db` consumes.
 
 The flow end to end: `generator-settings.json` says _what_ to extract, `tact`
 finds the bytes inside the WoW install, `wdc` + `dbd` turn them into typed rows
@@ -23,7 +23,7 @@ Three modes:
 
 - **Local-CASC mode (default)** — reads the WoW install named by the settings'
   `BaseDir`: `.build.info` picks the build, files come out of local CASC
-  storage, and the client's `DBCache.bin` hotfixes for that build are applied
+  storage, and the game files' `DBCache.bin` hotfixes for that build are applied
   to the decoded rows. `BaseDir` may be a symlink; the cache scan resolves it
   first, and the run warns when it finds no cache for the build.
 - **CDN mode (`--cdn`)** — the same pipeline, but the build is whatever
@@ -52,7 +52,7 @@ list).
 Blizzard ships unreleased content inside the normal `.db2` files as sections
 encrypted with per-bundle Salsa20 keys ("TACT keys"). A section's header
 names the key it needs; the bytes only become readable once that key is
-known. Keys reach a client three ways: shipped in `TactKey.db2`, pushed by the
+known. Keys come from three places: shipped in `TactKey.db2`, pushed by the
 server as TACTKEY hotfix records into `DBCache.bin`, or published by the
 community at https://github.com/wowdev/TACTKeys.
 
@@ -97,9 +97,9 @@ numbers.
 
 **`wdc/`** — the DB2 file format decoder. Once tact hands over raw bytes, this
 parses the WDC5 container format (`wdc5.go`, `row.go`, `bitreader.go` for its
-bit-packed columns). `hotfix.go` reads the client's `DBCache.bin` — Blizzard's
+bit-packed columns). `hotfix.go` reads the game files' `DBCache.bin` — Blizzard's
 server-pushed data corrections — and overlays those records onto the decoded
-rows so the output matches what the live client actually uses.
+rows so the output matches what the live game actually uses.
 
 **`dbd/`** — schema definitions. DB2 files don't fully describe their own
 columns, so the community maintains [WoWDBDefs](https://github.com/wowdev/WoWDBDefs)
@@ -147,8 +147,8 @@ gets extracted:
   base-stats generation reads them. No DB2 decoding involved.
 - **`Tables`** — the list of DB2 tables to decode into SQLite. Roughly:
   everything item-related (ItemSparse, damage/armor tables, random suffixes,
-  upgrades, reforging, gems, sets), everything spell-related (the ~25 `Spell*`
-  tables that the modern client splits spell data into, enchants,
+  upgrades, reforging, sets), everything spell-related (the ~25 `Spell*`
+  tables that the modern game files split spell data into, enchants,
   procs-per-minute),
   talents/glyphs, and dungeon-journal/zone tables (Map, JournalEncounter…)
   used for item source info.
@@ -156,4 +156,4 @@ gets extracted:
 **To add a new table to `wowsims.db`**: add its name to `Tables` — that's all
 it takes. The schema comes from WoWDBDefs automatically. GameTable additions
 work the same way via `GameTables` (names match the `gametables/*.txt` files
-in the client).
+in the game files).

@@ -45,10 +45,14 @@ var bulkSimSelectedOrder = []BulkSimItemSlot{
 	BulkSimItemSlotHandWeapon,
 }
 
-// bulkSimNonWeaponOrder is bulkSimSelectedOrder minus the hand-weapon slots, which are handled
-// pairwise by getAllWeaponCombos. The ranged slot iterates normally.
+func isHandWeaponBulkSlot(bulkSlot BulkSimItemSlot) bool {
+	return bulkSlot == BulkSimItemSlotMainHand || bulkSlot == BulkSimItemSlotOffHand || bulkSlot == BulkSimItemSlotHandWeapon
+}
+
+// The selected order minus the hand-weapon slots, which getAllWeaponCombos pairs up. The ranged
+// slot iterates normally.
 var bulkSimNonWeaponOrder = core.FilterSlice(bulkSimSelectedOrder, func(bulkSlot BulkSimItemSlot) bool {
-	return bulkSlot != BulkSimItemSlotMainHand && bulkSlot != BulkSimItemSlotOffHand && bulkSlot != BulkSimItemSlotHandWeapon
+	return !isHandWeaponBulkSlot(bulkSlot)
 })
 
 var BulkSimItemSlotNames = map[BulkSimItemSlot]string{

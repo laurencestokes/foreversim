@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"slices"
 )
 
 // Function for applying permanent effects to an Agent.
@@ -14,19 +13,9 @@ type ApplyEffect func(Agent)
 var itemEffects = map[int32]ApplyEffect{}
 var enchantEffects = map[int32]ApplyEffect{}
 
-// IDs of item effects which should be used for tests.
-var itemEffectsForTest []int32
-var enchantEffectsForTest []int32
-
-// This value can be set before adding item effects, to control whether they are included in tests.
-var AddEffectsToTest = true
-
 func HasItemEffect(id int32) bool {
 	_, ok := itemEffects[id]
 	return ok
-}
-func HasItemEffectForTest(id int32) bool {
-	return slices.Contains(itemEffectsForTest, id)
 }
 
 func HasEnchantEffect(id int32) bool {
@@ -34,30 +23,10 @@ func HasEnchantEffect(id int32) bool {
 	return ok
 }
 
-// The items an effect is registered for, in id order. For the test that pins which items the sim
-// simulates an effect for, which is how a regeneration says what it made live and what it dropped.
-func RegisteredItemEffectIDs() []int32 {
-	return sortedKeys(itemEffects)
-}
-
-// The same for the enchant registry.
-func RegisteredEnchantEffectIDs() []int32 {
-	return sortedKeys(enchantEffects)
-}
-
-func sortedKeys(effects map[int32]ApplyEffect) []int32 {
-	ids := make([]int32, 0, len(effects))
-	for id := range effects {
-		ids = append(ids, id)
-	}
-	slices.Sort(ids)
-	return ids
-}
-
 // Registers an ApplyEffect function which will be called before the Sim
 // starts, for any Agent that is wearing the item.
-// missingItemEffects collects the items an effect was registered for that this client
-// does not ship, so the count can be reported rather than silently swallowed.
+// missingItemEffects collects the items an effect was registered for that the game files
+// do not ship, so the count can be reported rather than silently swallowed.
 var missingItemEffects []int32
 
 var missingEnchantEffects []int32
@@ -72,15 +41,13 @@ func MissingEnchantEffects() []int32 { return missingEnchantEffects }
 func NewItemEffect(id int32, itemEffect ApplyEffect) {
 	if WITH_DB {
 		if GetItemByID(id) == nil {
-			if _, hasGem := GetGemByID(id); !hasGem {
-				// Forever's item set is a subset of TBC's -- 81 items these effects were
-				// written for are simply not in the client any more, and item 1168 is not
-				// in the DBC at all. Skipping keeps the implementation around for the day
-				// an item comes back, where panicking would stop the sim from starting and
-				// deleting the code would lose work that is still correct.
-				missingItemEffects = append(missingItemEffects, id)
-				return
-			}
+			// Forever's item set is a subset of TBC's -- 81 items these effects were
+			// written for are simply not in the game files any more, and item 1168 is not
+			// in the DBC at all. Skipping keeps the implementation around for the day
+			// an item comes back, where panicking would stop the sim from starting and
+			// deleting the code would lose work that is still correct.
+			missingItemEffects = append(missingItemEffects, id)
+			return
 		}
 	}
 
@@ -89,15 +56,12 @@ func NewItemEffect(id int32, itemEffect ApplyEffect) {
 	}
 
 	itemEffects[id] = itemEffect
-	if AddEffectsToTest {
-		itemEffectsForTest = append(itemEffectsForTest, id)
-	}
 }
 
 func NewEnchantEffect(id int32, enchantEffect ApplyEffect) {
 	if WITH_DB {
 		if GetEnchantByEffectID(id) == nil {
-			// Same as NewItemEffect: enchants this client does not ship are skipped rather
+			// Same as NewItemEffect: enchants the game files do not ship are skipped rather
 			// than aborting the process.
 			missingEnchantEffects = append(missingEnchantEffects, id)
 			return
@@ -109,28 +73,14 @@ func NewEnchantEffect(id int32, enchantEffect ApplyEffect) {
 	}
 
 	enchantEffects[id] = enchantEffect
-	if AddEffectsToTest {
-		enchantEffectsForTest = append(enchantEffectsForTest, id)
-	}
 }
 
-func (equipment *Equipment) applyItemEffects(agent Agent, registeredItemEffects map[int32]bool, registeredItemEnchantEffects map[int32]bool, includeGemEffects bool) {
+func (equipment *Equipment) applyItemEffects(agent Agent, registeredItemEffects map[int32]bool, registeredItemEnchantEffects map[int32]bool) {
 	class := agent.GetCharacter().Class
 	for _, eq := range equipment {
 		if applyItemEffect, ok := itemEffects[eq.ID]; ok && !registeredItemEffects[eq.ID] && eq.UsableBy(class) {
 			applyItemEffect(agent)
 			registeredItemEffects[eq.ID] = true
-		}
-
-		if includeGemEffects {
-			for _, g := range eq.Gems {
-				if g.Disabled {
-					continue
-				}
-				if applyGemEffect, ok := itemEffects[g.ID]; ok {
-					applyGemEffect(agent)
-				}
-			}
 		}
 
 		if applyEnchantEffect, ok := enchantEffects[eq.Enchant.EffectID]; ok && !registeredItemEnchantEffects[eq.Enchant.EffectID] {

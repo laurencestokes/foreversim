@@ -1,11 +1,8 @@
 package mage
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
-	"github.com/wowsims/forever/sim/core/stats"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 func (mage *Mage) registerFrostTalents() {
@@ -23,17 +20,17 @@ func (mage *Mage) registerFrostTalents() {
 	// Tier 3
 	mage.registerPiercingIce()
 	mage.registerFrostChanneling()
-	// Ice Lance: ice_lance.go
-	// Improved Blizzard: blizzard.go
+	mage.registerIceLance()
+	mage.registerImprovedBlizzard()
 
 	// Tier 4
 	mage.registerArcticReach()
 	mage.registerIceBlock()
-	// Shatter: with Fingers of Frost below
+	mage.registerShatter()
 
 	// Tier 5
 	mage.registerImprovedConeOfCold()
-	// Cold Snap: cold_snap.go
+	mage.registerColdSnapTalent()
 	mage.registerFingersOfFrost()
 
 	// Tier 6
@@ -43,36 +40,43 @@ func (mage *Mage) registerFrostTalents() {
 	mage.registerIceBarrier()
 }
 
-// registerFrostWarding implements Frost Warding, new in Forever.
+func (mage *Mage) registerColdSnapTalent() {
+	if !mage.Talents.ColdSnap {
+		return
+	}
+
+	mage.registerColdSnapSpell()
+}
+
+// "Increases the Armor and resistance given by your Frost Armor and Ice Armor spells by 30%. In
+// addition, gives your Frost Ward a 20% chance to reflect Frost spells and effects while active."
 //
-// Not modelled: 11189 raises Frost/Ice Armor's armor and resistance and lets Frost Ward reflect
-// Frost spells; neither changes damage dealt.
+// The armor half is applied in armors.go. The reflect needs an enemy casting Frost at the mage, so
+// it is not modelled.
 func (mage *Mage) registerFrostWarding() {
 	if mage.Talents.FrostWarding == 0 {
 		return
 	}
 }
 
+// Improved Frostbolt: Frostbolt's casting time is reduced by 0.1 sec per point.
 func (mage *Mage) registerImprovedFrostbolt() {
 	if mage.Talents.ImprovedFrostbolt == 0 {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask: MageSpellFrostbolt,
-		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedFrostbolt.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CASTING_TIME)).ValueAt(mage.Talents.ImprovedFrostbolt)),
-		Kind:      core.SpellMod_CastTime_Flat,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.ImprovedFrostbolt.Rank(mage.Talents.ImprovedFrostbolt))
 }
 
+// "Improves your chance to hit with Frost and Fire spells by 5%." The row's mask names the Fire and
+// Frost spells, Frostfire Bolt included.
 func (mage *Mage) registerElementalPrecision() {
 	if mage.Talents.ElementalPrecision == 0 {
 		return
 	}
 
-	hit := spellData.ElementalPrecision.ValueAt(mage.Talents.ElementalPrecision)
-	mage.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexFire] += hit
-	mage.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexFrost] += hit
+	spelldata.ParseStatic(&mage.Character, spellData.ElementalPrecision.Rank(mage.Talents.ElementalPrecision),
+		spelldata.ShowAsSchoolHit(core.SpellSchoolFire|core.SpellSchoolFrost))
 }
 
 func (mage *Mage) registerIceShards() {
@@ -80,269 +84,353 @@ func (mage *Mage) registerIceShards() {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll,
-		School:     core.SpellSchoolFrost,
-		FloatValue: spellData.IceShards.FractionAt(mage.Talents.IceShards),
-		Kind:       core.SpellMod_CritMultiplier_Flat,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.IceShards.Rank(mage.Talents.IceShards))
 }
 
-// registerPermafrost implements Permafrost, new in Forever.
+// "Increases the duration of your Chill effects by 33% and reduces the target's speed by an
+// additional 10%."
 //
-// Not modelled: 11175 lengthens Chill effects 11/22/33% and slows 3/7/10% more; neither changes
-// damage in the sim.
+// Not modelled: both effects act on the slow alone, which does nothing to a boss the sim fights. A
+// Chill rolls for Frostbite or Fingers of Frost per hit, not per second chilled.
 func (mage *Mage) registerPermafrost() {
 	if mage.Talents.Permafrost == 0 {
 		return
 	}
 }
 
-// Improved Frost Nova (11165): Frost Nova's cooldown -2/-4 s.
 func (mage *Mage) registerImprovedFrostNova() {
 	if mage.Talents.ImprovedFrostNova == 0 {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask: MageSpellFrostNova,
-		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedFrostNova.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COOLDOWN)).ValueAt(mage.Talents.ImprovedFrostNova)),
-		Kind:      core.SpellMod_Cooldown_Flat,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.ImprovedFrostNova.Rank(mage.Talents.ImprovedFrostNova))
 }
 
-// registerFrostbite implements Frostbite, new in Forever.
+// "Gives your Chill effects a 15% chance to Freeze the target for 5 sec."
 //
-// Not modelled: 11071 gives Chill effects a 5/10/15% chance to freeze (12494); bosses are immune.
+// The freeze (12494) is not modelled: it is a root, which a boss the sim fights is immune to, the
+// same reason Frost Nova's root is not modelled. A target is only ever Frozen through Fingers of
+// Frost, whose charges this talent's roll grants (registerFingersOfFrost).
 func (mage *Mage) registerFrostbite() {
 	if mage.Talents.Frostbite == 0 {
 		return
 	}
 }
 
-// registerPiercingIce: effect 0 (SPELLMOD_DAMAGE, 2/4/6%) raises Frost spell hits, Blizzard's too (its
-// ticks are direct hits of 1279949). Effect 1 (SPELLMOD_DOT) names Blizzard and Frostfire Bolt but has
-// no rank curve in client 1.60.1.70170, so Frostfire Bolt's DoT gets its base 2% at every rank.
 func (mage *Mage) registerPiercingIce() {
 	if mage.Talents.PiercingIce == 0 {
 		return
 	}
 
-	hit := spellData.PiercingIce.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(mage.Talents.PiercingIce)
-	dot := spellData.PiercingIce.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DOT)).FractionAt(mage.Talents.PiercingIce)
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll &^ MageSpellFrostfireBolt,
-		School:     core.SpellSchoolFrost,
-		FloatValue: hit,
-		Kind:       core.SpellMod_DamageDone_Flat,
-	})
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellFrostfireBolt,
-		FloatValue: dot,
-		Kind:       core.SpellMod_DamageDone_Flat,
-	})
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellFrostfireBolt,
-		FloatValue: hit - dot,
-		Kind:       core.SpellMod_DirectDamageDone_Flat,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.PiercingIce.Rank(mage.Talents.PiercingIce))
 }
 
+// Reduces the mana cost of your Frost spells by 5/10/15% and their threat by 10/20/30%.
 func (mage *Mage) registerFrostChanneling() {
 	if mage.Talents.FrostChanneling == 0 {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll,
-		School:     core.SpellSchoolFrost,
-		FloatValue: spellData.FrostChanneling.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(mage.Talents.FrostChanneling),
-		Kind:       core.SpellMod_PowerCost_Pct_Add,
-	})
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll,
-		School:     core.SpellSchoolFrost,
-		FloatValue: -spellData.FrostChanneling.Effect(dbcenums.A_MOD_THREAT, 16).FractionAt(mage.Talents.FrostChanneling),
-		Kind:       core.SpellMod_ThreatMultiplier_Pct,
-	})
+	// Effect 1 is the mana cost, on the row's mask of Frost spells; effect 2 the threat, on misc 16, the
+	// Frost school.
+	spelldata.ParseStatic(&mage.Character, spellData.FrostChanneling.Rank(mage.Talents.FrostChanneling))
 }
 
-// registerArcticReach implements Arctic Reach, new in Forever: 16757 adds 10/20% to Frostbolt and
-// Blizzard range and to Frost Nova and Cone of Cold radius (its two class masks). The sim has no
-// percent range mod, so the share is taken of each spell's own range here.
+func (mage *Mage) registerIceLance() {
+	if !mage.Talents.IceLance {
+		return
+	}
+
+	mage.registerIceLanceSpell()
+}
+
+// "Adds a Chill effect to your Blizzard spell. This effect lowers the target's movement speed by 40%
+// for 1.5 sec."
+//
+// The slow (12484) does nothing to a boss; what the talent changes is that Blizzard becomes a Chill
+// effect, which isChill reads for Fingers of Frost.
+func (mage *Mage) registerImprovedBlizzard() {
+	if mage.Talents.ImprovedBlizzard == 0 {
+		return
+	}
+}
+
+// "Increases the range of your Frostbolt and Blizzard spells and the radius of your Frost Nova and
+// Cone of Cold spells by 20%."
 func (mage *Mage) registerArcticReach() {
 	if mage.Talents.ArcticReach == 0 {
 		return
 	}
 
-	rangeShare := spellData.ArcticReach.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_RANGE)).FractionAt(mage.Talents.ArcticReach)
-	radiusShare := spellData.ArcticReach.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_RADIUS)).FractionAt(mage.Talents.ArcticReach)
-	for mask, yards := range map[int64]float64{
-		MageSpellFrostbolt:                       rangeShare * float64(spellData.Frostbolt.Highest().MaxRange),
-		MageSpellBlizzard:                        rangeShare * float64(spellData.Blizzard.Highest().MaxRange),
-		MageSpellFrostNova | MageSpellConeOfCold: radiusShare * pointBlankRadius,
-	} {
-		mage.AddStaticMod(core.SpellModConfig{ClassMask: mask, FloatValue: yards, Kind: core.SpellMod_Range_Flat})
-	}
+	spelldata.ParseStatic(&mage.Character, spellData.ArcticReach.Rank(mage.Talents.ArcticReach))
 }
 
-// registerIceBlock implements Ice Block, new in Forever.
-//
-// Not modelled: 11958 is a defensive immunity during which the mage cannot act.
 func (mage *Mage) registerIceBlock() {
 	if !mage.Talents.IceBlock {
 		return
 	}
+
+	mage.registerIceBlockSpell()
 }
 
-// Improved Cone of Cold (11190): Cone of Cold damage +12/23/35%.
+// "Increases the critical strike chance of all your spells against Frozen targets by 50%." The
+// amount is the talent's dummy effect, 17/33/50.
+func (mage *Mage) registerShatter() {
+	if mage.Talents.Shatter == 0 {
+		return
+	}
+
+	critBonus := spellData.Shatter.ValueAt(mage.Talents.Shatter)
+
+	mage.addTargetCritBonus(
+		func(spell *core.Spell) bool {
+			return spell.ProcMask.Matches(core.ProcMaskSpellDamage)
+		},
+		func(target *core.Unit) float64 {
+			if mage.isFrozen(target) {
+				return critBonus
+			}
+			return 0
+		})
+}
+
 func (mage *Mage) registerImprovedConeOfCold() {
 	if mage.Talents.ImprovedConeOfCold == 0 {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellConeOfCold,
-		FloatValue: spellData.ImprovedConeOfCold.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(mage.Talents.ImprovedConeOfCold),
-		Kind:       core.SpellMod_DamageDone_Flat,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.ImprovedConeOfCold.Rank(mage.Talents.ImprovedConeOfCold))
 }
 
-// Raid bosses cannot be chilled or frozen, so Fingers of Frost is the only thing that gets Shatter
-// and the Ice Lance bonus going on one; Shatter is folded in here because the two only ever fire
-// together. A chill effect has a 15% chance (the talent row's second effect, flat at both ranks) to
-// treat the next spells, one per point, as if the target were frozen.
+// "Gives your Chill effects a 15% chance to grant you the Fingers of Frost effect, which treats your
+// next 2 spells cast as if the target were Frozen. Lasts 15 sec."
+//
+// The chance is effect 2 (15 at both ranks), which the resolver reads; with Frostbite it is split
+// between Frostbite's roll and the talent's own. The charges are effect 1 (1 and 2). The buff's own
+// row (400669) names only Deep Freeze, which is not in Forever, so what "as if Frozen" reaches is the
+// tooltip's: every spell reading isFrozen, Shatter and Ice Lance.
 func (mage *Mage) registerFingersOfFrost() {
 	if mage.Talents.FingersOfFrost == 0 {
 		return
 	}
 
-	procChance := spellData.FingersOfFrost.EffectAt(2).FractionAt(mage.Talents.FingersOfFrost)
-	fofRank := spellData.FingersOfFrostTriggered.Highest()
-	shatterCrit := spellData.Shatter.ValueAt(mage.Talents.Shatter)
+	talentRank := spellData.FingersOfFrost.Rank(mage.Talents.FingersOfFrost)
+	charges := int32(talentRank.EffectN(1).BaseValue())
 
-	shatterMod := mage.AddDynamicMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll,
-		FloatValue: shatterCrit,
-		Kind:       core.SpellMod_BonusCrit_Percent,
-	})
+	config := spelldata.AuraConfig(spellData.FingersOfFrostTriggered.Highest())
+	config.MaxStacks = charges
 
-	// The beta's logs (foreverlogs 2748, 5 procs off Frostbolt, 4 mages) gain the aura at Frostbolt's cast
-	// end, before it lands (0.6-0.9 sec later): the next cast takes the bonus and a charge, the bolt's
-	// own impact neither. So Frostbolt and Frostfire Bolt roll it at launch (procFingersOfFrost, on
-	// the hit already rolled there); Cone of Cold and Improved Blizzard's ticks land at once.
-	var launcher *core.Spell
-	mage.FingersOfFrostAura = mage.RegisterAura(core.Aura{
-		Label:     "Fingers of Frost",
-		ActionID:  core.ActionID{SpellID: fofRank.ID},
-		Duration:  fofRank.Duration(),
-		MaxStacks: int32(spellData.FingersOfFrost.EffectAt(1).ValueAt(mage.Talents.FingersOfFrost)),
-		OnGain: func(_ *core.Aura, _ *core.Simulation) {
-			shatterMod.Activate()
-		},
-		OnExpire: func(_ *core.Aura, _ *core.Simulation) {
-			shatterMod.Deactivate()
-		},
-		OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
-			if !spell.Matches(MageSpellsAllDamaging) {
-				return
+	// A cast that granted the charges from inside its own effects, which spends none of them.
+	var grantedBy *core.Spell
+	// Counts the grants, so a spend can tell whether charges were granted after it was cast.
+	var grants int
+
+	// Every damage spell the rotation casts spends a charge, except a channel and the cast that
+	// granted them: in the logs, Blizzard casts made with charges up spent none. The charge goes a
+	// spell batch after the cast, so a spell queued in the same batch still reads the target as
+	// Frozen and spends the same charge. A grant inside that batch leaves the charges full: the
+	// spend came before it.
+	config.OnCastComplete = func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
+		if spell == grantedBy {
+			grantedBy = nil
+			return
+		}
+		if spell.Flags.Matches(core.SpellFlagAPL) && !spell.Flags.Matches(core.SpellFlagChanneled) &&
+			spell.ProcMask.Matches(core.ProcMaskSpellDamage) {
+			grantsAtCast := grants
+			pa := sim.GetConsumedPendingActionFromPool()
+			pa.NextActionAt = sim.CurrentTime + core.SpellBatchWindow
+			pa.Priority = core.ActionPriorityDOT
+			pa.OnAction = func(sim *core.Simulation) {
+				if grants == grantsAtCast {
+					aura.RemoveStack(sim)
+				}
 			}
-
-			if spell == launcher {
-				launcher = nil
-				return
-			}
-
-			// OnCastComplete runs after the damage is rolled, so the consuming cast keeps the bonus.
-			aura.RemoveStack(sim)
-		},
-	})
-
-	grant := func(sim *core.Simulation) {
-		mage.FingersOfFrostAura.Activate(sim)
-		mage.FingersOfFrostAura.SetStacks(sim, mage.FingersOfFrostAura.MaxStacks)
+			sim.AddPendingAction(pa)
+		}
 	}
-
-	mage.procFingersOfFrost = func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-		if result.Landed() && sim.Proc(procChance, "Fingers of Frost") {
-			launcher = spell
-			grant(sim)
+	// Arcane Missiles' channel spends no charge; each missile that lands spends one, and a miss
+	// keeps it. The charge goes on the missile's cast result, right after its damage is rolled, so
+	// the roll that read the target as Frozen is the one that spends it, whatever the travel time.
+	config.OnCastResult = func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+		if spell.Matches(MageSpellArcaneMissilesTick) && result.Landed() {
+			aura.RemoveStack(sim)
 		}
 	}
 
-	mage.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Fingers of Frost Trigger",
-		Callback:           core.CallbackOnSpellHitDealt,
-		ClassSpellMask:     MageSpellConeOfCold | MageSpellImprovedBlizzard,
-		Outcome:            core.OutcomeLanded,
-		ProcChance:         procChance,
-		TriggerImmediately: true,
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			grant(sim)
-		},
-	})
+	mage.FingersOfFrostAura = mage.RegisterAura(config)
+
+	grant := func(atCast bool) core.ProcHandler {
+		return func(sim *core.Simulation, spell *core.Spell, _ *core.SpellResult) {
+			// Charges granted inside a rotation spell's own cast spend none on it.
+			if spell.Flags.Matches(core.SpellFlagAPL) && (atCast || spell.MissileSpeed == 0) {
+				grantedBy = spell
+			}
+			mage.FingersOfFrostAura.Activate(sim)
+			mage.FingersOfFrostAura.SetStacks(sim, charges)
+			grants++
+		}
+	}
+
+	// The talent's own roll, on the landed hit, with the charges up at once. A miss or full resist
+	// grants none.
+	trigger := spelldata.ProcTrigger(&mage.Character, talentRank, grant(false))
+	trigger.Name = "Fingers of Frost - Trigger"
+	trigger.Callback = core.CallbackOnSpellHitDealt
+	trigger.Outcome = core.OutcomeLanded
+	trigger.TriggerImmediately = true
+	trigger.ExtraCondition = func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
+		return mage.isChill(spell)
+	}
+
+	// With Frostbite a Chill rolls twice, independently. Frostbite's roll grants the charges at its
+	// rank's chance whether or not the freeze lands; it is on the cast result, so a missile grants
+	// at its cast (a spell queued behind it is already Frozen) and a Chill without travel time
+	// (Cone of Cold, a Blizzard tick) rolls on each hit. The talent's own roll keeps what is left of
+	// its chance, so a Chill still grants at least once at that chance; at Frostbite's top rank
+	// nothing is left and the roll is gone. A second grant only refreshes the charges.
+	if mage.Talents.Frostbite > 0 {
+		chance := trigger.ProcChance
+		freezeChance := spellData.Frostbite.FractionAt(mage.Talents.Frostbite)
+
+		frostbiteTrigger := trigger
+		frostbiteTrigger.Name = "Fingers of Frost - Frostbite Trigger"
+		frostbiteTrigger.Callback = core.CallbackOnCastResult
+		frostbiteTrigger.ProcChance = freezeChance
+		frostbiteTrigger.Handler = grant(true)
+		mage.MakeProcTriggerAura(frostbiteTrigger)
+
+		trigger.ProcChance = (chance - freezeChance) / (1 - freezeChance)
+	}
+
+	// A trigger with no chance would fire on every hit.
+	if trigger.ProcChance > 1e-9 {
+		mage.MakeProcTriggerAura(trigger)
+	}
 }
 
-// IsTargetFrozen reports whether the mage's next spell is treated as hitting a frozen target.
-func (mage *Mage) IsTargetFrozen() bool {
-	return mage.FingersOfFrostAura != nil && mage.FingersOfFrostAura.IsActive()
-}
-
-// In Forever Winter's Chill only helps the mage's own Frostbolt and Ice Lance, where Classic and TBC
-// made it a raid debuff: 2% crit a stack, one stack per talent point.
+// "Gives your Frostbolt, Frost Blast, and Fingers of Frost empowered Ice Lance spells a 20/40/60/80/100%
+// chance to apply Winter's Chill, increasing the target's damage taken from your next Cone of Cold by
+// 5% and it gains an additional 7% of your spell damage, stacking up to 5 times."
+//
+// The talent (11180) names no class mask, so the spells are checked here; its chance is effect 2,
+// which the resolver reads, and its stack cap effect 1. The debuff's (12579) damage taken is
+// A_MOD_SPELL_DAMAGE_FROM_CASTER on Cone of Cold's class flags, so it is parsed onto this mage's
+// attack table against the target; its spell damage is a dummy (effect 2), which Cone of Cold adds
+// to its coefficient per stack (wintersChillCoefficient). Cone of Cold spends the stacks on each
+// target it lands on (consumeWintersChill). Each mage's debuff carries its own label.
 func (mage *Mage) registerWinterChill() {
 	if mage.Talents.WintersChill == 0 {
 		return
 	}
 
-	chillRank := spellData.WintersChillTriggered.Highest()
-	critPerStack := chillRank.EffectN(1).Average(core.CharacterLevel)
+	talentRank := spellData.WintersChill.Rank(mage.Talents.WintersChill)
+	debuff := spellData.WintersChillTriggered.Highest()
+	coneFlags := debuff.EffectN(1).ClassFlags
 
-	critMod := mage.AddDynamicMod(core.SpellModConfig{
-		ClassMask: MageSpellFrostbolt | MageSpellIceLance,
-		Kind:      core.SpellMod_BonusCrit_Percent,
+	mage.WintersChillAuras = mage.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
+		config := spelldata.AuraConfig(debuff, spelldata.Label(debuff.Name+mage.Label))
+		config.MaxStacks = int32(talentRank.EffectN(1).BaseValue())
+		aura := target.RegisterAura(config)
+		spelldata.ParseEffects(nil, aura, debuff, spelldata.FromCaster(&mage.Unit, DDBC_WintersChill, DDBC_Total))
+		return aura
 	})
 
-	mage.WintersChillAura = mage.RegisterAura(core.Aura{
-		Label:     "Winter's Chill",
-		ActionID:  core.ActionID{SpellID: chillRank.ID},
-		Duration:  chillRank.Duration(),
-		MaxStacks: int32(spellData.WintersChill.EffectAt(1).ValueAt(mage.Talents.WintersChill)),
-		OnGain: func(_ *core.Aura, _ *core.Simulation) {
-			critMod.Activate()
-		},
-		OnExpire: func(_ *core.Aura, _ *core.Simulation) {
-			critMod.Deactivate()
-		},
-		OnStacksChange: func(_ *core.Aura, _ *core.Simulation, _ int32, newStacks int32) {
-			critMod.UpdateFloatValue(critPerStack * float64(newStacks))
-		},
+	mage.Env.RegisterPreFinalizeEffect(func() {
+		for _, spell := range mage.Spellbook {
+			if spell.MatchesFlags(coneFlags) {
+				spell.RelatedAuraArrays = mage.WintersChillAuras.ToMap()
+			}
+		}
 	})
 
-	// Forever states a flat SpellAuraOptions.ProcChance of 100 on the talent spell and puts the
-	// real per-rank chance on effect 2 (by position); effect 1 is the stack count.
-	mage.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Winters Chill Talent",
-		Callback:           core.CallbackOnSpellHitDealt,
-		ProcMask:           core.ProcMaskSpellDamage,
-		Outcome:            core.OutcomeLanded,
-		ProcChance:         spellData.WintersChill.EffectAt(2).FractionAt(mage.Talents.WintersChill),
-		TriggerImmediately: true,
-		ExtraCondition: func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
-			return spell.SpellSchool.Matches(core.SpellSchoolFrost)
-		},
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			mage.WintersChillAura.Activate(sim)
-			mage.WintersChillAura.AddStack(sim)
-		},
-	})
+	addStack := func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
+		aura := mage.WintersChillAuras.Get(result.Target)
+		aura.Activate(sim)
+		aura.AddStack(sim)
+	}
+
+	// PROC_FLAG_DEAL_HARMFUL_SPELL decodes to the cast, which names no target; the debuff goes on
+	// the one the bolt landed on, when it lands.
+	trigger := spelldata.ProcTrigger(&mage.Character, talentRank, addStack)
+	trigger.Name = "Winter's Chill - Trigger"
+	trigger.Callback = core.CallbackOnSpellHitDealt
+	trigger.Outcome = core.OutcomeLanded
+	trigger.ExtraCondition = func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
+		return spellData.Frostbolt.Contains(spell) || spellData.FrostBlast.Contains(spell)
+	}
+	mage.MakeProcTriggerAura(trigger)
+
+	// Ice Lance rolls on its cast result, where its damage read the target as Frozen: Fingers of Frost
+	// may have no charge left by the time the lance lands.
+	iceLanceTrigger := trigger
+	iceLanceTrigger.Name = "Winter's Chill - Ice Lance Trigger"
+	iceLanceTrigger.Callback = core.CallbackOnCastResult
+	iceLanceTrigger.ExtraCondition = func(_ *core.Simulation, spell *core.Spell, result *core.SpellResult) bool {
+		return spellData.IceLance.Contains(spell) && mage.isFrozen(result.Target)
+	}
+	mage.MakeProcTriggerAura(iceLanceTrigger)
 }
 
-// registerIceBarrier implements Ice Barrier, new in Forever.
-//
-// Not modelled: 11426 is an absorb shield (rank 1 431); the sim models no damage taken for a mage.
+// The spell power coefficient Winter's Chill adds to this mage's Cone of Cold on the target: 7% of
+// spell damage per stack (12579 effect 2), which the talent states as "an additional 7% of your spell
+// damage", a share added to the coefficient.
+func (mage *Mage) wintersChillCoefficient(target *core.Unit) float64 {
+	stacks := mage.WintersChillAuras.Get(target).GetStacks()
+	return float64(stacks) * spellData.WintersChillTriggered.Highest().EffectN(2).Percent()
+}
+
+// Cone of Cold spends every stack on a target it lands on.
+func (mage *Mage) consumeWintersChill(sim *core.Simulation, target *core.Unit) {
+	mage.WintersChillAuras.Get(target).Deactivate(sim)
+}
+
 func (mage *Mage) registerIceBarrier() {
 	if !mage.Talents.IceBarrier {
 		return
 	}
+
+	mage.registerIceBarrierSpell()
+}
+
+// The Chill effects Permafrost's mask names (family 3, mask 0x100000): Frostbolt, Frost Blast, Cone
+// of Cold, Frostfire Bolt and the armors' Chilled.
+var chillFlags = spellData.Permafrost.Highest().EffectN(1).ClassFlags
+
+// Whether the spell applies a Chill effect: one the Chill mask names, or Blizzard with Improved
+// Blizzard, which adds a Chill the mask does not carry.
+func (mage *Mage) isChill(spell *core.Spell) bool {
+	if spell.MatchesFlags(chillFlags) {
+		return true
+	}
+	return mage.Talents.ImprovedBlizzard > 0 && spell.Matches(MageSpellBlizzard)
+}
+
+// Whether this mage's spells treat the target as Frozen. A boss the sim fights is immune to Frost
+// Nova's and Frostbite's roots, so the only way there is Fingers of Frost, which does not look at
+// the target.
+func (mage *Mage) isFrozen(_ *core.Unit) bool {
+	return mage.FingersOfFrostAura.IsActive()
+}
+
+// Raises the crit chance of the spells matches accepts by what bonus reads for the target, for
+// Shatter, whose bonus is a dummy effect with no aura on the target to parse onto. Each matching
+// spell carries the bonus for the duration of its own effects: the crit is rolled there, travel time
+// or not. Spells are matched once every one is registered.
+func (mage *Mage) addTargetCritBonus(matches func(*core.Spell) bool, bonus func(target *core.Unit) float64) {
+	mage.Env.RegisterPreFinalizeEffect(func() {
+		for _, spell := range mage.Spellbook {
+			if spell.ApplyEffects == nil || !matches(spell) {
+				continue
+			}
+
+			applyEffects := spell.ApplyEffects
+			spell.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+				critBonus := bonus(target)
+				spell.BonusCritPercent += critBonus
+				applyEffects(sim, target, spell)
+				spell.BonusCritPercent -= critBonus
+			}
+		}
+	})
 }

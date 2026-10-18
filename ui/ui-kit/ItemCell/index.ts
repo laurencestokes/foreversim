@@ -1,1 +1,1 @@
-export { ItemCell, type ItemCellProps } from './ItemCell';
+export { ItemCell, ItemCellIcon, type ItemCellIconProps, type ItemCellProps } from './ItemCell';

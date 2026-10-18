@@ -4,10 +4,10 @@ import (
 	"time"
 
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// The librams the client ships unencrypted. Item effects apply before the spells register, so a
+// The librams the game files ship unencrypted. Item effects apply before the spells register, so a
 // libram that changes a number a spell reads at registration sets it on the paladin and the spell
 // picks it up; one that changes a spell's cost, cooldown or crit chance is a spell mod.
 //
@@ -22,18 +22,6 @@ func init() {
 		paladin := agent.(PaladinAgent).GetPaladin()
 		paladin.sealOfTheCrusaderBonusAttackPower += 48
 		paladin.judgementOfTheCrusaderBonus += 33
-	})
-
-	// Libram of Hope
-	// https://www.wowhead.com/forever/item=22401/libram-of-hope
-	//
-	// Increases the duration of your Seal spells by 4 sec (27848). Classic's took 20 mana off them.
-	core.NewItemEffect(22401, func(agent core.Agent) {
-		agent.GetCharacter().AddStaticMod(core.SpellModConfig{
-			ClassMask: SpellMaskAllSeals,
-			Kind:      core.SpellMod_BuffDuration_Flat,
-			TimeValue: time.Second * 4,
-		})
 	})
 
 	// Libram of Light
@@ -99,24 +87,11 @@ func init() {
 	// Increases your damage against Undead by 1%.
 	core.NewItemEffect(249397, func(agent core.Agent) {
 		character := agent.GetCharacter()
-		core.MakePermanent(character.RegisterAura(core.Aura{
+		aura := core.MakePermanent(character.RegisterAura(core.Aura{
 			Label:    "Tenets of the Silver Hand",
 			ActionID: core.ActionID{SpellID: 1302545},
-		})).
-			ApplyOnGain(func(_ *core.Aura, _ *core.Simulation) {
-				for _, at := range character.AttackTables {
-					if at.Defender.MobType == proto.MobType_MobTypeUndead {
-						at.DamageDealtMultiplier *= 1.01
-					}
-				}
-			}).
-			ApplyOnExpire(func(_ *core.Aura, _ *core.Simulation) {
-				for _, at := range character.AttackTables {
-					if at.Defender.MobType == proto.MobType_MobTypeUndead {
-						at.DamageDealtMultiplier /= 1.01
-					}
-				}
-			})
+		}))
+		spelldata.ParseEffects(character, aura, spelldata.MustFind(1302545))
 	})
 
 	// Sentinel's Libram
@@ -134,7 +109,7 @@ func init() {
 	// Libram of Law
 	// https://www.wowhead.com/forever/item=272435/libram-of-law
 	//
-	// Increases the damage of your Judgement ability by 4%. The client's mask names Judgement of
+	// Increases the damage of your Judgement ability by 4%. The game files' mask names Judgement of
 	// Righteousness and Judgement of Fury, not Judgement of Command.
 	core.NewItemEffect(272435, func(agent core.Agent) {
 		agent.GetCharacter().AddStaticMod(core.SpellModConfig{
@@ -173,44 +148,6 @@ func init() {
 			ClassMask:  SpellMaskHolyShock | SpellMaskHolyShockHeal,
 			Kind:       core.SpellMod_BonusCrit_Percent,
 			FloatValue: 6,
-		})
-	})
-
-	// Sanctified Orb
-	// https://www.wowhead.com/forever/item=20512/sanctified-orb
-	//
-	// Not a libram, but the paladin's. Use: Restores 340 Mana (24865), doubled in Wasteland and
-	// Haunted areas, which no encounter is. 5 min cooldown. Classic's gave 3% crit for 25 sec.
-	core.NewItemEffect(20512, func(agent core.Agent) {
-		character := agent.GetCharacter()
-		actionID := core.ActionID{ItemID: 20512}
-		manaMetrics := character.NewManaMetrics(actionID)
-		manaGain := 340.0
-
-		spell := character.RegisterSpell(core.SpellConfig{
-			ActionID:    actionID,
-			SpellSchool: core.SpellSchoolHoly,
-			ProcMask:    core.ProcMaskEmpty,
-			Flags:       core.SpellFlagNoOnCastComplete | core.SpellFlagHelpful,
-
-			Cast: core.CastConfig{
-				CD: core.Cooldown{
-					Timer:    character.NewTimer(),
-					Duration: time.Minute * 5,
-				},
-			},
-
-			ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
-				character.AddMana(sim, manaGain, manaMetrics)
-			},
-		})
-
-		character.AddMajorCooldown(core.MajorCooldown{
-			Spell: spell,
-			Type:  core.CooldownTypeMana,
-			ShouldActivate: func(_ *core.Simulation, character *core.Character) bool {
-				return character.MaxMana()-character.CurrentMana() >= manaGain
-			},
 		})
 	})
 }

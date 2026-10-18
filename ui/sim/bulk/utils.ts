@@ -1,9 +1,8 @@
 import { BulkSimResult, BulkSimStage, DistributionMetrics } from '@generated/proto/api';
-import { ItemSlot, WeaponType } from '@generated/proto/common';
+import { EquipmentSpec, ItemSlot, WeaponType } from '@generated/proto/common';
 
 import { getClassWeaponTypes, isSpecDualWieldCapable } from '../player/classes/capabilities';
 import type { Player } from '../player/player';
-import { Gear } from '../proto/gear';
 import { getGearIdentityKey } from '../proto/items';
 import {
 	BULK_SIM_ITEM_SLOT_TO_ITEM_SLOT_PAIRS,
@@ -52,16 +51,16 @@ export const cleanBulkDpsMetrics = (dpsMetrics: DistributionMetrics): Distributi
 	return dpsMetrics;
 };
 
-export const dedupeGearSets = (gearSets: Gear[], existingGearSets: Gear[] = []): Gear[] => {
+export const dedupeGearSets = (gearSets: EquipmentSpec[], existingGearSets: EquipmentSpec[] = []): EquipmentSpec[] => {
 	const seenGearKeys = new Set<string>();
 	for (let i = 0; i < existingGearSets.length; i++) {
-		seenGearKeys.add(getGearIdentityKey(existingGearSets[i].asSpec()));
+		seenGearKeys.add(getGearIdentityKey(existingGearSets[i]));
 	}
 
-	const deduped: Gear[] = [];
+	const deduped: EquipmentSpec[] = [];
 	for (let i = 0; i < gearSets.length; i++) {
 		const gear = gearSets[i];
-		const gearKey = getGearIdentityKey(gear.asSpec());
+		const gearKey = getGearIdentityKey(gear);
 		if (seenGearKeys.has(gearKey)) {
 			continue;
 		}
@@ -72,10 +71,8 @@ export const dedupeGearSets = (gearSets: Gear[], existingGearSets: Gear[] = []):
 	return deduped;
 };
 
-export const bulkSimStageToOptimisationStage = (stage: BulkSimStage): OptimisationStage | 'reforging' | 'finalist' | null => {
+export const bulkSimStageToOptimisationStage = (stage: BulkSimStage): OptimisationStage | 'finalist' | null => {
 	switch (stage) {
-		case BulkSimStage.BulkSimStageReforge:
-			return 'reforging';
 		case BulkSimStage.BulkSimStageLow:
 			return 'low';
 		case BulkSimStage.BulkSimStageMedium:

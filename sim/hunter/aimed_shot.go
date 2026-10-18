@@ -2,48 +2,21 @@ package hunter
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Aimed Shot is no longer a talent. The beta client (1.60.1.69893) keeps every rank on the hunter
-// with a 2 sec cast, down from 3, and a much smaller flat bonus (rank 6 600 -> 166); mana costs and
-// the 6 sec cooldown are Classic's. Forever puts that cooldown on the Multi-Shot timer.
-func (hunter *Hunter) registerAimedShotSpell(timer *core.Timer) {
-	rank := spellData.AimedShot.Highest()
-	flatBonus := rank.DamageEffect().Average(core.CharacterLevel)
+var aimedShotRank = spellData.AimedShot.Highest()
 
-	hunter.AimedShot = hunter.RegisterRangedSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    rank.DefenseTypeCore(),
-		ClassSpellMask: HunterSpellAimedShot,
-		ProcMask:       core.ProcMaskRangedSpecial,
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		MissileSpeed:   float64(rank.Speed),
+func (hunter *Hunter) registerAimedShot() {
+	config := spelldata.SpellConfig(&hunter.Unit, aimedShotRank, spelldata.Melee(core.ProcMaskRangedSpecial))
+	hunter.hasteRangedCast(&config)
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(rank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				CastTime: rank.CastTime(),
-			},
-			CD: core.Cooldown{
-				Timer:    timer,
-				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
-			},
-		},
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		baseDamage := aimedShotRank.WeaponStrike(sim, spell, hunter.RangedNormalizedWeaponDamage(sim, spell.RangedAttackPower(target)), 0)
+		result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeRangedHitAndCrit)
 
-		BonusCoefficient: 1,
+		spell.DealDamageAfterTravel(sim, result)
+	}
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			baseDamage := hunter.AutoAttacks.Ranged().CalculateNormalizedWeaponDamage(sim, spell.RangedAttackPower(target)) +
-				flatBonus
-
-			result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeRangedHitAndCrit)
-
-			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
-				spell.DealDamage(sim, result)
-			})
-		},
-	})
+	hunter.RegisterSpell(config)
 }

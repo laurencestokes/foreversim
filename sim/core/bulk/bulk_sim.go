@@ -34,10 +34,6 @@ type BulkSimCandidateResult struct {
 	Error      *proto.ErrorOutcome
 }
 
-func BulkSim(request *proto.BulkSimRequest) *proto.BulkSimResult {
-	return runBulkSim(request, nil, simsignals.CreateSignals())
-}
-
 func BulkSimAsync(request *proto.BulkSimRequest, progress chan *proto.ProgressMetrics, requestId string) {
 	signals, err := simsignals.RegisterWithId(requestId)
 	if err != nil {
@@ -90,13 +86,12 @@ func runBulkSim(request *proto.BulkSimRequest, progress chan *proto.ProgressMetr
 	}
 
 	result := &proto.BulkSimResult{
-		Timings:             &proto.BulkSimTimings{},
-		OptimizedCandidates: request.GetOptimizedCandidates(),
+		Timings: &proto.BulkSimTimings{},
 	}
 	baselineGear := GetBulkSimBaselineGear(request)
 
 	if len(candidates) == 0 {
-		baselineResult := runSingleBulkSim(request, BulkSimCandidate{Index: -1, Gear: baselineGear}, request.BaseRequest.SimOptions.Iterations, signals)
+		baselineResult := runSingleBulkSim(request, BulkSimCandidate{Index: -1, Gear: baselineGear}, bulkSimHighStageFloor(), signals)
 		if baselineResult.Error != nil {
 			result.Error = baselineResult.Error
 			return result
@@ -112,7 +107,7 @@ func runBulkSim(request *proto.BulkSimRequest, progress chan *proto.ProgressMetr
 	var latestResults []*BulkSimCandidateResult
 
 	var carry *bulkSimStageCarryOver
-	useLegacyBulkSim := shouldUseLegacyBulkSim(request.GetBulkSettings(), request.HighStageIterations, len(candidates))
+	singleStage := shouldUseSingleStageBulkSim(len(candidates))
 	// Culling intervals are corrected for how many candidates the run started with,
 	// not for how many are left: the survivors were themselves selected by the same
 	// noisy metric, so recomputing the correction on the shrinking set would weaken
@@ -128,7 +123,7 @@ func runBulkSim(request *proto.BulkSimRequest, progress chan *proto.ProgressMetr
 			return result
 		}
 
-		if useLegacyBulkSim && stageConfig.Stage != proto.BulkSimStage_BulkSimStageHigh {
+		if singleStage && stageConfig.Stage != proto.BulkSimStage_BulkSimStageHigh {
 			continue
 		}
 		if !shouldRunBulkSimStage(stageConfig, len(candidates)) {
@@ -168,7 +163,7 @@ func runBulkSim(request *proto.BulkSimRequest, progress chan *proto.ProgressMetr
 	}
 
 	if latestBaseline == nil {
-		baselineResult := runSingleBulkSim(request, BulkSimCandidate{Index: -1, Gear: baselineGear}, request.BaseRequest.SimOptions.Iterations, signals)
+		baselineResult := runSingleBulkSim(request, BulkSimCandidate{Index: -1, Gear: baselineGear}, bulkSimHighStageFloor(), signals)
 		if baselineResult.Error != nil {
 			result.Error = baselineResult.Error
 			return result
@@ -255,7 +250,7 @@ func getBulkSimPlayer(raid *proto.Raid) (*proto.Player, string) {
 	return player, ""
 }
 
-// GetBulkSimBaselineGear returns the raid's single bulk player's equipment, or nil.
+// The raid's single bulk player's equipment, or nil.
 func GetBulkSimBaselineGear(request *proto.BulkSimRequest) *proto.EquipmentSpec {
 	player, _ := getBulkSimPlayer(request.GetBaseRequest().GetRaid())
 	if player == nil {

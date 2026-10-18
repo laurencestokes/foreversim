@@ -1,94 +1,53 @@
 package mage
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Every rank is registered: a rotation can drop to a cheaper rank when mana runs short.
+// Only the highest rank is registered: the mage casts the rank configured here, not every rank
+// spellData.ArcaneMissiles lists.
 func (mage *Mage) registerArcaneMissilesSpell() {
-	spellData.ArcaneMissiles.Each(func(_ int32, rank *spelldata.Spell) { mage.registerArcaneMissilesRank(rank) })
+	//Rank 7 is last trainer taught spell
+	mage.registerArcaneMissilesRank(spellData.ArcaneMissiles.Len(), spellData.ArcaneMissiles.Rank(7))
 }
 
-func (mage *Mage) registerArcaneMissilesRank(arcaneMissilesRank *spelldata.Spell) {
-	missileRank := spellData.ArcaneMissilesTriggered.Rank(arcaneMissilesRank.RankNumber())
+// The channel's periodic effect names the missile it fires each tick, a rank of
+// spellData.ArcaneMissilesTriggered.
+func (mage *Mage) registerArcaneMissilesRank(_ int32, rank *spelldata.Spell) {
+	missile := spelldata.MustFind(rank.PeriodicEffect().TriggerID)
+	missileDamage := missile.DamageEffect()
 
-	// One missile a second for the channel; the row states the channel's length, not its period.
-	tickLength := time.Second
-	numTicks := int32(arcaneMissilesRank.Duration() / tickLength)
+	tickConfig := spelldata.SpellConfig(&mage.Unit, missile, spelldata.Magic(core.ProcMaskSpellDamage), spelldata.RemoveFlags(core.SpellFlagAPL))
+	tickConfig.ClassSpellMask = MageSpellArcaneMissilesTick
+	// Each missile rolls when the tick fires it and lands after flying at the row's speed.
+	tickConfig.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcDamage(sim, target, missileDamage.Average(), spell.OutcomeTickMagicHitAndCrit)
+		spell.DealDamageAfterTravel(sim, result)
+		spell.SpellMetrics[target.UnitIndex].Casts--
+	}
 
-	// The Arcane Blast stacks the channel spent, which its missiles keep.
-	arcaneBlastBonus := 0.0
+	tickSpell := mage.RegisterSpell(tickConfig)
 
-	arcaneMissilesTickSpell := mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: missileRank.ID},
-		SpellSchool:    missileRank.SpellSchool(),
-		DefenseType:    missileRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagNoOnCastComplete,
-		ClassSpellMask: MageSpellArcaneMissilesTick,
-		MissileSpeed:   float64(missileRank.Speed),
+	spellConfig := spelldata.SpellConfig(&mage.Unit, rank, spelldata.Magic(core.ProcMaskSpellDamage), spelldata.RemoveFlags(core.SpellFlagHelpful))
+	spellConfig.ClassSpellMask = MageSpellArcaneMissilesCast
 
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-		BonusCoefficient: missileRank.DamageEffect().Coeff(),
+	dotConfig := spelldata.DotConfig(rank, rank.PeriodicEffect())
+	dotConfig.OnTick = func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
+		tickSpell.Cast(sim, target)
+	}
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.DamageMultiplierAdditive += arcaneBlastBonus
-			defer func() { spell.DamageMultiplierAdditive -= arcaneBlastBonus }()
+	spellConfig.Dot = dotConfig
 
-			result := spell.CalcDamage(sim, target, missileRank.DamageEffect().Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
-				spell.DealDamage(sim, result)
-			})
-		},
-	})
+	spellConfig.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		// The channel never misses; each missile rolls its own hit.
+		spell.CalcAndDealOutcome(sim, target, spell.OutcomeAlwaysHit)
 
-	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: arcaneMissilesRank.ID},
-		SpellSchool:    arcaneMissilesRank.SpellSchool(),
-		DefenseType:    arcaneMissilesRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagChanneled | core.SpellFlagAPL,
-		ClassSpellMask: MageSpellArcaneMissilesCast,
-		MaxRange:       float64(arcaneMissilesRank.MaxRange),
-		Rank:           arcaneMissilesRank.RankNumber(),
+		spell.Dot(target).Apply(sim)
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(arcaneMissilesRank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: arcaneMissilesRank.GCD(),
-			},
-		},
+		tickSpell.SpellMetrics[target.UnitIndex].Casts++
+		tickSpell.SpellMetrics[target.UnitIndex].Hits++
+	}
 
-		Dot: core.DotConfig{
-			Aura: core.Aura{
-				Label: fmt.Sprintf("ArcaneMissiles-%d", arcaneMissilesRank.RankNumber()),
-			},
-			NumberOfTicks: numTicks,
-			TickLength:    tickLength,
-			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				arcaneMissilesTickSpell.Cast(sim, target)
-			},
-		},
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			// The channel spends the Arcane Blast stacks as it starts: beta log 2689 (Icykiss) shows
-			// 400573 removed 0.3 s into both Arcane Missiles, before the first missile. Its missiles
-			// still carry them, 15% a stack, though 400573's mask leaves Arcane Missiles out: beta log
-			// 2721 (Dainer, rank 3) has every missile after 1 stack at 99-101 and after 2 at 112-114
-			// (crits 149-151 / 169-171), the same fights and targets; 1.30/1.15 = 1.13 where the
-			// client's 10% would give 1.20/1.10 = 1.09.
-			arcaneBlastBonus = 0.15 * float64(mage.ArcaneBlastAura.GetStacks())
-			if mage.ArcaneBlastAura != nil {
-				mage.ArcaneBlastAura.Deactivate(sim)
-			}
-			spell.Dot(target).Apply(sim)
-		},
-	})
+	mage.RegisterSpell(spellConfig)
 }

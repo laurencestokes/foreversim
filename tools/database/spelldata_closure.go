@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"maps"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -16,17 +15,16 @@ import (
 	"github.com/wowsims/forever/tools/database/overrides"
 )
 
-// The spells the sim can reach without anything naming them first: everything the nine class files
-// are built from, and every spell an item, an enchant or a set bonus casts. What those spells trigger
-// is reached from here by reachableSpells.
+// The spells the sim can reach from gear without anything naming them first: every spell an item, an
+// enchant or a set bonus casts. With the spells the nine class files are built from, they are the
+// store's roots, and what those spells trigger is reached from there by reachableSpells. They are kept
+// apart from the class roots: they are the items spell data group and the universe the proc audit
+// asks its question over, and which query a root came from cannot be recovered from a merged list.
 //
 // The hand-kept extra spells are not here: they are added while the store is rendered, so that adding
 // one and forgetting to regenerate fails the regeneration check instead of passing it - see
 // withExtraIDs.
-// The gear half is returned on its own as well: it is the universe the proc audit asks its question
-// over, and which query a root came from cannot be recovered from the merged list.
-func storeRoots(db *sql.DB, t *spellTables, ladderIDs []int32) (roots []int32, gear []int32, err error) {
-	roots = slices.Clone(ladderIDs)
+func gearRoots(db *sql.DB, t *spellTables) (gear []int32, err error) {
 	for _, source := range []struct {
 		name  string
 		query string
@@ -41,19 +39,18 @@ func storeRoots(db *sql.DB, t *spellTables, ladderIDs []int32) (roots []int32, g
 			if err := rows.Scan(&id); err != nil {
 				return err
 			}
-			roots = append(roots, id)
 			gear = append(gear, id)
 			return nil
 		}); err != nil {
-			return nil, nil, fmt.Errorf("%s: %w", source.name, err)
+			return nil, fmt.Errorf("%s: %w", source.name, err)
 		}
 	}
 
-	return namedIDs(t, roots), namedIDs(t, gear), nil
+	return namedIDs(t, gear), nil
 }
 
 // Set by gen_spelldata -everyClassSpell: roots the store at every spell of a class family as well,
-// for an export of the client's class spells rather than a store the sim is built against.
+// for an export of the game files' class spells rather than a store the sim is built against.
 var EveryClassSpell bool
 
 // Selects nothing unless EveryClassSpell is set.
@@ -65,21 +62,22 @@ func everyClassSpellQuery() string {
 }
 
 // The spells a rank reads its numbers off by name. A rank that states no amount of its own keeps it
-// on a same-name sibling - Frenzied Regeneration's heal is on 22845, Tiger's Fury's energize on
-// 417045 - so the store carries those too: same name, same rank subtext, a shared class bit, and
-// taught by a skill line rather than merely existing.
+// on a same-name sibling - Frenzied Regeneration's heal is on 22845 - so the store carries those
+// too: same name, same rank subtext, a shared class bit, and taught by a skill line rather than
+// merely existing.
 //
 // One pass over everything already reached is enough: the relation is the name and subtext, so a
-// sibling's siblings are the ones already in hand.
-func siblingSpells(db *sql.DB, ids []int32) ([]int32, error) {
+// sibling's siblings are the ones already in hand. The siblings come back by the spell they are
+// siblings of, so one query serves every spell data group's reach.
+func siblingSpells(db *sql.DB, ids []int32) (map[int32][]int32, error) {
 	list := make([]string, len(ids))
 	for i, id := range ids {
 		list[i] = strconv.Itoa(int(id))
 	}
 
-	var siblings []int32
+	siblings := map[int32][]int32{}
 	err := eachRow(db, `
-		SELECT DISTINCT b.Spell
+		SELECT DISTINCT a.Spell, b.Spell
 		FROM SkillLineAbility a
 		JOIN SkillLineAbility b ON b.Spell != a.Spell AND (a.ClassMask & b.ClassMask) != 0
 		JOIN SpellName na ON na.ID = a.Spell
@@ -88,18 +86,18 @@ func siblingSpells(db *sql.DB, ids []int32) ([]int32, error) {
 		JOIN Spell sb ON sb.ID = b.Spell AND sb.NameSubtext_lang = sa.NameSubtext_lang
 		WHERE a.Spell IN (`+strings.Join(list, ", ")+`)
 		ORDER BY b.Spell`, func(rows *sql.Rows) error {
-		var id int32
-		if err := rows.Scan(&id); err != nil {
+		var of, id int32
+		if err := rows.Scan(&of, &id); err != nil {
 			return err
 		}
-		siblings = append(siblings, id)
+		siblings[of] = append(siblings[of], id)
 		return nil
 	})
 	return siblings, err
 }
 
 // The hand-kept extra spells, added to the captured roots while the store is rendered rather than
-// while the client tables are read, so an entry added without a regeneration shows up as a row the
+// while the game files tables are read, so an entry added without a regeneration shows up as a row the
 // committed store lacks.
 func withExtraIDs(t *spellTables, roots []int32) ([]int32, error) {
 	extras := make([]int32, 0, len(overrides.ExtraSpells))
@@ -107,9 +105,13 @@ func withExtraIDs(t *spellTables, roots []int32) ([]int32, error) {
 		if extra.Reason == "" {
 			return nil, fmt.Errorf("the extra spell %d states no reason", extra.SpellID)
 		}
+		if extra.SpellDataGroup != "" && extra.SpellDataGroup != groupRacials {
+			return nil, fmt.Errorf("the extra spell %d names spell data group %q, and only %q is named by hand",
+				extra.SpellID, extra.SpellDataGroup, groupRacials)
+		}
 		// Dropped like any other unnamed id, but said out loud: it was written down on purpose.
 		if _, named := t.Names[extra.SpellID]; !named {
-			fmt.Fprintf(progress, "spelldata: extra spell %d is no spell in this client, so the store does not carry it\n",
+			fmt.Fprintf(progress, "spelldata: extra spell %d is no spell in the game files, so the store does not carry it\n",
 				extra.SpellID)
 		}
 		extras = append(extras, extra.SpellID)
@@ -124,16 +126,21 @@ func withExtraIDs(t *spellTables, roots []int32) ([]int32, error) {
 func buffManifestIDs() []int32 {
 	var ids []int32
 	for _, spec := range buffmanifest.All() {
-		ids = append(ids, spec.SpellID, spec.CastID, spec.Talent)
-		if spec.ImpAction != nil {
-			ids = append(ids, spec.ImpAction.SpellID)
-		}
+		ids = append(ids, buffSpecIDs(spec)...)
+	}
+	return ids
+}
+
+func buffSpecIDs(spec buffmanifest.Row) []int32 {
+	ids := []int32{spec.SpellID, spec.CastID, spec.Talent}
+	if spec.ImpAction != nil {
+		ids = append(ids, spec.ImpAction.SpellID)
 	}
 	return ids
 }
 
 // The ids of every list that this build names as a spell, deduped and in search order. An id no
-// SpellName row carries is not a spell here: ItemEffect keeps rows for spells the client dropped,
+// SpellName row carries is not a spell here: ItemEffect keeps rows for spells the game files dropped,
 // and following one would put an empty row in the store.
 func namedIDs(t *spellTables, lists ...[]int32) []int32 {
 	set := map[int32]bool{}
@@ -148,9 +155,8 @@ func namedIDs(t *spellTables, lists ...[]int32) []int32 {
 }
 
 // The gear and consumables gen_db ships, which is where the item procs the sim registers come from.
-// The gear half is the predicate gen_db itself passes to LoadAndWriteRawItems; the consumable half
-// states the classes LoadAndWriteConsumables selects, whose query cannot be reused as it stands
-// because its own filter reads a subquery alias. Both halves let the allowlists through, as gen_db
+// Each half is the predicate gen_db itself selects with: SimItemFilter for LoadAndWriteRawItems and
+// ConsumableItemFilter for LoadAndWriteConsumables. Both halves let the allowlists through, as gen_db
 // does: Hand of Justice and the raid consumables are shipped by id rather than by predicate.
 //
 // The predicate runs over Item left-joined to ItemSparse alone, without the inner joins to
@@ -166,21 +172,16 @@ func itemEffectSpellQuery() string {
 		LEFT JOIN ItemSparse s ON s.ID = i.ID
 		WHERE ie.SpellID > 0 AND (
 			(` + SimItemFilter(core.CharacterLevel) + `)
-			OR (((i.ClassID = 0 AND i.SubclassID IS NOT 0 AND i.SubclassID IS NOT 8 AND i.SubclassID IS NOT 6)
-			     OR (i.ClassID = 7 AND i.SubclassID = 2))
-			    AND s.RequiredLevel >= 50 AND s.Display_lang != ''
-			    AND s.Display_lang NOT LIKE '%Test%' AND s.Display_lang NOT LIKE 'QA%')
+			OR (` + ConsumableItemFilter() + `)
 			OR i.ID IN (` + allowListedItemIDs() + `))`
 }
 
-// The items gen_db ships by id: ItemAllowList bypasses the gear filter and ConsumableAllowList is
-// added to the consumable query. Hand of Justice and Skullflame Shield have no ItemSparse row in
+// The items gen_db ships by id: ItemAllowList bypasses the gear filter and catalogueConsumableIDs
+// are added to the consumable query. Hand of Justice and Skullflame Shield have no ItemSparse row in
 // this build, which is why the join to it above is a left one: an allowlisted item is taken by id,
 // whatever the sparse table says about it.
 func allowListedItemIDs() string {
-	ids := append(slices.Collect(maps.Keys(ItemAllowList)), ConsumableAllowList...)
-	ids = append(ids, slices.Collect(maps.Keys(ClassicConsumableTypes))...)
-	ids = append(ids, foreverSimItemIDs()...)
+	ids := append(slices.Collect(maps.Keys(ItemAllowList)), catalogueConsumableIDs()...)
 	slices.Sort(ids)
 
 	list := make([]string, len(ids))
@@ -189,20 +190,6 @@ func allowListedItemIDs() string {
 	}
 	return strings.Join(list, ", ")
 }
-
-// The items gen_db merges in from our Forever sim's database (mergeForeverSimDB) - Classic-era gear
-// the gear filter above does not select, Hurricane and Blade of Eternal Darkness among them. Their
-// procs are registered like any other item's, so their spells have to be in the store. A missing
-// file (a checkout without the generated inputs) only means those items add no roots.
-func foreverSimItemIDs() []int32 {
-	raw, err := os.ReadFile(foreverSimDBPath)
-	if err != nil {
-		return nil
-	}
-	return slices.Collect(maps.Keys(ReadDatabaseFromJson(string(raw)).Items))
-}
-
-const foreverSimDBPath = "assets/db_inputs/forever_sim_db.json"
 
 // An enchant states the spell it applies in the EffectArg of the effect that applies it, which is
 // what LoadAndWriteRawEnchants reads as its spell id: effect 1 and effect 3 are the two that name a
@@ -258,12 +245,23 @@ func spellEdges(t *spellTables, id int32) []int32 {
 	return append(next, t.referencedIDs(id)...)
 }
 
-// The spells a server-side handler casts off this one, which no client row states.
+// The spells a server-side handler casts off this one, which no game files row states.
 func handTriggered(id int32) []int32 {
 	var ids []int32
 	for _, link := range overrides.HandTriggers {
 		if link.Spell == id {
 			ids = append(ids, link.Triggers)
+		}
+	}
+	return ids
+}
+
+// The ids this one's tooltip names where its handler casts another spell.
+func handReplaced(id int32) []int32 {
+	var ids []int32
+	for _, link := range overrides.HandTriggers {
+		if link.Spell == id && link.Replaces != 0 {
+			ids = append(ids, link.Replaces)
 		}
 	}
 	return ids

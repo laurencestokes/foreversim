@@ -4,19 +4,8 @@ import (
 	"time"
 
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
-	"github.com/wowsims/forever/sim/core/stats"
-)
-
-type Stance uint8
-
-const (
-	StanceNone          = 0
-	BattleStance Stance = 1 << iota
-	DefensiveStance
-	BerserkerStance
 )
 
 const stanceEffectCategory = "Stance"
@@ -25,66 +14,53 @@ var battleStanceRank = spellData.BattleStance.Highest()
 var defensiveStanceRank = spellData.DefensiveStance.Highest()
 var berserkerStanceRank = spellData.BerserkerStance.Highest()
 
-func (warrior *Warrior) StanceMatches(other Stance) bool {
-	return (warrior.Stance & other) != 0
-}
+// The passive each stance carries, which is where the game files state what standing in it is worth.
+var battleStancePassive = spellData.BattleStancePassive.Highest()
+var defensiveStancePassive = spellData.DefensiveStancePassive.Highest()
+var berserkerStancePassive = spellData.BerserkerStancePassive.Highest()
 
-func (warrior *Warrior) makeStanceSpell(stance Stance, mask int64, rank *spelldata.Spell, aura *core.Aura, stanceCD *core.Timer) *core.Spell {
-	actionID := aura.ActionID
-	rageMetrics := warrior.NewRageMetrics(actionID)
+// The three stance rows share category 47, so their 1 s category cooldown runs off one timer.
+func (warrior *Warrior) makeStanceSpell(rank *spelldata.Spell, aura *core.Aura) *core.Spell {
+	form := rank.ShapeshiftForm()
+	rageMetrics := warrior.NewRageMetrics(aura.ActionID)
 	maxRetainedRage := spellData.TacticalMastery.ValueAt(1) + spellData.ImprovedTacticalMastery.ValueAt(warrior.Talents.ImprovedTacticalMastery)
 
-	return warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       actionID,
-		DefenseType:    rank.DefenseTypeCore(),
-		ClassSpellMask: mask,
-		Flags:          core.SpellFlagNoOnCastComplete | core.SpellFlagAPL,
+	config := spelldata.SpellConfig(&warrior.Unit, rank, spelldata.Flags(core.SpellFlagNoOnCastComplete|core.SpellFlagAPL))
 
-		Cast: core.CastConfig{
-			CD: core.Cooldown{
-				Timer:    stanceCD,
-				Duration: cooldownOf(rank),
-			},
-		},
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return warrior.Stance != stance
-		},
+	config.ExtraCastCondition = func(sim *core.Simulation, target *core.Unit) bool {
+		return warrior.ShapeshiftForm != form
+	}
 
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
-			if warrior.WarriorInputs.StanceSnapshot {
-				// Delayed, so same-GCD casts are affected by the current aura.
-				// Alternatively, those casts could just (artificially) happen before the stance change.
-				pa := sim.GetConsumedPendingActionFromPool()
-				pa.NextActionAt = sim.CurrentTime + 10*time.Millisecond
-				pa.OnAction = aura.Activate
-				sim.AddPendingAction(pa)
-			} else {
-				aura.Activate(sim)
-			}
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
+		if warrior.WarriorInputs.StanceSnapshot {
+			// Delayed, so same-GCD casts are affected by the current aura.
+			// Alternatively, those casts could just (artificially) happen before the stance change.
+			pa := sim.GetConsumedPendingActionFromPool()
+			pa.NextActionAt = sim.CurrentTime + 10*time.Millisecond
+			pa.OnAction = aura.Activate
+			sim.AddPendingAction(pa)
+		} else {
+			aura.Activate(sim)
+		}
 
-			if warrior.CurrentRage() > maxRetainedRage {
-				warrior.SpendRage(sim, warrior.CurrentRage()-maxRetainedRage, rageMetrics)
-			}
+		if warrior.CurrentRage() > maxRetainedRage {
+			warrior.SpendRage(sim, warrior.CurrentRage()-maxRetainedRage, rageMetrics)
+		}
 
-			warrior.Stance = stance
-		},
+		warrior.ShapeshiftForm = form
+	}
 
-		RelatedSelfBuff: aura,
-	})
+	config.RelatedSelfBuff = aura
+
+	return warrior.RegisterSpell(config)
 }
 
 func (warrior *Warrior) registerBattleStanceAura() *core.Aura {
-	actionID := core.ActionID{SpellID: battleStanceRank.ID}
+	config := spelldata.AuraConfig(battleStanceRank)
+	config.BuildPhase = core.Ternary(warrior.DefaultStance == proto.WarriorStance_WarriorStanceBattle, core.CharacterBuildPhaseBuffs, core.CharacterBuildPhaseNone)
 
-	aura := warrior.RegisterAura(core.Aura{
-		Label:      "Battle Stance",
-		ActionID:   actionID,
-		Duration:   core.NeverExpires,
-		BuildPhase: core.Ternary(warrior.DefaultStance == proto.WarriorStance_WarriorStanceBattle, core.CharacterBuildPhaseBuffs, core.CharacterBuildPhaseNone),
-	}).AttachMultiplicativePseudoStatBuff(
-		&warrior.PseudoStats.ThreatMultiplier,
-		spellData.BattleStancePassive.Effect(dbcenums.A_MOD_THREAT, 127).MultiplierAt(1),
-	)
+	aura := warrior.RegisterAura(config)
+	spelldata.ParseEffects(&warrior.Character, aura, battleStancePassive)
 
 	aura.NewExclusiveEffect(stanceEffectCategory, true, core.ExclusiveEffect{})
 
@@ -92,39 +68,22 @@ func (warrior *Warrior) registerBattleStanceAura() *core.Aura {
 }
 
 func (warrior *Warrior) registerDefensiveStanceAura() *core.Aura {
-	actionID := core.ActionID{SpellID: defensiveStanceRank.ID}
+	config := spelldata.AuraConfig(defensiveStanceRank)
+	config.BuildPhase = core.Ternary(warrior.DefaultStance == proto.WarriorStance_WarriorStanceDefensive, core.CharacterBuildPhaseBuffs, core.CharacterBuildPhaseNone)
 
-	aura := warrior.RegisterAura(core.Aura{
-		Label:      "Defensive Stance",
-		ActionID:   actionID,
-		Duration:   core.NeverExpires,
-		BuildPhase: core.Ternary(warrior.DefaultStance == proto.WarriorStance_WarriorStanceDefensive, core.CharacterBuildPhaseBuffs, core.CharacterBuildPhaseNone),
-	}).AttachMultiplicativePseudoStatBuff(
-		&warrior.PseudoStats.ThreatMultiplier,
-		spellData.DefensiveStancePassive.Effect(dbcenums.A_MOD_THREAT, 127).MultiplierAt(1),
-	).AttachMultiplicativePseudoStatBuff(
-		&warrior.PseudoStats.DamageTakenMultiplier,
-		spellData.DefensiveStancePassive.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_TAKEN, 127).MultiplierAt(1),
-	).AttachMultiplicativePseudoStatBuff(
-		&warrior.PseudoStats.DamageDealtMultiplier,
-		spellData.DefensiveStancePassive.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_DONE, 127).MultiplierAt(1),
-	)
+	aura := warrior.RegisterAura(config)
+	spelldata.ParseEffects(&warrior.Character, aura, defensiveStancePassive)
+
 	if warrior.Talents.Defiance > 0 {
-		defiance := spellData.Defiance.Effect(dbcenums.A_MOD_THREAT, 127).MultiplierAt(warrior.Talents.Defiance)
-		applied := false
-		refresh := func(inStance bool) {
-			want := inStance && warrior.PseudoStats.CanBlock
-			if want && !applied {
-				warrior.PseudoStats.ThreatMultiplier *= defiance
-			} else if !want && applied {
-				warrior.PseudoStats.ThreatMultiplier /= defiance
-			}
-			applied = want
-		}
-		aura.ApplyOnGain(func(_ *core.Aura, _ *core.Simulation) { refresh(true) })
-		aura.ApplyOnExpire(func(_ *core.Aura, _ *core.Simulation) { refresh(false) })
-		warrior.RegisterItemSwapCallback([]proto.ItemSlot{proto.ItemSlot_ItemSlotOffHand}, func(_ *core.Simulation, _ proto.ItemSlot) {
-			refresh(aura.IsActive())
+		// The stance the talent's threat applies in is the aura it hangs on. The row states the
+		// shield, but the parse never scopes to a shield, so it is the caller's condition, re-read
+		// on an off-hand swap.
+		defiance := spelldata.ParseEffects(&warrior.Character, aura,
+			spellData.Defiance.Rank(warrior.Talents.Defiance),
+			spelldata.Conditional(func() bool { return warrior.PseudoStats.CanBlock }))
+
+		warrior.RegisterItemSwapCallback([]proto.ItemSlot{proto.ItemSlot_ItemSlotOffHand}, func(sim *core.Simulation, _ proto.ItemSlot) {
+			defiance.Refresh(sim)
 		})
 	}
 
@@ -134,20 +93,13 @@ func (warrior *Warrior) registerDefensiveStanceAura() *core.Aura {
 }
 
 func (warrior *Warrior) registerBerserkerStanceAura() *core.Aura {
-	actionId := core.ActionID{SpellID: berserkerStanceRank.ID}
+	config := spelldata.AuraConfig(berserkerStanceRank)
+	config.BuildPhase = core.Ternary(warrior.DefaultStance == proto.WarriorStance_WarriorStanceBerserker, core.CharacterBuildPhaseBuffs, core.CharacterBuildPhaseNone)
 
-	aura := warrior.RegisterAura(core.Aura{
-		Label:      "Berserker Stance",
-		ActionID:   actionId,
-		Duration:   core.NeverExpires,
-		BuildPhase: core.Ternary(warrior.DefaultStance == proto.WarriorStance_WarriorStanceBerserker, core.CharacterBuildPhaseBuffs, core.CharacterBuildPhaseNone),
-	}).AttachMultiplicativePseudoStatBuff(
-		&warrior.PseudoStats.ThreatMultiplier,
-		spellData.BerserkerStancePassive.Effect(dbcenums.A_MOD_THREAT, 127).MultiplierAt(1),
-	).AttachMultiplicativePseudoStatBuff(
-		&warrior.PseudoStats.DamageTakenMultiplier,
-		spellData.BerserkerStancePassive.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_TAKEN, 127).MultiplierAt(1),
-	).AttachStatBuff(stats.PhysicalCritPercent, spellData.BerserkerStancePassive.Effect(dbcenums.A_MOD_CRIT_PCT, 0).ValueAt(1))
+	aura := warrior.RegisterAura(config)
+	// The row's fourth effect is an attack power percentage of 0, which has no sim kind and nothing
+	// to apply either way.
+	spelldata.ParseEffects(&warrior.Character, aura, berserkerStancePassive)
 
 	aura.NewExclusiveEffect(stanceEffectCategory, true, core.ExclusiveEffect{})
 
@@ -155,13 +107,12 @@ func (warrior *Warrior) registerBerserkerStanceAura() *core.Aura {
 }
 
 func (warrior *Warrior) registerStances() {
-	stanceCD := warrior.NewTimer()
 	battleStanceAura := warrior.registerBattleStanceAura()
 	defensiveStanceAura := warrior.registerDefensiveStanceAura()
 	berserkerStanceAura := warrior.registerBerserkerStanceAura()
-	warrior.BattleStance = warrior.makeStanceSpell(BattleStance, SpellMaskBattleStance, battleStanceRank, battleStanceAura, stanceCD)
-	warrior.DefensiveStance = warrior.makeStanceSpell(DefensiveStance, SpellMaskDefensiveStance, defensiveStanceRank, defensiveStanceAura, stanceCD)
-	warrior.BerserkerStance = warrior.makeStanceSpell(BerserkerStance, SpellMaskBerserkerStance, berserkerStanceRank, berserkerStanceAura, stanceCD)
+	warrior.BattleStance = warrior.makeStanceSpell(battleStanceRank, battleStanceAura)
+	warrior.DefensiveStance = warrior.makeStanceSpell(defensiveStanceRank, defensiveStanceAura)
+	warrior.BerserkerStance = warrior.makeStanceSpell(berserkerStanceRank, berserkerStanceAura)
 
 	switch warrior.DefaultStance {
 	case proto.WarriorStance_WarriorStanceBattle:

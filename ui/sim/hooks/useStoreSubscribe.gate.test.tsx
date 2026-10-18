@@ -5,7 +5,7 @@
 // React binding needs `subscribeGated` is a question to settle by measurement. This is that
 // measurement, over three bindings of the same store:
 //
-//   gated    — useStoreSubscribe over a subscribeGated source (what every ported component uses)
+//   gated    — useStoreSubscribe over a subscribeGated source (what every component uses)
 //   ungated  — useStoreSubscribe over a raw store.subscribe source
 //   useStore — zustand's own React binding, which has no gate at all
 import { act, render } from '@testing-library/react';

@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 
@@ -130,17 +129,7 @@ func (rot *APLRotation) newActionStrictSequence(config *proto.APLActionStrictSeq
 	subactions := MapSlice(config.Actions, func(action *proto.APLAction) *APLAction {
 		return rot.newAPLAction(action)
 	})
-	// A strict sequence runs every step in order or not at all. With a step the character doesn't
-	// have (an untaken talent), the steps left over are a different row: smite's "Inner Focus,
-	// then Smite" became an unconditional Smite that outranked every row below it.
-	if slices.Contains(subactions, nil) {
-		for _, subaction := range subactions {
-			if subaction != nil {
-				rot.prunedActions = append(rot.prunedActions, subaction.impl)
-			}
-		}
-		return nil
-	}
+	subactions = FilterSlice(subactions, func(action *APLAction) bool { return action != nil })
 	if len(subactions) == 0 {
 		return nil
 	}
@@ -199,11 +188,23 @@ func (action *APLActionStrictSequence) advanceSequence() {
 		action.relinquishControl()
 	}
 }
-func (action *APLActionStrictSequence) GetNextAction(sim *Simulation) *APLAction {
-	if action.subactions[action.curIdx].IsReady(sim) {
-		nextAction := action.subactions[action.curIdx]
 
-		if action.unit.GCD.IsReady(sim) {
+// The subaction the sequence is at, without moving it on.
+func (action *APLActionStrictSequence) current() *APLAction {
+	return action.subactions[action.curIdx]
+}
+func (action *APLActionStrictSequence) GetNextAction(sim *Simulation) *APLAction {
+	if nextAction := action.current(); nextAction.IsReady(sim) {
+		castReady := action.unit.GCD.IsReady(sim)
+		switch cast := nextAction.impl.(type) {
+		case *APLActionCastSpell:
+			castReady = cast.spell.CanCast(sim, cast.target.Get())
+		case *APLActionCastFriendlySpell:
+			castReady = cast.spell.CanCast(sim, cast.target.Get())
+		case *APLActionChannelSpell:
+			castReady = cast.spell.CanCast(sim, cast.target.Get())
+		}
+		if castReady {
 			action.advanceSequence()
 		} else if _, ok := nextAction.impl.(*APLActionWait); ok {
 			action.advanceSequence()

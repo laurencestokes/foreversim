@@ -1,7 +1,6 @@
 package paladin
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/wowsims/forever/sim/core"
@@ -27,6 +26,9 @@ type sealConfig struct {
 	echo   func(sim *core.Simulation, target *core.Unit)
 }
 
+// Only one Twist of Light Echo is up at a time.
+const EchoCategory = "PaladinEcho"
+
 // The Echoes Twist of Light names, one per seal.
 const (
 	echoOfCommandID       = 1311703
@@ -41,7 +43,7 @@ type sealEcho struct {
 	seal *sealConfig
 }
 
-// The seals' rows as the client states them. Seal of Command is a talent and registers from
+// The seals' rows as the game files state them. Seal of Command is a talent and registers from
 // registerTalentSpells.
 var (
 	SealOfRighteousnessRankMap = spellData.SealOfRighteousness
@@ -61,14 +63,6 @@ func (paladin *Paladin) registerSeals() {
 	SealOfFuryRankMap.Each(paladin.registerSealOfFury)
 }
 
-// Seal of Justice has one rank and no rank subtext, so its label carries no rank.
-func sealLabel(name string, paladin *Paladin, rank *spelldata.Spell) string {
-	if rank.RankNumber() == 0 {
-		return name + paladin.Label
-	}
-	return fmt.Sprintf("%s%s Rank %d", name, paladin.Label, rank.RankNumber())
-}
-
 // Every seal aura joins the seal category, so casting one seal drops the other.
 func (paladin *Paladin) makeSealExclusive(aura *core.Aura) *core.Aura {
 	aura.NewExclusiveEffect(SealCategory, true, core.ExclusiveEffect{})
@@ -77,38 +71,33 @@ func (paladin *Paladin) makeSealExclusive(aura *core.Aura) *core.Aura {
 
 // The castable seal spell: instant, on the GCD, priced as the row says.
 func (paladin *Paladin) registerSealSpell(cfg *sealConfig) *core.Spell {
-	cfg.spell = paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: cfg.rank.ID},
-		SpellSchool:    cfg.rank.SpellSchool(),
-		DefenseType:    cfg.rank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskEmpty,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: cfg.classMask,
-		Rank:           cfg.rank.RankNumber(),
+	config := spelldata.SpellConfig(&paladin.Unit, cfg.rank, spelldata.Flags(core.SpellFlagAPL))
+	config.ProcMask = core.ProcMaskEmpty
+	config.ClassSpellMask = cfg.classMask
 
-		ManaCost: cfg.rank.ManaCost(),
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: cfg.rank.GCD(),
-			},
-		},
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
+		paladin.applySeal(sim, cfg)
+	}
 
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
-			paladin.applySeal(sim, cfg)
-		},
+	config.RelatedSelfBuff = cfg.aura
 
-		RelatedSelfBuff: cfg.aura,
-	})
+	cfg.spell = paladin.RegisterSpell(config)
 	return cfg.spell
 }
 
 func (paladin *Paladin) applySeal(sim *core.Simulation, cfg *sealConfig) {
 	previous := paladin.currentSeal
-	if previous != nil && previous != cfg && previous.aura.IsActive() {
+	if previous != nil && previous != cfg && previous.echoID != cfg.echoID && previous.aura.IsActive() {
 		if echo := paladin.echoes[previous.echoID]; echo != nil {
 			echo.seal = previous
 			echo.aura.Activate(sim)
 		}
+	}
+
+	// A seal and its own Echo are never up together: putting the seal back up drops its Echo.
+	if echo := paladin.echoes[cfg.echoID]; echo != nil && echo.aura.IsActive() {
+		echo.seal = nil
+		echo.aura.Deactivate(sim)
 	}
 
 	paladin.currentSeal = cfg
@@ -127,12 +116,17 @@ func (paladin *Paladin) activeSeal() *sealConfig {
 // A seal's per-hit damage lands a batch window after the swing that fired it, the way the game
 // resolves the proc after the melee hit.
 func dealAfterBatch(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+	afterBatch(sim, core.ActionPriorityLow, func(sim *core.Simulation) {
+		spell.DealDamage(sim, result)
+	})
+}
+
+// Runs the action a batch window from now.
+func afterBatch(sim *core.Simulation, priority core.ActionPriority, onAction func(*core.Simulation)) {
 	sim.AddPendingAction(core.NewDelayedAction(core.DelayedActionOptions{
 		DoAt:     sim.CurrentTime + core.SpellBatchWindow,
-		Priority: core.ActionPriorityLow,
-		OnAction: func(sim *core.Simulation) {
-			spell.DealDamage(sim, result)
-		},
+		Priority: priority,
+		OnAction: onAction,
 	}))
 }
 
@@ -144,7 +138,7 @@ func (paladin *Paladin) newJudgementAuras(makeAura func(target *core.Unit) *core
 	return auras
 }
 
-// Refreshes every judgement debuff this paladin has on the target, which the client does on every
+// Refreshes every judgement debuff this paladin has on the target, which the game does on every
 // melee strike that lands.
 func (paladin *Paladin) refreshJudgements(sim *core.Simulation, target *core.Unit) {
 	for _, auras := range paladin.JudgementAuras {

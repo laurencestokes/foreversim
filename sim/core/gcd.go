@@ -19,14 +19,7 @@ func (unit *Unit) newHardcastAction(sim *Simulation) {
 		pa := &PendingAction{
 			NextActionAt: unit.Hardcast.Expires,
 			Priority:     ActionPriorityGCD,
-			OnAction: func(sim *Simulation) {
-				if hc := &unit.Hardcast; hc.Expires != startingCDTime && hc.Expires <= sim.CurrentTime {
-					hc.Expires = startingCDTime
-					if hc.OnComplete != nil {
-						hc.OnComplete(sim, hc.Target)
-					}
-				}
-			},
+			OnAction:     unit.completeDueHardcast,
 		}
 		unit.hardcastAction = pa
 	} else {
@@ -35,6 +28,16 @@ func (unit *Unit) newHardcastAction(sim *Simulation) {
 	}
 
 	sim.AddPendingAction(unit.hardcastAction)
+}
+
+func (unit *Unit) completeDueHardcast(sim *Simulation) {
+	if hc := &unit.Hardcast; hc.Expires != startingCDTime && hc.Expires <= sim.CurrentTime {
+		hc.Expires = startingCDTime
+		if hc.OnComplete != nil {
+			hc.OnComplete(sim, hc.Target)
+		}
+		unit.endRotationCast()
+	}
 }
 
 func (unit *Unit) NextGCDAt() time.Duration {
@@ -51,6 +54,13 @@ func (unit *Unit) SetGCDTimer(sim *Simulation, gcdReadyAt time.Duration) {
 	}
 
 	unit.GCD.Set(gcdReadyAt)
+
+	// A queued spell that lands during a Wait keeps the Wait's earlier wake, so the rotation can
+	// still act off the GCD, such as a weaver walking out of melee.
+	if waitEnd := unit.NextRotationActionAt(); waitEnd > sim.CurrentTime && waitEnd < gcdReadyAt &&
+		unit.Rotation.HasBlockingControllingAction() {
+		return
+	}
 	unit.SetRotationTimer(sim, gcdReadyAt)
 }
 
@@ -108,7 +118,7 @@ func (unit *Unit) CancelGCDTimer(sim *Simulation) {
 func (unit *Unit) Interrupt(sim *Simulation) {
 	if unit.IsChanneling() {
 		dot := unit.ChanneledDot
-		dot.tickAction.NextActionAt = NeverExpires // don't tick again in ApplyOnExpire
+		dot.stopTicking(sim)
 		dot.Deactivate(sim)
 	}
 
@@ -122,6 +132,8 @@ func (unit *Unit) Interrupt(sim *Simulation) {
 func (unit *Unit) CancelHardcast(sim *Simulation) {
 	unit.HardcastAvoidanceAura.Deactivate(sim)
 	unit.Hardcast.Expires = startingCDTime
+	unit.AutoAttacks.releaseMeleeHeldByCast(sim)
+	unit.endRotationCast()
 	unit.SetGCDTimer(sim, sim.CurrentTime+unit.ReactionTime)
 }
 

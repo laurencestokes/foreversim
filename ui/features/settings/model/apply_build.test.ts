@@ -1,6 +1,5 @@
 import { ReforgeSettings as ReforgeSettingsProto } from '@generated/proto/api';
 import { APLRotation, APLRotation_Type as APLRotationType } from '@generated/proto/apl';
-import { Phase } from '@sim/constants/other';
 import type { PresetBuild } from '@sim/presets/types';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -47,7 +46,7 @@ const simpleRotation = (json: string) =>
 	}) as unknown as NonNullable<PresetBuild['rotation']>;
 
 describe('applyBuild rotation', () => {
-	// TBC's builds are hand-written and set both. Taking only the type branch left the
+	// Builds are hand-written and set both. Taking only the type branch would leave the
 	// previous spec rotation in place — apply "Arms", keep simming Fury.
 	it('applies the rotation when the build carries both a type and a rotation', () => {
 		applyBuild({ name: 'Arms', rotationType: APLRotationType.TypeSimple, rotation: simpleRotation('{"spec":"Arms"}') }, host());
@@ -97,7 +96,7 @@ describe('applyBuild player timings', () => {
 describe('applyBuild reforge settings', () => {
 	// Preset builds carry a partial; fromProto is the full-replace deserialization path.
 	it('merges the preset instead of replacing every field', () => {
-		const reforgeSettings = ReforgeSettingsProto.create({ maxGemPhase: Phase.Launch });
+		const reforgeSettings = ReforgeSettingsProto.create({ useCustomEpValues: true });
 
 		applyBuild({ name: 'P1', reforgeSettings }, host());
 

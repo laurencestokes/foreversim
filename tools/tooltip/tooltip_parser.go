@@ -634,6 +634,8 @@ func (s SimpleCompute) Eval(ctx *TooltipContext) float64 {
 func (s SimpleCompute) String(ctx *TooltipContext) string {
 	right := s.Value.Eval(ctx)
 	ctx.LastEval = right
+	// Signed the same way as a plain spell value: the tooltip writes its own "-" where it wants one.
+	right = math.Abs(right)
 	if s.Op == "/" {
 		return fmt.Sprintf("%.1f", right/float64(s.Num))
 	} else {
@@ -656,8 +658,8 @@ func (s SimpleSpellValue) Eval(ctx *TooltipContext) float64 {
 	case "d":
 		return float64(ctx.DataProvider.GetSpellDuration(s.getSpellId(ctx))) / float64(time.Second)
 	case "w":
-		// This does not properly evaluate in client for Spell Descriptions. In theory it seems to refer to the specific extra values of a buff
-		// i.E. the actual stamina buffed by a priester to display it correctly client side
+		// This does not properly evaluate in game for Spell Descriptions. In theory it seems to refer to the specific extra values of a buff
+		// i.E. the actual stamina buffed by a priester to display it correctly in game
 		// So for Buff Tooltip rendering we want to treat at probably the same as scaled effect value
 		fallthrough
 	case "s":
@@ -753,6 +755,8 @@ func (s SimpleSpellValue) String(ctx *TooltipContext) string {
 		fallthrough
 	case "t":
 		return fmt.Sprintf("%.1f", value/float64(time.Second))
+	case "S":
+		fallthrough
 	case "s":
 		fallthrough
 	case "A":
@@ -766,6 +770,8 @@ func (s SimpleSpellValue) String(ctx *TooltipContext) string {
 	case "m":
 		fallthrough
 	case "h":
+		fallthrough
+	case "H":
 		fallthrough
 	case "o":
 		fallthrough

@@ -3,31 +3,52 @@
 package sim
 
 import (
+	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
+	"github.com/wowsims/forever/assets/database"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/simsignals"
 )
 
-// ItemSparse.AllowableClass reaches the sim as the item's class allowlist, playable classes only.
+// The class allowlist each item states in the database reaches the sim's item as it is, and names
+// playable classes only, each once. The database loads an item id once, its first row.
 func TestClassRestrictedItemsCarryTheirAllowlist(t *testing.T) {
-	for id, want := range map[int32][]proto.Class{
-		14152: {proto.Class_ClassMage},    // Robe of the Archmage
-		19339: {proto.Class_ClassMage},    // Mind Quickening Gem, AllowableClass 31360
-		19343: {proto.Class_ClassPaladin}, // Scrolls of Blinding Light
-		19951: {proto.Class_ClassWarrior}, // Gri'lek's Charm of Might
-		19954: {proto.Class_ClassRogue},   // Renataki's Charm of Trickery
-	} {
-		item := core.GetItemByID(id)
-		if item == nil {
-			t.Errorf("item %d is not in the database", id)
+	playable := []proto.Class{proto.Class_ClassWarrior, proto.Class_ClassPaladin, proto.Class_ClassHunter,
+		proto.Class_ClassRogue, proto.Class_ClassPriest, proto.Class_ClassShaman, proto.Class_ClassMage,
+		proto.Class_ClassWarlock, proto.Class_ClassDruid}
+	restricted := 0
+	loaded := map[int32]bool{}
+	for _, uiItem := range database.Load().Items {
+		if loaded[uiItem.Id] {
 			continue
 		}
-		if !slices.Equal(item.ClassAllowlist, want) {
-			t.Errorf("item %d %s class allowlist = %v, want %v", id, item.Name, item.ClassAllowlist, want)
+		loaded[uiItem.Id] = true
+		item := core.GetItemByID(uiItem.Id)
+		if item == nil {
+			t.Errorf("item %d is not in the sim's database", uiItem.Id)
+			continue
 		}
+		if !slices.Equal(item.ClassAllowlist, uiItem.ClassAllowlist) {
+			t.Errorf("item %d %s loads class allowlist %v, the database states %v", item.ID, item.Name, item.ClassAllowlist, uiItem.ClassAllowlist)
+		}
+		if len(item.ClassAllowlist) > 0 {
+			restricted++
+		}
+		for i, class := range item.ClassAllowlist {
+			if !slices.Contains(playable, class) {
+				t.Errorf("item %d %s class allowlist %v names %v, which is not a playable class", item.ID, item.Name, item.ClassAllowlist, class)
+			}
+			if slices.Contains(item.ClassAllowlist[:i], class) {
+				t.Errorf("item %d %s class allowlist %v names %v twice", item.ID, item.Name, item.ClassAllowlist, class)
+			}
+		}
+	}
+	if restricted == 0 {
+		t.Error("no item carries a class allowlist")
 	}
 }
 
@@ -64,5 +85,51 @@ func TestClassRestrictedOnUseRegistersOnlyForItsClass(t *testing.T) {
 		DpsWarrior: &proto.DpsWarrior{Options: &proto.DpsWarrior_Options{ClassOptions: &proto.WarriorOptions{}}}}}
 	if onUseFor(warrior) != nil {
 		t.Errorf("a warrior wearing item %d has its on-use", charmID)
+	}
+}
+
+// Every gear set and build the specs ship holds only items its class may use; the class is the folder
+// the spec sits in, ui/specs/<class>/<spec>/gear_sets or ui/specs/<class>/<spec>/builds.
+func TestGearSetsHoldOnlyTheirClassItems(t *testing.T) {
+	gearFiles, err := filepath.Glob("../ui/specs/*/*/gear_sets/*.gear.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	buildFiles, err := filepath.Glob("../ui/specs/*/*/builds/*.build.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(gearFiles) == 0 || len(buildFiles) == 0 {
+		t.Fatalf("found %d gear sets and %d builds under ../ui/specs", len(gearFiles), len(buildFiles))
+	}
+	for _, file := range slices.Concat(gearFiles, buildFiles) {
+		className := strings.Split(filepath.ToSlash(file), "/")[3]
+		classValue, ok := proto.Class_value["Class"+strings.ToUpper(className[:1])+className[1:]]
+		if !ok {
+			t.Errorf("%s: %s is not a class", file, className)
+			continue
+		}
+		class := proto.Class(classValue)
+
+		dir, name := filepath.Dir(file), filepath.Base(file)
+		var equipment *proto.EquipmentSpec
+		if build, ok := strings.CutSuffix(name, ".build.json"); ok {
+			equipment = core.GetTestBuildFromJSON(class, dir, build, core.ItemFilter{}, nil, nil).GearSet.GearSet
+		} else {
+			equipment = core.GetGearSet(dir, strings.TrimSuffix(name, ".gear.json")).GearSet
+		}
+		for _, spec := range equipment.GetItems() {
+			if spec.Id == 0 {
+				continue
+			}
+			item := core.GetItemByID(spec.Id)
+			if item == nil {
+				t.Errorf("%s: item %d is not in the sim's database", file, spec.Id)
+				continue
+			}
+			if !item.UsableBy(class) {
+				t.Errorf("%s: item %d %s may only be used by %v, not %v", file, item.ID, item.Name, item.ClassAllowlist, class)
+			}
+		}
 	}
 }

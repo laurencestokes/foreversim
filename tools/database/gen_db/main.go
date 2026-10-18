@@ -27,8 +27,9 @@ import (
 // go run ./tools/database/gen_db -outDir=assets -gen=db
 
 var outDir = flag.String("outDir", "assets", "Path to output directory for writing generated .go files.")
-var genAsset = flag.String("gen", "", "Asset to generate. Valid values are 'db', 'encounters', 'atlasloot' and 'go-to-ts'")
+var genAsset = flag.String("gen", "", "Asset to generate. Valid values are 'db', 'atlasloot' and 'go-to-ts'")
 var dbPath = flag.String("dbPath", "./tools/database/wowsims.db", "Location of the wowsims.db file produced by tools/db2tool")
+var classes = flag.String("classes", "", "Write the talent files of these classes only (comma-separated package names, all or none, as gen_spelldata -classes); the item database is always written")
 
 func main() {
 	flag.Parse()
@@ -53,6 +54,12 @@ func main() {
 		if err := database.GenerateBulkSimTuningConstantsTSFile(); err != nil {
 			log.Fatalf("failed to generate bulk sim tuning constants TS file: %v", err)
 		}
+		if err := database.GenerateSimTablesTSFile(); err != nil {
+			log.Fatalf("failed to generate sim tables TS file: %v", err)
+		}
+		if err := database.GenerateStatWeightConstantsTSFile(); err != nil {
+			log.Fatalf("failed to generate stat weight constants TS file: %v", err)
+		}
 		return
 	} else if *genAsset == "atlasloot" {
 		helper, err := database.NewDBHelper()
@@ -64,13 +71,6 @@ func main() {
 		db := database.ReadAtlasLootData(helper)
 		db.WriteJson(fmt.Sprintf("%s/atlasloot_db.json", inputsDir))
 		return
-	} else if *genAsset == "encounters" {
-		// Refreshes only the preset encounters in the committed database, for when
-		// sim/encounters changes and the client database (-dbPath) is not at hand.
-		db := database.ReadDatabaseFromJson(tools.ReadFile(fmt.Sprintf("%s/db.json", dbDir)))
-		db.Encounters = core.PresetEncounters
-		db.WriteBinaryAndJson(fmt.Sprintf("%s/db.bin", dbDir), fmt.Sprintf("%s/db.json", dbDir))
-		return
 	} else if *genAsset != "db" {
 		panic("Invalid gen value")
 	}
@@ -79,6 +79,20 @@ func main() {
 		log.Fatalf("failed to initialize database: %v", err)
 	}
 	defer helper.Close()
+
+	only, behind, err := database.ResolveSpellDataGroups(helper, *classes, false, true)
+	if err != nil {
+		log.Fatalf("spell data groups: %v", err)
+	}
+	for _, line := range behind {
+		fmt.Fprintf(os.Stderr, "talent files kept, not ported: %s\n", line)
+	}
+
+	// The item database and the talent files of the groups taken are written from the database, so one
+	// behind the committed inputs in hotfixes would drop the items and talents only a hotfix adds.
+	if err := database.RequireCommittedHotfixes(helper, only); err != nil {
+		log.Fatalf("hotfixes: %v", err)
+	}
 
 	if err := database.RunOverrides(helper, "tools/database/overrides"); err != nil {
 		log.Fatalf("failed to run overrides: %v", err)
@@ -93,6 +107,7 @@ func main() {
 		names           map[int]string
 		craftingSources map[int][]*proto.CraftedSource
 		repSources      map[int][]*proto.RepSource
+		factionNames    map[int32]string
 		atlaslootDB     *database.WowDatabase
 		iconsMap        map[int]string
 		icons           map[int]database.SpellIcon
@@ -104,16 +119,15 @@ func main() {
 		return err
 	})
 	g.Go(func() error { _, err := database.LoadAndWriteRandomPropAllocations(helper, inputsDir); return err })
-	g.Go(func() error { _, err := database.LoadAndWriteRawGems(helper, inputsDir); return err })
 	g.Go(func() error { _, err := database.LoadAndWriteRawEnchants(helper, inputsDir); return err })
 	g.Go(func() error { _, err := database.LoadAndWriteRawSpellEffects(helper, inputsDir); return err })
-	g.Go(func() error { _, err := database.LoadAndWriteItemStatEffects(helper, inputsDir); return err })
 	g.Go(func() error { _, err := database.LoadAndWriteItemDamageTables(helper, inputsDir); return err })
 	g.Go(func() error { _, err := database.LoadAndWriteItemArmorTotal(helper, inputsDir); return err })
 	g.Go(func() error { _, err := database.LoadAndWriteItemArmorQuality(helper, inputsDir); return err })
 	g.Go(func() error { _, err := database.LoadAndWriteItemArmorShield(helper, inputsDir); return err })
 	g.Go(func() error { _, err := database.LoadAndWriteArmorLocation(helper, inputsDir); return err })
 	g.Go(func() error { _, err := database.LoadAndWriteItemEffects(helper, inputsDir); return err })
+	g.Go(func() error { _, err := database.LoadAndWriteItemSetSpells(helper, inputsDir); return err })
 	g.Go(func() error { _, err := database.LoadAndWriteSpells(helper, inputsDir); return err })
 	g.Go(func() (err error) { consumables, err = database.LoadAndWriteConsumables(helper, inputsDir); return })
 	g.Go(func() (err error) {
@@ -122,7 +136,7 @@ func main() {
 	})
 	g.Go(func() (err error) { icons, err = database.LoadSpellIcons(helper); return })
 	g.Go(func() error { craftingSources = database.LoadCraftedItems(helper); return nil })
-	g.Go(func() error { repSources = database.LoadRepItems(helper); return nil })
+	g.Go(func() (err error) { repSources, factionNames, err = database.LoadRepItems(helper); return })
 	g.Go(func() error {
 		//Todo: See if we cant get rid of these as well
 		atlaslootDB = database.ReadDatabaseFromJson(tools.ReadFile(fmt.Sprintf("%s/atlasloot_db.json", inputsDir)))
@@ -139,21 +153,9 @@ func main() {
 	var instance = dbc.GetDBC()
 	instance.LoadSpellScaling()
 	instance.LoadShieldBlockValues()
-	database.GenerateProtos(instance, db)
+	database.GenerateProtos(instance, db, only)
 
 	processItems(instance, iconsMap, names, dropSources, craftingSources, repSources, db)
-
-	for _, gem := range instance.Gems {
-		parsed := gem.ToProto()
-		// All BOA gems are unique-equipped, but this isn't indicated in the gamefiles.
-		if gem.Bonding == dbc.BIND_ON_ACQUIRE {
-			parsed.Unique = true
-		}
-		if parsed.Icon == "" {
-			parsed.Icon = strings.ToLower(database.GetIconName(iconsMap, gem.FDID))
-		}
-		db.MergeGem(parsed)
-	}
 
 	for _, enchant := range instance.Enchants {
 		parsed := enchant.ToProto()
@@ -169,7 +171,7 @@ func main() {
 
 	for _, atlaslootItem := range atlaslootDB.Items {
 		if dbItem, ok := db.Items[atlaslootItem.Id]; ok {
-			firstDBRepFaction := proto.RepFaction(-1)
+			firstDBRepFaction := int32(-1)
 
 			for _, dbItemSource := range dbItem.Sources {
 				if dbRepSource := dbItemSource.GetRep(); dbRepSource != nil {
@@ -187,31 +189,48 @@ func main() {
 		}
 	}
 
+	consumableRoutes := map[int]*database.ConsumableRouting{}
 	for _, consumable := range consumables {
-		db.MergeConsumable(consumable.ToProto())
-		// The consumable proto has no icon field, so ship it in the icon table instead. Without
-		// this the UI fetches every consumable icon from nether.wowhead.com on each page load.
-		db.AddItemIcon(int32(consumable.Id), strings.ToLower(database.GetIconName(iconsMap, consumable.IconFileDataID)), consumable.Name)
+		routing := database.RouteConsumable(&consumable, instance)
+		consumableRoutes[consumable.Id] = routing
+		if !database.ShipsConsumable(routing) {
+			continue
+		}
+		db.MergeConsumable(database.ShippedConsumable(&consumable, routing, instance))
 	}
 
 	for _, consumable := range database.ConsumableOverrides {
 		db.MergeConsumable(consumable)
 	}
+	if err := database.AddUnparsedStats(db); err != nil {
+		log.Fatalf("failed to add the stats the parse leaves out: %v", err)
+	}
+	if err := database.AddPotionClasses(db); err != nil {
+		log.Fatalf("failed to classify the potions: %v", err)
+	}
 
 	db.MergeItems(database.ItemOverrides)
-	db.MergeGems(database.GemOverrides)
+	database.ApplyItemSetClasses(db)
 	db.MergeEnchants(database.EnchantOverrides)
 	ApplyGlobalFilters(db)
-	// After the global filters: those are for the client's rows, ours were filtered on master.
-	mergeForeverSimDB(db, fmt.Sprintf("%s/forever_sim_db.json", inputsDir))
+	database.AddConsumableIcons(db, consumables, instance, iconsMap)
 	leftovers := db.Clone()
 	ApplyNonSimmableFilters(leftovers)
+	applyRepSources(leftovers, factionNames)
 	leftovers.WriteBinaryAndJson(fmt.Sprintf("%s/leftover_db.bin", dbDir), fmt.Sprintf("%s/leftover_db.json", dbDir))
 	ApplySimmableFilters(db)
 
 	database.GenerateItemEffects(instance, db, dropSources)
 	database.GenerateEnchantEffects(instance, db)
-	database.GenerateMissingEffectsFile()
+	if err := database.GenerateConsumableRegistrations(instance, db, consumableRoutes); err != nil {
+		log.Fatalf("failed to generate the consumable registrations: %v", err)
+	}
+	if err := database.GenerateConsumablesTSFile(db); err != nil {
+		log.Fatalf("failed to generate the consumables TS file: %v", err)
+	}
+	if err := database.GenerateMissingEffectsFile(instance, db); err != nil {
+		log.Fatalf("failed to generate the missing effects TS file: %v", err)
+	}
 	database.GenerateItemEffectRandomPropPoints(instance, db)
 
 	// Disbabled due to duplicate SpellIDs
@@ -234,9 +253,11 @@ func main() {
 		}
 	}
 
-	for _, randomSuffix := range instance.RandomSuffix {
-		if _, exists := db.RandomSuffixes[int32(randomSuffix.ID)]; !exists {
-			db.RandomSuffixes[int32(randomSuffix.ID)] = randomSuffix.ToProto()
+	for _, item := range db.Items {
+		for _, id := range item.RandomSuffixOptions {
+			if _, exists := db.RandomSuffixes[id]; !exists {
+				db.RandomSuffixes[id] = instance.RandomSuffix[int(id)].ToProto()
+			}
 		}
 	}
 
@@ -261,16 +282,10 @@ func main() {
 					item.RequiredProfession = crafted.Profession
 				}
 			}
-
-			if rep := source.GetRep(); rep != nil {
-				item.FactionRestriction = proto.UIItem_FactionRestriction(rep.FactionId)
-			}
 		}
 
-		if item.Phase < 2 {
-			item.Phase = database.InferPhase(item)
-		}
-
+		// Forever's content phases are not known yet, so every item is phase 1.
+		item.Phase = 1
 	}
 	addSpellIcons(db, craftedSpellIds, icons, iconsMap)
 
@@ -282,7 +297,26 @@ func main() {
 	if err := database.LoadZoneAreas(db, helper); err != nil {
 		log.Fatal(err)
 	}
+	applyRepSources(db, factionNames)
 	db.WriteBinaryAndJson(fmt.Sprintf("%s/db.bin", dbDir), fmt.Sprintf("%s/db.json", dbDir))
+}
+
+func applyRepSources(db *database.WowDatabase, factionNames map[int32]string) {
+	for _, item := range db.Items {
+		sides := make(map[proto.Faction]bool)
+		for _, source := range item.Sources {
+			if rep := source.GetRep(); rep != nil {
+				db.MergeFaction(&proto.UIFaction{Id: rep.RepFactionId, Name: factionNames[rep.RepFactionId]})
+				sides[rep.FactionId] = true
+			}
+		}
+		// A side's restriction holds only when every rep source names that side.
+		if len(sides) == 1 && !sides[proto.Faction_Unknown] {
+			for side := range sides {
+				item.FactionRestriction = database.AtlasLootFactionRestrictions[side]
+			}
+		}
+	}
 }
 
 func processItems(instance *dbc.DBC,
@@ -303,6 +337,9 @@ func processItems(instance *dbc.DBC,
 
 	for _, item := range sortedItems {
 		if item.Flags2&0x10 != 0 && (item.StatAlloc[0] > 0 && item.StatAlloc[0] < 600) {
+			continue
+		}
+		if _, allowed := database.ItemAllowList[int32(item.Id)]; item.Flags0.Has(dbc.DEPRECATED) && !allowed {
 			continue
 		}
 		parsed := item.ToUIItem()
@@ -344,8 +381,8 @@ func processItems(instance *dbc.DBC,
 					Source: &proto.UIItemSource_Rep{Rep: repItem},
 				})
 			}
-			parsed.Sources = sources
-			sourceMap[parsed.Name] = sources
+			parsed.Sources = append(parsed.Sources, sources...)
+			sourceMap[parsed.Name] = parsed.Sources
 		}
 
 		parsedItems = append(parsedItems, parsed)
@@ -359,44 +396,6 @@ func processItems(instance *dbc.DBC,
 		}
 	}
 	db.MergeItems(parsedItems)
-}
-
-// Our Forever sim's items, enchants and random suffixes (tools/database/import_forever_sim_db.py).
-// The client wins wherever it has the row; this fills in what it does not ship: the Classic-era
-// items our gear presets use that the beta client lacks (Hand of Justice, the Tier 1 sets), the
-// Lesser Arcanums, and the random suffixes, which the client no longer carries at all.
-func mergeForeverSimDB(db *database.WowDatabase, path string) {
-	ours := database.ReadDatabaseFromJson(tools.ReadFile(path))
-	for id, item := range ours.Items {
-		if _, ok := db.Items[id]; !ok {
-			db.Items[id] = item
-		}
-	}
-	FillArmorFromOurs(db, ours)
-	effectIDs := map[int32]bool{}
-	for key := range db.Enchants {
-		effectIDs[key.EffectID] = true
-	}
-	for key, enchant := range ours.Enchants {
-		if !effectIDs[key.EffectID] {
-			db.Enchants[key] = enchant
-		}
-	}
-	for id, suffix := range ours.RandomSuffixes {
-		if _, ok := db.RandomSuffixes[id]; !ok {
-			db.RandomSuffixes[id] = suffix
-		}
-	}
-	for id, zone := range ours.Zones {
-		if _, ok := db.Zones[id]; !ok {
-			db.Zones[id] = zone
-		}
-	}
-	for id, npc := range ours.Npcs {
-		if _, ok := db.Npcs[id]; !ok {
-			db.Npcs[id] = npc
-		}
-	}
 }
 
 // Filters out entities which shouldn't be included anywhere.
@@ -464,51 +463,6 @@ func ApplyGlobalFilters(db *database.WowDatabase) {
 		return true
 	})
 
-	db.Gems = core.FilterMap(db.Gems, func(_ int32, gem *proto.UIGem) bool {
-		if _, ok := database.GemDenyList[gem.Id]; ok {
-			return false
-		}
-
-		prefix, uncut, _ := strings.Cut(gem.Name, " ")
-		if slices.Contains([]string{
-			"Forceful",
-			"Quick",
-			"Reckless",
-			"Purified Shadowsong",
-		}, prefix) {
-			gem.Phase = 5
-		} else if slices.Contains([]string{
-			"Crimson Spinel",
-			"Empyrean Sapphire",
-			"Lionseye",
-			"Shadowsong Amethyst",
-			"Pyrestone",
-			"Seaspray Emerald",
-		}, uncut) {
-			gem.Phase = 3
-		} else if gem.Name == "Charmed Amani Jewel" {
-			gem.Phase = 3
-		} else if strings.Contains(prefix, "Unstable") {
-			gem.Phase = 2
-		} else {
-			gem.Phase = 1
-		}
-
-		for _, pattern := range database.DenyListNameRegexes {
-			if pattern.MatchString(gem.Name) {
-				return false
-			}
-		}
-		return true
-	})
-
-	db.Gems = core.FilterMap(db.Gems, func(_ int32, gem *proto.UIGem) bool {
-		if strings.HasSuffix(gem.Name, "Stormjewel") {
-			gem.Unique = false
-		}
-		return true
-	})
-
 	db.ItemIcons = core.FilterMap(db.ItemIcons, func(_ int32, icon *proto.IconData) bool {
 		return icon.Name != "" && icon.Icon != ""
 	})
@@ -517,55 +471,17 @@ func ApplyGlobalFilters(db *database.WowDatabase) {
 	})
 
 	db.Enchants = core.FilterMap(db.Enchants, func(_ database.EnchantDBKey, enchant *proto.UIEnchant) bool {
-		for _, pattern := range database.DenyListNameRegexes {
-			if pattern.MatchString(enchant.Name) {
-				return false
-			}
-		}
-		if strings.Contains(enchant.Name, "Template") {
-			return false
-		}
-		return !strings.HasPrefix(enchant.Name, "QA") && !strings.HasPrefix(enchant.Name, "Test") && !strings.HasPrefix(enchant.Name, "TEST")
+		return database.KeepEnchant(enchant)
 	})
 
 	db.Consumables = core.FilterMap(db.Consumables, func(_ int32, consumable *proto.Consumable) bool {
-		if _, classic := database.ClassicConsumableTypes[consumable.Id]; classic || slices.Contains(database.ConsumableAllowList, consumable.Id) {
-			return true
-		}
-		if slices.Contains(database.ConsumableDenyList, consumable.Id) {
-			return false
-		}
-		if allZero(consumable.Stats) && consumable.Type != proto.ConsumableType_ConsumableTypePotion {
-			return false
-		}
-
-		for _, pattern := range database.DenyListNameRegexes {
-			if pattern.MatchString(consumable.Name) {
-				return false
-			}
-		}
-
-		if consumable.Type == proto.ConsumableType_ConsumableTypeUnknown || consumable.Type == proto.ConsumableType_ConsumableTypeScroll {
-			return false
-		}
-
-		return !strings.HasPrefix(consumable.Name, "QA") && !strings.HasPrefix(consumable.Name, "Test") && !strings.HasPrefix(consumable.Name, "TEST") && !strings.Contains(consumable.Name, "Flaskataur")
+		return database.KeepConsumable(consumable)
 	})
-}
-
-func allZero(stats []float64) bool {
-	for _, val := range stats {
-		if val != 0 {
-			return false
-		}
-	}
-	return true
 }
 
 // Filters out entities which shouldn't be included in the sim.
 func ApplySimmableFilters(db *database.WowDatabase) {
 	db.Items = core.FilterMap(db.Items, simmableItemFilter)
-	db.Gems = core.FilterMap(db.Gems, simmableGemFilter)
 	db.Enchants = core.FilterMap(db.Enchants, simmableEnchantFilter)
 }
 
@@ -573,12 +489,14 @@ func ApplyNonSimmableFilters(db *database.WowDatabase) {
 	db.Items = core.FilterMap(db.Items, func(id int32, item *proto.UIItem) bool {
 		return !simmableItemFilter(id, item)
 	})
-	db.Gems = core.FilterMap(db.Gems, func(id int32, gem *proto.UIGem) bool {
-		return !simmableGemFilter(id, gem)
-	})
 	db.Enchants = core.FilterMap(db.Enchants, func(id database.EnchantDBKey, enchant *proto.UIEnchant) bool {
 		return !simmableEnchantFilter(id, enchant)
 	})
+	// db.json ships every consumable and its icon.
+	for id := range db.Consumables {
+		delete(db.ItemIcons, id)
+	}
+	db.Consumables = map[int32]*proto.Consumable{}
 }
 func simmableItemFilter(_ int32, item *proto.UIItem) bool {
 	if _, ok := database.ItemAllowList[item.Id]; ok {
@@ -602,13 +520,6 @@ func simmableItemFilter(_ int32, item *proto.UIItem) bool {
 	}
 
 	return true
-}
-func simmableGemFilter(_ int32, gem *proto.UIGem) bool {
-	if _, ok := database.GemAllowList[gem.Id]; ok {
-		return true
-	}
-
-	return gem.Quality >= proto.ItemQuality_ItemQualityUncommon
 }
 
 var nonLiveEnchants = map[database.EnchantDBKey]struct{}{}
@@ -722,7 +633,7 @@ func GetAllRotationSpellIds() map[string][]int32 {
 			Class:         proto.Class_ClassDruid,
 			Equipment:     &proto.EquipmentSpec{},
 			TalentsString: rotationTalentsString("druid"),
-		}, &proto.Player_FeralCatDruid{FeralCatDruid: &proto.FeralCatDruid{Options: &proto.FeralCatDruid_Options{ClassOptions: &proto.DruidOptions{}}, Rotation: &proto.FeralCatDruid_Rotation{}}}), nil, nil, nil)},
+		}, &proto.Player_FeralCatDruid{FeralCatDruid: &proto.FeralCatDruid{Options: &proto.FeralCatDruid_Options{ClassOptions: &proto.DruidOptions{}}}}), nil, nil, nil)},
 		{Name: "feralBearDruid", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
 			Class:         proto.Class_ClassDruid,
 			Equipment:     &proto.EquipmentSpec{},
@@ -874,46 +785,6 @@ func addSpellIcons(db *database.WowDatabase, spellIds []int32, icons map[int]dat
 			Icon:    strings.ToLower(database.GetIconName(iconsMap, iconEntry.FDID)),
 			HasBuff: iconEntry.HasBuff,
 			Rank:    int32(iconEntry.Rank),
-		}
-	}
-}
-
-// The Forever client stores no armor on its item rows: ItemSparse's armor column (Resistance_0,
-// which dbc.Item.GetArmorValue reads) is 0 and the game computes it from the ItemArmor tables.
-// Where the client row wins the merge it would leave the item with no armor at all (3,810 items,
-// Lionheart Helm among them), so ours - Wowhead's Forever gear planner, e.g. Lionheart 565 - fills it.
-// Wowhead's armor is the total, the client's extra armor (ItemSparse stat 50, our BonusArmor)
-// included: Field Marshal's Dragonhide Helmet shows 209 and carries 30 extra, Hammer of Bestial
-// Fury shows 90 and carries 90. So the base is ours less the client's bonus, or the extra counts twice.
-// Feral attack power is an equip spell (the Hammer's 24994, +154) the client does not link to the
-// item, so ours fills that too.
-func FillArmorFromOurs(db *database.WowDatabase, ours *database.WowDatabase) {
-	armor, bonus, feral := int32(proto.Stat_StatArmor), int32(proto.Stat_StatBonusArmor), int32(proto.Stat_StatFeralAttackPower)
-	block := int32(proto.Stat_StatBlockValue)
-	for id, item := range db.Items {
-		our, ok := ours.Items[id]
-		if !ok || our == item {
-			continue
-		}
-		for key, opt := range item.ScalingOptions {
-			ourOpt, ok := our.ScalingOptions[key]
-			if !ok {
-				continue
-			}
-			if opt.Stats == nil {
-				opt.Stats = map[int32]float64{}
-			}
-			if opt.Stats[armor] == 0 && ourOpt.Stats[armor] > opt.Stats[bonus] {
-				opt.Stats[armor] = ourOpt.Stats[armor] - opt.Stats[bonus]
-			}
-			// The client ships no block value; the generator's comes from a TBC game table (73 for an
-			// item level 78 epic shield). Ours is Wowhead Forever's: Grand Marshal's Aegis shows 55.
-			if ourOpt.Stats[block] != 0 {
-				opt.Stats[block] = ourOpt.Stats[block]
-			}
-			if opt.Stats[feral] == 0 && ourOpt.Stats[feral] != 0 {
-				opt.Stats[feral] = ourOpt.Stats[feral]
-			}
 		}
 	}
 }

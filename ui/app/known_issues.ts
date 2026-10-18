@@ -1,3 +1,4 @@
+import { Spec } from '@generated/proto/common';
 import i18n from '@i18n/config';
 import { LaunchStatus } from '@sim/constants/other';
 import type { SimStatus } from '@sim/player/player_spec';
@@ -20,7 +21,10 @@ const statusNotice = (status: LaunchStatus): string => {
 	}
 };
 
-export const knownIssuesFor = (simStatus: SimStatus, knownIssues?: ReadonlyArray<ReactNode>): ReactNode[] => {
+const SPELL_CASTER_SPECS: ReadonlySet<Spec> = new Set([Spec.SpecBalanceDruid, Spec.SpecMage, Spec.SpecDpsPriest, Spec.SpecElementalShaman, Spec.SpecWarlock]);
+
+export const knownIssuesFor = (simStatus: SimStatus, spec: Spec, knownIssues?: ReadonlyArray<ReactNode>): ReactNode[] => {
 	const notice = statusNotice(simStatus.status);
-	return [...(notice ? [notice] : []), ...(knownIssues ?? []), ...globalKnownIssues];
+	const casterNotices = SPELL_CASTER_SPECS.has(spec) ? [i18n.t('info.spell_resistance')] : [];
+	return [...(notice ? [notice] : []), ...casterNotices, ...(knownIssues ?? []), ...globalKnownIssues];
 };

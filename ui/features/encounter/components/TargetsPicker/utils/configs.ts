@@ -1,26 +1,31 @@
-import { InputType, MobType, SpellSchool, Stat, Target as TargetProto, TargetInput } from '@generated/proto/common';
+import type { BooleanPickerConfig, ChoiceFieldConfig, NumberFieldConfig } from '@features/inputs/configs';
+import { CreatureFamily, InputType, MobType, SpellSchool, Stat, Target as TargetProto, TargetInput } from '@generated/proto/common';
 import i18n from '@i18n/config';
-import { translateMobType, translateSpellSchool, translateStat, translateTargetInputLabel, translateTargetInputTooltip } from '@i18n/localization';
+import {
+	translateCreatureFamily,
+	translateMobType,
+	translateSpellSchool,
+	translateStat,
+	translateTargetInputLabel,
+	translateTargetInputTooltip,
+} from '@i18n/localization';
 import type { Encounter } from '@sim/raid/encounter';
 import { subscribeEncounterField } from '@sim/state/subscriptions';
 import { distinct } from '@sim/utils/collections';
 import { randomUUID } from '@sim/utils/misc';
-import type { BooleanPickerConfig } from '@ui-kit/BooleanPicker/types';
-import type { EnumPickerConfig } from '@ui-kit/EnumPicker/types';
-import type { NumberPickerConfig } from '@ui-kit/NumberPicker/types';
 
 import { trackEvent, type TrackEventProps } from '../../../../../tracking/utils';
 
-export const ALL_TARGET_STATS: Array<{ stat: Stat; tooltip: string; extraClassNames: Array<string> }> = [
-	{ stat: Stat.StatHealth, tooltip: '', extraClassNames: [] },
-	{ stat: Stat.StatArmor, tooltip: '', extraClassNames: [] },
-	{ stat: Stat.StatArcaneResistance, tooltip: '', extraClassNames: [] },
-	{ stat: Stat.StatFireResistance, tooltip: '', extraClassNames: [] },
-	{ stat: Stat.StatFrostResistance, tooltip: '', extraClassNames: [] },
-	{ stat: Stat.StatNatureResistance, tooltip: '', extraClassNames: [] },
-	{ stat: Stat.StatShadowResistance, tooltip: '', extraClassNames: [] },
-	{ stat: Stat.StatAttackPower, tooltip: '', extraClassNames: ['threat-metrics'] },
-	{ stat: Stat.StatBlockValue, tooltip: '', extraClassNames: ['threat-metrics'] },
+export const ALL_TARGET_STATS: Array<{ stat: Stat; tooltip: string; threatMetrics?: boolean }> = [
+	{ stat: Stat.StatHealth, tooltip: '' },
+	{ stat: Stat.StatArmor, tooltip: '' },
+	{ stat: Stat.StatArcaneResistance, tooltip: '' },
+	{ stat: Stat.StatFireResistance, tooltip: '' },
+	{ stat: Stat.StatFrostResistance, tooltip: '' },
+	{ stat: Stat.StatNatureResistance, tooltip: '' },
+	{ stat: Stat.StatShadowResistance, tooltip: '' },
+	{ stat: Stat.StatAttackPower, tooltip: '', threatMetrics: true },
+	{ stat: Stat.StatBlockValue, tooltip: '', threatMetrics: true },
 ];
 
 const mobTypeEnumValues = [
@@ -34,6 +39,17 @@ const mobTypeEnumValues = [
 	MobType.MobTypeMechanical,
 	MobType.MobTypeUndead,
 ].map(value => ({ name: translateMobType(value), value }));
+
+// The families each mob type holds; Aquatic spans beasts, elementals and humanoids.
+const creatureFamiliesByMobType: Partial<Record<MobType, ReadonlyArray<CreatureFamily>>> = {
+	[MobType.MobTypeBeast]: [CreatureFamily.CreatureFamilyAquatic],
+	[MobType.MobTypeDemon]: [CreatureFamily.CreatureFamilySatyr],
+	[MobType.MobTypeElemental]: [CreatureFamily.CreatureFamilyEarthElemental, CreatureFamily.CreatureFamilyFireElemental, CreatureFamily.CreatureFamilyAquatic],
+	[MobType.MobTypeGiant]: [CreatureFamily.CreatureFamilyMountainGiant],
+	[MobType.MobTypeHumanoid]: [CreatureFamily.CreatureFamilyNaga, CreatureFamily.CreatureFamilyAquatic],
+};
+
+export const creatureFamiliesOf = (mobType: MobType): ReadonlyArray<CreatureFamily> => creatureFamiliesByMobType[mobType] ?? [];
 
 const spellSchoolValues = [
 	SpellSchool.SpellSchoolPhysical,
@@ -63,7 +79,7 @@ export interface TargetFieldContext {
 
 const onTargets = (encounter: Encounter) => () => subscribeEncounterField(encounter, 'targets');
 
-export const npcConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext): EnumPickerConfig<null> => {
+export const npcConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext): ChoiceFieldConfig<null> => {
 	const presetTargets = encounter.sim.db.getAllPresetTargets();
 	return {
 		id: targetId(targetIndex, 'npc'),
@@ -81,7 +97,7 @@ export const npcConfig = ({ encounter, targetIndex, getTarget }: TargetFieldCont
 	};
 };
 
-export const aiConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext): EnumPickerConfig<null> => {
+export const aiConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext): ChoiceFieldConfig<null> => {
 	const presetTargets = encounter.sim.db.getAllPresetTargets();
 	const byNpcId = distinct(presetTargets, (a, b) => a.target?.id === b.target?.id);
 	return {
@@ -103,10 +119,10 @@ export const aiConfig = ({ encounter, targetIndex, getTarget }: TargetFieldConte
 	};
 };
 
-export const levelConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext): EnumPickerConfig<null> => ({
+export const levelConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext): ChoiceFieldConfig<null> => ({
 	id: targetId(targetIndex, 'level'),
 	label: i18n.t('settings_tab.encounter.level'),
-	values: [73, 72, 71, 70, 68].map(value => ({ name: String(value), value })),
+	values: [63, 62, 61, 60].map(value => ({ name: String(value), value })),
 	storeSubscribe: onTargets(encounter),
 	getValue: () => getTarget().level,
 	setValue: (_: null, newValue: number) => {
@@ -117,7 +133,7 @@ export const levelConfig = ({ encounter, targetIndex, getTarget }: TargetFieldCo
 	},
 });
 
-export const mobTypeConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext): EnumPickerConfig<null> => ({
+export const mobTypeConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext): ChoiceFieldConfig<null> => ({
 	id: targetId(targetIndex, 'mob-type'),
 	label: i18n.t('settings_tab.encounter.mob_type'),
 	values: mobTypeEnumValues,
@@ -127,11 +143,29 @@ export const mobTypeConfig = ({ encounter, targetIndex, getTarget }: TargetField
 		trackEvent({ action: 'settings', category: 'targets', label: 'mob_type', value: newValue });
 		encounter.modifyTarget(targetIndex, target => {
 			target.mobType = newValue;
+			if (!creatureFamiliesOf(newValue).includes(target.creatureFamily)) {
+				target.creatureFamily = CreatureFamily.CreatureFamilyUnknown;
+			}
 		});
 	},
 });
 
-export const tankIndexConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext): EnumPickerConfig<null> => ({
+export const creatureFamilyConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext, mobType: MobType): ChoiceFieldConfig<null> => ({
+	id: targetId(targetIndex, 'creature-family'),
+	label: i18n.t('settings_tab.encounter.creature_family.label'),
+	labelTooltip: i18n.t('settings_tab.encounter.creature_family.tooltip'),
+	values: [CreatureFamily.CreatureFamilyUnknown, ...creatureFamiliesOf(mobType)].map(value => ({ name: translateCreatureFamily(value), value })),
+	storeSubscribe: onTargets(encounter),
+	getValue: () => getTarget().creatureFamily,
+	setValue: (_: null, newValue: number) => {
+		trackEvent({ action: 'settings', category: 'targets', label: 'creature_family', value: newValue });
+		encounter.modifyTarget(targetIndex, target => {
+			target.creatureFamily = newValue;
+		});
+	},
+});
+
+export const tankIndexConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext): ChoiceFieldConfig<null> => ({
 	id: targetId(targetIndex, 'tanked-by'),
 	label: i18n.t('settings_tab.encounter.tanked_by.label'),
 	labelTooltip: i18n.t('settings_tab.encounter.tanked_by.tooltip'),
@@ -152,11 +186,9 @@ export const tankIndexConfig = ({ encounter, targetIndex, getTarget }: TargetFie
 	},
 });
 
-export const statConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext, stat: Stat, tooltip: string, extraClassNames: Array<string>) =>
+export const statConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext, stat: Stat, tooltip: string) =>
 	({
 		id: `target-${targetIndex}-picker-stats-${stat}`,
-		layout: 'inline',
-		extraClassNames,
 		label: translateStat(stat),
 		labelTooltip: tooltip,
 		storeSubscribe: onTargets(encounter),
@@ -166,7 +198,7 @@ export const statConfig = ({ encounter, targetIndex, getTarget }: TargetFieldCon
 				target.stats[stat] = newValue;
 			});
 		},
-	}) satisfies NumberPickerConfig<null>;
+	}) satisfies NumberFieldConfig<null>;
 
 interface NumberField {
 	name: string;
@@ -209,7 +241,7 @@ const NUMBER_FIELDS: Array<NumberField> = [
 	},
 ];
 
-export const numberConfigs = ({ encounter, targetIndex, getTarget }: TargetFieldContext): Array<NumberPickerConfig<null>> =>
+export const numberConfigs = ({ encounter, targetIndex, getTarget }: TargetFieldContext): Array<NumberFieldConfig<null>> =>
 	NUMBER_FIELDS.map(field => ({
 		id: targetId(targetIndex, field.name),
 		label: i18n.t(`settings_tab.encounter.${field.key}.label`),
@@ -288,7 +320,7 @@ export const booleanConfigs = ({ encounter, targetIndex, getTarget }: TargetFiel
 		...(field.enabledWhen ? { enableWhen: () => field.enabledWhen!(getTarget()) } : {}),
 	}));
 
-export const spellSchoolConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext): EnumPickerConfig<null> => ({
+export const spellSchoolConfig = ({ encounter, targetIndex, getTarget }: TargetFieldContext): ChoiceFieldConfig<null> => ({
 	id: targetId(targetIndex, 'spell-school'),
 	label: i18n.t('settings_tab.encounter.spell_school.label'),
 	labelTooltip: i18n.t('settings_tab.encounter.spell_school.tooltip'),
@@ -332,7 +364,7 @@ export const targetInputConfig = (encounter: Encounter, targetIndex: number, inp
 				setValue: write<number>((draft, value) => {
 					draft.numberValue = value;
 				}),
-			} satisfies NumberPickerConfig<null>,
+			} satisfies NumberFieldConfig<null>,
 		};
 	}
 	if (input.inputType === InputType.Bool) {
@@ -359,7 +391,7 @@ export const targetInputConfig = (encounter: Encounter, targetIndex: number, inp
 				setValue: write<number>((draft, value) => {
 					draft.enumValue = value;
 				}),
-			} satisfies EnumPickerConfig<null>,
+			} satisfies ChoiceFieldConfig<null>,
 		};
 	}
 	return { kind: 'none' as const };

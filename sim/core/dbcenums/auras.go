@@ -588,10 +588,10 @@ const (
 	A_MOD_TARGET_ABILITY_ABSORB_SCHOOL EffectAuraType = 574
 	// A_575 EffectAuraType = 575
 	// A_576 EffectAuraType = 576
-	A_MOD_ATTACKER_MELEE_CRIT_DAMAGE  EffectAuraType = 577
-	A_MOD_ATTACKER_RANGED_CRIT_DAMAGE EffectAuraType = 578
-	A_MOD_SCHOOL_CRIT_DMG_TAKEN       EffectAuraType = 579
-	A_580                             EffectAuraType = 580
+	A_MOD_ATTACKER_MELEE_CRIT_DAMAGE          EffectAuraType = 577
+	A_MOD_ATTACKER_RANGED_CRIT_DAMAGE         EffectAuraType = 578
+	A_MOD_SCHOOL_CRIT_DMG_TAKEN               EffectAuraType = 579
+	A_MOD_RANGED_ATTACK_POWER_OF_STAT_PERCENT EffectAuraType = 580
 	// A_581 EffectAuraType = 581
 	// A_582 EffectAuraType = 582
 	A_MOD_RATING_FROM_STAT EffectAuraType = 583
@@ -609,10 +609,10 @@ const (
 	// A_595 EffectAuraType = 595
 	// A_596 EffectAuraType = 596
 	// A_597 EffectAuraType = 597
-	A_598                            EffectAuraType = 598
-	A_MOD_IGNORE_TARGET_RESIST2      EffectAuraType = 599
-	A_SCHOOL_MASK_DAMAGE_FROM_CASTER EffectAuraType = 600
-	A_IGNORE_MELEE_RESET             EffectAuraType = 601
+	A_MOD_ATTACK_POWER_OF_STAT_PERCENT EffectAuraType = 598
+	A_MOD_IGNORE_TARGET_RESIST2        EffectAuraType = 599
+	A_SCHOOL_MASK_DAMAGE_FROM_CASTER   EffectAuraType = 600
+	A_IGNORE_MELEE_RESET               EffectAuraType = 601
 	// A_602 EffectAuraType = 602
 	// A_603 EffectAuraType = 603
 	A_MOD_HONOR_GAIN_PCT2 EffectAuraType = 604
@@ -646,7 +646,7 @@ const (
 	// A_632 EffectAuraType = 632
 	// A_633 EffectAuraType = 633
 	// A_634 EffectAuraType = 634
-	A_635 EffectAuraType = 635
+	A_IGNORE_FOG_OF_WAR EffectAuraType = 635
 	// A_636 EffectAuraType = 636
 	A_MOD_EXPLORATION_EXPERIENCE            EffectAuraType = 637
 	A_MOD_CRITICAL_BLOCK_AMOUNT             EffectAuraType = 638
@@ -680,4 +680,10 @@ const (
 	// A_666 EffectAuraType = 666
 	// A_667 EffectAuraType = 667
 	// A_668 EffectAuraType = 668
+	// A_669 EffectAuraType = 669
+	// A_670 EffectAuraType = 670
+	// A_671 EffectAuraType = 671
+	// A_672 EffectAuraType = 672
+	// A_673 EffectAuraType = 673
+	A_MOD_ARMOR_NO_MODS EffectAuraType = 674 // Flat armor, misc 1 as on A_MOD_RESISTANCE; named after the game files' test spell 1322297 "(DNT) Mod Armor No Mods".
 )

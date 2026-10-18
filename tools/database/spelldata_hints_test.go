@@ -1,6 +1,6 @@
 package database
 
-// The proc shapes docs/spell_data.md names, read off the client database the way the store's rows
+// The proc shapes docs/spell_data/procs.md names, read off the game files database the way the store's rows
 // are. Which shape a spell has is a reading of its tooltip, and a reading is what silently changes
 // when a matcher is widened: Flurry states "$m1%" for its attack speed and Unbridled Wrath states
 // "$m1% chance" for its rage, and only the second is a roll.
@@ -27,7 +27,7 @@ func clientSpellTables(t *testing.T) *spellTables {
 	t.Helper()
 	DatabasePath = "wowsims.db"
 	if _, err := os.Stat(DatabasePath); err != nil {
-		t.Skipf("no client database at %s - run `make db` from a local WoW install to enable this gate", DatabasePath)
+		t.Skipf("no game files database at %s - run `make db` from a local WoW install to enable this gate", DatabasePath)
 	}
 
 	clientTables.once.Do(func() {
@@ -61,7 +61,7 @@ func TestProcShapeOfNamedSpells(t *testing.T) {
 		hintWhy string
 	}{
 		{12317, "Enrage", procChanceColumn, 0, `the tooltip's "$h%" is the ProcChance column`,
-			0, `"the victim of any damaging attack" states no outcome and no wording any hint reads`},
+			core.ProcHintDamage, `"any damaging attack" is damage wording, which the taken mask it sits beside ignores`},
 		{12322, "Unbridled Wrath", procChanceEffectN, 1, `"$m1% chance to generate Rage" is effect 1's ladder`,
 			0, `"when you deal melee damage with a weapon" is the mask's own shape`},
 		{12298, "Shield Specialization", procChanceEffectN, 2, `"$m2% chance to generate Rage", past the "$s1%" block value`,
@@ -70,35 +70,45 @@ func TestProcShapeOfNamedSpells(t *testing.T) {
 			0, `"after dealing a melee critical strike" is the crit the caller reads off the result, since the same listener has to see the white hits that spend a charge`},
 		{12834, "Deep Wounds", procChanceAlways, 0, `"$m1%" is the share of weapon damage, and a crit is the condition`,
 			core.ProcHintCrit, `"Your critical strikes" names the trigger`},
-		{16928, "Armor Shatter", procChancePPM, 0, "the 101 sentinel, answered by an override into RPPM",
+		{30160, "Elemental Devastation", procChanceAlways, 0, `"$m1%" is the melee crit it grants, and a crit is the condition`,
+			core.ProcHintCrit | core.ProcHintDamage, `"Your Critical Strikes", capitalized, names the trigger, and "direct damage spells" restricts it to damage`},
+		{16928, "Armor Shatter", procChanceAlways, 0, "the 101 sentinel; the rate is Annihilator's, on its item effect",
 			0, "the tooltip is the armor reduction, not a trigger"},
 		{1308935, "Striking", procChanceColumn, 0, "no tooltip at all, so the column is all there is",
 			0, "no tooltip to read a hint off"},
 		{23548, "Battlegear of Wrath, the parry grant", procChanceColumn, 0, `the tooltip's "$h%" is the ProcChance column`,
 			core.ProcHintOutcomeTaken, `"after a block" is an outcome no ProcTypeMask has a bit for`},
-		{23547, "Battlegear of Wrath, the parry buff", procChanceAlways, 0, "the 100 in the column is the client's no-roll",
+		{23547, "Battlegear of Wrath, the parry buff", procChanceAlways, 0, "the 100 in the column is the game files' no-roll",
 			0, "the row ships no tooltip, so the parry it is spent on stays the caller's"},
-		{29626, "Shadowbolt Volley", procChancePPM, 0, `a column of 100 next to "Chance to strike" is a rate the client keeps elsewhere`,
+		{29626, "Shadowbolt Volley", procChancePPM, 0, `a column of 100 next to "Chance to strike" is a rate the game files keep elsewhere`,
 			0, "the wording states a rate, not a trigger the mask cannot carry"},
 		{22618, "Force Reactive Disk", procChanceAlways, 0, `the "chance of damaging the shield" is the shield's durability, in a sentence naming nothing the charge fires on; the charge itself fires on every block`,
-			0, `"when the shield blocks" is the shield's own condition rather than an outcome of the wearer's`},
+			core.ProcHintDamage, `"when the shield blocks" is the shield's own condition rather than an outcome of the wearer's, and "damaging the shield" is damage wording the taken mask ignores`},
 		{432042, "Tidal Waves", procChanceAlways, 0, `"increases the critical effect chance of your Lesser Healing Wave" is a magnitude, not a rate`,
 			core.ProcHintCastTrigger | core.ProcHintCrit | core.ProcHintNamedAbility,
 			`"When you cast Chain Heal or Riptide" names the cast, the ability and the critical effect it grants`},
 		{467889, "T2 Shaman Tank 2P", procChanceAlways, 0, `"grants increased chance to Block" is a magnitude, not a rate`,
 			0, `"until you Block an attack" is what spends the buff, not what triggers it`},
 		{1226977, "Scarlet Enclave Elemental 4P", procChanceAlways, 0, `"Chance to trigger Overload increased by an additional" is a magnitude, not a rate`,
-			0, "the wording modifies another spell's chance and states no trigger of its own"},
-		{440529, "Resourcefulness", procChancePPM, 0, `"your critical strikes have a $m3% chance" names effect 3, and the row carries two effects, so no chance resolves`,
-			core.ProcHintCrit | core.ProcHintNamedAbility, `"your critical strikes" names the trigger, "your Trap abilities" the ability`},
-		{23689, "Darkmoon Card: Heroism", procChancePPM, 0, `"Sometimes heals" beside the 100 is a rate the client keeps elsewhere`,
-			core.ProcHintHeals, `"heals bearer" is heal wording`},
+			core.ProcHintDamage, `"When Lightning Bolt or Chain Lightning deal damage" restricts the trigger to damage; the rest modifies another spell's chance`},
+		{440529, "Resourcefulness", procChanceEffectN, 2, `"a $m2% chance" is effect 2's ladder`,
+			0, `"grants your melee and ranged ability Critical Strikes" names the crit after the verb, which no hint reads; the caller sets the outcome`},
+		{23689, "Darkmoon Card: Heroism", procChancePPM, 0, `"Sometimes heals" beside the 100 is a rate the game files keep elsewhere`,
+			core.ProcHintHeals | core.ProcHintDamage, `"heals bearer" is heal wording, and "when damaging an enemy" restricts the trigger to damage`},
 		{1248761, "Recovery, an enchant's equip aura", procChanceAlways, 0, `the row ships no tooltip, and its grant 1248760's "Cannot occur more often than" is a cooldown, not a rate`,
 			core.ProcHintAttackDodged | core.ProcHintAttackParried, `the grant reads "when you are Parried or Dodged"`},
-		{1248806, "Revelation, an enchant's equip aura", procChancePPM, 0, `its grant 1248805's "a chance to trigger Revelation" beside the 100 is a rate the client keeps elsewhere`,
+		{1248806, "Revelation, an enchant's equip aura", procChancePPM, 0, `its grant 1248805's "a chance to trigger Revelation" beside the 100 is a rate the game files keep elsewhere`,
 			0, "the grant's crit wording names which hits feed the proc, which is the row's own mask to say"},
 		{1248758, "Insight, an enchant's equip aura", procChanceColumn, 0, "the column's 35 is the roll",
 			0, `the grant's "when you cast a spell" names which hits feed the proc, which is the row's own mask to say`},
+		{28200, "Talisman of Ascendance's stacking aura", procChanceAlways, 0, "the 100 in the column is the game files' no-roll",
+			core.ProcHintHeals | core.ProcHintDamage, `"Your next 5 damage or healing spells" restricts the trigger to damage and names healing without being restricted to it`},
+		{9452, "Vindication", procChanceAlways, 0, "the 100 in the column is the game files' no-roll",
+			core.ProcHintDamage, `"your damaging melee attacks" restricts the trigger to damage`},
+		{14076, "Improved Sap", procChanceEffectN, 1, `"$s1% chance" is effect 1's ladder`,
+			core.ProcHintNamedAbility, `"your Sap ability" names the ability and no damage`},
+		{7711, "Blazefury Medallion", procChanceAlways, 0, "the 100 in the column is the game files' no-roll",
+			core.ProcHintDamage, "an override rules the proc to hits with a damage component"},
 	} {
 		t.Run(want.name, func(t *testing.T) {
 			rows := []storeSpell{tables.row(want.id)}
@@ -119,7 +129,7 @@ func TestProcShapeOfNamedSpells(t *testing.T) {
 			}
 
 			// An effect the chance sits on has to be one the sim can reach by that number, since
-			// EffectN counts positions and the client's EffectIndex has gaps.
+			// EffectN counts positions and the game files' EffectIndex has gaps.
 			if row.ProcChanceEffect != 0 {
 				position := int(row.ProcChanceEffect) - 1
 				if position >= len(row.Effects) {
@@ -138,12 +148,25 @@ func TestProcShapeOfNamedSpells(t *testing.T) {
 func TestEnchantChanceOfNamedCombatSpells(t *testing.T) {
 	tables := clientSpellTables(t)
 
+	fieryBlaze := tables.row(6297)
+	stated, ok := tables.EnchantChances[6297]
+	if !ok || stated.Chance == 0 {
+		t.Fatalf("Fiery Blaze 6297: enchantments state no chance for it (%v)", stated)
+	}
+	applyTooltipHints(tables, &fieryBlaze)
+	if err := applyEnchantChance(tables, &fieryBlaze); err != nil {
+		t.Fatalf("Fiery Blaze 6297: %v", err)
+	}
+	if fieryBlaze.ProcChance != stated.Chance || fieryBlaze.ProcChanceSource != procChanceColumn || fieryBlaze.ProcChanceEffect != 0 {
+		t.Errorf("Fiery Blaze 6297: ProcChance %d from %s effect %d, want enchantments %v's %d from the column",
+			fieryBlaze.ProcChance, fieryBlaze.ProcChanceSource, fieryBlaze.ProcChanceEffect, stated.Enchants, stated.Chance)
+	}
+
 	for _, want := range []struct {
 		id     int32
 		name   string
 		chance uint8
 	}{
-		{6297, "Fiery Blaze, 15 on enchantment 36 and no column of its own", 15},
 		{11398, "Mind-numbing Poison III, 20 on enchantments 643 and 8696 beside a column of 101", 20},
 		{8516, "Windfury Totem, 20 on enchantment 1783 beside a column of 100", 20},
 	} {
@@ -160,9 +183,10 @@ func TestEnchantChanceOfNamedCombatSpells(t *testing.T) {
 
 	row := tables.row(1248758)
 	applyTooltipHints(tables, &row)
-	if err := applyEnchantChance(tables, &row); err != nil || row.ProcChance != 35 || len(row.overrideNotes) != 0 {
-		t.Errorf("Insight's equip aura 1248758 reads %d%% (%v, notes %v), want its own 35 untouched",
-			row.ProcChance, err, row.overrideNotes)
+	own := row.ProcChance
+	if err := applyEnchantChance(tables, &row); err != nil || row.ProcChance != own || len(row.overrideNotes) != 0 {
+		t.Errorf("Insight's equip aura 1248758 reads %d%% (%v, notes %v), want its own %d untouched",
+			row.ProcChance, err, row.overrideNotes, own)
 	}
 }
 

@@ -1,25 +1,21 @@
-import {
-	type AreaType,
-	GemColor,
-	ItemRandomSuffix,
-	ItemSlot,
-	ItemSpec,
-	ItemType,
-	Profession,
-	PseudoStat,
-	ScalingItemProperties,
-	WeaponType,
-} from '@generated/proto/common';
-import { UIEnchant as Enchant, UIGem as Gem, UIItem as Item } from '@generated/proto/ui';
+import { type AreaType, ItemRandomSuffix, ItemSlot, ItemSpec, Profession, PseudoStat, ScalingItemProperties } from '@generated/proto/common';
+import { UIEnchant as Enchant, UIItem as Item } from '@generated/proto/ui';
 
 import { distinct } from '../utils/collections';
 import { ActionId } from './action_id';
-import { gemEligibleForSocket, gemMatchesSocket } from './gems';
 import { enchantAppliesToItem } from './items';
 import { Stats } from './stats';
 
-export const getWeaponDPS = (item: Item, upgradeStep: 0): number => {
-	const { weaponDamageMin, weaponDamageMax } = item.scalingOptions[upgradeStep];
+// The damage range the item deals with the suffix: one that reduces caster DPS swaps in the range the item carries for it.
+export const getWeaponDamageRange = (item: Item, upgradeStep: 0, randomSuffix?: ItemRandomSuffix | null) => {
+	const scalingOptions = item.scalingOptions[upgradeStep];
+	const reduced = randomSuffix?.reducedCasterDps ? scalingOptions.reducedCasterWeaponDamage : undefined;
+	const { weaponDamageMin, weaponDamageMax } = reduced ?? scalingOptions;
+	return { weaponDamageMin, weaponDamageMax };
+};
+
+export const getWeaponDPS = (item: Item, upgradeStep: 0, randomSuffix?: ItemRandomSuffix | null): number => {
+	const { weaponDamageMin, weaponDamageMax } = getWeaponDamageRange(item, upgradeStep, randomSuffix);
 	return (weaponDamageMin + weaponDamageMax) / 2 / (item.weaponSpeed || 1);
 };
 
@@ -35,9 +31,16 @@ export const getWeaponDpsStatsBySlot = (weaponDps: number, slot: ItemSlot): Stat
 	return stats;
 };
 
-export const getWeaponStatsBySlot = (item: Item, slot: ItemSlot, upgradeStep: 0) => {
+// Flat weapon damage is worth the DPS it adds at the enchanted weapon's speed, as a weapon's own damage is.
+export const enchantWeaponDamageEP = (enchant: Enchant, weaponSpeed: number, epPerWeaponDps: number): number =>
+	enchant.weaponDamage && weaponSpeed ? (enchant.weaponDamage / weaponSpeed) * epPerWeaponDps : 0;
+
+export const enchantEP = (enchant: Enchant, weights: Stats, weaponSpeed: number, epPerWeaponDps: number): number =>
+	new Stats(enchant.stats, enchant.pseudoStats).computeEP(weights) + enchantWeaponDamageEP(enchant, weaponSpeed, epPerWeaponDps);
+
+export const getWeaponStatsBySlot = (item: Item, slot: ItemSlot, upgradeStep: 0, randomSuffix?: ItemRandomSuffix | null) => {
 	if (item.weaponSpeed > 0) {
-		return getWeaponDpsStatsBySlot(getWeaponDPS(item, upgradeStep), slot);
+		return getWeaponDpsStatsBySlot(getWeaponDPS(item, upgradeStep, randomSuffix), slot);
 	}
 	return new Stats();
 };
@@ -45,13 +48,11 @@ export const getWeaponStatsBySlot = (item: Item, slot: ItemSlot, upgradeStep: 0)
 type EquippedItemOptions = {
 	item: Item;
 	enchant?: Enchant | null;
-	gems?: Array<Gem | null>;
 	randomSuffix?: ItemRandomSuffix | null;
-	weaponTypeOverride?: WeaponType;
 };
 
 /**
- * Represents an equipped item along with enchants/gems attached to it.
+ * Represents an equipped item along with the enchant attached to it.
  *
  * This is an immutable type.
  */
@@ -59,26 +60,11 @@ export class EquippedItem {
 	readonly _item: Item;
 	readonly _randomSuffix: ItemRandomSuffix | null;
 	readonly _enchant: Enchant | null;
-	readonly _gems: Array<Gem | null>;
-	// Debug relabel of this weapon's type; see withWeaponTypeOverride and effectiveWeaponType.
-	// WeaponTypeUnknown means no override -- use the item's own type.
-	readonly _weaponTypeOverride: WeaponType;
 
-	readonly numPossibleSockets: number;
-
-	constructor({ item, enchant, gems, randomSuffix, weaponTypeOverride }: EquippedItemOptions) {
+	constructor({ item, enchant, randomSuffix }: EquippedItemOptions) {
 		this._item = item;
 		this._enchant = enchant || null;
-		this._gems = gems || [];
 		this._randomSuffix = randomSuffix || null;
-		this._weaponTypeOverride = weaponTypeOverride || WeaponType.WeaponTypeUnknown;
-
-		this.numPossibleSockets = this.numSockets();
-
-		// Fill gems with null so we always have the same number of gems as gem slots.
-		if (this._gems.length < this.numPossibleSockets) {
-			this._gems = this._gems.concat(new Array(this.numPossibleSockets - this._gems.length).fill(null));
-		}
 	}
 
 	get item(): Item {
@@ -97,14 +83,6 @@ export class EquippedItem {
 		// Make a defensive copy
 		return this._enchant ? Enchant.clone(this._enchant) : null;
 	}
-	get gems(): Array<Gem | null> {
-		// Make a defensive copy
-		return this._gems.map(gem => (gem == null ? null : Gem.clone(gem)));
-	}
-	get gemSockets(): Array<GemColor> {
-		// Make a defensive copy
-		return [...this._item.gemSockets];
-	}
 	get randomPropPoints(): number {
 		return this.item.scalingOptions[0].randPropPoints || this.item.randPropPoints;
 	}
@@ -112,29 +90,13 @@ export class EquippedItem {
 		return this.item.scalingOptions[0].ilvl;
 	}
 
-	// The raw debug override, or WeaponTypeUnknown if none is set. Mainly useful for driving the
-	// override select in the item editor; most callers that care about "what type is this weapon
-	// actually being treated as" want effectiveWeaponType instead.
-	get weaponTypeOverride(): WeaponType {
-		return this._weaponTypeOverride;
-	}
-
-	// The weapon type that type-keyed effects (racials like Sword/Axe/Mace Specialization,
-	// talents, ability requirements like Backstab/Mutilate needing a dagger) should key on: the
-	// debug override when one is active, otherwise the item's own type. Item browsing/filtering
-	// should keep using item.weaponType -- only "what is currently wielded" checks want this.
-	get effectiveWeaponType(): WeaponType {
-		return this._weaponTypeOverride !== WeaponType.WeaponTypeUnknown ? this._weaponTypeOverride : this._item.weaponType;
-	}
-
 	getBaseScalingItemProperties(): ScalingItemProperties {
 		return this._item.scalingOptions[0];
 	}
 
-	equals(other: EquippedItem, ignoreEnchants?: boolean, ignoreGems?: boolean) {
+	equals(other: EquippedItem, ignoreEnchants?: boolean) {
 		if (this.id != other.id) return false;
 		if (!Item.equals(this._item, other.item)) return false;
-		if (this._weaponTypeOverride != other.weaponTypeOverride) return false;
 
 		if ((this._randomSuffix == null) != (other.randomSuffix == null)) return false;
 
@@ -144,54 +106,19 @@ export class EquippedItem {
 
 		if (this._enchant && other.enchant && !Enchant.equals(this._enchant, other.enchant) && !ignoreEnchants) return false;
 
-		if (this._gems.length != other.gems.length && !ignoreGems) return false;
-
-		if (!ignoreGems) {
-			for (let i = 0; i < this._gems.length; i++) {
-				if ((this._gems[i] == null) != (other.gems[i] == null)) return false;
-
-				if (this._gems[i] && other.gems[i] && !Gem.equals(this._gems[i]!, other.gems[i]!)) return false;
-			}
-		}
-
 		return true;
 	}
 
 	/**
-	 * Replaces the item and tries to keep the existing enchants/gems if possible.
-	 *
-	 * The weapon type override is deliberately NOT carried over: it's a relabel of this specific
-	 * weapon, and a different item picked here isn't necessarily even a weapon.
+	 * Replaces the item and tries to keep the existing enchant if possible.
 	 */
 	withItem(item: Item): EquippedItem {
 		let newEnchant = null;
 		if (this._enchant && enchantAppliesToItem(this._enchant, item)) newEnchant = this._enchant;
-		// Reorganize gems to match as many colors in the new item as possible.
-		const newGems = new Array(item.gemSockets.length).fill(null);
-		this._gems
-			.slice(0, this._item.gemSockets.length)
-			.filter(gem => gem != null)
-			.forEach(gem => {
-				const firstMatchingIndex = item.gemSockets.findIndex((socketColor, socketIdx) => !newGems[socketIdx] && gemMatchesSocket(gem!, socketColor));
-				const firstEligibleIndex = item.gemSockets.findIndex(
-					(socketColor, socketIdx) => !newGems[socketIdx] && gemEligibleForSocket(gem!, socketColor),
-				);
-				if (firstMatchingIndex != -1) {
-					newGems[firstMatchingIndex] = gem;
-				} else if (firstEligibleIndex != -1) {
-					newGems[firstEligibleIndex] = gem;
-				}
-			});
-
-		// Copy the extra socket gem directly.
-		// if (this.couldHaveExtraSocket()) {
-		// 	newGems.push(this._gems[this._gems.length - 1]);
-		// }
 
 		return new EquippedItem({
 			item,
 			enchant: newEnchant,
-			gems: newGems,
 		});
 	}
 
@@ -202,101 +129,15 @@ export class EquippedItem {
 		return new EquippedItem({
 			item: this._item,
 			enchant,
-			gems: this._gems,
 			randomSuffix: this._randomSuffix,
-			weaponTypeOverride: this._weaponTypeOverride,
 		});
-	}
-
-	/**
-	 * Returns a new EquippedItem with its weapon type debug-relabelled (e.g. a sword displayed
-	 * and treated as an axe). Stats and effects are unchanged; only the type tag that type-keyed
-	 * effects read via effectiveWeaponType changes. Pass WeaponTypeUnknown to clear the override
-	 * and go back to the item's own type.
-	 *
-	 * A no-op (override cleared) for non-weapons, and for held off-hands/shields on either end --
-	 * relabelling into or out of those would confuse dual-wield and hand-type logic. Mirrors
-	 * sim/core/database.go's NewItem.
-	 */
-	withWeaponTypeOverride(weaponType: WeaponType): EquippedItem {
-		const excluded = [WeaponType.WeaponTypeOffHand, WeaponType.WeaponTypeShield];
-		const canOverride = this._item.type === ItemType.ItemTypeWeapon && !excluded.includes(this._item.weaponType) && !excluded.includes(weaponType);
-
-		return new EquippedItem({
-			item: this._item,
-			enchant: this._enchant,
-			gems: this._gems,
-			randomSuffix: this._randomSuffix,
-			weaponTypeOverride: canOverride ? weaponType : WeaponType.WeaponTypeUnknown,
-		});
-	}
-
-	/**
-	 * Returns a new EquippedItem with the given gem socketed.
-	 */
-	private withGemHelper(gem: Gem | null, socketIdx: number): EquippedItem {
-		if (this._gems.length <= socketIdx) {
-			throw new Error('No gem socket with index ' + socketIdx);
-		}
-
-		const newGems = this._gems.slice();
-		newGems[socketIdx] = gem;
-
-		return new EquippedItem({
-			item: this._item,
-			enchant: this._enchant,
-			gems: newGems,
-			randomSuffix: this._randomSuffix,
-			weaponTypeOverride: this._weaponTypeOverride,
-		});
-	}
-
-	/**
-	 * Returns a new EquippedItem with the given gem socketed.
-	 *
-	 * Also ensures validity of the item on its own. Currently this just means enforcing unique gems.
-	 */
-	withGem(gem: Gem | null, socketIdx: number): EquippedItem {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		let curItem: EquippedItem | null = this;
-
-		if (gem && gem.unique) {
-			curItem = curItem.removeGemsWithId(gem.id);
-		}
-
-		return curItem.withGemHelper(gem, socketIdx);
-	}
-
-	removeGemsWithId(gemId: number): EquippedItem {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		let curItem: EquippedItem | null = this;
-		// Remove any currently socketed identical gems.
-		for (let i = 0; i < curItem._gems.length; i++) {
-			if (curItem._gems[i]?.id == gemId) {
-				curItem = curItem.withGemHelper(null, i);
-			}
-		}
-		return curItem;
-	}
-
-	removeAllGems(): EquippedItem {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		let curItem: EquippedItem | null = this;
-
-		for (let i = 0; i < curItem._gems.length; i++) {
-			curItem = curItem.withGemHelper(null, i);
-		}
-
-		return curItem;
 	}
 
 	withRandomSuffix(randomSuffix: ItemRandomSuffix | null): EquippedItem {
 		return new EquippedItem({
 			item: this._item,
 			enchant: this._enchant,
-			gems: this._gems,
 			randomSuffix,
-			weaponTypeOverride: this._weaponTypeOverride,
 		});
 	}
 
@@ -306,13 +147,13 @@ export class EquippedItem {
 		const scalingOptions = item.scalingOptions[0];
 
 		item.stats = new Stats().asProtoArray().map((_, index) => scalingOptions.stats[index] || 0);
-		item.weaponDamageMin = scalingOptions.weaponDamageMin;
-		item.weaponDamageMax = scalingOptions.weaponDamageMax;
+		({ weaponDamageMin: item.weaponDamageMin, weaponDamageMax: item.weaponDamageMax } = getWeaponDamageRange(item, 0, this._randomSuffix));
 		item.randPropPoints = scalingOptions.randPropPoints;
 
-		// Forever's random suffixes are flat enchantments, as in Classic (sim/core/database.go).
 		if (this._randomSuffix) {
-			item.stats = item.stats.map((stat, index) => stat + (this._randomSuffix!.stats[index] || 0));
+			const suffixStats = this._randomSuffix.stats;
+			// The game rounds each suffix stat to the nearest point and adds it to the item's own.
+			item.stats = item.stats.map((stat, index) => stat + Math.round(((suffixStats[index] || 0) * item.randPropPoints) / 10000));
 		}
 
 		for (const areaStats of scalingOptions.areaStats.filter(bonus => areaTypes.includes(bonus.areaType))) {
@@ -322,9 +163,7 @@ export class EquippedItem {
 		return new EquippedItem({
 			item,
 			enchant: this._enchant,
-			gems: this._gems,
 			randomSuffix: this._randomSuffix,
-			weaponTypeOverride: this._weaponTypeOverride,
 		});
 	}
 
@@ -333,7 +172,8 @@ export class EquippedItem {
 	calcStats(slot?: ItemSlot): Stats {
 		const item = this.item;
 		let stats = new Stats(item.stats, item.pseudoStats);
-		if (typeof slot === 'number') stats = stats.add(getWeaponStatsBySlot(item, slot, 0));
+		if (this._randomSuffix) stats = stats.add(new Stats([], this._randomSuffix.pseudoStats));
+		if (typeof slot === 'number') stats = stats.add(getWeaponStatsBySlot(item, slot, 0, this._randomSuffix));
 		return stats;
 	}
 
@@ -346,59 +186,11 @@ export class EquippedItem {
 			id: this._item.id,
 			randomSuffix: this._randomSuffix?.id,
 			enchant: this._enchant?.effectId,
-			gems: this._gems.map(gem => gem?.id || 0),
-			weaponTypeOverride: this._weaponTypeOverride || undefined,
 		});
-	}
-
-	meetsSocketBonus(): boolean {
-		return this._item.gemSockets.every((socketColor, i) => this._gems[i] && gemMatchesSocket(this._gems[i]!, socketColor));
-	}
-
-	socketBonusStats(): Stats {
-		if (this.meetsSocketBonus()) {
-			return new Stats(this._item.socketBonus);
-		} else {
-			return new Stats();
-		}
-	}
-
-	numSockets(): number {
-		return this._item.gemSockets.length;
-	}
-
-	numSocketsOfColor(color: GemColor | null): number {
-		let numSockets = 0;
-
-		for (const socketColor of this._item.gemSockets) {
-			if (socketColor == color) {
-				numSockets += 1;
-			}
-		}
-
-		return numSockets;
 	}
 
 	hasRandomSuffixOptions(): boolean {
 		return !!this._item.randomSuffixOptions.length;
-	}
-
-	hasSocketedGem(socketIdx: number): boolean {
-		return this._gems[socketIdx] != null;
-	}
-
-	allSocketColors(): Array<GemColor> {
-		return this._item.gemSockets;
-	}
-	curSocketColors(): Array<GemColor> {
-		return this._item.gemSockets;
-	}
-
-	curGems(): Array<Gem | null> {
-		return this._gems;
-	}
-	curEquippedGems(): Array<Gem> {
-		return this.curGems().filter(g => g != null) as Array<Gem>;
 	}
 
 	getProfessionRequirements(): Array<Profession> {
@@ -409,15 +201,10 @@ export class EquippedItem {
 		if (this._enchant != null && this._enchant.requiredProfession != Profession.ProfessionUnknown) {
 			profs.push(this._enchant.requiredProfession);
 		}
-		this._gems.forEach(gem => {
-			if (gem != null && gem.requiredProfession != Profession.ProfessionUnknown) {
-				profs.push(gem.requiredProfession);
-			}
-		});
 		return distinct(profs);
 	}
-	getFailedProfessionRequirements(professions: Array<Profession>): Array<Item | Gem | Enchant> {
-		const failed: Array<Item | Gem | Enchant> = [];
+	getFailedProfessionRequirements(professions: Array<Profession>): Array<Item | Enchant> {
+		const failed: Array<Item | Enchant> = [];
 		if (this._item.requiredProfession != Profession.ProfessionUnknown && !professions.includes(this._item.requiredProfession)) {
 			failed.push(this._item);
 		}
@@ -428,11 +215,6 @@ export class EquippedItem {
 		) {
 			failed.push(this._enchant);
 		}
-		this._gems.forEach(gem => {
-			if (gem != null && gem.requiredProfession != Profession.ProfessionUnknown && !professions.includes(gem.requiredProfession)) {
-				failed.push(gem);
-			}
-		});
 		return failed;
 	}
 }

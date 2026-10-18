@@ -2,41 +2,40 @@ package mage
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+// Only the highest rank is registered: the mage casts the rank configured here, not every rank
+// spellData.ConeOfCold lists.
 func (mage *Mage) registerConeOfColdSpell() {
-	coneOfColdRank := spellData.ConeOfCold.Highest()
+	mage.registerConeOfColdRank(spellData.ConeOfCold.Len(), spellData.ConeOfCold.Highest())
+}
 
-	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: coneOfColdRank.ID},
-		SpellSchool:    coneOfColdRank.SpellSchool(),
-		DefenseType:    coneOfColdRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL | core.SpellFlagBinary,
-		ClassSpellMask: MageSpellConeOfCold,
-		MaxRange:       pointBlankRadius,
+// The slow (effect 1) does nothing to a boss.
+func (mage *Mage) registerConeOfColdRank(_ int32, rank *spelldata.Spell) {
+	// Binary: a spell with a non-damage effect (the slow) is resisted whole or not at all, which the
+	// row does not state.
+	config := spelldata.SpellConfig(&mage.Unit, rank,
+		spelldata.Magic(core.ProcMaskSpellDamage), spelldata.Flags(core.SpellFlagBinary))
+	config.ClassSpellMask = MageSpellConeOfCold
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(coneOfColdRank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: coneOfColdRank.GCD(),
-			},
-			CD: core.Cooldown{
-				Timer:    mage.NewTimer(),
-				Duration: max(coneOfColdRank.Cooldown(), coneOfColdRank.CategoryCooldown()),
-			},
-		},
+	damage := rank.DamageEffect()
 
-		DamageMultiplier: 1,
-		BonusCoefficient: coneOfColdRank.DamageEffect().Coeff(),
-		ThreatMultiplier: 1,
+	// Winter's Chill raises the coefficient against each target by that target's own stacks, which
+	// this hit then spends, so each target is calculated on its own.
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		for _, aoeTarget := range sim.Encounter.ActiveTargetUnits {
+			bonusCoefficient := mage.wintersChillCoefficient(aoeTarget)
 
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealAoeDamageWithVariance(sim, spell.OutcomeMagicHitAndCrit, func(sim *core.Simulation, _ *core.Spell) float64 {
-				return coneOfColdRank.DamageEffect().Roll(sim, core.CharacterLevel)
-			})
-		},
-	})
+			spell.BonusCoefficient += bonusCoefficient
+			result := spell.CalcAndDealDamage(sim, aoeTarget, damage.DirectAmount(sim), spell.OutcomeMagicHitAndCrit)
+			spell.BonusCoefficient -= bonusCoefficient
+
+			if result.Landed() {
+				mage.consumeWintersChill(sim, aoeTarget)
+			}
+		}
+	}
+
+	mage.RegisterSpell(config)
 }

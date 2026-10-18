@@ -6,6 +6,7 @@ import type { Encounter } from '../raid/encounter';
 import type { Party } from '../raid/party';
 import type { Raid } from '../raid/raid';
 import type { ReforgeSettings } from '../settings/reforge_settings';
+import type { StatSweepSettings } from '../settings/stat_sweep_settings';
 import type { StatWeightActionSettings } from '../settings/stat_weight_settings';
 import type { Sim } from '../sim';
 import { arrayEquals } from '../utils/collections';
@@ -25,10 +26,10 @@ import type {
 import { PLAYER_FIELDS } from './sim_store';
 
 // Fields whose change counts as a "player settings change" for aggregate
-// subscribers (mirrors the old Player.changeEmitter composition): everything
+// subscribers: everything
 // the user edits. Server-derived `currentStats` is excluded — including it
 // would make stat recomputation re-trigger itself.
-export const PLAYER_CHANGE_FIELDS = PLAYER_FIELDS.filter(f => f !== 'currentStats');
+const PLAYER_CHANGE_FIELDS = PLAYER_FIELDS.filter(f => f !== 'currentStats');
 
 export const shallowArrayEquals = (a: ReadonlyArray<unknown>, b: ReadonlyArray<unknown>) => arrayEquals(a as Array<unknown>, b as Array<unknown>, Object.is);
 
@@ -95,7 +96,7 @@ function composeAll(subs: Array<StoreSubscribe>): StoreSubscribe {
 
 // ---------------------------------------------------------------------------
 // Field subscriptions. Player/reforge fields watch a version counter, which the
-// facade bumps exactly when the old emitter would have fired.
+// facade bumps on every write that should notify.
 
 export function subscribePlayerField(player: Player<any>, field: PlayerField): StoreSubscribe {
 	const storeKey = player.storeKey;
@@ -146,7 +147,7 @@ function flattenKeys(keys: Array<Array<number> | null>): Array<unknown> {
 	return out;
 }
 
-// Domain-level sim settings (mirrors the old Sim.settingsChangeEmitter): the
+// Domain-level sim settings: the
 // sim + ui slices minus the run-derived rng seed / metadata counters.
 export function simSettingsKey(s: SimState): Array<unknown> {
 	return [s.sim.iterations, s.sim.phase, s.sim.faction, s.sim.fixedRngSeed, s.sim.filters, s.ui];
@@ -194,20 +195,19 @@ export function subscribeEncounterChange(encounter: Encounter): StoreSubscribe {
 	return cached(encounter, 'change', () => fromSelector(encounter.sim.store, s => s.encounter));
 }
 
-// Sim settings + UI flags (legacy Sim.settingsChangeEmitter).
+// Sim settings + UI flags.
 export function subscribeSimSettingsChange(sim: Sim): StoreSubscribe {
 	return cached(sim, 'settingsChange', () => fromSelector(sim.store, simSettingsKey, shallowArrayEquals));
 }
 
-// Mirrors the old Sim.changeEmitter: settings + raid + encounter. Server-derived
+// Settings + raid + encounter. Server-derived
 // state (currentStats, metadata, rng seed) and the reforge / stat-weight slices
 // are NOT included — subscribe to those explicitly where needed.
 export function subscribeSimChange(sim: Sim): StoreSubscribe {
 	return cached(sim, 'change', () => fromSelector(sim.store, s => [...simSettingsKey(s), s.encounter, ...raidTuple(s)], shallowArrayEquals));
 }
 
-// Party buffs for one party. Unlike MoP's, where the message is vestigial, TBC's
-// PartyBuffs is populated and drives a picker row of its own.
+// Party buffs for one party. PartyBuffs is populated and drives a picker row of its own.
 export function subscribePartyBuffs(party: Party): StoreSubscribe {
 	const index = party.getIndex();
 	return cached(party, 'buffs', () => fromSelector(party.sim.store, s => s.raid.partyBuffs[index]));
@@ -236,6 +236,12 @@ export function subscribeReforgeChange(settings: ReforgeSettings): StoreSubscrib
 export function subscribeStatWeightsChange(settings: StatWeightActionSettings): StoreSubscribe {
 	const storeKey = settings.storeKey;
 	return cached(settings, 'change', () => fromSelector(settings.store, s => s.statWeights[storeKey]?.v.settings));
+}
+
+// Stat sweep settings (per player).
+export function subscribeStatSweepChange(settings: StatSweepSettings): StoreSubscribe {
+	const storeKey = settings.storeKey;
+	return cached(settings, 'change', () => fromSelector(settings.store, s => s.statSweep[storeKey]?.v.settings));
 }
 
 export function subscribePlayerStatWeightsField(player: Player<any>, field: keyof StatWeightsSlice['v']): StoreSubscribe {

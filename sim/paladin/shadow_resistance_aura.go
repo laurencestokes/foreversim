@@ -14,7 +14,7 @@ var ShadowResistanceAuraRankMap = spellData.ShadowResistanceAura
 // may only have one Aura on them per Paladin at any one time.
 func (paladin *Paladin) registerShadowResistanceAura() {
 	ShadowResistanceAuraRankMap.Each(func(_ int32, rank *spelldata.Spell) {
-		aura := buffs.ShadowResistanceAura(&paladin.Character, true, auraRank(rank))
+		aura := buffs.NewSpellDataShadowResistanceAuraRank(&paladin.Character, auraRank(rank))
 		paladin.registerAuraSpell(rank, aura, SpellMaskShadowResistanceAura)
 	})
 }

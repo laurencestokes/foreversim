@@ -45,7 +45,37 @@ func itemAuraRows() []Spell {
 		Spell{ID: 7700, Name: "Arena Aura", DurationMs: -1, RequiredAreas: 9337, Effects: []Effect{
 			itemAuraEffect(0, dbcenums.A_MOD_DAMAGE_PERCENT_TAKEN, miscAllSchools, -6, dbcenums.TARGET_UNIT_CASTER),
 		}},
+		Spell{ID: 7800, Name: "Spikes", DurationMs: 30000, Effects: []Effect{
+			itemAuraEffect(0, dbcenums.A_DAMAGE_SHIELD, 0, 25, dbcenums.TARGET_UNIT_CASTER),
+			itemAuraEffect(1, dbcenums.A_MOD_RESISTANCE, 4, 20, dbcenums.TARGET_UNIT_CASTER),
+		}},
+		Spell{ID: 7900, Name: "Pet Spikes", DurationMs: 30000, Effects: []Effect{
+			itemAuraEffect(0, dbcenums.A_DAMAGE_SHIELD, 0, 25, dbcenums.TARGET_UNIT_PET),
+		}},
+		Spell{ID: 8000, Name: "Cold Eye", DurationMs: 15000, Effects: []Effect{
+			itemAuraEffect(0, dbcenums.A_MOD_DECREASE_SPEED, 0, -40, dbcenums.TARGET_UNIT_TARGET_ENEMY),
+			itemAuraEffect(1, dbcenums.A_MOD_MELEE_RANGED_HASTE_2, 0, -20, dbcenums.TARGET_UNIT_TARGET_ENEMY),
+		}},
 	)
+}
+
+// A damage shield on the wearer is attached beside the parse and a movement slow is left out, so
+// neither is parsed and neither refuses the row; a damage shield on a pet is parsed, and refused.
+func TestItemAuraParsedOnLeavesOutShieldsAndMovement(t *testing.T) {
+	withRows(t, itemAuraRows())
+
+	if got := ItemAuraParsedOn(Find(7800), AuraOnWearer); !slices.Equal(got, []int32{2}) {
+		t.Errorf("parsed on the wearer of 7800: %v, want the resistance alone, [2]", got)
+	}
+	if got := ItemAuraDamageShields(Find(7800)); len(got) != 1 || got[0].BasePoints != 25 {
+		t.Errorf("damage shields of 7800: %v, want the one of 25", got)
+	}
+	if got := ItemAuraParsedOn(Find(8000), AuraOnEnemy); !slices.Equal(got, []int32{2}) {
+		t.Errorf("parsed on the enemy of 8000: %v, want the attack speed slow alone, [2]", got)
+	}
+	if got := ItemAuraDamageShields(Find(7900)); len(got) != 0 {
+		t.Errorf("damage shields on the wearer of 7900: %v, want none", got)
+	}
 }
 
 func TestEffectsOnSplitsTheRowByTarget(t *testing.T) {
@@ -91,6 +121,9 @@ func TestItemAuraUnsupported(t *testing.T) {
 		{"no duration", 7300, false, []string{"the row states no duration", "effect 1 lands on implicit target 0"}},
 		{"a terrain area", 7600, true, nil},
 		{"a single zone", 7700, true, []string{"the row applies only in area group 9337, which names no area type"}},
+		{"a damage shield on the wearer", 7800, false, nil},
+		{"a damage shield on a pet", 7900, false, []string{"effect 1 A_DAMAGE_SHIELD misc 0 is not parsed on a pet"}},
+		{"a movement slow beside an attack speed slow", 8000, false, nil},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			if got := ItemAuraUnsupported(Find(c.id), c.equipped); !slices.Equal(got, c.want) {

@@ -1,11 +1,9 @@
 package paladin
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
-	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -47,11 +45,11 @@ func (paladin *Paladin) applyToughness() {
 		return
 	}
 
-	paladin.ApplyEquipScaling(stats.Armor, spellData.Toughness.Effect(dbcenums.A_MOD_BASE_RESISTANCE_PCT, 1).MultiplierAt(paladin.Talents.Toughness))
+	spelldata.ParseStatic(&paladin.Character, spellData.Toughness.Rank(paladin.Talents.Toughness))
 }
 
 // Redoubt - Damaging melee attacks against you have a 10% chance to increase your chance to block
-// by 6/12/18/24/30%. Lasts 10 sec or 5 blocks.
+// by 4/8/12/16/20%. Lasts 10 sec or 5 blocks.
 func (paladin *Paladin) applyRedoubt() {
 	if paladin.Talents.Redoubt == 0 {
 		return
@@ -76,34 +74,21 @@ func (paladin *Paladin) applyRedoubt() {
 		},
 	})
 
-	paladin.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Redoubt - Trigger" + paladin.Label,
-		Callback:           core.CallbackOnSpellHitTaken,
-		ProcMask:           core.ProcMaskMelee,
-		Outcome:            core.OutcomeLanded,
-		RequireDamageDealt: true,
-		// Up with the hit that procs it, like Shield Specialization. One batch window later it
-		// outlived its 10 sec by 10 ms and caught a fifth 2.0 sec boss swing that master's never
-		// sees: +12% blocks, behind Protection's +1.6% parity gap.
-		TriggerImmediately: true,
-		// The row carries the rank 5 chance, 10%, on every rank; the beta client's talent curve on
-		// effect index 1 (which the row has no effect for) is 2% a rank.
-		ProcChance: 0.02 * float64(paladin.Talents.Redoubt),
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			redoubt.Activate(sim)
-			redoubt.SetStacks(sim, redoubt.MaxStacks)
-		},
+	trigger := spelldata.ProcTrigger(&paladin.Character, spellData.Redoubt.Rank(paladin.Talents.Redoubt), func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+		redoubt.Activate(sim)
+		redoubt.SetStacks(sim, redoubt.MaxStacks)
 	})
+	trigger.Name = "Redoubt - Trigger" + paladin.Label
+	paladin.MakeProcTriggerAura(trigger)
 }
 
-// Precision - Improves your chance to hit by 1/2/3%, with melee weapons and spells alike.
+// Precision - Improves your chance to hit by 1/2/3%.
 func (paladin *Paladin) applyPrecision() {
 	if paladin.Talents.Precision == 0 {
 		return
 	}
 
-	paladin.AddStat(stats.PhysicalHitPercent, spellData.Precision.Effect(dbcenums.A_MOD_HIT_CHANCE, 0).ValueAt(paladin.Talents.Precision))
-	paladin.AddStat(stats.SpellHitPercent, spellData.Precision.Effect(dbcenums.A_MOD_SPELL_HIT_CHANCE, 0).ValueAt(paladin.Talents.Precision))
+	spelldata.ParseStatic(&paladin.Character, spellData.Precision.Rank(paladin.Talents.Precision))
 }
 
 // Anticipation - Increases your Defense Skill by 4/8/12/16/20.
@@ -112,25 +97,23 @@ func (paladin *Paladin) applyAnticipation() {
 		return
 	}
 
-	paladin.AddStat(stats.DefenseRating, spellData.Anticipation.ValueAt(paladin.Talents.Anticipation)*core.DefenseRatingPerDefenseLevel)
+	spelldata.ParseStatic(&paladin.Character, spellData.Anticipation.Rank(paladin.Talents.Anticipation))
 }
 
 // Improved Seal of Fury - When Seal of Fury's shield is fully absorbed, restore 60 Mana, increased
-// by 15% per level the attacker is above you, up to 45%. The level is the current target's. The
-// client states the mana as one point per caster level, so it is read folded. The mana is
-// restored by 1314104, which client 70374 flags No Threat (beta notes 8 Oct: no longer generates
-// threat when restoring Mana); that spell isn't in the store, so the flag is set here.
+// by 15% per level the attacker is above you, up to 45%.
 func (paladin *Paladin) applyImprovedSealOfFury(shield *core.DamageAbsorptionAura) {
 	if !paladin.Talents.ImprovedSealOfFury {
 		return
 	}
 
 	rank := spellData.ImprovedSealOfFury.Highest()
-	mana := rank.EffectN(1).Average(core.CharacterLevel)
+	mana := rank.EffectN(1).Average()
 	perLevel := rank.EffectN(2).Percent()
-	maxLevels := rank.EffectN(3).Average(core.CharacterLevel)
-	manaMetrics := paladin.NewManaMetrics(core.ActionID{SpellID: rank.ID})
-	manaMetrics.NoThreat = true
+	maxLevels := rank.EffectN(3).Average()
+	restore := spellData.ImprovedSealOfFuryTriggered.Highest()
+	manaMetrics := paladin.NewManaMetrics(core.ActionID{SpellID: restore.ID})
+	manaMetrics.NoThreat = restore.GeneratesNoThreat()
 
 	shield.AttachOnDamageAbsorbed(func(sim *core.Simulation, aura *core.DamageAbsorptionAura, _ *core.SpellResult, _ float64) {
 		if aura.ShieldStrength > 0 {
@@ -147,7 +130,7 @@ func (paladin *Paladin) applyImprovedRighteousFury() {
 		return
 	}
 
-	// The client states this as a negative percentage per rank: -2 / -4 / -6, so MultiplierAt
+	// The game files state this as a negative percentage per rank: -2 / -4 / -6, so MultiplierAt
 	// gives 0.98 / 0.96 / 0.94 and the minus is never written here.
 	multiplier := spellData.ImprovedRighteousFury.
 		Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_EFFECT2)).
@@ -161,127 +144,69 @@ func (paladin *Paladin) applyImprovedRighteousFury() {
 }
 
 // Shield Specialization - Increases the amount of damage absorbed by your shield by 10/20/30%, and
-// gives your blocks a 33/66/100% chance to restore 6% of your maximum Mana. May only occur once
+// gives your blocks a 33/66/100% chance to restore 4% of your maximum Mana. May only occur once
 // every 3 sec.
 func (paladin *Paladin) applyShieldSpecialization() {
 	if paladin.Talents.ShieldSpecialization == 0 {
 		return
 	}
 
-	paladin.PseudoStats.BlockValueMultiplier *= spellData.ShieldSpecialization.Effect(dbcenums.A_MOD_BLOCK_VALUE_PCT, 0).MultiplierAt(paladin.Talents.ShieldSpecialization)
+	spelldata.ParseStatic(&paladin.Character, spellData.ShieldSpecialization.Rank(paladin.Talents.ShieldSpecialization), spelldata.Effects(1))
 
 	rank := spellData.ShieldSpecializationTriggered.Highest()
 	manaShare := rank.EffectN(1).Percent()
 	manaMetrics := paladin.NewManaMetrics(core.ActionID{SpellID: rank.ID})
-	manaMetrics.NoThreat = rank.NoThreat() // No Threat since client 70374 (beta notes 8 Oct)
+	manaMetrics.NoThreat = rank.GeneratesNoThreat()
 
-	paladin.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Shield Specialization" + paladin.Label,
-		Callback:           core.CallbackOnSpellHitTaken,
-		Outcome:            core.OutcomeBlock,
-		ProcChance:         spellData.ShieldSpecialization.EffectAt(2).FractionAt(paladin.Talents.ShieldSpecialization),
-		ICD:                time.Second * 3,
-		TriggerImmediately: true,
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			paladin.AddMana(sim, paladin.MaxMana()*manaShare, manaMetrics)
-		},
+	trigger := spelldata.ProcTrigger(&paladin.Character, spellData.ShieldSpecialization.Rank(paladin.Talents.ShieldSpecialization), func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+		paladin.AddMana(sim, paladin.MaxMana()*manaShare, manaMetrics)
 	})
+	trigger.Name = "Shield Specialization" + paladin.Label
+	trigger.Outcome = core.OutcomeBlock
+	// The tooltip's "your blocks" counts a block that stops the whole hit.
+	trigger.RequireDamageDealt = false
+	trigger.TriggerImmediately = true
+	paladin.MakeProcTriggerAura(trigger)
 }
 
 // Sacred Duty - Increases your total Stamina by 2/4% and reduces the cooldown of your Divine
-// Shield, Divine Protection, and Templar's Bulwark spells by 30/60 sec. Only Templar's Bulwark is
-// modelled; the cooldown is the second effect.
+// Shield, Divine Protection, and Templar's Bulwark spells by 30/60 sec.
 func (paladin *Paladin) applySacredDuty() {
 	if paladin.Talents.SacredDuty == 0 {
 		return
 	}
 
-	paladin.MultiplyStat(stats.Stamina, spellData.SacredDuty.Effect(dbcenums.A_MOD_TOTAL_STAT_PERCENTAGE, 0).MultiplierAt(paladin.Talents.SacredDuty))
-	paladin.AddStaticMod(core.SpellModConfig{
-		ClassMask: SpellMaskTemplarsBulwark,
-		Kind:      core.SpellMod_Cooldown_Flat,
-		TimeValue: time.Duration(spellData.SacredDuty.EffectAt(2).ValueAt(paladin.Talents.SacredDuty)) * time.Millisecond,
-	})
+	spelldata.ParseStatic(&paladin.Character, spellData.SacredDuty.Rank(paladin.Talents.SacredDuty))
 }
 
 // One-Handed Weapon Specialization - Increases the damage you deal with one-handed melee weapons
-// by 3/7/10%. The client puts it on the Physical school alone.
+// by 3/7/10%.
 func (paladin *Paladin) applyOneHandedWeaponSpecialization() {
 	if paladin.Talents.OneHandedWeaponSpecialization == 0 {
 		return
 	}
 
-	paladin.applyWeaponSpecialization(
-		spellData.OneHandedWeaponSpecialization.FractionAt(paladin.Talents.OneHandedWeaponSpecialization),
-		proto.HandType_HandTypeOneHand,
-	)
+	spelldata.ParseStatic(&paladin.Character,
+		spellData.OneHandedWeaponSpecialization.Rank(paladin.Talents.OneHandedWeaponSpecialization))
 }
 
-// The one- and two-handed specializations: a physical damage bonus that follows the weapon in the
-// main hand, item swaps included.
-func (paladin *Paladin) applyWeaponSpecialization(bonus float64, handType proto.HandType) {
-	weaponMod := paladin.AddDynamicMod(core.SpellModConfig{
-		School:     core.SpellSchoolPhysical,
-		Kind:       core.SpellMod_DamageDone_Pct,
-		FloatValue: bonus,
-	})
-
-	if paladin.GetMainHandType() == handType {
-		weaponMod.Activate()
-	}
-
-	paladin.RegisterItemSwapCallback(core.AllMeleeWeaponSlots(), func(_ *core.Simulation, _ proto.ItemSlot) {
-		if paladin.GetMainHandType() == handType {
-			weaponMod.Activate()
-		} else {
-			weaponMod.Deactivate()
-		}
-	})
-}
-
-// Reckoning - Gives you a 8/16/24/32/40% chance to gain an extra attack after Blocking a melee
-// attack and a 20/40/60/80/100% chance to gain an extra attack after being the victim of a
-// non-periodic critical strike.
+// Reckoning - Gives you a 8/16/24/32/40% chance after Blocking and a 20/40/60/80/100% chance after
+// receiving a non-periodic critical strike to gain an extra attack. Stores up to 4 extra attacks, which
+// the next main-hand swing spends. Cannot occur from Blocks more than once every 1.5 sec.
 func (paladin *Paladin) applyReckoning() {
 	if paladin.Talents.Reckoning == 0 {
 		return
 	}
 
+	talent := spellData.Reckoning.Rank(paladin.Talents.Reckoning)
+	rank := spellData.ReckoningTriggered.Highest()
 	blockChance := spellData.Reckoning.FractionAt(paladin.Talents.Reckoning)
 	critChance := blockChance * 2.5
 
-	// 16 Oct build: each proc banks a charge (max 4) and the next melee swing (auto attack) spends
-	// them all, 1 extra attack each. An extra attack is a free swing that leaves the swing timer
-	// alone (beta logs 2747-2749). Client 70291+ gives 20177 a 1.5 s proc cooldown, shared by both
-	// triggers.
-	icd := core.Cooldown{Timer: paladin.NewTimer(), Duration: spellData.Reckoning.Highest().ICD()}
-	charges := paladin.RegisterAura(core.Aura{
-		Label:     "Reckoning" + paladin.Label,
-		ActionID:  core.ActionID{SpellID: 20178},
-		Duration:  core.NeverExpires,
-		MaxStacks: 4,
-		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, _ *core.SpellResult) {
-			if !spell.ProcMask.Matches(core.ProcMaskMeleeMHAuto) {
-				return
-			}
-			// Spend after this swing resolves: deactivating inside the callback reorders the other
-			// hit-dealt auras mid-loop.
-			sim.AddPendingAction(core.NewDelayedAction(core.DelayedActionOptions{DoAt: sim.CurrentTime, OnAction: func(sim *core.Simulation) {
-				n := aura.GetStacks()
-				aura.Deactivate(sim)
-				for range n {
-					paladin.AutoAttacks.InstantMHAttack(sim)
-				}
-			}}))
-		},
-	})
-	extraAttack := func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-		if !icd.IsReady(sim) {
-			return
-		}
-		icd.Use(sim)
-		charges.Activate(sim)
-		charges.AddStack(sim)
+	stored := paladin.RegisterAura(spelldata.AuraConfig(rank, spelldata.Label("Reckoning"+paladin.Label)))
+	gain := func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+		stored.Activate(sim)
+		stored.AddStack(sim)
 	}
 
 	paladin.MakeProcTriggerAura(core.ProcTrigger{
@@ -289,30 +214,59 @@ func (paladin *Paladin) applyReckoning() {
 		Callback:   core.CallbackOnSpellHitTaken,
 		Outcome:    core.OutcomeBlock,
 		ProcChance: blockChance,
-		Handler:    extraAttack,
+		ICD:        talent.ICD(),
+		Handler:    gain,
 	})
-
 	paladin.MakeProcTriggerAura(core.ProcTrigger{
 		Name:       "Reckoning - Crit" + paladin.Label,
 		Callback:   core.CallbackOnSpellHitTaken,
 		Outcome:    core.OutcomeCrit,
 		ProcChance: critChance,
-		Handler:    extraAttack,
+		Handler:    gain,
+	})
+
+	// The next main-hand swing spends every stored charge as a copy of itself, tagged with
+	// Reckoning, at the same target. The copies spend none.
+	var extraAttack *core.Spell
+	paladin.MakeProcTriggerAura(core.ProcTrigger{
+		Name:               "Reckoning - Swing" + paladin.Label,
+		Callback:           core.CallbackOnSpellHitDealt,
+		ProcMask:           core.ProcMaskMeleeMHAuto,
+		TriggerImmediately: true,
+		ExtraCondition: func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
+			return extraAttack != nil && spell != extraAttack && stored.IsActive()
+		},
+		Handler: func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
+			count := stored.GetStacks()
+			stored.Deactivate(sim)
+			target := result.Target
+			sim.RunAfterCurrentEvent(func(sim *core.Simulation) {
+				mainHand := paladin.AutoAttacks.MHAuto()
+				extraAttack.SetSpellSchool(mainHand.SpellSchool)
+				extraAttack.BonusCoefficient = mainHand.BonusCoefficient
+				for range count {
+					extraAttack.Cast(sim, target)
+				}
+			})
+		},
+	}).ApplyOnInit(func(_ *core.Aura, _ *core.Simulation) {
+		if paladin.AutoAttacks.MHAuto() == nil {
+			return
+		}
+		swing := *paladin.AutoAttacks.MHConfig()
+		swing.ActionID = swing.ActionID.WithTag(rank.ID)
+		extraAttack = paladin.GetOrRegisterSpell(swing)
 	})
 }
 
-// Iron Creed - Increases the threat generated by your Holy Strike ability 5/10/15/20/25%. While
-// Righteous Fury is active, Holy Strike also reduces your damage taken by 3/6/9/12/15% for 6 sec.
+// Iron Creed - Increases the threat generated by your Holy Strike ability by 5/10/15/20/25%. While
+// Righteous Fury is active, Holy Strike also reduces your damage taken by 2/4/6/8/10% for 6 sec.
 func (paladin *Paladin) applyIronCreed() {
 	if paladin.Talents.IronCreed == 0 {
 		return
 	}
 
-	paladin.AddStaticMod(core.SpellModConfig{
-		ClassMask:  SpellMaskHolyStrike,
-		Kind:       core.SpellMod_ThreatMultiplier_Pct,
-		FloatValue: spellData.IronCreed.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_THREAT)).FractionAt(paladin.Talents.IronCreed),
-	})
+	spelldata.ParseStatic(&paladin.Character, spellData.IronCreed.Rank(paladin.Talents.IronCreed), spelldata.Effects(1))
 
 	rank := spellData.IronCreedTriggered.Highest()
 	reduction := spellData.IronCreed.Effect(dbcenums.A_PROC_TRIGGER_SPELL_WITH_VALUE, 0).FractionAt(paladin.Talents.IronCreed)
@@ -323,16 +277,14 @@ func (paladin *Paladin) applyIronCreed() {
 		Duration: rank.Duration(),
 	}).AttachMultiplicativePseudoStatBuff(&paladin.PseudoStats.DamageTakenMultiplier, 1-reduction)
 
-	paladin.MakeProcTriggerAura(core.ProcTrigger{
-		Name:           "Iron Creed - Trigger" + paladin.Label,
-		Callback:       core.CallbackOnSpellHitDealt,
-		ClassSpellMask: SpellMaskHolyStrike,
-		Outcome:        core.OutcomeLanded,
-		ExtraCondition: func(_ *core.Simulation, _ *core.Spell, _ *core.SpellResult) bool {
-			return paladin.RighteousFuryAura.IsActive()
-		},
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			ironCreed.Activate(sim)
-		},
+	// The row hears any melee special and names its ability only in the tooltip.
+	trigger := spelldata.ProcTrigger(&paladin.Character, spellData.IronCreed.Rank(paladin.Talents.IronCreed), func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+		ironCreed.Activate(sim)
 	})
+	trigger.Name = "Iron Creed - Trigger" + paladin.Label
+	trigger.ClassSpellMask = SpellMaskHolyStrike
+	trigger.ExtraCondition = func(_ *core.Simulation, _ *core.Spell, _ *core.SpellResult) bool {
+		return paladin.RighteousFuryAura.IsActive()
+	}
+	paladin.MakeProcTriggerAura(trigger)
 }

@@ -1,21 +1,40 @@
 @layer components {
 	.ui-button {
-		@apply inline-block cursor-pointer rounded-none border border-transparent text-center align-middle text-sm leading-normal font-normal no-underline transition-[color,background-color,border-color] duration-150 ease-in-out select-none;
+		@apply inline-flex cursor-pointer items-center justify-center gap-(--btn-gap) rounded-none border border-transparent text-center align-middle text-(length:--control-font-size) leading-normal font-normal no-underline transition-[color,background-color,border-color] duration-150 ease-in-out select-none;
 
 		&:focus-visible {
 			@apply outline-none;
 		}
 
+		/* A `focusableWhenDisabled` button is not `:disabled` and keeps its pointer events, so a tooltip on it can say why. */
 		&:disabled {
-			@apply pointer-events-none opacity-65;
+			@apply pointer-events-none;
+		}
+
+		/* Base UI sets `data-disabled` on every disabled button, `focusableWhenDisabled` included. */
+		&[data-disabled] {
+			@apply cursor-default opacity-65;
+		}
+
+		&[aria-busy] {
+			@apply relative;
 		}
 	}
 
 	.ui-button-link {
-		@apply cursor-pointer rounded-none border-0 p-0 text-center align-middle text-sm leading-normal font-normal text-link no-underline transition-[color,background-color,border-color] duration-150 ease-in-out select-none;
+		@apply inline-flex cursor-pointer items-center gap-(--btn-gap) rounded-none border-0 p-0 text-center align-middle text-(length:--control-font-size) leading-normal font-normal text-link no-underline transition-[color,background-color,border-color] duration-150 ease-in-out select-none;
 
-		&:hover {
-			@apply text-link-hover;
+		/* A link takes the font size of its size class and none of its padding. */
+		&.ui-button-md,
+		&.ui-button-sm,
+		&.ui-button-xs {
+			@apply p-0;
+		}
+
+		&:where(:not([data-disabled])) {
+			&:hover {
+				@apply text-link-hover;
+			}
 		}
 
 		&:focus-visible {
@@ -23,34 +42,49 @@
 		}
 
 		&:disabled {
-			@apply pointer-events-none text-gray-600 opacity-65;
+			@apply pointer-events-none;
+		}
+
+		&[data-disabled] {
+			@apply cursor-default text-gray-600 opacity-65;
 		}
 	}
 
 	.ui-button-icon {
 		@apply cursor-pointer border-0 bg-transparent;
+
+		&[aria-busy] {
+			@apply relative;
+		}
 	}
 
 	.ui-button-primary {
 		@apply border-primary bg-primary text-primary-foreground;
 
-		&:hover {
-			@apply border-primary-hover bg-primary-hover;
+		/* A `focusableWhenDisabled` button still takes :hover, :active and :focus-visible, so every variant's interactive colours skip a disabled one. `:where` keeps the guard out of the specificity, so these rules keep their source order against the rest. */
+		&:where(:not([data-disabled])) {
+			&:hover {
+				@apply border-primary-hover bg-primary-hover;
+			}
+
+			&:focus-visible {
+				@apply border-primary-hover bg-primary-hover;
+			}
+
+			&:active {
+				@apply border-primary-active bg-primary-active;
+			}
+
+			&[data-popup-open] {
+				@apply border-primary-active bg-primary-active;
+			}
 		}
 
 		&:focus-visible {
-			@apply border-primary-hover bg-primary-hover shadow-focus-primary;
+			@apply shadow-focus-primary;
 		}
 
-		&:active {
-			@apply border-primary-active bg-primary-active;
-		}
-
-		&[data-popup-open] {
-			@apply border-primary-active bg-primary-active;
-		}
-
-		&:disabled {
+		&[data-disabled] {
 			@apply border-primary-disabled bg-primary-disabled;
 		}
 	}
@@ -58,63 +92,87 @@
 	.ui-button-secondary {
 		@apply border-secondary bg-secondary text-white;
 
-		&:hover {
-			@apply border-secondary-hover bg-secondary-hover;
+		&:where(:not([data-disabled])) {
+			&:hover {
+				@apply border-secondary-hover bg-secondary-hover;
+			}
+
+			&:focus-visible {
+				@apply border-secondary-hover bg-secondary-hover;
+			}
+
+			&:active {
+				@apply border-secondary-active bg-secondary-active;
+			}
 		}
 
 		&:focus-visible {
-			@apply border-secondary-hover bg-secondary-hover shadow-focus-secondary;
-		}
-
-		&:active {
-			@apply border-secondary-active bg-secondary-active;
+			@apply shadow-focus-secondary;
 		}
 	}
 
 	.ui-button-danger {
 		@apply border-danger bg-danger text-white;
 
-		&:hover {
-			@apply border-danger-hover bg-danger-hover;
+		&:where(:not([data-disabled])) {
+			&:hover {
+				@apply border-danger-hover bg-danger-hover;
+			}
+
+			&:focus-visible {
+				@apply border-danger-hover bg-danger-hover;
+			}
+
+			&:active {
+				@apply border-danger-active bg-danger-active;
+			}
 		}
 
 		&:focus-visible {
-			@apply border-danger-hover bg-danger-hover shadow-focus-danger;
-		}
-
-		&:active {
-			@apply border-danger-active bg-danger-active;
+			@apply shadow-focus-danger;
 		}
 	}
 
 	.ui-button-cancel {
 		@apply border-cancel bg-cancel text-black;
 
-		&:hover {
-			@apply border-cancel-hover bg-cancel-hover;
+		&:where(:not([data-disabled])) {
+			&:hover {
+				@apply border-cancel-hover bg-cancel-hover;
+			}
+
+			&:focus-visible {
+				@apply border-cancel-hover bg-cancel-hover;
+			}
+
+			&:active {
+				@apply border-cancel-active bg-cancel-active;
+			}
 		}
 
 		&:focus-visible {
-			@apply border-cancel-hover bg-cancel-hover shadow-focus-cancel;
-		}
-
-		&:active {
-			@apply border-cancel-active bg-cancel-active;
+			@apply shadow-focus-cancel;
 		}
 	}
 
 	.ui-button-link-danger {
 		@apply text-link-danger;
 
-		&:hover {
-			@apply text-foreground;
+		&:where(:not([data-disabled])) {
+			&:hover {
+				@apply text-foreground;
+			}
+
+			&:focus-visible {
+				@apply text-foreground;
+			}
 		}
 
 		&:focus-visible {
-			@apply text-foreground shadow-focus-link-danger;
+			@apply shadow-focus-link-danger;
 		}
 
-		&:disabled {
+		&[data-disabled] {
 			@apply text-foreground-disabled;
 		}
 	}
@@ -122,80 +180,104 @@
 	.ui-button-outline-primary {
 		@apply border-primary text-primary;
 
-		&:hover {
-			@apply border-primary-hover bg-primary-hover text-primary-foreground;
+		&:where(:not([data-disabled])) {
+			&:hover {
+				@apply border-primary-hover bg-primary-hover text-primary-foreground;
+			}
+
+			&:focus-visible {
+				@apply border-primary-hover bg-primary-hover text-primary-foreground;
+			}
+
+			&:active {
+				@apply border-primary-active bg-primary-active text-primary-foreground;
+			}
 		}
 
 		&:focus-visible {
-			@apply border-primary-hover bg-primary-hover text-primary-foreground shadow-focus-outline-primary;
+			@apply shadow-focus-outline-primary;
+		}
+	}
+
+	.ui-button-outline-secondary {
+		@apply border-secondary text-foreground;
+
+		&:where(:not([data-disabled])) {
+			&:hover {
+				@apply border-secondary-hover bg-secondary-hover text-white;
+			}
+
+			&:focus-visible {
+				@apply border-secondary-hover bg-secondary-hover text-white;
+			}
+
+			&:active {
+				@apply border-secondary-active bg-secondary-active text-white;
+			}
 		}
 
-		&:active {
-			@apply border-primary-active bg-primary-active text-primary-foreground;
-		}
-
-		&:disabled {
-			@apply border-primary text-primary;
+		&:focus-visible {
+			@apply shadow-focus-secondary;
 		}
 	}
 
 	.ui-button-outline-light {
 		@apply border-light text-light;
 
-		&:hover {
-			@apply border-light bg-light text-black;
+		&:where(:not([data-disabled])) {
+			&:hover {
+				@apply border-light bg-light text-black;
+			}
+
+			&:focus-visible {
+				@apply border-light bg-light text-black;
+			}
+
+			&:active {
+				@apply border-light bg-light text-black;
+			}
 		}
 
 		&:focus-visible {
-			@apply border-light bg-light text-black shadow-focus-outline-light;
-		}
-
-		&:active {
-			@apply border-light bg-light text-black;
+			@apply shadow-focus-outline-light;
 		}
 	}
 
 	.ui-button-outline-cancel {
 		@apply border-cancel text-cancel;
 
-		&:hover {
-			@apply border-cancel bg-cancel text-black;
+		&:where(:not([data-disabled])) {
+			&:hover {
+				@apply border-cancel bg-cancel text-black;
+			}
+
+			&:focus-visible {
+				@apply border-cancel bg-cancel text-black;
+			}
+
+			&:active {
+				@apply border-cancel bg-cancel text-black;
+			}
 		}
 
 		&:focus-visible {
-			@apply border-cancel bg-cancel text-black shadow-focus-outline-cancel;
-		}
-
-		&:active {
-			@apply border-cancel bg-cancel text-black;
-		}
-	}
-
-	.ui-button-warning {
-		@apply text-link-warning;
-
-		&:hover {
-			@apply text-link-warning;
-		}
-
-		&:focus-visible {
-			@apply text-link-warning shadow-none;
-		}
-
-		&:disabled {
-			@apply text-link-warning;
+			@apply shadow-focus-outline-cancel;
 		}
 	}
 
 	.ui-button-md {
-		@apply px-3 py-2;
+		@apply px-(--control-padding-x) py-(--control-padding-y);
 	}
 
 	.ui-button-sm {
 		@apply px-2 py-1;
 	}
 
-	.ui-button-inline {
-		@apply px-2 py-0;
+	.ui-button-xs {
+		@apply px-2 py-1 text-ui;
+	}
+
+	.ui-button-spinner {
+		@apply absolute inset-0 m-auto;
 	}
 }

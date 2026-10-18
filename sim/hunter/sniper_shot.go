@@ -2,51 +2,40 @@ package hunter
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Sniper Shot from the beta client (1310687, 1310785, 1310786): a 4 sec cast on a 15 sec cooldown
-// for 365 mana at every rank, adding 160/225/295 to a normalized weapon shot.
-func (hunter *Hunter) registerSniperShotSpell() {
+var sniperShotRank = spellData.SniperShot.Highest()
+
+func (hunter *Hunter) registerSniperShot() {
 	if !hunter.Talents.SniperShot {
 		return
 	}
 
-	rank := spellData.SniperShot.Highest()
-	flatBonus := rank.DamageEffect().Average(core.CharacterLevel)
+	// The buff is the row's own aura: its duration, its charges and the range its second effect adds
+	// to the Shots its class flags name, Auto Shot among them. Sniper Shot is not one of them.
+	buff := hunter.RegisterAura(spelldata.AuraConfig(sniperShotRank))
+	spelldata.ParseEffects(&hunter.Character, buff, sniperShotRank)
 
-	hunter.SniperShot = hunter.RegisterRangedSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    rank.DefenseTypeCore(),
-		ClassSpellMask: HunterSpellSniperShot,
-		ProcMask:       core.ProcMaskRangedSpecial,
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		MissileSpeed:   float64(rank.Speed),
+	// One charge per Shot the range mod names, however many targets it hits. The row's proc flags hear
+	// every ranged hit, Sniper Shot's own among them, so the listener takes the mod's class flags.
+	// TODO: Ingame test needed: a Shot that misses keeps the charge (the row's proc flags ask for damage
+	// dealt), and Multi-Shot spends one charge per cast.
+	spelldata.AttachChargeSpender(&hunter.Character, buff, sniperShotRank, "Sniper Shot - Spend")
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(rank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				CastTime: rank.CastTime(),
-			},
-			CD: core.Cooldown{
-				Timer:    hunter.NewTimer(),
-				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
-			},
-		},
+	config := spelldata.SpellConfig(&hunter.Unit, sniperShotRank, spelldata.Melee(core.ProcMaskRangedSpecial))
+	hunter.hasteRangedCast(&config)
+	config.RelatedSelfBuff = buff
 
-		BonusCoefficient: 1,
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		buff.Activate(sim)
+		buff.SetStacks(sim, buff.MaxStacks)
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			baseDamage := hunter.AutoAttacks.Ranged().CalculateNormalizedWeaponDamage(sim, spell.RangedAttackPower(target)) +
-				flatBonus
+		baseDamage := sniperShotRank.WeaponStrike(sim, spell, hunter.RangedNormalizedWeaponDamage(sim, spell.RangedAttackPower(target)), 0)
+		result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeRangedHitAndCrit)
 
-			result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeRangedHitAndCrit)
+		spell.DealDamageAfterTravel(sim, result)
+	}
 
-			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
-				spell.DealDamage(sim, result)
-			})
-		},
-	})
+	hunter.RegisterSpell(config)
 }

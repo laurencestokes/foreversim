@@ -1,13 +1,9 @@
 package priest
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/buffs"
 	"github.com/wowsims/forever/sim/core/spelldata"
-	"github.com/wowsims/forever/sim/core/stats"
 )
 
 func (priest *Priest) registerShadowTalents() {
@@ -17,7 +13,6 @@ func (priest *Priest) registerShadowTalents() {
 	priest.applySpiritTap()
 
 	// Tier 2
-	priest.applyShadowAffinity()
 	priest.applyImprovedShadowWordPain()
 	priest.applyShadowReach()
 
@@ -28,7 +23,7 @@ func (priest *Priest) registerShadowTalents() {
 	priest.applyImprovedMindFlay()
 
 	// Tier 4
-	priest.applyImprovedFade()
+	priest.applyDarkInspiration()
 	priest.applyVampiricEmbrace()
 	priest.applyShadowWeaving()
 
@@ -44,424 +39,213 @@ func (priest *Priest) registerShadowTalents() {
 	priest.applyShadowform()
 }
 
-// A school-specific hit bonus has to go through the pseudo-stat; a SpellMod carrying a school panics.
+// Improves your chance to hit with Shadow spells by 5%.
 func (priest *Priest) applyShadowFocus() {
 	if priest.Talents.ShadowFocus == 0 {
 		return
 	}
 
-	priest.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexShadow] +=
-		spellData.ShadowFocus.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_RESIST_MISS_CHANCE)).ValueAt(priest.Talents.ShadowFocus)
+	spelldata.ParseStatic(&priest.Character, spellData.ShadowFocus.Rank(priest.Talents.ShadowFocus), spelldata.ShowAsSchoolHit(core.SpellSchoolShadow))
 }
 
-// applyBlackout implements Blackout.
-//
-// TODO: To be implemented. It stuns (15269), and a raid boss is immune.
-func (priest *Priest) applyBlackout() {
-	if priest.Talents.Blackout == 0 {
-		return
-	}
-}
+// Gives your Shadow damage spells a 10% chance to stun the target for 3 sec.
+// The damage sim does not model the stun.
+func (priest *Priest) applyBlackout() {}
 
-// applySpiritTap implements Spirit Tap.
-//
-// TODO: To be implemented. The buff (15271) is granted by a killing blow, which no encounter in the
-// sim delivers.
+// Gives you a X% chance to increase your Spirit by Y% for 15 sec when an enemy afflicted by your Vampiric Embrace dies.
+// For the duration, 50% of your Mana regeneration will continue while casting.
+// TODO: Procs on a target's death, which the sim does not model.
 func (priest *Priest) applySpiritTap() {
 	if priest.Talents.SpiritTap == 0 {
 		return
 	}
 }
 
-func (priest *Priest) applyShadowAffinity() {
-	if priest.Talents.ShadowAffinity == 0 {
-		return
-	}
-
-	priest.AddStaticMod(core.SpellModConfig{
-		ClassMask:  PriestSpellsAll,
-		School:     core.SpellSchoolShadow,
-		FloatValue: spellData.ShadowAffinity.FractionAt(priest.Talents.ShadowAffinity),
-		Kind:       core.SpellMod_ThreatMultiplier_Pct,
-	})
-}
-
-// +3 sec of duration per point, which is one more tick at Shadow Word: Pain's 3 second cadence.
+// Increases the duration of your Shadow Word: Pain spell by 6 sec.
 func (priest *Priest) applyImprovedShadowWordPain() {
 	if priest.Talents.ImprovedShadowWordPain == 0 {
 		return
 	}
 
-	added := time.Millisecond * time.Duration(spellData.ImprovedShadowWordPain.ValueAt(priest.Talents.ImprovedShadowWordPain))
-	tickLength := spellData.ShadowWordPain.Highest().PeriodicEffect().Period()
-
-	priest.AddStaticMod(core.SpellModConfig{
-		ClassMask: PriestSpellShadowWordPain,
-		IntValue:  int32(added / tickLength),
-		Kind:      core.SpellMod_DotNumberOfTicks_Flat,
-	})
+	spelldata.ParseStatic(&priest.Character, spellData.ImprovedShadowWordPain.Rank(priest.Talents.ImprovedShadowWordPain))
 }
 
-// applyShadowReach implements Shadow Reach: 17322 adds 10/20% to the range of the spells its class
-// mask reaches, of the priest's the five targeted Shadow spells.
+// Increases the range of your offensive Shadow spells by X%.
 func (priest *Priest) applyShadowReach() {
 	if priest.Talents.ShadowReach == 0 {
 		return
 	}
 
-	priest.extendRange(PriestSpellDevouringPlague|PriestSpellMindBlast|PriestSpellMindFlay|PriestSpellShadowWordDeath|PriestSpellShadowWordPain,
-		spellData.ShadowReach.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_RANGE)).FractionAt(priest.Talents.ShadowReach))
+	spelldata.ParseStatic(&priest.Character, spellData.ShadowReach.Rank(priest.Talents.ShadowReach))
 }
 
-// extendRange is a percent range modifier: the sim's range mod is flat yards, so the share is taken of
-// each spell's own range as it registers. A spell with no range (0) keeps none.
-func (priest *Priest) extendRange(mask int64, share float64) {
-	priest.OnSpellRegistered(func(spell *core.Spell) {
-		if spell.Matches(mask) {
-			spell.MaxRange *= 1 + share
-		}
-	})
-}
-
+// Reduces the cooldown of your Mind Blast spell by X sec.
 func (priest *Priest) applyImprovedMindBlast() {
 	if priest.Talents.ImprovedMindBlast == 0 {
 		return
 	}
 
-	priest.AddStaticMod(core.SpellModConfig{
-		ClassMask: PriestSpellMindBlast,
-		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedMindBlast.ValueAt(priest.Talents.ImprovedMindBlast)),
-		Kind:      core.SpellMod_Cooldown_Flat,
-	})
+	spelldata.ParseStatic(&priest.Character, spellData.ImprovedMindBlast.Rank(priest.Talents.ImprovedMindBlast))
 }
 
-// applyImprovedPsychicScream implements Improved Psychic Scream.
-//
-// TODO: To be implemented. Psychic Scream fears, and a raid boss is immune.
-func (priest *Priest) applyImprovedPsychicScream() {
-	if priest.Talents.ImprovedPsychicScream == 0 {
-		return
-	}
-}
+// Reduces the cooldown of your Psychic Scream spell by 4 sec.
+// The damage sim does not model crowd control.
+func (priest *Priest) applyImprovedPsychicScream() {}
 
+// Grants the Mind Flay ability
 func (priest *Priest) applyMindFlay() {
 	if !priest.Talents.MindFlay {
 		return
 	}
-
-	MindFlayRankMap.Each(func(_ int32, rank *spelldata.Spell) { priest.registerMindFlaySpell(rank) })
+	spellData.MindFlay.Each(priest.registerMindFlaySpell)
 }
 
-var MindFlayRankMap = spellData.MindFlay
+// Each instance of damage of Mind Flay deals X% more damage than its previous instance of damage.
+// The ramp is on Mind Flay's ticks, in registerMindFlaySpell.
+func (priest *Priest) applyImprovedMindFlay() {}
 
-// A three tick channel. Forever's ticks are not hastened, as in Classic and TBC.
-func (priest *Priest) registerMindFlaySpell(rank *spelldata.Spell) {
-	tick := rank.PeriodicEffect()
-	tickLength := tick.Period()
+// Your Mind Blast and fully channeled Mind Flay causes Dark Inspiration, increasing yours and your party's Spirit by X% for 10 sec.
+// The buff's row targets the caster's party (target 20). The sim buffs the party's players, the priest
+// among them, and not their pets. Each player carries one copy per priest, and only the strongest applies,
+// the party buff from the settings included.
+func (priest *Priest) applyDarkInspiration() {
+	if priest.Talents.DarkInspiration == 0 {
+		return
+	}
 
-	priest.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: rank.ID},
-		SpellSchool: rank.SpellSchool(),
-		DefenseType: rank.DefenseTypeCore(),
-		ProcMask:    core.ProcMaskSpellDamage,
-		// Binary, as on master: the row slows (effect 1), so it resists whole or not at all.
-		Flags:          core.SpellFlagAPL | core.SpellFlagChanneled | core.SpellFlagBinary,
+	auras := priest.NewPartyAuraArray(func(member *core.Character) *core.Aura {
+		return buffs.NewSpellDataDarkInspirationAuraFor(&member.Unit, &priest.Unit, priest.Talents.DarkInspiration)
+	})
+
+	priest.MakeProcTriggerAura(core.ProcTrigger{
+		Name:           "Dark Inspiration Trigger",
+		ClassSpellMask: PriestSpellMindBlast,
+		Callback:       core.CallbackOnSpellHitDealt,
+		Outcome:        core.OutcomeLanded,
+		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+			auras.ActivateAll(sim)
+		},
+	})
+	priest.MakeProcTriggerAura(core.ProcTrigger{
+		Name:           "Dark Inspiration Channel Trigger",
 		ClassSpellMask: PriestSpellMindFlay,
-		Rank:           rank.RankNumber(),
-		MaxRange:       float64(rank.MaxRange),
-
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(rank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: rank.GCD(),
-			},
-		},
-
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-
-		Dot: core.DotConfig{
-			Aura: core.Aura{
-				Label: fmt.Sprintf("MindFlay-%d", rank.RankNumber()),
-			},
-			NumberOfTicks:       int32(rank.Duration() / tickLength),
-			TickLength:          tickLength,
-			AffectedByCastSpeed: false,
-			BonusCoefficient:    tick.Coeff(),
-
-			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, tick.Average(core.CharacterLevel))
-			},
-			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, priest.tickOutcome(rank.PeriodicCanCrit(), dot))
-			},
-		},
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcOutcome(sim, target, spell.OutcomeMagicHitNoHitCounter)
-			if result.Landed() {
-				spell.Dot(target).Apply(sim)
+		Callback:       core.CallbackOnPeriodicDamageDealt,
+		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			if spell.Dot(result.Target).RemainingTicks() == 0 {
+				auras.ActivateAll(sim)
 			}
-			spell.DealOutcome(sim, result)
-		},
-
-		ExpectedTickDamage: func(sim *core.Simulation, target *core.Unit, spell *core.Spell, useSnapshot bool) *core.SpellResult {
-			if useSnapshot {
-				return spell.Dot(target).CalcSnapshotDamage(sim, target, spell.OutcomeExpectedMagicHit)
-			}
-			return spell.CalcPeriodicDamage(sim, target, tick.Average(core.CharacterLevel), spell.OutcomeExpectedMagicHit)
 		},
 	})
 }
 
-// Improved Mind Flay is new in Forever: +10% damage per point, plus range and slow the sim ignores.
-func (priest *Priest) applyImprovedMindFlay() {
-	if priest.Talents.ImprovedMindFlay == 0 {
-		return
-	}
-
-	priest.AddStaticMod(core.SpellModConfig{
-		ClassMask:  PriestSpellMindFlay,
-		FloatValue: spellData.ImprovedMindFlay.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DOT)).FractionAt(priest.Talents.ImprovedMindFlay),
-		Kind:       core.SpellMod_DamageDone_Flat,
-	})
-}
-
-// applyImprovedFade implements Improved Fade.
-//
-// TODO: To be implemented. Fade sheds threat, and the sim never needs the priest to drop aggro.
-func (priest *Priest) applyImprovedFade() {
-	if priest.Talents.ImprovedFade == 0 {
-		return
-	}
-}
-
-// The Forever client heals the priest's whole party for a share of the Shadow damage it deals, where
-// Classic healed only the priest. Only the priest who applied the debuff heals from it.
+// Grants the Vampiric Embrace Spell
 func (priest *Priest) applyVampiricEmbrace() {
 	if !priest.Talents.VampiricEmbrace {
 		return
 	}
 
-	rank := spellData.VampiricEmbrace.Highest()
-	healPct := rank.Effect(dbcenums.A_DUMMY, 0).Average(core.CharacterLevel) / 100
-	healthMetrics := priest.NewHealthMetrics(core.ActionID{SpellID: rank.ID})
-	partyPlayers := priest.Party.Players
-
-	veAuras := priest.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
-		aura := target.GetOrRegisterAura(core.Aura{
-			Label:    "Vampiric Embrace - " + target.Label,
-			ActionID: core.ActionID{SpellID: rank.ID},
-			Duration: rank.Duration(),
-		})
-		aura.AttachProcTriggerCallback(target, core.ProcTrigger{
-			Name:               "Vampiric Embrace Proc",
-			Callback:           core.CallbackOnSpellHitTaken | core.CallbackOnPeriodicDamageTaken,
-			RequireDamageDealt: true,
-			ExtraCondition: func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
-				return spell.Unit == &priest.Unit && spell.SpellSchool.Matches(core.SpellSchoolShadow)
-			},
-			Handler: func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
-				for _, player := range partyPlayers {
-					player.GetCharacter().GainHealth(sim, result.Damage*healPct, healthMetrics)
-				}
-			},
-		})
-		return aura
-	})
-
-	priest.VampiricEmbrace = priest.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    core.SpellSchoolShadow,
-		DefenseType:    core.DefenseTypeMagic,
-		ProcMask:       core.ProcMaskEmpty,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: PriestSpellVampiricEmbrace,
-
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(rank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: core.GCDDefault,
-			},
-			CD: core.Cooldown{
-				Timer:    priest.NewTimer(),
-				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
-			},
-		},
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcOutcome(sim, target, spell.OutcomeMagicHit)
-			if result.Landed() {
-				veAuras.Get(target).Activate(sim)
-			}
-			spell.DealOutcome(sim, result)
-		},
-
-		RelatedAuraArrays: veAuras.ToMap(),
-	})
+	spellData.VampiricEmbrace.Each(priest.registerVampiricEmbrace)
 }
 
-// Shadow Weaving's stacks (15258) are a debuff on the target, as in Classic, but they raise only the
-// priest's own Shadow damage on that target (A_MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER), 2% a stack to five.
-// Each target keeps its own stacks: beta log 2726 (Serana) dots four Razorfen mobs and each carries
-// one stack of its own, dropping off on its own 15 sec.
+// Your Shadow damage spells have a X% chance to increase the Shadow damage you deal by 2% for 15 sec, stacking up to 5 times.
 func (priest *Priest) applyShadowWeaving() {
 	if priest.Talents.ShadowWeaving == 0 {
 		return
 	}
 
-	stackAura := spellData.ShadowWeavingTriggered.Highest()
-	perStack := stackAura.Effect(dbcenums.A_MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER, 32).Average(core.CharacterLevel) / 100
-
-	priest.ShadowWeavingAuras = priest.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
-		return target.RegisterAura(core.Aura{
-			Label:     "Shadow Weaving-" + priest.Label,
-			ActionID:  core.ActionID{SpellID: stackAura.ID},
-			Duration:  stackAura.Duration(),
-			MaxStacks: 5,
-		})
+	debuff := spellData.ShadowWeavingTriggered.Highest()
+	swAuras := priest.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
+		aura := target.GetOrRegisterAura(spelldata.AuraConfig(debuff, spelldata.RankLabel(debuff, &priest.Unit)))
+		spelldata.ParseEffects(nil, aura, debuff, spelldata.FromCaster(&priest.Unit, 0, 2))
+		return aura
 	})
 
-	for _, target := range priest.Env.Encounter.AllTargetUnits {
-		target.AddDynamicDamageTakenModifier(func(_ *core.Simulation, spell *core.Spell, result *core.SpellResult, _ bool) {
-			if spell.Unit != &priest.Unit || !spell.SpellSchool.Matches(core.SpellSchoolShadow) {
-				return
-			}
-			if aura := priest.ShadowWeavingAuras.Get(result.Target); aura.IsActive() {
-				result.Damage *= 1 + perStack*float64(aura.GetStacks())
-			}
-		})
-	}
-
 	priest.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Shadow Weaving Trigger",
-		Callback:           core.CallbackOnSpellHitDealt,
-		ClassSpellMask:     PriestShadowSpells,
-		Outcome:            core.OutcomeLanded,
-		ProcChance:         spellData.ShadowWeaving.FractionAt(priest.Talents.ShadowWeaving),
-		TriggerImmediately: true,
-		Handler: func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
-			aura := priest.ShadowWeavingAuras.Get(result.Target)
+		Name:             "Shadow Weaving Trigger",
+		CanProcFromProcs: true, // 15257 carries the bit.
+		ClassSpellMask:   PriestShadowSpells,
+		Callback:         core.CallbackOnSpellHitDealt,
+		Outcome:          core.OutcomeLanded,
+		ProcChance:       spellData.ShadowWeaving.FractionAt(priest.Talents.ShadowWeaving),
+		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			aura := swAuras.Get(result.Target)
 			aura.Activate(sim)
 			aura.AddStack(sim)
 		},
 	})
 }
 
-// applySilence implements Silence, new in Forever.
-//
-// TODO: To be implemented. It interrupts a cast, which no encounter in the sim makes.
-func (priest *Priest) applySilence() {
-	if !priest.Talents.Silence {
-		return
-	}
-}
+// Grants the Silence ability
+// The damage sim does not model interrupts.
+func (priest *Priest) applySilence() {}
 
-// Devouring Contagion is new in Forever: Devouring Plague costs 25% less per point. The client's
-// second effect is a dummy worth 5/10 that no tooltip names, so it is left out.
+// Reduces the mana cost of your Devouring Plague by (25/50)%.
+// Targets that die while Devouring Plague is active spreads it, jumping to a nearby enemy within (5/10) yds for the remaining duration.
 func (priest *Priest) applyDevouringContagion() {
 	if priest.Talents.DevouringContagion == 0 {
 		return
 	}
 
-	priest.AddStaticMod(core.SpellModConfig{
-		ClassMask:  PriestSpellDevouringPlague,
-		FloatValue: spellData.DevouringContagion.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(priest.Talents.DevouringContagion),
-		Kind:       core.SpellMod_PowerCost_Pct_Add,
+	spelldata.ParseStatic(&priest.Character, spellData.DevouringContagion.Rank(priest.Talents.DevouringContagion))
+}
+
+// Increases Shadow Word: Death's critical strike chance on targets at or below X% health by Y%.
+func (priest *Priest) applyEarlyDemise() {
+	if priest.Talents.EarlyDemise == 0 {
+		return
+	}
+
+	// The sim tracks the target's health as the execute phases 90, 45, 35, 25 and 20.
+	threshold := int32(spellData.EarlyDemise.EffectAt(2).ValueAt(priest.Talents.EarlyDemise))
+	critMod := priest.AddDynamicMod(core.SpellModConfig{
+		Kind:       core.SpellMod_BonusCrit_Percent,
+		FloatValue: spellData.EarlyDemise.EffectAt(1).ValueAt(priest.Talents.EarlyDemise),
+		ClassMask:  PriestSpellShadowWordDeath,
+	})
+
+	onExecutePhase := func(_ *core.Simulation, isExecute int32) {
+		if isExecute <= threshold {
+			critMod.Activate()
+		}
+	}
+	priest.RegisterResetEffect(func(sim *core.Simulation) {
+		critMod.Deactivate()
+		sim.RegisterExecutePhaseCallback(onExecutePhase)
 	})
 }
 
-// applyEarlyDemise implements Early Demise, new in Forever.
-//
-// The crit it grants Shadow Word: Death below 20% health is read in shadow_word_death.go, where the
-// execute check belongs.
-func (priest *Priest) applyEarlyDemise() {
-}
-
-// Classic's Darkness raised the damage of five named Shadow spells. The Forever client's (15259)
-// raises all Shadow damage done, 2% per point.
+// Increases your Shadow damage done by X%
 func (priest *Priest) applyDarkness() {
 	if priest.Talents.Darkness == 0 {
 		return
 	}
 
-	priest.AddStaticMod(core.SpellModConfig{
-		ClassMask:  PriestSpellsAll,
-		School:     core.SpellSchoolShadow,
-		FloatValue: spellData.Darkness.FractionAt(priest.Talents.Darkness),
-		Kind:       core.SpellMod_DamageDone_Pct,
-	})
+	spelldata.ParseStatic(&priest.Character, spellData.Darkness.Rank(priest.Talents.Darkness))
 }
 
-// The beta client's 15473: +10% Shadow damage, -50% Shadow mana cost, +100% Shadow critical strike
-// damage bonus, -15% Physical damage taken. Only healing is blocked, so Smite and Holy Fire stay
-// castable inside it and do not break it. The crit bonus is not school-wide: its mask (41984016)
-// names Mind Blast, Mind Flay, Shadow Word: Pain, Devouring Plague and Mana Burn. Shadow Word: Death
-// is added: the devs called its absence a bug, fixed for the next build (forever-bugs #328).
+// Grants the Shadowform Ability
 func (priest *Priest) applyShadowform() {
 	if !priest.Talents.Shadowform {
 		return
 	}
 
 	rank := spellData.Shadowform.Highest()
+	form := rank.ShapeshiftForm()
 
-	priest.ShadowformAura = priest.RegisterAura(core.Aura{
-		Label:    "Shadowform",
-		ActionID: core.ActionID{SpellID: rank.ID},
-		Duration: core.NeverExpires,
-		OnReset: func(aura *core.Aura, sim *core.Simulation) {
-			if priest.SelfBuffs.PreShadowform {
-				aura.Activate(sim)
-			}
-		},
-		// The client's form 28, which Holy Nova's and Chastise's rows exclude.
-		OnGain: func(aura *core.Aura, sim *core.Simulation) {
-			priest.ShapeshiftForm = rank.ShapeshiftForm()
-		},
-		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
-			priest.ShapeshiftForm = 0
-		},
-	}).AttachSpellMod(core.SpellModConfig{
-		ClassMask:  PriestSpellsAll,
-		School:     core.SpellSchoolShadow,
-		FloatValue: rank.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_DONE, 32).Average(core.CharacterLevel) / 100,
-		Kind:       core.SpellMod_DamageDone_Pct,
-	}).AttachSpellMod(core.SpellModConfig{
-		ClassMask:  PriestSpellsAll,
-		School:     core.SpellSchoolShadow,
-		FloatValue: rank.Effect(dbcenums.A_MOD_POWER_COST_SCHOOL_PCT, 32).Average(core.CharacterLevel) / 100,
-		Kind:       core.SpellMod_PowerCost_Pct,
-	}).AttachSpellMod(core.SpellModConfig{
-		ClassMask:  PriestSpellMindBlast | PriestSpellMindFlay | PriestSpellShadowWordPain | PriestSpellDevouringPlague | PriestSpellShadowWordDeath,
-		FloatValue: rank.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_CRIT_DAMAGE_BONUS)).Average(core.CharacterLevel) / 100,
-		Kind:       core.SpellMod_CritMultiplier_Flat,
-	}).AttachMultiplicativePseudoStatBuff(
-		&priest.PseudoStats.SchoolDamageTakenMultiplier[stats.SchoolIndexPhysical],
-		1+rank.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_TAKEN, 1).Average(core.CharacterLevel)/100,
-	)
+	auraConfig := spelldata.AuraConfig(rank)
+	auraConfig.OnReset = func(aura *core.Aura, sim *core.Simulation) {
+		if priest.SelfBuffs.PreShadowform {
+			aura.Activate(sim)
+		}
+	}
+	auraConfig.OnGain = func(_ *core.Aura, _ *core.Simulation) {
+		priest.ShapeshiftForm = form
+	}
+	auraConfig.OnExpire = func(_ *core.Aura, _ *core.Simulation) {
+		priest.ShapeshiftForm = 0
+	}
+	shadowformAura := priest.RegisterAura(auraConfig)
+	spelldata.ParseEffects(&priest.Character, shadowformAura, rank)
 
-	priest.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    core.SpellSchoolShadow,
-		ProcMask:       core.ProcMaskEmpty,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: PriestSpellShadowform,
-
-		ManaCost: rank.ManaCost(),
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: core.GCDDefault,
-			},
-		},
-
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
-			priest.ShadowformAura.Activate(sim)
-		},
-
-		RelatedSelfBuff: priest.ShadowformAura,
-	})
+	priest.registerSelfBuffSpell(rank, shadowformAura)
 }

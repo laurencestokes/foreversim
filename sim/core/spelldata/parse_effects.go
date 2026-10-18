@@ -2,6 +2,7 @@ package spelldata
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"slices"
 
@@ -21,17 +22,23 @@ type parseOptions struct {
 	cond         func() bool
 	ignoreStacks bool
 
-	level       int32
-	scale       *Effect
-	comboPoints bool
-	count       float64
-	buffAuras   bool
+	level        int32
+	scale        *Effect
+	rankFraction float64
+	comboPoints  bool
+	count        float64
+	buffAuras    bool
+	hand         core.ProcMask
 
 	exclusive         bool
 	category          string
 	singleAura        bool
 	perStatCategory   string
 	schoolResistances bool
+
+	casterSlot *casterSlot
+
+	showAsSchoolHit core.SpellSchool
 }
 
 // Only these effects, counted from 1 by position the way EffectN counts.
@@ -79,9 +86,9 @@ func Level(n int32) ParseOpt {
 	}
 }
 
-// An improving talent's modifier on the amount, truncated the way the client resolves one: a
+// An improving talent's modifier on the amount, truncated the way the game resolves one: a
 // percentage of it for A_ADD_PCT_MODIFIER, a flat addition otherwise. It prices the first effect the
-// table attaches, in the client's units before the row converts them. An untaken talent is
+// table attaches, in the game files' units before the row converts them. An untaken talent is
 // NilEffect, which changes nothing.
 func ScaledBy(mod *Effect) ParseOpt {
 	return func(o *parseOptions) {
@@ -91,7 +98,18 @@ func ScaledBy(mod *Effect) ParseOpt {
 	}
 }
 
-// The finisher at full combo points: an effect the client states per combo point spent is worth
+// The talent's ranks out of divisor, for a talent whose tooltip prices the buff as a fraction of the
+// spell's own amount. Every amount the parse attaches is scaled, in the game files' units, and rounded
+// to the nearest whole amount the way the tooltip shows it. Rank 0 changes nothing: the full amount.
+func ScaledByRanks(ranks, divisor int32) ParseOpt {
+	return func(o *parseOptions) {
+		if ranks > 0 && divisor > 0 {
+			o.rankFraction = float64(ranks) / float64(divisor)
+		}
+	}
+}
+
+// The finisher at full combo points: an effect the game files state per combo point spent is worth
 // five of them. A parse without it skips an effect whose amount is its per-point value alone.
 func FullComboPoints() ParseOpt {
 	return func(o *parseOptions) {
@@ -107,6 +125,15 @@ func Count(n float64) ParseOpt {
 	}
 }
 
+// The row sits on the weapon in this hand, so a hit, crit or rating aura bound to a matching weapon
+// reaches that hand's attacks alone and holds while that hand holds one. An aura this hand cannot
+// carry is skipped.
+func OnHand(hand core.ProcMask) ParseOpt {
+	return func(o *parseOptions) {
+		o.hand = hand
+	}
+}
+
 // The rows only a raid buff reads, on top of the table: see buffAuraTable.
 func BuffAuras() ParseOpt {
 	return func(o *parseOptions) {
@@ -114,9 +141,12 @@ func BuffAuras() ParseOpt {
 	}
 }
 
-// Everything the parse attaches bids under one exclusive category, priced at how strong the first
-// attachment is: a multiplier by how far it is from 1, and a stacking row once per stack. Only the
-// strongest member of the category applies, and with singleAura it deactivates the others outright.
+// The parse bids under an exclusive category, where only the strongest member applies: a multiplier
+// priced by how far it is from 1, a stat by its size, and a stacking row once per stack. With
+// singleAura everything it attaches bids as a whole, priced at the first attachment, and deactivates
+// the others outright. Without, each stat and pseudo-stat bids alone under category + its key +
+// "Add" or "Mul", so a stronger member holds only the effects of its own kind and the aura keeps the
+// rest.
 func Exclusive(category string, singleAura bool) ParseOpt {
 	return func(o *parseOptions) {
 		o.exclusive, o.category, o.singleAura = true, category, singleAura
@@ -141,9 +171,32 @@ func SchoolResistances() ParseOpt {
 	}
 }
 
-// One attachment the parse made, for a log or a test: the effect it came from, the sim kind it
-// became and the value it carries in the sim's own units. A time value is stated in milliseconds,
-// and a multiplier as the factor itself.
+// The unit that put the aura on the unit it sits on, for the rows that reach only that caster's
+// attacks on it: Shadow Weaving's shadow damage, Hemorrhage's Rupture, Winter's Chill's crit. Those
+// rows share one slot, index out of total, in the caster's attack table against the aura's unit:
+// every damage row multiplies into its DamageDoneByCasterExtraMultiplier handler and every crit row
+// adds into its CritChanceByCasterBonus handler, each enabled while any of its rows is up. The class
+// numbers its slots the way it numbers its AttachDDBC calls, one per parse. Without a caster those
+// rows are skipped.
+func FromCaster(caster *core.Unit, index, total int) ParseOpt {
+	return func(o *parseOptions) {
+		o.casterSlot = &casterSlot{caster: caster, index: index, total: total}
+	}
+}
+
+// The character sheet shows the row's SPELLMOD_RESIST_MISS_CHANCE hit in these schools' hit, from the
+// talents stage on. The row names its spells by class flags, which carry no school, so the caller states
+// the schools its tooltip names, for a talent that reaches the class's main spells of them: Arcane Focus
+// takes core.SpellSchoolArcane. The spells the mod reaches stay the ones the class flags name.
+func ShowAsSchoolHit(schools core.SpellSchool) ParseOpt {
+	return func(o *parseOptions) {
+		o.showAsSchoolHit = schools
+	}
+}
+
+// One attachment the parse made, or one part of an attachment that has parts, for a log or a test: the
+// effect it came from, the sim kind it became and the value it carries in the sim's own units. A time
+// value is stated in milliseconds, and a multiplier as the factor itself.
 type Applied struct {
 	Effect *Effect
 	Kind   string
@@ -151,10 +204,11 @@ type Applied struct {
 }
 
 // An aura effect the parse left out, and its position on the row, counted from 1 the way EffectN
-// counts.
+// counts. Reason says why, where the row that refused the effect states one.
 type SkippedEffect struct {
 	*Effect
 	Position int
+	Reason   string
 }
 
 // What one parse did. Skipped holds the aura effects the table does not know, which are the ones a
@@ -184,8 +238,9 @@ type Parsed struct {
 // a debuff on an enemy - takes a nil character and has those rows skipped and reported.
 //
 // An aura that is already up when it is parsed is caught up the way core's Attach helpers catch one
-// up, except for the rows that need a Simulation to act: the haste multipliers stay off until the
-// aura is applied again. What a category holds waits for the aura's next application too.
+// up, except for the rows that need a Simulation to act: the haste and energy regen multipliers stay
+// off until the aura is applied again. What a category holds waits for the aura's next application
+// too.
 func ParseEffects(character *core.Character, aura *core.Aura, s *Spell, opts ...ParseOpt) *Parsed {
 	if aura == nil {
 		return &Parsed{}
@@ -194,7 +249,7 @@ func ParseEffects(character *core.Character, aura *core.Aura, s *Spell, opts ...
 }
 
 // Everything the row's aura effects say, applied to the character now: a talent or a passive, which
-// the client states as an aura the unit is never without.
+// the game files state as an aura the unit is never without.
 func ParseStatic(character *core.Character, s *Spell, opts ...ParseOpt) *Parsed {
 	if character == nil {
 		return &Parsed{}
@@ -223,23 +278,30 @@ func parse(unit *core.Unit, character *core.Character, aura *core.Aura, s *Spell
 
 	stacking := s.MaxStack > 0 && !o.ignoreStacks
 	p := &parser{
-		unit:        unit,
-		character:   character,
-		spell:       s,
-		static:      aura == nil && !dry,
-		conditional: o.cond != nil,
-		stacking:    stacking || o.count != 0,
-		dry:         dry,
-		aura:        aura,
+		unit:            unit,
+		character:       character,
+		spell:           s,
+		static:          aura == nil && !dry,
+		conditional:     o.cond != nil,
+		stacking:        stacking || o.count != 0,
+		dry:             dry,
+		aura:            aura,
+		hand:            o.hand,
+		casterSlot:      o.casterSlot,
+		showAsSchoolHit: o.showAsSchoolHit,
+	}
+	if o.casterSlot != nil {
+		o.casterSlot.target = unit
 	}
 
-	folded := foldedDotEffects(s, o)
-
 	// The amount is the caster's, so a debuff on an enemy is still priced at the character's level
-	// and not at the level of the unit it sits on. Without a character there is only the unit.
+	// and not at the level of the unit it sits on. Without a character the FromCaster unit is the
+	// caster, and without either there is only the unit.
 	level := unit.Level
 	if character != nil {
 		level = character.Level
+	} else if o.casterSlot != nil {
+		level = o.casterSlot.caster.Level
 	}
 	if o.level != 0 {
 		level = o.level
@@ -252,35 +314,35 @@ func parse(unit *core.Unit, character *core.Character, aura *core.Aura, s *Spell
 			continue
 		}
 
-		value := e.Average(level)
+		value := e.MeanAt(level)
 
 		if e.PointsPerResource != 0 && value == 0 {
 			if !o.comboPoints {
-				parsed.skip(s, i, e)
+				parsed.skip(s, i, e, "")
 				continue
 			}
 			value = float64(e.PointsPerResource) * fullComboPoints
 		}
 
-		if slices.Contains(folded, e) {
-			parsed.Applied = append(parsed.Applied, Applied{Effect: e,
-				Kind: "folded-into SpellMod_DamageDone_Flat", Value: value / 100})
-			parsed.attachments = append(parsed.attachments, nil)
-			continue
-		}
-
 		attached := o.row(e.Aura)
 		if attached == nil {
-			parsed.skip(s, i, e)
+			parsed.skip(s, i, e, "")
 			continue
 		}
 
 		if scale != nil {
 			value = Scaled(value, scale)
 		}
+		if o.rankFraction > 0 {
+			value = math.Round(value * o.rankFraction)
+		}
 		a := attached(p, e, value)
 		if a == nil {
-			parsed.skip(s, i, e)
+			parsed.skip(s, i, e, "")
+			continue
+		}
+		if a.skipReason != "" {
+			parsed.skip(s, i, e, a.skipReason)
 			continue
 		}
 		scale = nil
@@ -288,8 +350,16 @@ func parse(unit *core.Unit, character *core.Character, aura *core.Aura, s *Spell
 		if a.key == "" {
 			a.key = a.kind
 		}
-		parsed.Applied = append(parsed.Applied, Applied{Effect: e, Kind: a.kind, Value: a.value})
+		if len(a.parts) == 0 {
+			parsed.Applied = append(parsed.Applied, Applied{Effect: e, Kind: a.kind, Value: a.value})
+		}
+		for _, part := range a.parts {
+			parsed.Applied = append(parsed.Applied, Applied{Effect: e, Kind: part.kind, Value: part.value})
+		}
 		parsed.attachments = append(parsed.attachments, a)
+	}
+	if o.showAsSchoolHit != 0 && !p.showAsSchoolHitStamped {
+		panic(fmt.Sprintf("spelldata: spell %d attaches no SPELLMOD_RESIST_MISS_CHANCE hit for ShowAsSchoolHit to show", s.ID))
 	}
 
 	parsed.aura = aura
@@ -305,7 +375,7 @@ func parse(unit *core.Unit, character *core.Character, aura *core.Aura, s *Spell
 	}
 
 	if aura == nil {
-		parsed.live = parsed.attached()
+		parsed.live = parsed.attachments
 		parsed.set(nil, parsed.level())
 		return parsed
 	}
@@ -335,9 +405,7 @@ func parse(unit *core.Unit, character *core.Character, aura *core.Aura, s *Spell
 func (p *Parsed) Stats() []stats.Stat {
 	var sts []stats.Stat
 	for _, a := range p.attachments {
-		if a != nil {
-			sts = append(sts, a.stats...)
-		}
+		sts = append(sts, a.stats...)
 	}
 	return sts
 }
@@ -395,20 +463,10 @@ func (p *Parsed) catchUp(level float64) {
 	}
 }
 
-func (p *Parsed) attached() []*attachment {
-	var out []*attachment
-	for _, a := range p.attachments {
-		if a != nil {
-			out = append(out, a)
-		}
-	}
-	return out
-}
-
-func (p *Parsed) skip(s *Spell, i int, e *Effect) {
-	p.Skipped = append(p.Skipped, SkippedEffect{Effect: e, Position: i + 1})
+func (p *Parsed) skip(s *Spell, i int, e *Effect, reason string) {
+	p.Skipped = append(p.Skipped, SkippedEffect{Effect: e, Position: i + 1, Reason: reason})
 	if !p.quiet {
-		report(s, i+1, e)
+		report(s, i+1, e, reason)
 	}
 }
 
@@ -427,49 +485,37 @@ func AppliesAura(t dbcenums.SpellEffectType) bool {
 		t == dbcenums.E_APPLY_AREA_AURA_RAID
 }
 
-// The dot modifiers a spell states twice. A talent that raises a spell's damage states the same
-// number once for the hit and once for the dot, and one SpellMod_DamageDone_Flat already reaches the
-// ticks as well as the hit, so the second effect would double the bonus on the dot. Only a hit
-// modifier this parse reads folds the dot one into itself; a parse narrowed to the dot effect alone
-// attaches it.
-func foldedDotEffects(s *Spell, o *parseOptions) []*Effect {
-	var folded []*Effect
-	for i := range s.Effects {
-		dot := &s.Effects[i]
-		if dot.Aura != dbcenums.A_ADD_PCT_MODIFIER || dbcenums.SpellModOp(dot.Misc) != dbcenums.SPELLMOD_DOT {
-			continue
-		}
-
-		for j := range s.Effects {
-			hit := &s.Effects[j]
-			if hit.Aura != dbcenums.A_ADD_PCT_MODIFIER || !AppliesAura(hit.Type) ||
-				!o.reads(int32(j+1)) ||
-				(dbcenums.SpellModOp(hit.Misc) != dbcenums.SPELLMOD_DAMAGE &&
-					dbcenums.SpellModOp(hit.Misc) != dbcenums.SPELLMOD_ALL_EFFECTS) {
-				continue
-			}
-			if hit.ClassFlags == dot.ClassFlags && hit.BasePoints == dot.BasePoints {
-				folded = append(folded, dot)
-				break
-			}
-		}
+// Whether ParseEffects attaches something for the effect's aura. The skill row reads only Defense and
+// the weapon skills, so a profession skill is not one. Another row can still refuse one effect by its
+// misc value, which only a parse against a unit finds out.
+func (e *Effect) ParsedAura() bool {
+	if _, weapon := weaponSkillLines[e.Misc]; e.Aura == dbcenums.A_MOD_SKILL && e.Misc != miscDefense && !weapon {
+		return false
 	}
-	return folded
+	return AppliesAura(e.Type) && auraTable[e.Aura] != nil
 }
 
 // What a port has to wire by hand, on the console when SPELLDATA_REPORT is set.
-func report(s *Spell, pos int, e *Effect) {
+func report(s *Spell, pos int, e *Effect, reason string) {
 	if os.Getenv("SPELLDATA_REPORT") == "" {
 		return
 	}
-	fmt.Printf("spelldata: unparsed %d %s %s value %v\n", s.ID, s.Name, effectNote(pos, e), e.BasePoints)
+	fmt.Printf("spelldata: unparsed %d %s %s value %v%s\n", s.ID, s.Name, effectNote(pos, e), e.BasePoints,
+		reasonNote(reason))
+}
+
+func reasonNote(reason string) string {
+	if reason == "" {
+		return ""
+	}
+	return ": " + reason
 }
 
 func effectNote(pos int, e *Effect) string {
 	return fmt.Sprintf("effect %d %s(%d) misc %d", pos, auraName(e.Aura), e.Aura, e.Misc)
 }
 
-// The client's name for an aura the parser skipped, or its number where the client names none.
+// The game files' name for an aura the parser skipped, or its number where the game files name none.
 func auraName(a dbcenums.EffectAuraType) string {
 	if name, ok := dbcenums.Named(a); ok {
 		return name

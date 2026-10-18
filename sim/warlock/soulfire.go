@@ -2,44 +2,28 @@ package warlock
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+// The 1 min cooldown is the row's category cooldown, and the Soul Shard each cast takes the row's reagent.
 func (warlock *Warlock) registerSoulfire() {
-	rank := spellData.SoulFire.Highest()
+	rankedSpell := spellData.SoulFire.ByID(17924)
+	soulFireHit := rankedSpell.DamageEffect()
 
-	// Bane's cast time cut and Decimation's cooldown cut ride on the talents as SpellMods.
-	warlock.Soulfire = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    rank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: WarlockSpellSoulFire,
-		MaxRange:       float64(rank.MaxRange),
-		MissileSpeed:   float64(rank.Speed),
+	config := spelldata.SpellConfig(&warlock.Unit, rankedSpell, spelldata.Magic(core.ProcMaskSpellDamage))
+	config.ClassSpellMask = WarlockSpellSoulFire
 
-		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD:      rank.GCD(),
-				CastTime: rank.CastTime(),
-			},
-			CD: core.Cooldown{
-				Timer:    warlock.NewTimer(),
-				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
-			},
-		},
+	// Roll the damage and to hit, then land it after the travel time
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcDamage(sim, target, soulFireHit.Average(), spell.OutcomeMagicHitAndCrit)
+		spell.DealDamageAfterTravel(sim, result)
+	}
 
-		DamageMultiplierAdditive: 1,
-		DamageMultiplier:         1,
-		ThreatMultiplier:         1,
-		BonusCoefficient:         rank.DamageEffect().Coeff(),
+	// Calculate expected damage from the row's average hit
+	config.ExpectedInitialDamage = func(sim *core.Simulation, target *core.Unit, spell *core.Spell, _ bool) *core.SpellResult {
+		return spell.CalcDamage(sim, target, soulFireHit.Average(), spell.OutcomeExpectedMagicHitAndCrit)
+	}
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, rank.DamageEffect().Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
-				spell.DealDamage(sim, result)
-			})
-		},
-	})
+	warlock.useReagents(&config, rankedSpell)
+	warlock.Soulfire = warlock.RegisterSpell(config)
 }

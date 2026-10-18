@@ -1,29 +1,21 @@
-import { GemColor, ItemSlot } from '@generated/proto/common';
+import { ItemSlot } from '@generated/proto/common';
+import i18n from '@i18n/config';
 import { SimHostProvider } from '@sim/context/SimHostContext';
 import type { EquippedItem } from '@sim/proto/equipped_item';
 import type { IndividualSimHost } from '@sim/sim_host';
 import { createSimStore, patchKeyed, PLAYER_FIELDS, seedKeyed, type SimStore, zeroVersions } from '@sim/state/sim_store';
-import { fakeHost } from '@sim/testing';
-import { act, fireEvent, render } from '@testing-library/react';
+import { renderWithHost } from '@testing/react';
+import { fakeHost } from '@testing/sim/fake_host';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useMemo } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type OpenSelectorModal, type SelectorModalState, useSelectorModalState } from '../../hooks/useSelectorModal';
 import { ALL_ITEM_SLOTS } from '../../model/gear_data';
 import { type GearData, SelectorModalTabs } from '../../types';
+import type { SelectorModalViewProps } from './SelectorModal';
 
-const store = vi.hoisted(() => {
-	const listeners = new Set<() => void>();
-	return {
-		subscribe: (callback: () => void) => {
-			listeners.add(callback);
-			return () => listeners.delete(callback);
-		},
-		notify: () => listeners.forEach(listener => listener()),
-	};
-});
-
-vi.mock('@sim/state/subscriptions', async () => (await import('@sim/testing')).mockSubscriptions(store.subscribe));
+vi.mock('@sim/state/subscriptions', async () => (await import('@testing/sim/subscriptions')).mockSubscriptions());
 
 const tabs = vi.hoisted(() => ({ build: vi.fn(), eligibility: vi.fn() }));
 vi.mock('./utils', () => ({ buildSelectorTabs: tabs.build, eligibilityFor: tabs.eligibility }));
@@ -38,12 +30,10 @@ vi.mock('./ItemList', () => ({
 
 vi.mock('./SlotRail', () => ({ SlotRail: () => <div data-testid="gear-picker-modal-slots" /> }));
 
-const { SelectorModal } = await import('./SelectorModal');
+const { SelectorModal, SelectorModalView } = await import('./SelectorModal');
 
-const tab = (label: SelectorModalTabs, socketIdx?: number) => ({
+const tab = (label: SelectorModalTabs) => ({
 	label,
-	socketColor: GemColor.GemColorRed,
-	socketIdx,
 	itemData: [],
 	computeEP: () => 0,
 	equippedToItem: () => null,
@@ -53,7 +43,7 @@ const tab = (label: SelectorModalTabs, socketIdx?: number) => ({
 const OPEN_SLOT = ALL_ITEM_SLOTS[3];
 
 const item = (id: number): EquippedItem => {
-	const stub = { id, gems: [], withChallengeMode: () => stub, withDynamicStats: () => stub };
+	const stub = { id, withChallengeMode: () => stub, withDynamicStats: () => stub };
 	return stub as unknown as EquippedItem;
 };
 
@@ -117,7 +107,7 @@ describe('SelectorModal', () => {
 		equippedItems = new Map(ALL_ITEM_SLOTS.map(slot => [slot, item(slot)]));
 		getEquippedItem = vi.fn(() => equippedItems.get(OPEN_SLOT) ?? null);
 		gearData = { equipItem: () => undefined, getEquippedItem, subscribe: () => () => undefined };
-		tabs.eligibility.mockReturnValue({ hasEnchants: true, socketCount: 2 });
+		tabs.eligibility.mockReturnValue({ hasEnchants: true });
 
 		const rootElem = document.createElement('div');
 		rootElem.className = 'sim-ui';
@@ -141,27 +131,19 @@ describe('SelectorModal', () => {
 		host.rootElem.remove();
 	});
 
-	it('renders one tab button and one pane per tab the data earned, wired to each other', () => {
-		setup({ tabSet: [tab(SelectorModalTabs.Items), tab(SelectorModalTabs.RandomSuffixes), tab(SelectorModalTabs.Gem1, 0)] });
+	it('renders one tab button and one pane per tab the data earned', () => {
+		setup({ tabSet: [tab(SelectorModalTabs.Items), tab(SelectorModalTabs.Enchants), tab(SelectorModalTabs.RandomSuffixes)] });
 
-		expect(tabButtons().map(button => button.dataset.label)).toEqual([SelectorModalTabs.Items, SelectorModalTabs.RandomSuffixes, SelectorModalTabs.Gem1]);
-		expect(panes.rendered.map(pane => pane.label)).toEqual([SelectorModalTabs.Items, SelectorModalTabs.RandomSuffixes, SelectorModalTabs.Gem1]);
-		for (const button of tabButtons()) {
-			const pane = document.getElementById(button.getAttribute('aria-controls')!);
-			expect(pane).not.toBeNull();
-			expect(pane!.getAttribute('aria-labelledby')).toBe(button.id);
-		}
-	});
-
-	it('marks a gem tab and gives it an icon instead of a label', () => {
-		setup({ tabSet: [tab(SelectorModalTabs.Items), tab(SelectorModalTabs.Gem1, 0), tab(SelectorModalTabs.Gem2, 1)] });
-
-		expect(tabButtons().map(button => !!button.dataset.label?.startsWith('Gem'))).toEqual([false, true, true]);
-		expect(document.querySelectorAll('[data-label^="Gem"] [data-testid="gem-socket-container"]')).toHaveLength(2);
+		expect(tabButtons().map(button => button.dataset.label)).toEqual([
+			SelectorModalTabs.Items,
+			SelectorModalTabs.Enchants,
+			SelectorModalTabs.RandomSuffixes,
+		]);
+		expect(panes.rendered.map(pane => pane.label)).toEqual([SelectorModalTabs.Items, SelectorModalTabs.Enchants, SelectorModalTabs.RandomSuffixes]);
 	});
 
 	it('opens on the requested tab, and on Items when the request is one the slot no longer offers', () => {
-		tabs.eligibility.mockReturnValue({ hasEnchants: false, socketCount: 2 });
+		tabs.eligibility.mockReturnValue({ hasEnchants: false });
 		setup({ requestTab: SelectorModalTabs.Enchants });
 
 		expect(tabButtons().find(button => button.getAttribute('aria-selected') === 'true')?.dataset.label).toBe(SelectorModalTabs.Items);
@@ -178,13 +160,13 @@ describe('SelectorModal', () => {
 	});
 
 	it('falls back to the first tab when the one you were on is gone', () => {
-		setup({ tabSet: [tab(SelectorModalTabs.Items), tab(SelectorModalTabs.RandomSuffixes), tab(SelectorModalTabs.Gem1, 0)] });
+		setup({ tabSet: [tab(SelectorModalTabs.Items), tab(SelectorModalTabs.Enchants), tab(SelectorModalTabs.RandomSuffixes)] });
 
 		act(() => tabButtons()[2].click());
-		expect(tabButtons().find(button => button.getAttribute('aria-selected') === 'true')?.dataset.label).toBe(SelectorModalTabs.Gem1);
+		expect(tabButtons().find(button => button.getAttribute('aria-selected') === 'true')?.dataset.label).toBe(SelectorModalTabs.RandomSuffixes);
 
 		panes.rendered.length = 0;
-		tabs.build.mockReturnValue([tab(SelectorModalTabs.Items), tab(SelectorModalTabs.RandomSuffixes)]);
+		tabs.build.mockReturnValue([tab(SelectorModalTabs.Items), tab(SelectorModalTabs.Enchants)]);
 		act(() => {
 			equippedItems.set(OPEN_SLOT, item(999));
 			refreshGear();
@@ -261,5 +243,79 @@ describe('SelectorModal', () => {
 			refreshGear();
 		});
 		expect(getEquippedItem.mock.calls.length).toBe(before + 1);
+	});
+});
+
+const TABS: SelectorModalViewProps['tabs'] = [
+	{ label: SelectorModalTabs.Items, pane: <p>items pane</p> },
+	{ label: SelectorModalTabs.Enchants, pane: <p>enchants pane</p> },
+	{ label: SelectorModalTabs.RandomSuffixes, pane: <p>random suffix pane</p> },
+];
+
+const renderView = (props: Partial<SelectorModalViewProps> = {}) => {
+	const all: SelectorModalViewProps = {
+		id: 'modal',
+		open: true,
+		onOpenChange: vi.fn(),
+		title: 'Main Hand',
+		tabs: TABS,
+		activeTab: SelectorModalTabs.Items,
+		onSelectTab: vi.fn(),
+		sequence: 1,
+		...props,
+	};
+	renderWithHost(<SelectorModalView {...all} />);
+	return all;
+};
+
+const viewTabButtons = () => screen.getAllByRole('tab');
+const activePanes = () => Array.from(document.querySelectorAll('[data-testid="selector-modal-tab-pane"][data-active]')).map(pane => pane.textContent);
+
+describe('SelectorModalView', () => {
+	it('titles the dialog with the slot and puts the rail in its header', () => {
+		renderView({ rail: <div data-testid="rail-marker" /> });
+		expect(screen.getByTestId('selector-modal-title').textContent).toBe('Main Hand');
+		expect(screen.getByTestId('rail-marker')).toBeTruthy();
+	});
+
+	it('wires each tab button to its pane under the given id', () => {
+		renderView();
+		expect(viewTabButtons().map(button => button.dataset.label)).toEqual([
+			SelectorModalTabs.Items,
+			SelectorModalTabs.Enchants,
+			SelectorModalTabs.RandomSuffixes,
+		]);
+		for (const button of viewTabButtons()) {
+			const pane = document.getElementById(button.getAttribute('aria-controls')!)!;
+			expect(pane.id.startsWith('modal-')).toBe(true);
+			expect(pane.getAttribute('aria-labelledby')).toBe(button.id);
+		}
+	});
+
+	it('labels each tab with its name', () => {
+		renderView();
+		expect(viewTabButtons()[0].textContent).toBe(i18n.t('gear_tab.gear_picker.tabs.items'));
+		expect(viewTabButtons()[2].textContent).toBe(i18n.t('gear_tab.gear_picker.tabs.random_suffix'));
+	});
+
+	it('shows the active pane and reports a tab pick', () => {
+		const props = renderView({ activeTab: SelectorModalTabs.Enchants });
+		expect(activePanes()).toEqual(['enchants pane']);
+
+		act(() => viewTabButtons()[2].click());
+		expect(props.onSelectTab).toHaveBeenCalledWith(SelectorModalTabs.RandomSuffixes);
+	});
+
+	it('renders no panes without a request', () => {
+		renderView({ sequence: undefined });
+		expect(document.querySelector('[data-testid="selector-modal-tab-pane"]')).toBeNull();
+		expect(viewTabButtons()).toHaveLength(3);
+	});
+
+	it('hands key presses on the popup to its handler', () => {
+		const onKeyDown = vi.fn();
+		renderView({ onKeyDown });
+		fireEvent.keyDown(screen.getByTestId('selector-modal'), { key: 'ArrowDown' });
+		expect(onKeyDown).toHaveBeenCalledOnce();
 	});
 });

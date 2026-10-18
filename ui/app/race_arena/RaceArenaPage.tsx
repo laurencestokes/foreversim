@@ -1,16 +1,11 @@
-// The race tier list: every race each class can be, ranked on each DPS spec's community builds
-// with everything but the race held the same.
-//
-// Like the build arena, nothing is simulated here. The lists run headless
-// (sim/arenalib/race_arena.go), tools/race_arena sorts them into tiers, and this page renders the
-// committed results file. The file is the cache and the commit that produced it is the key.
-
 import { textClassName } from '@sim/proto/utils';
 import { formatToNumber, formatToPercent } from '@sim/utils/format';
+import { Button } from '@ui-kit/Button';
 import clsx from 'clsx';
-import { type ReactNode, useState } from 'react';
+import { useState } from 'react';
 
-import { PageSection, ProductPage, SITE_REPO_URL } from '../ProductPage';
+import { LandingFooter } from '../landing/LandingFooter';
+import { LandingHeader } from '../landing/LandingHeader';
 import results from './results.json';
 
 export type RaceResult = { race: string; dps: number; behind: number; tier: string; relabelled?: string; racials: string };
@@ -32,15 +27,13 @@ export type RaceArenaResults = {
 	commit: string;
 	generated: string;
 	iterations: number;
-	clientBuild: string;
 	fight: { seconds: number; targetLevel: number; targetArmor: number };
 	tiers: Array<Tier>;
 	noise: { maxError: number; maxDifference: number };
 	lists: Array<RaceList>;
 };
 
-// Keyed by the arena's spec directories, which is what the runner writes. DPS specs only: a
-// tank or healer's race is not worth what it adds to damage.
+// The runner groups DPS builds by these spec keys.
 const SPEC_NAMES: Record<string, string> = {
 	balance_druid: 'Balance Druid',
 	feral_druid: 'Feral Druid',
@@ -56,24 +49,28 @@ const SPEC_NAMES: Record<string, string> = {
 	warrior: 'Warrior',
 };
 
-// The creature types the lists were run against. Mechanical is the build arena's neutral target;
+// The creature types the lists were run against. Mechanical is the race arena's neutral target;
 // the other two are the ones a racial pays extra against.
 const TARGETS: Array<{ key: string; label: string; blurb: string }> = [
 	{ key: 'Mechanical', label: 'Neutral target', blurb: 'A target no racial pays extra against. This is the main view.' },
-	{ key: 'Elemental', label: 'Elemental target', blurb: "Adds the Skyborne's Elemental Insight: +5% damage against Elementals." },
-	{ key: 'Beast', label: 'Beast target', blurb: "Adds the Dwarf's Big Game Hunter and the Troll's Beast Slaying: +5% damage against Beasts." },
+	{ key: 'Elemental', label: 'Elemental target', blurb: "Adds the Skyborne's Elemental Insight: +5% damage and crit damage against Elementals." },
+	{
+		key: 'Beast',
+		label: 'Beast target',
+		blurb: "Adds the Dwarf's Big Game Hunter and the Troll's Beast Slaying: +5% damage and crit damage against Beasts.",
+	},
 ];
 
 // Existing theme tokens, gold at the top down to red at the bottom.
 const TIER_COLOR: Record<string, string> = {
 	S: 'border-brand text-brand',
 	A: 'border-expansion text-expansion',
-	B: 'border-evidence-forever text-evidence-forever',
+	B: 'border-success text-success',
 	C: 'border-orange text-orange',
 	D: 'border-danger text-danger',
 };
 
-const PILL = 'inline-flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-1 text-sm';
+const PILL = 'inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-1 text-sm';
 const PILL_OFF = 'border-white/18 text-gray-300 hover:border-brand hover:text-white';
 const PILL_ON = 'border-brand bg-brand/15 text-white';
 
@@ -96,14 +93,14 @@ const RaceChip = ({ race }: { race: RaceResult }) => (
 		className="flex flex-col rounded-sm border border-white/18 bg-black/40 px-2 py-1"
 		title={`${formatToNumber(race.dps, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} DPS`}
 		data-testid="race-chip">
-		<span className="flex flex-wrap items-baseline gap-x-1.5">
+		<span className="flex flex-wrap items-baseline gap-x-1">
 			<strong>{race.race}</strong>
 			<span className="text-sm text-white/60 tabular-nums">
 				{race.behind ? formatToPercent(-race.behind, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'best'}
 			</span>
 			{race.relabelled && (
 				<span
-					className="cursor-help rounded-full border border-brand px-1.5 text-xs text-brand"
+					className="cursor-help rounded-full border border-brand px-1 text-xs text-brand"
 					title={`This race's weapons were relabelled ${race.relabelled} (same stats and procs), which beat the list's own weapons.`}
 					data-testid="relabelled">
 					as {race.relabelled}
@@ -115,7 +112,7 @@ const RaceChip = ({ race }: { race: RaceResult }) => (
 );
 
 const TierList = ({ list, tiers }: { list: RaceList; tiers: Array<Tier> }) => (
-	<section className="flex flex-col gap-2 border border-surface-border bg-black/30 p-3" data-testid="race-list">
+	<section className="flex flex-col gap-2 border border-surface-border bg-black/30 p-2" data-testid="race-list">
 		<header className="flex flex-col">
 			<span className="text-xs text-white/60">{specName(list.spec)}</span>
 			<h3 className={clsx('m-0 text-lg', textClassName(list.class.toLowerCase()))}>{list.build}</h3>
@@ -129,15 +126,11 @@ const TierList = ({ list, tiers }: { list: RaceList; tiers: Array<Tier> }) => (
 			{tiers.map(tier => {
 				const races = list.races.filter(race => race.tier === tier.name);
 				return (
-					<div
-						key={tier.name}
-						className="flex items-stretch gap-2 border-t border-surface-border py-1.5"
-						data-testid="tier-row"
-						data-tier={tier.name}>
+					<div key={tier.name} className="flex items-stretch gap-2 border-t border-surface-border py-1" data-testid="tier-row" data-tier={tier.name}>
 						<span className={clsx('flex w-8 shrink-0 items-center justify-center rounded-sm border text-lg font-bold', TIER_COLOR[tier.name])}>
 							{tier.name}
 						</span>
-						<div className="flex min-w-0 flex-wrap gap-1.5">
+						<div className="flex min-w-0 flex-wrap gap-1">
 							{races.length ? races.map(race => <RaceChip key={race.race} race={race} />) : <span className="self-center text-white/30">-</span>}
 						</div>
 					</div>
@@ -158,8 +151,8 @@ const Lists = ({ data }: { data: RaceArenaResults }) => {
 			<div className="flex flex-col gap-2">
 				<ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0" data-testid="tier-legend">
 					{data.tiers.map((tier, index) => (
-						<li key={tier.name} className="flex items-center gap-1.5">
-							<span className={clsx('rounded-sm border px-1.5 font-bold', TIER_COLOR[tier.name])}>{tier.name}</span>
+						<li key={tier.name} className="flex items-center gap-1">
+							<span className={clsx('rounded-sm border px-1 font-bold', TIER_COLOR[tier.name])}>{tier.name}</span>
 							<span className="text-sm text-white/70">{tierRange(data.tiers, index)}</span>
 						</li>
 					))}
@@ -167,14 +160,15 @@ const Lists = ({ data }: { data: RaceArenaResults }) => {
 				{targets.length > 1 && (
 					<div className="flex flex-wrap items-center gap-2">
 						{targets.map(t => (
-							<button
+							<Button
+								variant="unstyled"
 								key={t.key}
 								className={clsx(PILL, t.key === target ? PILL_ON : PILL_OFF)}
 								type="button"
 								aria-pressed={t.key === target}
 								onClick={() => setTarget(t.key)}>
 								{t.label}
-							</button>
+							</Button>
 						))}
 						<span className="text-sm text-white/50">{targets.find(t => t.key === target)?.blurb}</span>
 					</div>
@@ -183,7 +177,7 @@ const Lists = ({ data }: { data: RaceArenaResults }) => {
 			{classes.map(playerClass => (
 				<div key={playerClass} className="flex flex-col gap-2" data-testid="race-class">
 					<h2 className={clsx('m-0 text-xl', textClassName(playerClass.toLowerCase()))}>{playerClass}</h2>
-					<div className="grid grid-cols-[repeat(auto-fit,minmax(min(26rem,100%),1fr))] gap-3">
+					<div className="grid grid-cols-[repeat(auto-fit,minmax(min(26rem,100%),1fr))] gap-2">
 						{shown
 							.filter(list => list.class === playerClass)
 							.map(list => (
@@ -196,123 +190,49 @@ const Lists = ({ data }: { data: RaceArenaResults }) => {
 	);
 };
 
-const Commit = ({ commit }: { commit: string }) =>
-	commit ? (
-		<a className="text-brand hover:underline" href={`${SITE_REPO_URL}/commit/${commit}`} target="_blank" rel="noreferrer">
-			<code>{commit.slice(0, 7)}</code>
-		</a>
-	) : (
-		<code>unknown</code>
-	);
-
-const RulesLink = ({ children }: { children: ReactNode }) => (
-	<a href={`${SITE_REPO_URL}/blob/master/docs/forever_rules.md#racials`} target="_blank" rel="noreferrer">
-		{children}
-	</a>
-);
-
-const Method = ({ data }: { data: RaceArenaResults }) => (
-	<PageSection title="Method">
-		<p className="m-0">
-			<strong>One build, every race.</strong> Each list is one community build of a DPS spec: the talent presets named with their point split on the
-			spec&apos;s own page, the same builds the build arena runs. Each wears the page&apos;s default gear set and plays the rotation the page picks for
-			those talents. Where the default gear cannot play the build, the list names the set it wears instead: the Arms warrior&apos;s two-hander, the
-			Mutilate rogue&apos;s daggers, the Smite priest&apos;s own set, and the feral&apos;s Launch set, because its default set has no weapon.
-		</p>
-		<p className="m-0">
-			<strong>The build arena&apos;s environment.</strong> One buff set, the consumable list for the spec&apos;s role, and one target: a level{' '}
-			{data.fight.targetLevel} boss with {formatToNumber(data.fight.targetArmor)} armor, for {data.fight.seconds} seconds. Every race of a list is run on
-			the same random seed, so they meet the same rolls, and a race&apos;s result includes its base attributes as well as its racials.
-		</p>
-		<p className="m-0">
-			<strong>Identical gear.</strong> Since the 16 Oct beta build no racial depends on the weapon held: Human and Orc crit and Dwarf crit damage apply to
-			any weapon. Every race wears exactly the same set. (Earlier builds tied them to swords, axes and maces, and this page then also ran those races with
-			their weapons relabelled through the sim&apos;s weapon type override; a chip marked{' '}
-			<span className="rounded-full border border-brand px-1.5 text-xs text-brand">as Sword</span> would show where that won.)
-		</p>
-		<p className="m-0">
-			<strong>One exception to the gear as shipped.</strong> The Arms warrior takes Weaponmaster, which pays very differently by weapon type, and its
-			set&apos;s two-hander is an axe. A sword is the best type for that build (about 3.5% over the axe), so its two-hander is run as a sword for every
-			race.
-		</p>
-		<p className="m-0">
-			<strong>{formatToNumber(data.iterations)} iterations per race.</strong> One standard error on a race&apos;s mean is at most{' '}
-			{formatToNumber(data.noise.maxError, { maximumFractionDigits: 3 })}% of its list&apos;s best, so two races less than about{' '}
-			{formatToNumber(data.noise.maxDifference, { maximumFractionDigits: 2 })}% apart may be level. That is small next to a tier, but a race sitting right
-			on a tier edge could fall either side of it.
-		</p>
-		<p className="m-0">
-			<strong>Tiers are measured from each list&apos;s best race:</strong>{' '}
-			{data.tiers.map((tier, index) => `${tier.name} ${tierRange(data.tiers, index)}`).join('; ')}. The tiers compare races within one list, never one
-			spec with another.
-		</p>
-		<p className="m-0">
-			<strong>Where the racials come from.</strong> The Forever beta client, build {data.clientBuild}: each race&apos;s racial skill line and the spell
-			data behind it. Every value is listed with its spell id in <RulesLink>docs/forever_rules.md</RulesLink>.
-		</p>
-	</PageSection>
-);
-
-const Caveats = () => (
-	<PageSection title="Caveats">
-		<ul className="m-0 flex list-disc flex-col gap-2 pl-5">
-			<li>The racials come from a beta client. Blizzard can change any of them, and a new client build can move any list here.</li>
-			<li>
-				Touch of the Grave (Undead) is modelled as a drain of 5% of the caster&apos;s maximum health as Shadow damage, with a 30% chance for priests,
-				mages and warlocks and 20% for warriors, paladins and rogues on a landed hit, at most once every 25 seconds. Its damage follows maximum health,
-				so the environment&apos;s health buffs raise it.
-			</li>
-			<li>
-				Eureka! (Gnome) is an 8 second buff: the class&apos;s abilities on the client&apos;s class masks cost 10% less and deal 10% more, for warriors,
-				rogues, warlocks, mages and priests.
-			</li>
-			<li>
-				Cooldown racials - Blood Fury, Berserking, Elune&apos;s Light, Eureka! - fire when each page&apos;s rotation fires its cooldowns, not at an
-				ideal moment. The warrior rotation, for example, only uses them in roughly the first 40 seconds and the last 30.
-			</li>
-			<li>
-				Survival and utility racials are not valued: Stoneform, Shatter Curse, Will to Survive, Will of the Forsaken and the like. Neither is the Night
-				Elf priest&apos;s Starshards, which neither priest rotation casts.
-			</li>
-			<li>
-				The +5% creature type racials only apply against a matching target: the Skyborne against Elementals, Dwarves and Trolls against Beasts. The main
-				view is a neutral target; the Elemental and Beast views show those fights.
-			</li>
-			<li>
-				Damage over time effects are modelled as dynamic, recomputing the caster&apos;s bonuses on every tick, as beta reports describe (
-				<RulesLink>docs/forever_rules.md</RulesLink>). A short racial cooldown therefore raises only the ticks that land while it is up.
-			</li>
-			<li>
-				One gear set per list. A set with more or less crit can reorder races whose racials are crit (Human, Orc, Elune&apos;s Light) or crit damage
-				(Dwarf, Tauren).
-			</li>
-			<li>
-				Healers and tanks are not ranked. This page measures damage, and neither role is valued by its damage; the build arena shows tank specs on
-				damage alone.
-			</li>
-			<li>
-				The Skyborne are one row: the High Order and the Windshapers share every passive racial and their base attributes, and their on-use racials
-				(Read Ley Line&apos;s regeneration, Skysight&apos;s movement speed) are in no rotation. A Skyborne mage can only be High Order and a Skyborne
-				shaman only a Windshaper; warriors, hunters, rogues and druids can be either.
-			</li>
-		</ul>
-	</PageSection>
-);
-
 export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: RaceArenaResults }) => (
-	<ProductPage
-		title="Race tier list"
-		subtitle={`Every race each class can be, ranked on ${data.lists.filter(list => list.target === 'Mechanical').length} DPS builds with everything else held the same. Computed ahead of time from the sim; nothing is simulated in your browser.`}>
-		<div className="grid grid-cols-[repeat(auto-fit,minmax(min(26rem,100%),1fr))] gap-4">
-			<Method data={data} />
-			<Caveats />
-		</div>
-
-		<Lists data={data} />
-
-		<p className="m-0 text-sm text-white/60" data-testid="race-arena-source">
-			Computed from sim <Commit commit={data.commit} /> on {data.generated.slice(0, 10)}, {formatToNumber(data.iterations)} iterations per race, racials
-			from client build {data.clientBuild}.
-		</p>
-	</ProductPage>
+	<div className="flex min-h-full flex-col">
+		<LandingHeader />
+		<main className="ui-landing-container flex grow flex-col gap-6 py-8">
+			<Button href="/forever/" variant="link">
+				Back to the simulator
+			</Button>
+			<header>
+				<h1 className="text-3xl font-bold text-brand">Race tier list</h1>
+				<p>Every legal race, compared on {data.lists.filter(list => list.target === 'Mechanical').length} DPS builds from the upstream simulator.</p>
+			</header>
+			<section className="flex flex-col gap-2 border border-surface-border p-4">
+				<h2 className="m-0 text-xl">Method</h2>
+				<p className="m-0">
+					Each list uses the same preset gear, talents, resolved rotation and consumables for every race. Builds come directly from the simulator's
+					presets, including its development gear sets. Warlock uses upstream's preraid test set because its presets contain no gear. All races
+					receive the same full raid buffs and debuffs against a level {data.fight.targetLevel} target with {formatToNumber(data.fight.targetArmor)}{' '}
+					armor for {data.fight.seconds} seconds.
+				</p>
+				<p className="m-0">
+					The gear keeps its actual weapon types. Dwarf's mace bonus applies only when the preset equips a mace. Both Skyborne races are shown
+					separately. Cooldown racials follow the preset rotation. Rankings include pets and racial base attributes; they measure damage, with no
+					value assigned to survival or utility.
+				</p>
+				<p className="m-0">
+					{formatToNumber(data.iterations)} iterations per race use the same random seed. The largest standard error is{' '}
+					{formatToNumber(data.noise.maxError, { maximumFractionDigits: 3 })}% of a list's best; differences below about{' '}
+					{formatToNumber(data.noise.maxDifference, { maximumFractionDigits: 2 })}% may be simulation noise. Tiers compare races within a build, not
+					damage between builds.
+				</p>
+				<p className="m-0">
+					The engine and race mechanics follow wowsims/forever. A different gear set, fight length or future engine update can change these rankings.
+				</p>
+			</section>
+			<Lists data={data} />
+			<p className="m-0 text-sm text-white/60" data-testid="race-arena-source">
+				Computed from sim{' '}
+				<Button variant="link" href={`https://github.com/laurencestokes/foreversim/commit/${data.commit}`}>
+					<code>{data.commit.slice(0, 7)}</code>
+				</Button>{' '}
+				on {data.generated.slice(0, 10)}, {formatToNumber(data.iterations)} iterations per race.
+			</p>
+		</main>
+		<LandingFooter />
+	</div>
 );

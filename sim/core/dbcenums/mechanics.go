@@ -1,7 +1,7 @@
 package dbcenums
 
 // SpellCategories.Mechanic and EffectMechanic, and the misc value of A_MECHANIC_DURATION_MOD and
-// A_MECHANIC_IMMUNITY, under TrinityCore's names for the client's SpellMechanic rows.
+// A_MECHANIC_IMMUNITY, under TrinityCore's names for the game files' SpellMechanic rows.
 type Mechanic uint8
 
 const (

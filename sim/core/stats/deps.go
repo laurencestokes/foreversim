@@ -16,7 +16,9 @@ var safeDepsOrder = []Stat{
 	Stamina,
 	Intellect,
 	Spirit,
+	DefenseRating,
 	BonusArmor,
+	ArmorNoMods,
 	Armor,
 	FeralAttackPower,
 	AttackPower,
@@ -26,13 +28,9 @@ var safeDepsOrder = []Stat{
 	Health,
 	Mana,
 	MP5,
-	MeleeHasteRating,
-	MeleeCritRating,
-	MeleeHitRating,
-	SpellHitRating,
-	SpellCritRating,
-	SpellHasteRating,
-	DefenseRating,
+	HasteRating,
+	CritRating,
+	HitRating,
 	BlockRating,
 	BlockPercent,
 	DodgeRating,
@@ -92,6 +90,9 @@ type StatDependency struct {
 
 	// Where non-zero, src counts in whole steps of this size only.
 	step float64
+
+	// Where set, src adds to dst whole, outside dst's own multipliers.
+	unmultiplied bool
 }
 
 func (sd StatDependency) String() string {
@@ -147,6 +148,13 @@ func (sdm *StatDependencyManager) AddStatDependency(src Stat, dst Stat, amount f
 func (sdm *StatDependencyManager) AddFlooredStatDependency(src Stat, dst Stat, step float64, amount float64) {
 	sdm.AddStatDependency(src, dst, amount)
 	sdm.deps[len(sdm.deps)-1].step = step
+}
+
+// Adds all of src to dst after dst's own multipliers, which scale the rest of dst and leave src's
+// share whole. Every dependency that reads dst counts all of it.
+func (sdm *StatDependencyManager) AddUnmultipliedStatDependency(src Stat, dst Stat) {
+	sdm.AddStatDependency(src, dst, 1)
+	sdm.deps[len(sdm.deps)-1].unmultiplied = true
 }
 
 func (sdm *StatDependencyManager) MultiplyStat(s Stat, amount float64) {
@@ -220,10 +228,11 @@ func (sdm *StatDependencyManager) sortDeps() {
 					continue
 				}
 
-				if dep.dynamic || dep.step != 0 {
+				if dep.dynamic || dep.step != 0 || dep.unmultiplied {
 					// Dynamic deps need to remain separate, so
-					// they can be turned on/off, and floored ones
-					// so they keep their step.
+					// they can be turned on/off, floored ones
+					// so they keep their step, and unmultiplied
+					// ones so they stay outside the multipliers.
 					deps = append(deps, dep)
 				} else {
 					if srcStat == dstStat {
@@ -268,11 +277,16 @@ func (sdm *StatDependencyManager) IsFinalized() bool {
 	return sdm.finalized
 }
 
-func (sdm *StatDependencyManager) ApplyStatDependencies(s Stats) Stats {
+// ApplyStatDependenciesInPlace is ApplyStatDependencies without copying the array.
+func (sdm *StatDependencyManager) ApplyStatDependenciesInPlace(s *Stats) {
+	var unmultiplied Stats
 	for _, dep := range sdm.deps {
 		if dep.enabled {
 			if dep.src == dep.dst {
-				s[dep.dst] *= dep.amount
+				s[dep.dst] = (s[dep.dst]-unmultiplied[dep.dst])*dep.amount + unmultiplied[dep.dst]
+			} else if dep.unmultiplied {
+				s[dep.dst] += s[dep.src]
+				unmultiplied[dep.dst] += s[dep.src]
 			} else if dep.step != 0 {
 				s[dep.dst] += math.Floor(s[dep.src]/dep.step) * dep.step * dep.amount
 			} else if isFlooredGameStat[dep.src] {
@@ -285,6 +299,10 @@ func (sdm *StatDependencyManager) ApplyStatDependencies(s Stats) Stats {
 			}
 		}
 	}
+}
+
+func (sdm *StatDependencyManager) ApplyStatDependencies(s Stats) Stats {
+	sdm.ApplyStatDependenciesInPlace(&s)
 	return s
 }
 

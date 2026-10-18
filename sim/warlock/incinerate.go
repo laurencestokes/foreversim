@@ -2,51 +2,37 @@ package warlock
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Forever's Incinerate is a Destruction talent (412758 and up), 2.5 sec, and hits 25% harder on a
-// target carrying Immolate - the second effect on every rank of the client's row.
+// Granted by the Incinerate talent: effect 2 is the bonus against a target afflicted by Immolate.
+// TODO: Assumed any Immolate counts, not only this warlock's; confirm in-game.
 func (warlock *Warlock) registerIncinerate() {
-	if !warlock.Talents.Incinerate {
-		return
+	rankedSpell := spellData.Incinerate.ByID(1293813)
+	incinerateHit := rankedSpell.DamageEffect()
+	immolateMult := 1 + rankedSpell.EffectN(2).Percent()
+
+	config := spelldata.SpellConfig(&warlock.Unit, rankedSpell, spelldata.Magic(core.ProcMaskSpellDamage))
+	config.ClassSpellMask = WarlockSpellIncinerate
+
+	// Roll the damage and to hit, raised if any Immolate burns on the target, then land it after travel
+	// TODO: Confirm in game that the 25% raises the whole hit, spell power included.
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcDamage(sim, target, incinerateHit.Average(), spell.OutcomeMagicHitAndCrit)
+		if target.HasActiveAuraWithTag(immolateTag) {
+			scaleResult(sim, spell, result, immolateMult)
+		}
+		spell.DealDamageAfterTravel(sim, result)
 	}
 
-	rank := spellData.Incinerate.Highest()
-	immolateBonus := 1 + rank.EffectN(2).Percent()
+	// Calculate expected damage from the row's average hit, raised if any Immolate burns on the target
+	config.ExpectedInitialDamage = func(sim *core.Simulation, target *core.Unit, spell *core.Spell, _ bool) *core.SpellResult {
+		result := spell.CalcDamage(sim, target, incinerateHit.Average(), spell.OutcomeExpectedMagicHitAndCrit)
+		if target.HasActiveAuraWithTag(immolateTag) {
+			scaleResult(sim, spell, result, immolateMult)
+		}
+		return result
+	}
 
-	warlock.Incinerate = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    rank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: WarlockSpellIncinerate,
-		MaxRange:       float64(rank.MaxRange),
-		MissileSpeed:   float64(rank.Speed),
-
-		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD:      rank.GCD(),
-				CastTime: rank.CastTime(),
-			},
-		},
-
-		DamageMultiplierAdditive: 1,
-		DamageMultiplier:         1,
-		ThreatMultiplier:         1,
-		BonusCoefficient:         rank.DamageEffect().Coeff(),
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			baseDamage := rank.DamageEffect().Roll(sim, core.CharacterLevel)
-			if warlock.Immolate.Dot(target).IsActive() {
-				baseDamage *= immolateBonus
-			}
-
-			result := spell.CalcDamage(sim, target, baseDamage, spell.OutcomeMagicHitAndCrit)
-			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
-				spell.DealDamage(sim, result)
-			})
-		},
-	})
+	warlock.Incinerate = warlock.RegisterSpell(config)
 }

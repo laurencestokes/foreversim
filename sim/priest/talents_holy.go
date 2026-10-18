@@ -1,8 +1,6 @@
 package priest
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/spelldata"
@@ -42,288 +40,226 @@ func (priest *Priest) registerHolyTalents() {
 	priest.applyPrayerOfMending()
 }
 
-// Twilight Focus is new in Forever: pushback protection (14913, SPELLMOD_NOT_LOSE_CASTING_TIME).
-// Of the spells its mask names the sim models Smite, Holy Fire, Mind Blast, Mind Flay, Penance and,
-// since build 70009, Starshards.
+// Gives you a 70% chance to avoid interruption caused by damage while casting any spell.
+// The caster takes no hits in a damage sim, so it changes nothing.
 func (priest *Priest) applyTwilightFocus() {
 	if priest.Talents.TwilightFocus == 0 {
 		return
 	}
-
-	resist := spellData.TwilightFocus.FractionAt(priest.Talents.TwilightFocus)
-	priest.AddStaticMod(core.SpellModConfig{
-		ClassMask: PriestSpellSmite | PriestSpellHolyFire | PriestSpellMindBlast | PriestSpellMindFlay | PriestSpellPenance | PriestSpellStarshards,
-		Kind:      core.SpellMod_Custom,
-		ApplyCustom: func(_ *core.SpellMod, spell *core.Spell) {
-			spell.PushbackResist += resist
-		},
-		RemoveCustom: func(_ *core.SpellMod, spell *core.Spell) {
-			spell.PushbackResist -= resist
-		},
-	})
 }
 
-// applyImprovedRenew implements Improved Renew, new in Forever.
-//
-// TODO: To be implemented. Renew is not modelled.
+// Increases the amount healed by your Renew spell by 5%.
+// TODO: 1289450 is a second Renew, 35 per tick with a 0 coefficient and no level requirement. Nothing
+// teaches it, so the Renew ladder leaves it out; verify in game.
 func (priest *Priest) applyImprovedRenew() {
 	if priest.Talents.ImprovedRenew == 0 {
 		return
 	}
+
+	spelldata.ParseStatic(&priest.Character, spellData.ImprovedRenew.Rank(priest.Talents.ImprovedRenew))
 }
 
-// Holy Specialization is new in Forever: +1% critical strike per point on Smite, Holy Fire, Holy Nova
-// and the Penance bolts. 14889's class mask leaves Chastise (1277335) out (client 1.60.1.70205).
+// Increases the critical effect chance of your Holy spells by X%.
 func (priest *Priest) applyHolySpecialization() {
 	if priest.Talents.HolySpecialization == 0 {
 		return
 	}
 
-	priest.AddStaticMod(core.SpellModConfig{
-		ClassMask:  PriestHolySpells,
-		FloatValue: spellData.HolySpecialization.ValueAt(priest.Talents.HolySpecialization),
-		Kind:       core.SpellMod_BonusCrit_Percent,
-	})
+	spelldata.ParseStatic(&priest.Character, spellData.HolySpecialization.Rank(priest.Talents.HolySpecialization))
 }
 
-// applySpellWarding implements Spell Warding, new in Forever.
-//
-// TODO: To be implemented. It is -2% magic damage taken per point (27900), and nothing in a DPS sim
-// takes damage.
+// Reduces all spell damage taken by X%
 func (priest *Priest) applySpellWarding() {
 	if priest.Talents.SpellWarding == 0 {
 		return
 	}
+
+	spelldata.ParseStatic(&priest.Character, spellData.SpellWarding.Rank(priest.Talents.SpellWarding))
 }
 
+// Reduces the casting time of your Smite, Holy Fire, Heal and Greater Heal spells by x sec
 func (priest *Priest) applyDivineFury() {
 	if priest.Talents.DivineFury == 0 {
 		return
 	}
 
-	priest.AddStaticMod(core.SpellModConfig{
-		ClassMask: PriestSpellSmite | PriestSpellHolyFire,
-		TimeValue: time.Millisecond * time.Duration(spellData.DivineFury.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CASTING_TIME)).ValueAt(priest.Talents.DivineFury)),
-		Kind:      core.SpellMod_CastTime_Flat,
-	})
+	spelldata.ParseStatic(&priest.Character, spellData.DivineFury.Rank(priest.Talents.DivineFury))
 }
 
+// Grants the holy nova spell
 func (priest *Priest) applyHolyNova() {
 	if !priest.Talents.HolyNova {
 		return
 	}
 
-	HolyNovaRankMap.Each(func(_ int32, rank *spelldata.Spell) { priest.registerHolyNovaSpell(rank) })
+	HolyNovaRankMap.Each(priest.registerHolyNovaSpell)
 }
 
 var HolyNovaRankMap = spellData.HolyNova
 
-// Damage to everything in range and a heal on the priest's own party, both at the same coefficient.
-func (priest *Priest) registerHolyNovaSpell(rank *spelldata.Spell) {
-	heal := spellData.HolyNovaTriggered.Rank(rank.RankNumber())
-	partyPlayers := priest.Party.Players
-
-	healSpell := priest.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: heal.ID},
-		SpellSchool: core.SpellSchoolHoly,
-		DefenseType: heal.DefenseTypeCore(), // a crit needs it for its multiplier
-		ProcMask:    core.ProcMaskSpellHealing,
-		Flags:       core.SpellFlagHelpful | core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell,
-
-		DamageMultiplier: 1,
-		ThreatMultiplier: 0,
-		BonusCoefficient: rank.DamageEffect().Coeff(),
-
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			for _, player := range partyPlayers {
-				spell.CalcAndDealHealing(sim, &player.GetCharacter().Unit, heal.HealEffect().Average(core.CharacterLevel), spell.OutcomeHealingCrit)
-			}
-		},
-	})
-
-	priest.RegisterSpell(core.SpellConfig{
-		ActionID:        core.ActionID{SpellID: rank.ID},
-		SpellSchool:     rank.SpellSchool(),
-		DefenseType:     rank.DefenseTypeCore(),
-		ProcMask:        core.ProcMaskSpellDamage,
-		Flags:           core.SpellFlagAPL,
-		ClassSpellMask:  PriestSpellHolyNova,
-		Rank:            rank.RankNumber(),
-		MaxRange:        float64(rank.MaxRange),
-		CastRequirement: rank.CastRequirement(), // not in Shadowform
-
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(rank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: rank.GCD(),
-			},
-		},
-
-		DamageMultiplier: 1,
-		BonusCoefficient: rank.DamageEffect().Coeff(),
-		ThreatMultiplier: 0,
-
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealAoeDamageWithVariance(sim, spell.OutcomeMagicHitAndCrit, func(sim *core.Simulation, _ *core.Spell) float64 {
-				return rank.DamageEffect().Roll(sim, core.CharacterLevel)
-			})
-			healSpell.Cast(sim, &priest.Unit)
-		},
-	})
-}
-
-// applyBlessedRecovery implements Blessed Recovery, new in Forever.
-//
-// TODO: To be implemented. It heals after a critical strike is taken, and nothing in a DPS sim
-// takes one.
+// After being struck by a melee or ranged critical hit, or suffering more than 30% of your maximum Health from a single attack,
+// heal 8% of the damage taken over 6 sec. Refreshing this effect carries over any remaining healing.
+// TODO: The sim does not model the incoming damage events that trigger this heal.
 func (priest *Priest) applyBlessedRecovery() {
 	if priest.Talents.BlessedRecovery == 0 {
 		return
 	}
 }
 
-// applyInspiration implements Inspiration.
-//
-// TODO: To be implemented. It fires on a healing critical strike, and no healing spell is modelled
-// on this engine yet (see healer/healer.go).
+// Your non-periodic critical heals increase your target's Armor by X% for 15 sec.
 func (priest *Priest) applyInspiration() {
 	if priest.Talents.Inspiration == 0 {
 		return
 	}
+
+	triggered := spellData.InspirationTriggered.Highest()
+	armorAuras := priest.NewAllyAuraArray(func(target *core.Unit) *core.Aura {
+		aura := target.GetOrRegisterAura(spelldata.AuraConfig(triggered, spelldata.RankLabel(triggered, &priest.Unit)))
+		spelldata.ParseEffects(nil, aura, triggered)
+		return aura
+	})
+	priest.MakeProcTriggerAura(core.ProcTrigger{
+		Name:     "Inspiration",
+		Callback: core.CallbackOnHealDealt,
+		Handler: func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
+			if result.DidCrit() {
+				armorAuras.Get(result.Target).Activate(sim)
+			}
+		},
+	})
 }
 
-// applyHolyReach implements Holy Reach, new in Forever: 27789 adds 10/20% to Smite and Holy Fire range
-// (its first class mask). The second adds as much to Holy Nova and Prayer of Healing radius; the sim
-// gives Holy Nova no radius, so that half reaches nothing.
+// Increases the range of your Smite and Holy Fire spells and the radius of your Prayer of Healing and Holy Nova spells by X%.
+// The radius (effect 2) has no spell mod in the sim; Holy Nova already hits every enemy.
 func (priest *Priest) applyHolyReach() {
 	if priest.Talents.HolyReach == 0 {
 		return
 	}
 
-	priest.extendRange(PriestSpellSmite|PriestSpellHolyFire,
-		spellData.HolyReach.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_RANGE)).FractionAt(priest.Talents.HolyReach))
+	spelldata.ParseStatic(&priest.Character, spellData.HolyReach.Rank(priest.Talents.HolyReach), spelldata.Effects(1))
 }
 
-// applyImprovedHealing implements Improved Healing, new in Forever. It discounts Lesser Heal, Heal,
-// Greater Heal, Penance and Prayer of Mending; Penance is the only one of those the sim casts.
+// Reduces the Mana cost of your Lesser Heal, Heal, Greater Heal, Penance, and Prayer of Mending spells by x%.
 func (priest *Priest) applyImprovedHealing() {
 	if priest.Talents.ImprovedHealing == 0 {
 		return
 	}
 
-	priest.AddStaticMod(core.SpellModConfig{
-		ClassMask:  PriestSpellPenance,
-		FloatValue: spellData.ImprovedHealing.FractionAt(priest.Talents.ImprovedHealing),
-		Kind:       core.SpellMod_PowerCost_Pct_Add,
-	})
+	spelldata.ParseStatic(&priest.Character, spellData.ImprovedHealing.Rank(priest.Talents.ImprovedHealing))
 }
 
-// Searing Light now buffs every Holy spell and gives Holy Fire ticks a chance to refund the next
-// Holy Nova. The beta client reads 2/5% Holy damage and a 5/10% chance, and the free Holy Nova
-// (Holy Purpose, 1284536) lasts 10 sec.
+// Increases your Holy damage done by X%, and gives a Y% chance each time your Holy Fire spell deals periodic damage for your next Holy Nova to cost no Mana.
 func (priest *Priest) applySearingLight() {
 	if priest.Talents.SearingLight == 0 {
 		return
 	}
 
-	priest.AddStaticMod(core.SpellModConfig{
-		ClassMask:  PriestSpellsAll,
-		School:     core.SpellSchoolHoly,
-		FloatValue: spellData.SearingLight.EffectAt(1).FractionAt(priest.Talents.SearingLight),
-		Kind:       core.SpellMod_DamageDone_Pct,
-	})
+	spelldata.ParseStatic(&priest.Character, spellData.SearingLight.Rank(priest.Talents.SearingLight), spelldata.Effects(1))
 
-	freeNova := spellData.SearingLightTriggered.Highest()
-	costMod := priest.AddDynamicMod(core.SpellModConfig{
-		ClassMask:  PriestSpellHolyNova,
-		FloatValue: freeNova.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).Average(core.CharacterLevel) / 100,
-		Kind:       core.SpellMod_PowerCost_Pct_Add,
-	})
+	holyPurposeRow := spellData.SearingLightTriggered.Highest()
+	holyPurposeConfig := spelldata.AuraConfig(holyPurposeRow)
+	holyPurposeConfig.OnCastComplete = func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
+		if spellData.HolyNova.Contains(spell) {
+			aura.Deactivate(sim)
+		}
+	}
+	holyPurpose := priest.RegisterAura(holyPurposeConfig)
+	spelldata.ParseEffects(&priest.Character, holyPurpose, holyPurposeRow, spelldata.Effects(1))
 
-	priest.SearingLightAura = priest.RegisterAura(core.Aura{
-		Label:    "Searing Light",
-		ActionID: core.ActionID{SpellID: freeNova.ID},
-		Duration: freeNova.Duration(),
-		OnGain: func(_ *core.Aura, _ *core.Simulation) {
-			costMod.Activate()
-		},
-		OnExpire: func(_ *core.Aura, _ *core.Simulation) {
-			costMod.Deactivate()
-		},
-		OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
-			if spell.Matches(PriestSpellHolyNova) {
-				aura.Deactivate(sim)
-			}
-		},
-	})
-
+	// The row's listener names no spell; the tooltip limits it to Holy Fire's periodic damage.
 	priest.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Searing Light Trigger",
-		Callback:           core.CallbackOnPeriodicDamageDealt,
-		ClassSpellMask:     PriestSpellHolyFire,
-		ProcChance:         spellData.SearingLight.EffectAt(2).FractionAt(priest.Talents.SearingLight),
-		TriggerImmediately: true,
+		Name:           "Searing Light",
+		ClassSpellMask: PriestSpellHolyFire,
+		ProcChance:     spellData.SearingLight.EffectAt(2).FractionAt(priest.Talents.SearingLight),
+		Callback:       core.CallbackOnPeriodicDamageDealt,
 		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			priest.SearingLightAura.Activate(sim)
+			holyPurpose.Activate(sim)
 		},
 	})
 }
 
-// applyBindingHeal implements Binding Heal, new in Forever.
-//
-// TODO: To be implemented. It is a healing spell.
+// Grants Binding Heal.
 func (priest *Priest) applyBindingHeal() {
 	if !priest.Talents.BindingHeal {
 		return
 	}
+
+	spellData.BindingHeal.Each(priest.registerBindingHeal)
 }
 
-// applyLitanyOfLight implements Litany of Light, new in Forever.
-//
-// TODO: To be implemented. It is a proc off healing (1317006) with no damage half.
+// When you cast a healing spell, gain Mana equal to 20% of the base cost of the spell if your previous heal was a different spell.
 func (priest *Priest) applyLitanyOfLight() {
 	if priest.Talents.LitanyOfLight == 0 {
 		return
 	}
+
+	// One mask per spell, so every rank of a heal is the same previous heal.
+	var previousHeal int64
+	priest.RegisterResetEffect(func(_ *core.Simulation) {
+		previousHeal = 0
+	})
+	refundFraction := spellData.LitanyOfLight.EffectAt(1).FractionAt(priest.Talents.LitanyOfLight)
+	refundMetrics := priest.NewManaMetrics(core.ActionID{SpellID: spellData.LitanyOfLight.Highest().ID})
+	priest.MakeProcTriggerAura(core.ProcTrigger{
+		Name:           "Litany of Light",
+		Callback:       core.CallbackOnCastComplete,
+		ClassSpellMask: priestLitanyOfLightHeals,
+		Handler: func(sim *core.Simulation, spell *core.Spell, _ *core.SpellResult) {
+			heal := spell.ClassSpellMask
+			if previousHeal != 0 && previousHeal != heal && spell.Cost != nil {
+				spell.Unit.AddMana(sim, float64(spell.Cost.BaseCost)*refundFraction, refundMetrics)
+			}
+			previousHeal = heal
+		},
+	})
 }
 
-// Spirit of Redemption is only the on-death form (27827), which is not modelled. Classic's +5%
-// Spirit is gone: Forever's 20711 carries one dummy effect and no stat modifier.
+// Power Word: Shield absorbs rather than heals, so it is not a healing spell here.
+const priestLitanyOfLightHeals = PriestSpellFlashHeal |
+	PriestSpellLesserHeal |
+	PriestSpellHeal |
+	PriestSpellGreaterHeal |
+	PriestSpellBindingHeal |
+	PriestSpellRenew |
+	PriestSpellPenance |
+	PriestSpellPrayerOfHealing |
+	PriestSpellPrayerOfMending
+
+// Grants spirit of redemption on death
+// Acts after death, which a damage sim does not model.
 func (priest *Priest) applySpiritOfRedemption() {
 	if !priest.Talents.SpiritOfRedemption {
 		return
 	}
 }
 
-// The beta client's curves: damage 1/3/5/6/8% of Spirit, healing 5% per point.
+// Increases your spell healing by up to X% of your total Spirit and your spell damage by up to Y% of your total Spirit.
+// TODO: 14901 excludes Shadowform; unverified whether Shadowform suppresses it in game.
 func (priest *Priest) applySpiritualGuidance() {
 	if priest.Talents.SpiritualGuidance == 0 {
 		return
 	}
 
-	points := priest.Talents.SpiritualGuidance
-	priest.AddStatDependency(stats.Spirit, stats.SpellDamage,
-		spellData.SpiritualGuidance.Effect(dbcenums.A_MOD_SPELL_DAMAGE_OF_STAT_PERCENT, 126).FractionAt(points))
-	priest.AddStatDependency(stats.Spirit, stats.HealingPower,
-		spellData.SpiritualGuidance.Effect(dbcenums.A_MOD_SPELL_HEALING_OF_STAT_PERCENT, 4).FractionAt(points))
+	dmgCoeff := spellData.SpiritualGuidance.Effect(dbcenums.A_MOD_SPELL_DAMAGE_OF_STAT_PERCENT, 126).FractionAt(priest.Talents.SpiritualGuidance)
+	healCoeff := spellData.SpiritualGuidance.Effect(dbcenums.A_MOD_SPELL_HEALING_OF_STAT_PERCENT, 4).FractionAt(priest.Talents.SpiritualGuidance)
+	priest.AddStatDependency(stats.Spirit, stats.SpellDamage, dmgCoeff)
+	priest.AddStatDependency(stats.Spirit, stats.HealingPower, healCoeff)
 }
 
-// applySpiritualHealing implements Spiritual Healing.
-//
-// TODO: To be implemented. No healing spell is modelled on this engine yet.
+// Increases the amount healed by your spells by X%.
 func (priest *Priest) applySpiritualHealing() {
 	if priest.Talents.SpiritualHealing == 0 {
 		return
 	}
+
+	spelldata.ParseStatic(&priest.Character, spellData.SpiritualHealing.Rank(priest.Talents.SpiritualHealing))
 }
 
-// applyPrayerOfMending implements Prayer of Mending, new in Forever.
-//
-// TODO: To be implemented. It is a healing spell.
+// Grants Prayer of Mending.
 func (priest *Priest) applyPrayerOfMending() {
 	if !priest.Talents.PrayerOfMending {
 		return
 	}
+
+	spellData.PrayerOfMending.Each(priest.registerPrayerOfMending)
 }

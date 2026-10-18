@@ -5,49 +5,24 @@ import (
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Every rank is registered so a rotation can drop to a cheaper one when mana runs short; the
-// talents and procs reach them all through WarlockSpellShadowBolt. warlock.ShadowBolt stays the
-// highest rank.
+// Nightfall's Shadow Trance makes it instant through the cast time modifier parsed onto that aura.
 func (warlock *Warlock) registerShadowBolt() {
-	highest := spellData.ShadowBolt.Highest()
-	spellData.ShadowBolt.Each(func(_ int32, rank *spelldata.Spell) {
-		spell := warlock.registerShadowBoltRank(rank)
-		if rank == highest {
-			warlock.ShadowBolt = spell
-		}
-	})
-}
+	rankedSpell := spellData.ShadowBolt.ByID(25307)
+	shadowBoltHit := rankedSpell.DamageEffect()
 
-func (warlock *Warlock) registerShadowBoltRank(rank *spelldata.Spell) *core.Spell {
-	return warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    rank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: WarlockSpellShadowBolt,
-		MaxRange:       float64(rank.MaxRange),
-		Rank:           rank.RankNumber(),
-		MissileSpeed:   float64(rank.Speed),
+	config := spelldata.SpellConfig(&warlock.Unit, rankedSpell, spelldata.Magic(core.ProcMaskSpellDamage))
+	config.ClassSpellMask = WarlockSpellShadowBolt
 
-		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD:      rank.GCD(),
-				CastTime: rank.CastTime(),
-			},
-		},
+	// Roll the damage and to hit, then land it after the bolt's travel time
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcDamage(sim, target, shadowBoltHit.Average(), spell.OutcomeMagicHitAndCrit)
+		spell.DealDamageAfterTravel(sim, result)
+	}
 
-		DamageMultiplierAdditive: 1,
-		DamageMultiplier:         1,
-		ThreatMultiplier:         1,
-		BonusCoefficient:         rank.DamageEffect().Coeff(),
+	// Calculate expected damage from the row's average hit
+	config.ExpectedInitialDamage = func(sim *core.Simulation, target *core.Unit, spell *core.Spell, _ bool) *core.SpellResult {
+		return spell.CalcDamage(sim, target, shadowBoltHit.Average(), spell.OutcomeExpectedMagicHitAndCrit)
+	}
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, rank.DamageEffect().Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
-				spell.DealDamage(sim, result)
-			})
-		},
-	})
+	warlock.ShadowBolt = warlock.RegisterSpell(config)
 }

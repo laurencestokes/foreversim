@@ -1,5 +1,6 @@
 import type { ResultsPanelHandle } from '@features/results/model/results_panel_handle';
 import type { ProgressMetrics } from '@generated/proto/api';
+import { timeRemainingAtRate } from '@sim/utils/math';
 import { flushSync } from 'react-dom';
 
 export enum ResultsPanelStage {
@@ -17,7 +18,8 @@ export class ResultsPanelStore implements ResultsPanelHandle {
 	private abortHandler: ((event: MouseEvent) => void) | null = null;
 	private buttonsVisible = false;
 	private readonly listeners = new Set<() => void>();
-	private progressListener: ((progress: ProgressMetrics) => void) | null = null;
+	private readonly progressListeners = new Set<(progress: ProgressMetrics) => void>();
+	private estimateFrom: { at: number; completed: number } | null = null;
 
 	readonly subscribe = (listener: () => void): (() => void) => {
 		this.listeners.add(listener);
@@ -33,22 +35,31 @@ export class ResultsPanelStore implements ResultsPanelHandle {
 	readonly getButtonsVisible = (): boolean => this.buttonsVisible;
 
 	onProgress(listener: (progress: ProgressMetrics) => void): () => void {
-		this.progressListener = listener;
+		this.progressListeners.add(listener);
 		return () => {
-			if (this.progressListener === listener) this.progressListener = null;
+			this.progressListeners.delete(listener);
 		};
 	}
 
 	setPending() {
 		this.latestProgress = null;
+		this.estimateFrom = null;
 		this.setStage(ResultsPanelStage.Pending);
+	}
+
+	/** Measured from the first tick after the presim, so the presim's time does not count against the iterations. */
+	secondsRemaining(progress: ProgressMetrics): number | undefined {
+		const from = this.estimateFrom;
+		if (!from || progress.presimRunning) return undefined;
+		return timeRemainingAtRate((Date.now() - from.at) / 1000, progress.completedIterations - from.completed, progress.totalIterations - from.completed);
 	}
 
 	setProgress(progress: ProgressMetrics) {
 		this.latestProgress = progress;
-		// A tick landing before the block commits finds no listener; the block's mount effect reads `latestProgress` instead.
-		if (this.stage === ResultsPanelStage.Running) this.progressListener?.(progress);
-		else this.setStage(ResultsPanelStage.Running);
+		if (!progress.presimRunning && !this.estimateFrom) this.estimateFrom = { at: Date.now(), completed: progress.completedIterations };
+		// A block that mounts on this stage change reads `latestProgress` instead; one already mounted while pending hears it here.
+		if (this.stage !== ResultsPanelStage.Running) this.setStage(ResultsPanelStage.Running);
+		this.progressListeners.forEach(listener => listener(progress));
 	}
 
 	showResult() {

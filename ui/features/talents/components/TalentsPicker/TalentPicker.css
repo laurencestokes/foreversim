@@ -1,7 +1,7 @@
 @layer components {
 	:root {
-		--talent-icon-size: 2.5rem;
-		--talent-cell-size: 3.5rem;
+		--talent-icon-size: --spacing(10);
+		--talent-cell-size: --spacing(14);
 	}
 
 	.ui-talents-picker-trees {
@@ -52,6 +52,13 @@
 		&[data-full='true'] {
 			border-color: var(--color-talent-full);
 		}
+
+		&[data-broken='true'] {
+			border-color: var(--color-danger);
+			box-shadow:
+				0 0 0 1px var(--color-danger),
+				0 0 0.5rem var(--color-danger);
+		}
 	}
 
 	.ui-talent-picker-points {
@@ -67,6 +74,11 @@
 
 		.ui-talent-picker-root[data-full='true'] & {
 			color: var(--color-talent-full);
+		}
+
+		.ui-talent-picker-root[data-broken='true'] & {
+			color: var(--color-danger);
+			font-weight: bold;
 		}
 
 		.ui-talent-picker-root[data-points='0'][data-all-spent='true'] & {

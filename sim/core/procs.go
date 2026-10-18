@@ -33,13 +33,19 @@ func (dpm *DynamicProcManager) Proc(sim *Simulation, procMask ProcMask, label st
 }
 
 func (dpm *DynamicProcManager) Chance(procMask ProcMask, sim *Simulation) float64 {
+	chance, _ := dpm.chanceFor(procMask, sim)
+	return chance
+}
+
+// The chance the manager states for a hit of this proc mask, and whether any of its masks hears it.
+func (dpm *DynamicProcManager) chanceFor(procMask ProcMask, sim *Simulation) (float64, bool) {
 	for i, m := range dpm.procMasks {
 		if m.Matches(procMask) {
-			return dpm.procChances[i].Chance(sim)
+			return dpm.procChances[i].Chance(sim), true
 		}
 	}
 
-	return 0
+	return 0, false
 }
 
 // PPMManager for static ProcMasks
@@ -58,6 +64,29 @@ func (character *Character) NewStaticLegacyPPMManager(ppm float64, procMask Proc
 	dpm := character.newDynamicWeaponProcManager(ppm, 0, procMask)
 
 	return &dpm
+}
+
+// A procs-per-minute rate on the main hand's speed as WeaponSpeedMultiplier leaves it: Seal of the
+// Crusader's faster swings each carry 1/1.4 of the chance, so the swings' procs a minute hold, and
+// haste leaves the chance alone. Both are read at each roll, so a weapon swap needs no callback.
+func (character *Character) NewWeaponSpeedPPMManager(ppm float64, procMask ProcMask) *DynamicProcManager {
+	return &DynamicProcManager{
+		procMasks:   []ProcMask{procMask},
+		procChances: []DynamicProc{weaponSpeedProc{unit: &character.Unit, ppm: ppm}},
+	}
+}
+
+type weaponSpeedProc struct {
+	unit *Unit
+	ppm  float64
+}
+
+func (wp weaponSpeedProc) Reset() {}
+func (wp weaponSpeedProc) Chance(_ *Simulation) float64 {
+	return wp.ppm / 60 * wp.unit.AutoAttacks.MH().SwingSpeed / wp.unit.PseudoStats.WeaponSpeedMultiplier
+}
+func (wp weaponSpeedProc) Proc(sim *Simulation, label string) bool {
+	return sim.Proc(wp.Chance(sim), label)
 }
 
 // Dynamic Proc Manager for static ProcMasks and no item swap callback
@@ -170,14 +199,4 @@ func (sp staticProc) Reset()                       {}
 func (sp staticProc) Chance(_ *Simulation) float64 { return sp.chance }
 func (sp staticProc) Proc(sim *Simulation, label string) bool {
 	return sim.Proc(sp.chance, label)
-}
-
-func (item *Item) selectEffectId(isEnchant bool, isGem bool) int32 {
-	if isEnchant {
-		return item.Enchant.EffectID
-	} else if isGem {
-		return item.Gems[0].ID
-	}
-
-	return item.ID
 }

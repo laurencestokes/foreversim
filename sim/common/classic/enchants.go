@@ -33,13 +33,10 @@ func init() {
 
 	// Crusader
 	// EffectID: 1900, Proc SpellID: 20007
-	// PPM: 1, ICD: 0
 	// Permanently enchant a melee weapon so that often when attacking in melee
 	// it heals for 75 to 125 and increases Strength by 100 for 15 sec.
-	// Level 60 values from the client (20007: 100 Strength, heal 100 +-25%); the 60 Strength and
-	// 45 to 75 heal this carried were TBC's level 70 reduction.
-	// TODO: Manual review needed -- the client states no rate: 20007 has no proc chance and 458112's
-	// ProcChance 100 is the sentinel beside "often"; 1 PPM until measured in game.
+	// The game files state no rate: 20007 has no proc chance and 458112's ProcChance 100 is the
+	// sentinel beside "often". The enchant's effect entry carries it.
 	core.NewEnchantEffect(1900, func(agent core.Agent) {
 		character := agent.GetCharacter()
 		duration := time.Second * 15
@@ -67,7 +64,7 @@ func init() {
 			Name:         "Enchant Weapon - Crusader",
 			ActionID:     actionID,
 			IsWeaponProc: true,
-			DPM:          character.NewDynamicLegacyProcForEnchant(1900, 1.0, 0),
+			DPM:          character.NewDynamicLegacyProcForEnchant(1900, entryPPM(core.GetEnchantByEffectID(1900).EnchantEffects, 20007), 0),
 			Outcome:      core.OutcomeLanded,
 			Callback:     core.CallbackOnSpellHitDealt,
 			Handler: func(sim *core.Simulation, spell *core.Spell, _ *core.SpellResult) {

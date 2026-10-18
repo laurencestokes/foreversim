@@ -1,5 +1,5 @@
 // Package buffs holds the raid buffs and debuffs: the constructors tools/database/gen_spelldata
-// generates from tools/database/buffmanifest, the drivers that add what the client does not state,
+// generates from tools/database/buffmanifest, the drivers that add what the game files do not state,
 // and the hand-written auras that share categories with them. They sit above sim/core so that they
 // can read the spell store, which imports sim/core, so core cannot call them: init registers them
 // as core's buff hooks, and sim/common imports the package so that every sim links it.
@@ -13,8 +13,21 @@ func init() {
 	core.RegisterBuffHooks(core.BuffHooks{
 		ApplyBuffs:   applyGeneratedBuffs,
 		ApplyDebuffs: applyDebuffs,
-		GiftOfArthasAura: func(target *core.Unit) *core.Aura {
-			return GiftOfArthasAura(target, true, 0)
-		},
 	})
+}
+
+// A warlock's own Blood Pact, one per warlock, bidding in the party buff's category.
+func NewSpellDataBloodPactAuraFor(unit *core.Unit, warlock *core.Unit) *core.Aura {
+	return newCasterBuff(unit, bloodPactMeta, warlock, 0)
+}
+
+// A priest's own Dark Inspiration at the talent's rank, one per priest, bidding in the party buff's
+// category. It yields ties, so a copy no stronger than the party's leaves the party's holding the
+// Spirit while it is up.
+func NewSpellDataDarkInspirationAuraFor(unit *core.Unit, priest *core.Unit, ranks int32) *core.Aura {
+	aura := newCasterBuff(unit, darkInspirationMeta, priest, ranks)
+	for _, effect := range aura.ExclusiveEffects {
+		effect.YieldsTies = true
+	}
+	return aura
 }

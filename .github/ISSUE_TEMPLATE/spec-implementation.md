@@ -12,8 +12,8 @@ Everything needed to implement **<Spec> <Class>** for Forever: Go backend logic 
 gear interactions and simulation settings, and the frontend components for configuring the spec and
 displaying its output. One checkbox per talent and per ability family.
 
-Datamined from client build `<build>` (`wow_classic_beta`), trait tree `<id>`: **N ability families**
-and **N talents** after filtering. Counts and IDs are a starting point to verify against the client,
+Datamined from game build `<build>` (`wow_classic_beta`), trait tree `<id>`: **N ability families**
+and **N talents** after filtering. Counts and IDs are a starting point to verify against the game files,
 not gospel.
 
 <!--
@@ -39,7 +39,7 @@ Season of Discovery content is excluded. <List what the build still carries that
 ## Backend Tasks
 
 - [ ] Research and data gathering for Forever abilities and talents
-- [ ] Generate the spell data tables for this class from the Forever client DB
+- [ ] Generate the spell data tables for this class from the Forever game files
 - [ ] Identify any spells the extract found with no name or description
 - [ ] Implement core abilities and rotations
 - [ ] Implement the talent tree and choices
@@ -49,6 +49,7 @@ Season of Discovery content is excluded. <List what the build still carries that
 - [ ] Add configuration options to simulation settings (optional)
 - [ ] Develop and refine the APL
 - [ ] Write unit and integration tests
+- [ ] Run the `wowsims-review` pass over the change and fix what it finds before asking for review
 
 ## Frontend Tasks
 

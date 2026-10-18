@@ -25,6 +25,12 @@ npm start
 # Or
 WATCH=1 make host
 
+# Serve the component catalogue (every story and the design-system pages) at http://localhost:6006
+npm run storybook:dev
+
+# Build the same catalogue as static files into storybook-static/
+npm run storybook:build
+
 # Delete all generated files (.pb.go and .ts proto files, and dist/)
 make clean
 
@@ -71,29 +77,44 @@ make wowsimforever
 # Useful only if you're actively working on the generator and have already run make db locally at least once.
 make simdb
 
-# Generate data from WoW client files
-# Requires a local WoW install; point Settings.BaseDir in the settings file at it
+# Generate data from WoW game files
+# Requires a local WoW install. It reads the folder in WOW_DIR, or Settings.BaseDir in the settings
+# file (/mnt/c/Program Files/World of Warcraft) when WOW_DIR is not set.
 # Uses tools/database/generator-settings.json for settings
 # Also runs make simdb
 # This is what you will use most of the time for generation
 make db
 
-# Same as make db but from the ptr client
+# Same as make db but from the PTR install, and WOW_DIR applies the same way
 # Uses tools/database/ptr-generator-settings.json for settings
 make ptrdb
+
+# WoW installed somewhere other than C:? Point make db and make ptrdb at the folder that holds
+# _classic_beta_ and the other game folders. For one run:
+make db WOW_DIR="/mnt/e/World of Warcraft"
+# Or for every run, from your shell profile (then source the profile or open a new terminal).
+# Linux and WSL (bash):
+echo 'export WOW_DIR="/mnt/e/World of Warcraft"' >> ~/.bashrc
+# macOS (zsh):
+echo 'export WOW_DIR="/Applications/World of Warcraft"' >> ~/.zshrc
+# Windows, running make natively (PowerShell; open a new terminal afterwards):
+[Environment]::SetEnvironmentVariable("WOW_DIR", "E:\World of Warcraft", "User")
+# Windows, Command Prompt (open a new terminal afterwards):
+setx WOW_DIR "E:\World of Warcraft"
+# A variable set on the Windows side does not reach WSL; under WSL, use the bash line above.
 
 # Same as make db but without a WoW install: reads the current build off Blizzard's CDN
 # and applies the hotfix cache you point it at (see tools/db2tool/README.md).
 # The "Update DB" GitHub workflow runs this with raidbots' mirror of the live DBCache.bin.
 make db DB2TOOL_FLAGS="--cdn --dbcache tools/db2tool/caches/DBCache.bin"
 
-# Regenerate the spell store and the sim/<class>/spell_data_auto_gen.go tables from the client data
+# Regenerate the spell store and the sim/<class>/spell_data_auto_gen.go tables from the game files
 # Also rewrites the buff and debuff files in sim/core/buffs, their settings inputs and proto/buffs.proto
 # Needs tools/database/wowsims.db, so run make db at least once first
 make spelldata
 
 # Rewrite proto/buffs.proto alone from tools/database/buffmanifest
-# Needs no client database and no sim that builds; make sim/core/proto/api.pb.go runs it before protoc
+# Needs no game files database and no sim that builds; make sim/core/proto/api.pb.go runs it before protoc
 go run ./tools/gen_buffs_proto
 
 # Run one sim from a RaidSimRequest in protojson and print the RaidSimResult

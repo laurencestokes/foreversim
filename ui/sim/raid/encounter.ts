@@ -57,8 +57,8 @@ export class Encounter {
 	}
 
 	setTargets(newTargets: Array<TargetProto>) {
-		// The old setter notified unconditionally; a same-reference write is
-		// stored as a fresh array so subscribers still see a change.
+		// Always notifies: a same-reference write is stored as a fresh array so
+		// subscribers still see a change.
 		this.set({ targets: newTargets === this.enc.targets ? newTargets.slice() : newTargets });
 	}
 
@@ -141,18 +141,12 @@ export class Encounter {
 	getAreaTypes(): Array<AreaType> {
 		return this.enc.areaTypes;
 	}
-	inArea(areaType: AreaType): boolean {
-		return this.enc.areaTypes.includes(areaType);
-	}
 	setAreaTypes(newAreaTypes: Array<AreaType>, zoneId = 0) {
 		const areaTypes = [...new Set(newAreaTypes)].filter(areaType => areaType != AreaType.AreaTypeUnknown).sort((a, b) => a - b);
 		const current = this.enc.areaTypes;
 		const sameSet = areaTypes.length == current.length && areaTypes.every((areaType, i) => areaType == current[i]);
 		if (sameSet && zoneId == this.enc.zoneId) return;
 		this.set({ areaTypes, zoneId });
-	}
-	setInArea(areaType: AreaType, inArea: boolean) {
-		this.setAreaTypes(inArea ? [...this.enc.areaTypes, areaType] : this.enc.areaTypes.filter(t => t != areaType));
 	}
 
 	getZoneId(): number {
@@ -232,21 +226,21 @@ export class Encounter {
 	}
 
 	static defaultTargetProto(): TargetProto {
-		// Master's default target, the "Level 60" preset (sim/encounters/forever_raids.go). TBC's
-		// "Raid Target" (4192 base damage, 0.5 spread) hit tanks ~40% harder, so every tank opened
-		// with far more rage/mana from damage taken than on master.
+		// Copy default raid target used as fallback for missing DB.
+		// https://github.com/wowsims/forever/blob/3570c4fcf1a4e2cd81926019d4a1b3182f613de1/sim/encounters/register_all.go#L24
 		return TargetProto.create({
-			id: 213336,
-			name: 'Level 60',
+			id: 31146,
+			name: 'Raid Target',
 			level: Mechanics.BOSS_LEVEL,
-			mobType: MobType.MobTypeUnknown,
+			mobType: MobType.MobTypeMechanical,
 			stats: Stats.fromMap({
 				[Stat.StatArmor]: 3731,
-				[Stat.StatAttackPower]: 805,
-				[Stat.StatHealth]: 127393,
+				[Stat.StatAttackPower]: 320,
+				[Stat.StatBlockValue]: 54,
+				[Stat.StatHealth]: 1428900,
 			}).asProtoArray(),
-			minBaseDamage: 3000,
-			damageSpread: 0.3333,
+			minBaseDamage: 2601,
+			damageSpread: 0.5,
 			tankIndex: 0,
 			swingSpeed: 2,
 			suppressDodge: false,

@@ -3,49 +3,28 @@ package druid
 import (
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/buffs"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-var faerieFireRank = spellData.FaerieFire.Highest()
-
-// Forever has no Faerie Fire (Feral): the client keeps only the Balance line (770, 778, 9749,
-// 9907), so one registration serves every form.
+// TODO: Faerie Fire does not reset the swing timer.
+// TODO: Ingame research needed: Faerie Fire's threat in Bear and Dire Bear Form; its E_THREAT effect states 0.
 func (druid *Druid) registerFaerieFireSpell() {
+	rank := spellData.FaerieFire.Highest()
 	druid.FaerieFireAuras = druid.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
-		// Forever has no Improved Faerie Fire node, so there are no talent points to pass.
-		return buffs.FaerieFireAura(target, true, 0)
+		return buffs.NewSpellDataFaerieFireAura(target, true, 0)
 	})
-
-	druid.FaerieFire = druid.RegisterSpell(Any, core.SpellConfig{
-		ClassSpellMask: DruidSpellFaerieFire,
-		ActionID:       core.ActionID{SpellID: faerieFireRank.ID},
-		SpellSchool:    faerieFireRank.SpellSchool(),
-		DefenseType:    faerieFireRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL,
-		Rank:           faerieFireRank.RankNumber(),
-
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(faerieFireRank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: faerieFireRank.GCD(),
-			},
-		},
-
-		ThreatMultiplier: 1,
-		// Two threat a level, the sim's long-standing value; the client states none.
-		FlatThreatBonus: 2 * float64(core.CharacterLevel),
-		MaxRange:        float64(faerieFireRank.MaxRange),
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcAndDealOutcome(sim, target, spell.OutcomeMagicHit)
-
-			if result.Landed() {
-				druid.FaerieFireAuras.Get(target).Activate(sim)
-			}
-		},
-
-		RelatedAuraArrays: druid.FaerieFireAuras.ToMap(),
-	})
+	config := spelldata.SpellConfig(&druid.Unit, rank, spelldata.Magic(core.ProcMaskSpellDamage))
+	// The timer must exist before the form passive adds its recovery time.
+	config.Cast.CD = core.Cooldown{Timer: druid.NewTimer(), Duration: spellData.CatFormTriggered.Highest().EffectN(4).TimeValue()}
+	// Cost, cooldown and GCD in cat or bear come from the form passive's spell mods. A cast on a target
+	// that has the debuff refreshes it; when to refresh is the rotation's.
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcAndDealOutcome(sim, target, spell.OutcomeMagicHit)
+		if result.Landed() {
+			druid.FaerieFireAuras.Get(target).Activate(sim)
+		}
+	}
+	config.RelatedAuraArrays = druid.FaerieFireAuras.ToMap()
+	druid.FaerieFire = druid.RegisterSpell(config)
+	druid.FaerieFire.CD.Duration = rank.Cooldown()
 }

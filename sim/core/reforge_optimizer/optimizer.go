@@ -18,15 +18,10 @@ import (
 
 var reforgeOptimizeRequestID atomic.Uint64
 
-func Optimize(request *proto.ReforgeOptimizeRequest) *proto.ReforgeOptimizeResult {
-	return OptimizeAsync(request, simsignals.CreateSignals())
-}
-
 func OptimizeAsync(request *proto.ReforgeOptimizeRequest, signals simsignals.Signals) *proto.ReforgeOptimizeResult {
 	requestID := reforgeOptimizeRequestID.Add(1)
 	startedAt := time.Now()
 	debug := request.GetDebug()
-	logAbort := request.GetMode() != proto.ReforgeOptimizeMode_ReforgeOptimizeModeBulk || debug
 	if debug {
 		log.Printf("[reforgeOptimize:%d] started debug=%t", requestID, debug)
 		logRequestInput(requestID, request)
@@ -48,14 +43,13 @@ func OptimizeAsync(request *proto.ReforgeOptimizeRequest, signals simsignals.Sig
 	optimizer, err := newReforgeOptimizer(request, signals)
 	var optimizedGear *proto.EquipmentSpec
 	var score float64
+	var passes int
 	if err == nil {
-		optimizedGear, score, err = optimizer.optimizeReforges()
+		optimizedGear, score, passes, err = optimizer.optimizeReforges()
 	}
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			if logAbort {
-				log.Printf("[reforgeOptimize:%d] aborted solving after %s", requestID, time.Since(startedAt))
-			}
+			log.Printf("[reforgeOptimize:%d] aborted solving after %s", requestID, time.Since(startedAt))
 			return optimizeAborted()
 		}
 		gear := request.GetRaid().GetParties()[0].GetPlayers()[0].GetEquipment()
@@ -67,36 +61,15 @@ func OptimizeAsync(request *proto.ReforgeOptimizeRequest, signals simsignals.Sig
 		log.Printf("[reforgeOptimize:%d] HiGHS solved in %s score=%.3f", requestID, time.Since(solveStartedAt), score)
 	}
 	if signals.Abort.IsTriggered() {
-		if logAbort {
-			log.Printf("[reforgeOptimize:%d] aborted after solving in %s", requestID, time.Since(startedAt))
-		}
+		log.Printf("[reforgeOptimize:%d] aborted after solving in %s", requestID, time.Since(startedAt))
 		return optimizeAborted()
 	}
-
-	isBulk := request.GetMode() == proto.ReforgeOptimizeMode_ReforgeOptimizeModeBulk
-	var optimizedPlayerStats *proto.PlayerStats
-	if !isBulk || debug {
-		optimizedRaid := googleProto.Clone(request.Raid).(*proto.Raid)
-		optimizedRaid.Parties[0].Players[0].Equipment = optimizedGear
-		optimizedResult := computeReforgeStats(&proto.ComputeStatsRequest{Raid: optimizedRaid})
-		if optimizedResult.ErrorResult != "" {
-			log.Printf("[reforgeOptimize:%d] failed computing optimized stats after %s: %s", requestID, time.Since(startedAt), optimizedResult.ErrorResult)
-			return optimizeError(optimizedResult.ErrorResult)
-		}
-		optimizedPlayerStats = optimizedResult.RaidStats.Parties[0].Players[0]
-		if debug {
-			logOptimizedGearSummary(requestID, optimizedGear)
-		}
-	}
-	if !isBulk {
-		log.Printf("[Reforge Optimizer] Reforge optimization completed requestID=%d total=%s score=%.3f", requestID, time.Since(startedAt), score)
-	}
+	log.Printf("[Reforge Optimizer] Reforge optimization completed requestID=%d total=%s score=%.3f", requestID, time.Since(startedAt), score)
 
 	return &proto.ReforgeOptimizeResult{
-		OptimizedGear:        optimizedGear,
-		OptimizedPlayerStats: optimizedPlayerStats,
-		Score:                score,
-		PassesDone:           1,
+		OptimizedGear: optimizedGear,
+		Score:         score,
+		PassesDone:    int32(passes),
 	}
 }
 
@@ -106,115 +79,83 @@ type reforgeOptimizer struct {
 	player   *proto.Player
 	signals  simsignals.Signals
 
-	isTankSpec bool
-
 	frozenSlots    map[proto.ItemSlot]bool
 	undershootCaps core.UnitStats
-	gemOptions     []*proto.ReforgeGemOption
 
-	// statDeps is the player's build-phase StatDependencyManager (ComputeStatDependencies). It
-	// resolves every stat conversion the sim models and is used by resolveStatDelta to compute
-	// each LP variable's cap-space coefficients (the FULL dependency graph), separately from the
-	// EP-calibrated objective coefficients produced by applyReforgeStat.
+	// The baseline's build-phase stat dependency manager (ComputeStatDependencies). It resolves every
+	// stat conversion the sim models, and resolveStatDelta reads it for each LP variable's cap-space
+	// coefficients (the FULL dependency graph), apart from the EP-calibrated objective coefficients
+	// applyReforgeStat produces.
 	statDeps *stats.StatDependencyManager
 	sheet    core.SheetAvoidance
 
-	baseRaidProto     *proto.Raid
-	baseStrippedGear  *proto.EquipmentSpec
-	originalEquipment *core.Equipment
-	baseStats         core.UnitStats
+	candidates []enchantCandidate
+	baseGear   *proto.EquipmentSpec
+	baseStats  core.UnitStats
 }
 
-// newReforgeOptimizer builds the optimizer context from the request: strips gems for the
-// baseline, computes base stats and the stat dependency manager, and derives the player flags.
+// Builds the optimizer context from a clone of the request, whose raid becomes the baseline: the
+// enchant candidates of the input gear, then the baseline's base stats and stat dependency manager.
+// With no candidates there is nothing to solve, so the baseline's environment is not built.
 func newReforgeOptimizer(request *proto.ReforgeOptimizeRequest, signals simsignals.Signals) (*reforgeOptimizer, error) {
-	settings := request.GetSettings()
-	if settings == nil {
-		settings = &proto.ReforgeSettings{}
-	} else {
-		settings = googleProto.Clone(settings).(*proto.ReforgeSettings)
+	request = googleProto.Clone(request).(*proto.ReforgeOptimizeRequest)
+	player := request.Raid.Parties[0].Players[0]
+	if player.Database != nil {
+		core.AddToDatabase(player.Database)
 	}
 
-	request = googleProto.Clone(request).(*proto.ReforgeOptimizeRequest)
-	request.Settings = settings
+	o := &reforgeOptimizer{
+		request:  request,
+		settings: request.GetSettings(),
+		player:   player,
+		signals:  signals,
 
-	baseRaid := googleProto.Clone(request.Raid).(*proto.Raid)
-	originalGear := cloneEquipmentSpec(baseRaid.Parties[0].Players[0].Equipment)
-	baseStrippedGear := cloneEquipmentSpec(originalGear)
-	clearGems(baseStrippedGear, settings)
-	player := baseRaid.Parties[0].Players[0]
-	player.Equipment = baseStrippedGear
+		frozenSlots:    frozenItemSlots(request.GetSettings()),
+		undershootCaps: protoToCoreUnitStats(request.GetUndershootCaps()),
+		baseGear:       player.Equipment,
+	}
+	o.candidates = o.enchantCandidates(o.baseGear)
+	if len(o.candidates) == 0 {
+		return o, nil
+	}
 
-	// One environment build yields both FinalStats and the finalized StatDependencyManager,
-	// instead of building the character twice for the same base raid.
-	baseResult, baseSDM, sheet := computeReforgeStatsAndDeps(&proto.ComputeStatsRequest{Raid: baseRaid})
+	// The baseline's environment build yields both its FinalStats and its finalized
+	// StatDependencyManager.
+	baseResult, baseSDM, sheet := computeReforgeStatsAndDeps(&proto.ComputeStatsRequest{Raid: request.Raid})
 	if baseResult.ErrorResult != "" {
 		return nil, errors.New(baseResult.ErrorResult)
 	}
 	if signals.Abort.IsTriggered() {
 		return nil, context.Canceled
 	}
-
-	baseStats := protoToCoreUnitStats(baseResult.RaidStats.Parties[0].Players[0].FinalStats)
-	originalEquipment := core.ProtoToEquipment(originalGear)
-
-	return &reforgeOptimizer{
-		request:  request,
-		settings: settings,
-		player:   player,
-		signals:  signals,
-
-		isTankSpec: playerIsTankSpec(player),
-
-		frozenSlots:    frozenItemSlots(settings),
-		undershootCaps: protoToCoreUnitStats(request.GetUndershootCaps()),
-		gemOptions:     request.GetGemOptions(),
-
-		statDeps: baseSDM,
-		sheet:    sheet,
-
-		baseRaidProto:     baseRaid,
-		baseStrippedGear:  baseStrippedGear,
-		originalEquipment: &originalEquipment,
-		baseStats:         baseStats,
-	}, nil
+	o.statDeps = baseSDM
+	o.sheet = sheet
+	o.baseStats = protoToCoreUnitStats(baseResult.RaidStats.Parties[0].Players[0].FinalStats)
+	return o, nil
 }
 
-// optimizeReforges runs the gem/socket-bonus optimization: convert the configured caps into
-// gap-to-cap form, build the LP model, solve it with cap refinement, then apply the winning gems
-// back onto the gear.
-func (o *reforgeOptimizer) optimizeReforges() (*proto.EquipmentSpec, float64, error) {
-	reforgeCaps := computeStatCapsDelta(o.baseStats, protoToCoreUnitStats(o.settings.GetStatCaps()))
+// Picks one static enchant per listed slot. The baseline is the input gear with those slots' static
+// enchants cleared, so each candidate's coefficients are its full contribution. The score is the EP
+// of the picks over that baseline, without the tie-break, not their gain over the input gear.
+func (o *reforgeOptimizer) optimizeReforges() (*proto.EquipmentSpec, float64, int, error) {
+	if len(o.candidates) == 0 {
+		return o.baseGear, 0, 0, nil
+	}
 
+	reforgeCaps := computeStatCapsDelta(o.baseStats, protoToCoreUnitStats(o.settings.GetStatCaps()))
 	var softCapConfigs []*proto.StatCapConfig
 	if o.settings.GetUseSoftCapBreakpoints() {
 		softCapConfigs = o.request.GetSoftCaps()
 	}
 	reforgeSoftCaps := computeReforgeSoftCaps(o.baseStats, softCapConfigs)
-
 	weights := checkWeights(protoToCoreUnitStats(o.request.GetPreCapEpWeights()), reforgeCaps, reforgeSoftCaps)
 
-	equipment := core.ProtoToEquipment(o.baseStrippedGear)
-	variables := o.buildYalpsVariables(equipment, weights, reforgeCaps, reforgeSoftCaps)
-	constraints := o.buildYalpsConstraints(equipment)
-	addStructuralConstraints(variables, constraints)
-
-	timeoutSeconds := optimizerTimeout.Seconds()
-	if o.request.GetMode() == proto.ReforgeOptimizeMode_ReforgeOptimizeModeBulk {
-		timeoutSeconds /= 4
-	}
-
-	selectedVars, score, err := o.solveModel(weights, reforgeCaps, reforgeSoftCaps, variables, constraints, timeoutSeconds)
+	variables, constraints := o.buildEnchantModel(weights)
+	selected, score, passes, err := o.solveModel(weights, reforgeCaps, reforgeSoftCaps, variables, constraints, optimizerTimeout.Seconds())
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
-
-	return o.applyLPSolution(selectedVars), score, nil
-}
-
-func computeReforgeStats(request *proto.ComputeStatsRequest) *proto.ComputeStatsResult {
-	request.SkipRotation = true
-	return core.ComputeStats(request)
+	return o.applyEnchantSolution(selected), score, passes, nil
 }
 
 func computeReforgeStatsAndDeps(request *proto.ComputeStatsRequest) (*proto.ComputeStatsResult, *stats.StatDependencyManager, core.SheetAvoidance) {

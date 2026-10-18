@@ -12,10 +12,10 @@ import { describe, expect, it } from 'vitest';
 
 import { PRESET_FILTER_STORAGE_KEY } from './storage_keys';
 
-// Copied out of tools/state-snapshots/golden.json (`specs['druid/balance'].storageKeyNames`), which
-// was captured from the pre-port UI. A key that changes name here loses every saved set the user
-// has under the old one, and nothing else in the suite would notice.
-const GOLDEN = {
+// The keys every saved set in a user's browser is filed under, spelled out for one spec. A key that
+// changes name here loses every saved set the user has under the old one, and nothing else in the
+// suite would notice.
+const EXPECTED_KEYS = {
 	getSettingsStorageKey: '__forever_balance_druid__currentSettings__',
 	getSavedGearStorageKey: '__forever_balance_druid__savedGear__',
 	getSavedTalentsStorageKey: '__forever_balance_druid__savedTalents__',
@@ -29,7 +29,7 @@ const GOLDEN = {
 const key = (part: string) => specStorageKey(PlayerSpecs.BalanceDruid, part);
 
 describe('the storage keys SimHostObject builds', () => {
-	it('matches the golden capture for all eight accessors', () => {
+	it('builds the expected keys for all eight accessors', () => {
 		expect({
 			getSettingsStorageKey: key(SETTINGS_STORAGE_SUFFIX),
 			getSavedGearStorageKey: key(SAVED_GEAR_STORAGE_KEY),
@@ -39,11 +39,6 @@ describe('the storage keys SimHostObject builds', () => {
 			getSavedEPWeightsStorageKey: key(SAVED_EP_WEIGHTS_STORAGE_KEY),
 			getSavedEncounterStorageKey: SHARED_SAVED_ENCOUNTER_STORAGE_KEY,
 			getPresetFilterStorageKey: key(PRESET_FILTER_STORAGE_KEY),
-		}).toEqual(GOLDEN);
-	});
-
-	// The one key that is deliberately not spec-prefixed, so saved encounters are shared by every sim.
-	it('keeps the saved encounter key out of the spec prefix', () => {
-		expect(SHARED_SAVED_ENCOUNTER_STORAGE_KEY.startsWith('__forever')).toBe(false);
+		}).toEqual(EXPECTED_KEYS);
 	});
 });

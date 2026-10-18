@@ -26,7 +26,7 @@ type field struct {
 	Value string `json:"value"`
 }
 
-// One effect as both readings: what it does in words, and the client's own columns, which is what a
+// One effect as both readings: what it does in words, and the game files' own columns, which is what a
 // developer checks the words against. Human is "unrecognised shape" on an effect no branch covers,
 // and the literal is then all there is to read. Read marks the effect a chain read.
 type Line struct {
@@ -118,7 +118,7 @@ func (c card) writeMarkdown(md *strings.Builder) {
 	fmt.Fprintf(md, "\n[Wowhead](%s)\n", c.Wowhead)
 }
 
-// Each effect's wording over its client row, which needs the hover to render HTML for the break.
+// Each effect's wording over its game files row, which needs the hover to render HTML for the break.
 func effectTable(md *strings.Builder, effects []Line, onlyRead bool) {
 	if len(effects) == 0 {
 		return

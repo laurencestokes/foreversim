@@ -14,12 +14,14 @@ const DefenseRatingPerDefenseLevel = 1.000000
 const DodgeRatingPerDodgePercent = 12.000000
 const ParryRatingPerParryPercent = 15.000000
 const BlockRatingPerBlockPercent = 5.000000
-const PhysicalHitRatingPerHitPercent = 10.000000
-const SpellHitRatingPerHitPercent = 10.000000
-const PhysicalCritRatingPerCritPercent = 14.000000
-const SpellCritRatingPerCritPercent = 14.000000
-const PhysicalHasteRatingPerHastePercent = 10.000000
-const SpellHasteRatingPerHastePercent = 10.000000
+const HitRatingPerHitPercent = 10.000000
+const CritRatingPerCritPercent = 14.000000
+const HasteRatingPerHastePercent = 10.000000
+
+// ExpectedStat's creature values at the character level
+const CreatureHealthMaxLevel = 4365.0
+const CreatureArmorMaxLevel = 3566.0
+const CreatureAutoAttackDpsMaxLevel = 60.45291519165039
 
 var CritPerAgiMaxLevel = map[proto.Class]float64{
 	proto.Class_ClassUnknown: 0.0,
@@ -50,37 +52,37 @@ var ExtraClassBaseStats = map[proto.Class]stats.Stats{
 	proto.Class_ClassWarrior: {
 		stats.Mana:                0.0000,
 		stats.SpellCritPercent:    0.0000,
-		stats.PhysicalCritPercent: 1.1400,
+		stats.PhysicalCritPercent: 0.0000,
 	},
 	proto.Class_ClassPaladin: {
 		stats.Mana:                1512.0000,
-		stats.SpellCritPercent:    3.3355,
-		stats.PhysicalCritPercent: 0.6520,
+		stats.SpellCritPercent:    3.5000,
+		stats.PhysicalCritPercent: 0.7000,
 	},
 	proto.Class_ClassHunter: {
 		stats.Mana:                1720.0000,
-		stats.SpellCritPercent:    3.6020,
-		stats.PhysicalCritPercent: -1.5320,
+		stats.SpellCritPercent:    3.6000,
+		stats.PhysicalCritPercent: 0.0000,
 	},
 	proto.Class_ClassRogue: {
 		stats.Mana:                0.0000,
 		stats.SpellCritPercent:    0.0000,
-		stats.PhysicalCritPercent: -0.2950,
+		stats.PhysicalCritPercent: 0.0000,
 	},
 	proto.Class_ClassPriest: {
 		stats.Mana:                1376.0000,
-		stats.SpellCritPercent:    1.2375,
-		stats.PhysicalCritPercent: 3.1830,
+		stats.SpellCritPercent:    0.8000,
+		stats.PhysicalCritPercent: 3.0000,
 	},
 	proto.Class_ClassShaman: {
 		stats.Mana:                1520.0000,
-		stats.SpellCritPercent:    2.2010,
-		stats.PhysicalCritPercent: 1.6750,
+		stats.SpellCritPercent:    2.3000,
+		stats.PhysicalCritPercent: 1.7000,
 	},
 	proto.Class_ClassMage: {
 		stats.Mana:                1213.0000,
-		stats.SpellCritPercent:    0.9075,
-		stats.PhysicalCritPercent: 3.4575,
+		stats.SpellCritPercent:    0.2000,
+		stats.PhysicalCritPercent: 3.2000,
 	},
 	proto.Class_ClassWarlock: {
 		stats.Mana:                1373.0000,
@@ -89,7 +91,7 @@ var ExtraClassBaseStats = map[proto.Class]stats.Stats{
 	},
 	proto.Class_ClassDruid: {
 		stats.Mana:                1244.0000,
-		stats.SpellCritPercent:    1.8515,
-		stats.PhysicalCritPercent: 0.9610,
+		stats.SpellCritPercent:    1.8000,
+		stats.PhysicalCritPercent: 0.9000,
 	},
 }

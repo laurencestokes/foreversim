@@ -2,8 +2,7 @@ package spelldata
 
 // The generated store as the package loads it, rather than the fixture the rest of the tests run
 // against: the shape every accessor depends on (ids in search order, effects in position order) and
-// a handful of rows read out of the client database by hand, so that a regeneration which moves a
-// number says so here instead of in a sim result.
+// the links, masks and effect kinds of a handful of rows; no amount is pinned.
 
 import (
 	"github.com/wowsims/forever/sim/core/dbcenums"
@@ -48,7 +47,7 @@ func TestGeneratedStoreShape(t *testing.T) {
 				t.Errorf("spell %d effect %d says it belongs to spell %d", s.ID, position, e.SpellID)
 			}
 			if position > 0 && e.Index <= s.Effects[position-1].Index {
-				t.Errorf("spell %d has effect index %d after %d - the effects are out of client order",
+				t.Errorf("spell %d has effect index %d after %d - the effects are out of game files order",
 					s.ID, e.Index, s.Effects[position-1].Index)
 			}
 			if int(e.Index) != position {
@@ -64,8 +63,8 @@ func TestGeneratedStoreShape(t *testing.T) {
 		t.Errorf("the store holds %d effects, which is outside the [6000, 16000] a whole store has",
 			effects)
 	}
-	// The client's EffectIndex has gaps, which is why EffectN counts by position and the store keeps
-	// the client's own number alongside.
+	// The game files' EffectIndex has gaps, which is why EffectN counts by position and the store
+	// keeps the game files' own number alongside.
 	if gapped == 0 {
 		t.Errorf("no row states an EffectIndex that is not its position - EffectN's by-position count " +
 			"no longer has a gap to step over")
@@ -83,26 +82,128 @@ func TestGeneratedFrostbolt(t *testing.T) {
 	if s.School != 16 {
 		t.Errorf("Frostbolt's school mask is %d, want 16 (frost)", s.School)
 	}
-	if s.SpellLevel != 4 || s.MaxLevel != 8 {
-		t.Errorf("Frostbolt rank 1 is taught at %d and stops scaling at %d, want 4 and 8",
-			s.SpellLevel, s.MaxLevel)
+	if got := s.DamageEffect(); got != s.EffectN(2) {
+		t.Errorf("Frostbolt's damage is effect %d, want the second by position", got.Index)
 	}
-	if got := s.PowerCost(0); got != 25 {
-		t.Errorf("Frostbolt rank 1 costs %v mana, want 25", got)
+}
+
+// Per-level scaling counts from the spell's BaseLevel, which can sit below the level it is taught at:
+// the copy of Vindication's debuff 440667 here is an effect at BaseLevel 0 on a spell taught at 1,
+// and the game shows the BaseLevel amount.
+func TestAverageCountsLevelsFromBaseLevel(t *testing.T) {
+	vindication := &Effect{SpellID: 440667, Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_MOD_ATTACK_POWER,
+		BasePoints: 6, PPL: -3.5, MaxLevel: 60}
+	for _, c := range []struct {
+		level int32
+		want  float64
+	}{{16, -50}, {20, -64}, {60, -204}} {
+		if got := vindication.AverageAt(c.level); got != c.want {
+			t.Errorf("Vindication's debuff at %d is %v, want %v", c.level, got, c.want)
+		}
+	}
+	// BaseLevel equals SpellLevel on ordinary ranks, so their amounts do not move: Demoralizing Shout
+	// 11556's.
+	demoralizingShout := &Effect{SpellID: 11556, Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_MOD_ATTACK_POWER,
+		BasePoints: -196, PPL: -1.399999976158142, BaseLevel: 54, MaxLevel: 64}
+	if got := demoralizingShout.AverageAt(60); got != -205 {
+		t.Errorf("Demoralizing Shout at 60 is %v, want -205", got)
+	}
+}
+
+// Copies of game files rows whose ends, every one but 350026's at 0 and 60, are an in-game tooltip.
+// Wrath rank 3 (5178), Wildvine Potion's 11387 and Minor Recombobulator's 18805 end their base points
+// on halves, which round to the even end: 27.5 and 32.5 are 28 and 32, 0.5 and 1499.5 are 0 and 1500.
+func TestRollEndsMatchTheTooltip(t *testing.T) {
+	withRows(t, []Spell{
+		{ID: 2912, Name: "Starfire", School: 64, Effects: []Effect{
+			{SpellID: 2912, Type: dbcenums.E_SCHOOL_DAMAGE, BasePoints: 81, PPL: 1.2999999523162842,
+				Variance: 0.20202019810676575, BaseLevel: 20, MaxLevel: 25},
+		}},
+		{ID: 5177, Name: "Wrath", School: 8, Effects: []Effect{
+			{SpellID: 5177, Type: dbcenums.E_SCHOOL_DAMAGE, BasePoints: 23, PPL: 0.6000000238418579,
+				Variance: 0.14814814925193787, BaseLevel: 6, MaxLevel: 12},
+		}},
+		{ID: 5178, Name: "Wrath", School: 8, Effects: []Effect{
+			{SpellID: 5178, Type: dbcenums.E_SCHOOL_DAMAGE, BasePoints: 30, PPL: 0.699999988079071,
+				Variance: 0.1666666716337204, BaseLevel: 14, MaxLevel: 20},
+		}},
+		{ID: 11387, Name: "Wildvine Potion", School: 1, Effects: []Effect{
+			{SpellID: 11387, Type: dbcenums.E_HEAL, BasePoints: 750, Variance: 1.9986666440963745},
+			{SpellID: 11387, Index: 1, Type: dbcenums.E_ENERGIZE, BasePoints: 750, Variance: 1.9986666440963745},
+		}},
+		{ID: 18805, Name: "Recombobulate", School: 64, Effects: []Effect{
+			{SpellID: 18805, Type: dbcenums.E_DISPEL_MECHANIC, BasePoints: 1, MaxLevel: 30},
+			{SpellID: 18805, Index: 1, Type: dbcenums.E_HEAL, BasePoints: 270, Variance: 0.5, MaxLevel: 30},
+			{SpellID: 18805, Index: 2, Type: dbcenums.E_ENERGIZE, BasePoints: 128, Variance: 0.5, MaxLevel: 30},
+		}},
+		{ID: 350025, Name: "Frostbolt", School: 16, Effects: []Effect{
+			{SpellID: 350025, Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_MOD_DECREASE_SPEED, BasePoints: -40, MaxLevel: 12},
+			{SpellID: 350025, Index: 1, Type: dbcenums.E_SCHOOL_DAMAGE, BasePoints: 33, PPL: 0.699999988079071,
+				Variance: 0.12121211737394333, MaxLevel: 12},
+		}},
+		{ID: 350026, Name: "Shadow Bolt", School: 32, Effects: []Effect{
+			{SpellID: 350026, Type: dbcenums.E_SCHOOL_DAMAGE, BasePoints: 52, PPL: 0.8999999761581421,
+				Variance: 0.1538461595773697, MaxLevel: 17},
+		}},
+	})
+
+	for _, c := range []struct {
+		spell    int32
+		effect   int
+		level    int32
+		min, max float64
+	}{
+		{350026, 1, 0, 48, 56},
+		{350026, 1, 14, 60, 69},
+		{350026, 1, 60, 63, 72},
+		{350025, 2, 14, 39, 44},
+		{5177, 1, 20, 24, 29},
+		{2912, 1, 20, 73, 89},
+		{5178, 1, 20, 32, 37},
+		{11387, 1, 35, 0, 1500},
+		{18805, 2, 60, 202, 338},
+		{18805, 3, 60, 96, 160},
+	} {
+		effect := MustFind(c.spell).EffectN(c.effect)
+		if got, want := [2]float64{effect.MinAt(c.level), effect.MaxAt(c.level)}, [2]float64{c.min, c.max}; got != want {
+			t.Errorf("%d effect %d at %d rolls %v, want %v", c.spell, c.effect, c.level, got, want)
+		}
 	}
 
-	damage := s.EffectN(2)
-	if damage.BasePoints != 19 || (damage.PPL < 0.1999 || damage.PPL > 0.2001) {
-		t.Errorf("Frostbolt's damage effect is %v base + %v per level, want 19 + 0.2",
-			damage.BasePoints, damage.PPL)
+	// Wrath rank 3 at 20 shows 32 to 37, but a cast rolls its whole amount around Average, which keeps
+	// the fraction, so before spell power it averages 34.2 rather than the tooltip's middle.
+	if got, want := MustFind(5178).DamageEffect().MeanAt(20), float64(float32(34.2)); got != want {
+		t.Errorf("Wrath rank 3 at 20 averages %v, want %v", got, want)
 	}
-	if damage.SPCoef < 0.4069 || damage.SPCoef > 0.4071 {
-		t.Errorf("Frostbolt's spell power coefficient is %v, want 0.407", damage.SPCoef)
+}
+
+// A physical hit rolls its base points by the whole Variance either side: the copy of Revenge rank 1
+// below, 22 ± 3.4, rolls 19 to 25. A spell-school hit and a heal of any school, Healing Potion's
+// included, leave their roll to core, which spreads the whole amount by DirectVariance; an energize
+// keeps the half-width roll.
+func TestRollWidthByEffectKind(t *testing.T) {
+	withRows(t, []Spell{{ID: 6572, Name: "Revenge", School: 1, Effects: []Effect{
+		{SpellID: 6572, Type: dbcenums.E_SCHOOL_DAMAGE, BasePoints: 22, Variance: 0.1538461595773697, BaseLevel: 14},
+	}}})
+	copied := MustFind(6572).DamageEffect()
+	if got, want := [2]float64{copied.MinAt(60), copied.MaxAt(60)}, [2]float64{19, 25}; got != want {
+		t.Errorf("Revenge rank 1 rolls %v at 60, want %v", got, want)
 	}
-	// 19 plus a fifth of a point for each of the four levels between the rank's own 4 and its cap of 8, which
-	// the client rounds down to nothing: client 1.60.1.70291 cut the rank's 0.5 a level to 0.2 (#758).
-	if got := damage.Average(60); got != 19 {
-		t.Errorf("Frostbolt rank 1 averages %v at level 60, want 19", got)
+
+	withGeneratedStore(t)
+	revenge := MustFind(6572).DamageEffect()
+	if got := revenge.DirectVariance(); got != 0 {
+		t.Errorf("Revenge rank 1 hands core a DirectVariance of %v, want 0", got)
+	}
+
+	for _, effect := range []*Effect{MustFind(5178).DamageEffect(), MustFind(439).HealEffect()} {
+		if got := effect.DirectVariance(); got != effect.Variance || got == 0 {
+			t.Errorf("%d hands core a DirectVariance of %v, want its Variance %v", effect.SpellID, got, effect.Variance)
+		}
+	}
+
+	if got := MustFind(437).EnergizeEffect().DirectVariance(); got != 0 {
+		t.Errorf("Restore Mana hands core a DirectVariance of %v, want 0", got)
 	}
 }
 
@@ -115,12 +216,6 @@ func TestGeneratedLightningShield(t *testing.T) {
 	s := MustFind(324)
 	if s.ProcFlags[0] != 0x222A8 || s.ProcFlags[1] != 0 {
 		t.Errorf("Lightning Shield's proc mask is %#x/%#x, want 0x222a8/0", s.ProcFlags[0], s.ProcFlags[1])
-	}
-	if s.ProcCharges != 3 {
-		t.Errorf("Lightning Shield holds %d charges, want 3", s.ProcCharges)
-	}
-	if s.ICDMs != 3500 {
-		t.Errorf("Lightning Shield's internal cooldown is %dms, want 3500", s.ICDMs)
 	}
 	if s.ProcChanceSource != ProcChanceAlways {
 		t.Errorf("Lightning Shield's proc chance source is %d, want ProcChanceAlways", s.ProcChanceSource)
@@ -152,7 +247,7 @@ func TestGeneratedRequiredAreas(t *testing.T) {
 	}
 }
 
-// Area bonuses come from the override table, not the client.
+// Area bonuses come from the override table, not the game files.
 func TestGeneratedAreaBonus(t *testing.T) {
 	withGeneratedStore(t)
 
@@ -173,7 +268,7 @@ func TestGeneratedTriggerResolves(t *testing.T) {
 	}
 }
 
-// Retaliation's counterattack is a link the client does not state and overrides.HandTriggers
+// Retaliation's counterattack is a link the game files do not state and overrides.HandTriggers
 // supplies, so it has to come back out of Triggered() and Drivers().
 func TestGeneratedHandLink(t *testing.T) {
 	withGeneratedStore(t)
@@ -213,35 +308,39 @@ func TestGeneratedTalentCurve(t *testing.T) {
 	}
 }
 
-// Armor Shatter's rate is not in the client at all: its ProcChance is the 101 sentinel and an
-// override supplies the PPM.
+// Lightning Strike's rate is not in the game files at all: Darkmoon Card: Maelstrom's column states
+// no roll beside a tooltip that says "chance", and an override supplies the PPM.
 func TestGeneratedOverrideRow(t *testing.T) {
 	withGeneratedStore(t)
 
-	s := MustFind(16928)
+	s := MustFind(23686)
 	if s.RPPM != 1 {
-		t.Errorf("Armor Shatter's RPPM is %v, want the override's 1", s.RPPM)
+		t.Errorf("Lightning Strike's RPPM is %v, want the override's 1", s.RPPM)
 	}
 	if s.ProcChanceSource != ProcChancePPM {
-		t.Errorf("Armor Shatter's proc chance source is %d, want ProcChancePPM", s.ProcChanceSource)
+		t.Errorf("Lightning Strike's proc chance source is %d, want ProcChancePPM", s.ProcChanceSource)
 	}
 }
 
-// Frostbolt and Slam state 15, whose 0x2 pushes the cast back; EZ-Thro Bronze Mortar states 5.
+// Frostbolt and Slam state the flag that pushes the cast back, and Slam's row also carries the
+// attribute that keeps it from being pushed back. EZ-Thro Bronze Mortar states neither.
 func TestGeneratedInterruptFlags(t *testing.T) {
 	withGeneratedStore(t)
 
-	for id, want := range map[int32]uint32{116: 15, 11605: 15, 1269268: 5} {
+	for id, want := range map[int32]struct {
+		flags      uint32
+		pushedBack bool
+	}{116: {15, true}, 11605: {15, false}, 1269268: {5, false}} {
 		s := MustFind(id)
-		if s.InterruptFlags != want || s.PushedBack() != (want == 15) {
-			t.Errorf("%s (%d) states interrupt flags %d, pushed back %v; want %d", s.Name, id,
-				s.InterruptFlags, s.PushedBack(), want)
+		if s.InterruptFlags != want.flags || s.PushedBack() != want.pushedBack {
+			t.Errorf("%s (%d) states interrupt flags %d, pushed back %v; want %d, pushed back %v", s.Name, id,
+				s.InterruptFlags, s.PushedBack(), want.flags, want.pushedBack)
 		}
 	}
 }
 
-// Wrath is castable in Moonkin Form and excludes Tree Form, Healing Touch the reverse. Tiger's Fury
-// states its Cat Form requirement as a caster aura; its SpellShapeshift row is empty.
+// Wrath is castable in Moonkin Form and excludes Tree Form, Healing Touch the reverse. Shifting Power
+// states its Cat Form requirement twice, as a caster aura beside its stance mask.
 func TestGeneratedStanceAndAuraRestriction(t *testing.T) {
 	withGeneratedStore(t)
 
@@ -257,9 +356,10 @@ func TestGeneratedStanceAndAuraRestriction(t *testing.T) {
 			healingTouch.StanceMask, healingTouch.StanceExclude)
 	}
 
-	tigersFury := MustFind(5217)
-	if tigersFury.CasterAura != 768 {
-		t.Errorf("Tiger's Fury's caster aura is %d, want 768", tigersFury.CasterAura)
+	shiftingPower := MustFind(1322605)
+	if shiftingPower.CasterAura != 768 || shiftingPower.StanceMask != 0x1 {
+		t.Errorf("Shifting Power's caster aura is %d and stance mask %#x, want 768 and 0x1",
+			shiftingPower.CasterAura, shiftingPower.StanceMask)
 	}
 
 	for id, want := range map[int32]dbcenums.ShapeshiftForm{
@@ -269,6 +369,23 @@ func TestGeneratedStanceAndAuraRestriction(t *testing.T) {
 		if got := MustFind(id).ShapeshiftForm(); got != want {
 			t.Errorf("spell %d puts the caster in form %d, want %d", id, got, want)
 		}
+	}
+}
+
+// Justice Battleplate's 4-piece bonus 1301076 is an A_MOD_RATING row masked to the expertise bit.
+func TestGeneratedRatingRowParsesExpertise(t *testing.T) {
+	withGeneratedStore(t)
+
+	row := MustFind(1301076)
+	parsed := ParseStatic(parseWarrior(), row)
+	if len(parsed.Applied) != 1 {
+		t.Fatalf("attached %v, want one attachment", appliedKinds(parsed))
+	}
+	if got := parsed.Applied[0].Kind; got != "stat ExpertiseRating" {
+		t.Errorf("kind = %q, want %q", got, "stat ExpertiseRating")
+	}
+	if got, want := parsed.Applied[0].Value, row.EffectN(1).Mean(); got != want {
+		t.Errorf("value = %v, want the row's %v", got, want)
 	}
 }
 

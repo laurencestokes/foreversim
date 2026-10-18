@@ -1,227 +1,125 @@
 package shaman
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/buffs"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// The totem lays down a pulse spell of its own; the damage and coefficient live on that spell, not on
-// the totem, and the pulse's cast time is the interval between pulses.
 var searingTotemRank = spellData.SearingTotem.Highest()
-var searingTotemAttack = spellData.SearingTotemTriggered.Highest()
+var searingAttackRank = spellData.SearingTotemTriggered.Highest()
+
+// 10587's tooltip names the pulse, 10581, and the passive that casts it, 10584.
 var magmaTotemRank = spellData.MagmaTotem.Highest()
-var magmaTotemPulse = spellData.MagmaTotemTriggered.ByID(10581)
+var magmaPulseRank = spellData.MagmaTotemTriggered.ByID(10581)
+var magmaPassiveRank = spellData.MagmaTotemTriggered.ByID(10584)
 
-// Flametongue Totem has no pulse spell: its party aura (15036, procs on a landed melee auto) triggers
-// 16389, whose 1363 is the imbue's shape, hundredths of damage per second of main-hand speed.
-var flametongueTotemRank = spellData.FlametongueTotem.Highest()
-var flametongueTotemProc = spellData.FlametongueTotemTriggered.ByID(16389)
-
-// Forever has no Fire Nova Totem: the totem's ids are gone and the Fire Nova the spellbook teaches in
-// its place is the caster-centred nova, on a 10 sec cooldown.
 var fireNovaRank = spellData.FireNova.Highest()
+var fireNovaDamageRank = spellData.FireNovaTriggered.Highest()
 
-// The nova's damage is 408428 (403 base, 0.214 coefficient), which the scripted dummy casts, not the Era
-// row 11307 its tooltip cites: beta logs record every Fire Nova hit under the rank 1 sibling 408423.
-var fireNovaDamage = spellData.FireNovaTriggered.ByID(408428)
-
-func (shaman *Shaman) registerSearingTotemSpell() {
-	attack := shaman.RegisterSpell(core.SpellConfig{
-		ActionID:         core.ActionID{SpellID: searingTotemAttack.ID},
-		SpellSchool:      searingTotemAttack.SpellSchool(),
-		DefenseType:      searingTotemAttack.DefenseTypeCore(),
-		ProcMask:         core.ProcMaskEmpty,
-		Flags:            SpellFlagShamanSpell | core.SpellFlagPassiveSpell,
-		ClassSpellMask:   SpellMaskSearingTotem,
-		MissileSpeed:     float64(searingTotemAttack.Speed),
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-		BonusCoefficient: searingTotemAttack.DamageEffect().Coeff(),
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, searingTotemAttack.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
-				spell.DealDamage(sim, result)
-			})
-		},
-	})
-
-	// The totem hard casts the pulse (2.2 sec), then waits about 0.23 sec before starting the next one:
-	// beta logs time 1,267 attacks 2.435 sec apart (median, ranks 1-2, foreverlogs.gg reports to 2717).
-	tickLength := searingTotemAttack.CastTime() + 230*time.Millisecond
-	duration := searingTotemRank.Duration()
-
-	shaman.SearingTotem = shaman.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: searingTotemRank.ID},
-		SpellSchool:    searingTotemRank.SpellSchool(),
-		DefenseType:    core.DefenseTypeMagic,
-		ProcMask:       core.ProcMaskEmpty,
-		Flags:          core.SpellFlagAPL | SpellFlagShamanSpell | SpellFlagInstant,
-		ClassSpellMask: SpellMaskSearingTotem,
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(searingTotemRank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: searingTotemRank.GCD(),
-			},
-			IgnoreHaste: true,
-		},
-
-		DamageMultiplier: 1,
-		Dot: core.DotConfig{
-			Aura: core.Aura{
-				Label: "Searing Totem",
-			},
-			NumberOfTicks: int32(duration / tickLength),
-			TickLength:    tickLength,
-			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				attack.Cast(sim, target)
-			},
-		},
-
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			shaman.cancelFireTotems(sim)
-			spell.Dot(sim.Encounter.ActiveTargetUnits[0]).Apply(sim)
-			shaman.TotemExpirations[FireTotem] = sim.CurrentTime + duration
-		},
-	})
+// A fire totem's own attack: the totem's, not the caster's, so it lands no proc of the caster's.
+// It reports as the totem's spell tagged 1, so the results show the totem and its hits as one row.
+func (shaman *Shaman) newTotemAttackConfig(totem *spelldata.Spell, rank *spelldata.Spell) core.SpellConfig {
+	config := spelldata.SpellConfig(&shaman.Unit, rank,
+		spelldata.Magic(core.ProcMaskEmpty),
+		spelldata.Proc(),
+		spelldata.Flags(SpellFlagShamanSpell))
+	config.ActionID = core.ActionID{SpellID: totem.ID, Tag: 1}
+	return config
 }
 
-// Neither dummy deals damage itself; the totem's hit lands as Flametongue Attack 16368 (beta log 2713,
-// foreverlogs.gg), whose client row has no spell power coefficient and a class mask (bit 25) that
-// Elemental Fury and Elemental Weapons don't name. Ported from MythicSim patch 70 (sage3648).
-func (shaman *Shaman) registerFlametongueTotemSpell() {
-	duration := flametongueTotemRank.Duration()
-	hit := shaman.newFlametongueAttackSpell(flametongueTotemProc, shaman.MainHand, SpellMaskNone, 0)
-	// "Each main hand hit": the aura's row hears melee autos only, so specials and off-hand swings add nothing.
-	trigger := shaman.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Flametongue Totem Trigger",
-		Duration:           core.NeverExpires,
-		ProcMask:           core.ProcMaskMeleeMHAuto,
-		Outcome:            core.OutcomeLanded,
-		Callback:           core.CallbackOnSpellHitDealt,
-		TriggerImmediately: true,
-		Handler: func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
-			hit.Cast(sim, result.Target)
-		},
-	})
+// A fire totem that acts every period while it stands. Nothing it does lands before the pull. The
+// totem stands as long as its aura lasts, which a duration mod on the cast reaches (Trial by Fire's
+// on Magma Totem).
+func (shaman *Shaman) registerFireTotem(rank *spelldata.Spell, mask int64, period core.PeriodicActionOptions) *core.Spell {
+	onAction := period.OnAction
+	period.OnAction = func(sim *core.Simulation) {
+		if sim.CurrentTime >= 0 {
+			onAction(sim)
+		}
+	}
 
-	config := shaman.newTotemSpellConfig(int32(flametongueTotemRank.Cost()), flametongueTotemRank.ID, SpellMaskFlametongueTotem, flametongueTotemRank.GCD())
-	config.SpellSchool = flametongueTotemRank.SpellSchool()
-	totemAura := shaman.RegisterAura(core.Aura{
-		Label:    "Flametongue Totem (Self)",
-		ActionID: config.ActionID,
-		Duration: duration,
-	})
-	totemAura.NewExclusiveEffect(buffs.FlametongueTotemCategory, false, core.ExclusiveEffect{
-		Priority: buffs.FlametongueTotemCast,
-		OnGain: func(_ *core.ExclusiveEffect, sim *core.Simulation) {
-			trigger.Activate(sim)
-		},
-		OnExpire: func(_ *core.ExclusiveEffect, sim *core.Simulation) {
-			trigger.Deactivate(sim)
-		},
-	})
+	totemAura := shaman.RegisterAura(spelldata.AuraConfig(rank)).AttachPeriodicAction(period)
 
+	config := shaman.newTotemSpellConfig(rank)
+	config.ClassSpellMask = mask
 	config.RelatedSelfBuff = totemAura
 	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
-		shaman.cancelFireTotems(sim)
-		shaman.TotemExpirations[FireTotem] = sim.CurrentTime + duration
-		totemAura.Activate(sim)
+		shaman.dropTotem(sim, FireTotem, totemAura, totemAura.Duration)
 	}
-	shaman.FlametongueTotem = shaman.RegisterSpell(config)
+
+	return shaman.RegisterSpell(config)
 }
 
+// The totem attacks its target once a cast of its attack, 10436's 2.2 s.
+func (shaman *Shaman) registerSearingTotemSpell() {
+	damage := searingAttackRank.DamageEffect()
+
+	attackConfig := shaman.newTotemAttackConfig(searingTotemRank, searingAttackRank)
+	attackConfig.ClassSpellMask = SpellMaskSearingTotem
+	attackConfig.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcDamage(sim, target, damage.Average(), spell.OutcomeMagicHitAndCrit)
+		spell.DealDamageAfterTravel(sim, result)
+	}
+	attack := shaman.RegisterSpell(attackConfig)
+
+	shaman.SearingTotem = shaman.registerFireTotem(searingTotemRank, SpellMaskSearingTotem, core.PeriodicActionOptions{
+		Period: searingAttackRank.CastTime(),
+		OnAction: func(sim *core.Simulation) {
+			attack.Cast(sim, shaman.CurrentTarget)
+		},
+	})
+}
+
+// The passive casts the pulse on every enemy around the totem each of its periods.
 func (shaman *Shaman) registerMagmaTotemSpell() {
-	duration := magmaTotemRank.Duration()
-	tickLength := core.DurationFromSeconds(2)
+	damage := magmaPulseRank.DamageEffect()
 
-	shaman.MagmaTotem = shaman.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: magmaTotemRank.ID},
-		SpellSchool:    magmaTotemRank.SpellSchool(),
-		DefenseType:    core.DefenseTypeMagic,
-		ProcMask:       core.ProcMaskEmpty,
-		Flags:          core.SpellFlagAPL | SpellFlagShamanSpell | SpellFlagInstant,
-		ClassSpellMask: SpellMaskMagmaTotem,
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(magmaTotemRank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: magmaTotemRank.GCD(),
-			},
-			IgnoreHaste: true,
-		},
+	pulseConfig := shaman.newTotemAttackConfig(magmaTotemRank, magmaPulseRank)
+	pulseConfig.ClassSpellMask = SpellMaskMagmaTotem
+	pulseConfig.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealAoeDamage(sim, damage.Average(), spell.OutcomeMagicHitAndCrit)
+	}
+	pulse := shaman.RegisterSpell(pulseConfig)
 
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-
-		Dot: core.DotConfig{
-			IsAOE: true,
-			Aura: core.Aura{
-				Label: "Magma Totem",
-			},
-			NumberOfTicks:    int32(duration / tickLength),
-			TickLength:       tickLength,
-			BonusCoefficient: magmaTotemPulse.DamageEffect().Coeff(),
-
-			OnTick: func(sim *core.Simulation, _ *core.Unit, dot *core.Dot) {
-				dot.Spell.CalcPeriodicAoeDamage(sim, magmaTotemPulse.DamageEffect().Average(core.CharacterLevel), dot.Spell.OutcomeTickMagicHitAndCrit)
-				dot.Spell.DealBatchedPeriodicDamage(sim)
-			},
-		},
-
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			shaman.cancelFireTotems(sim)
-			spell.AOEDot().Apply(sim)
-			shaman.TotemExpirations[FireTotem] = sim.CurrentTime + duration
+	shaman.MagmaTotem = shaman.registerFireTotem(magmaTotemRank, SpellMaskMagmaTotem, core.PeriodicActionOptions{
+		Period: magmaPassiveRank.EffectN(1).Period(),
+		OnAction: func(sim *core.Simulation) {
+			pulse.Cast(sim, shaman.CurrentTarget)
 		},
 	})
 }
 
+// "Instantly inflicts $408428s1 fire damage to enemies within $408428a1 yd of your active Fire totem."
+// The cast deals nothing itself: it casts the Fire Nova row of its own rank, 408428, which hits. Each
+// row carries its own class flags, so Trial by Fire's cooldown reaches the cast and its damage the
+// hit, and Call of Flame and Elemental Fury name the hit alone.
+// The hit lacks Not a Proc, so only listeners that can proc from procs hear it. It reports as the
+// cast's spell tagged 1, so the results show the cast and its hits as one row.
 func (shaman *Shaman) registerFireNovaSpell() {
-	shaman.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: fireNovaRank.ID},
-		SpellSchool:    fireNovaRank.SpellSchool(),
-		DefenseType:    fireNovaRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL | SpellFlagShamanSpell | SpellFlagInstant,
-		ClassSpellMask: SpellMaskFireNova,
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(fireNovaRank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: fireNovaRank.GCD(),
-			},
-			CD: core.Cooldown{
-				Timer:    shaman.NewTimer(),
-				Duration: max(fireNovaRank.Cooldown(), fireNovaRank.CategoryCooldown()),
-			},
-		},
+	damage := fireNovaDamageRank.DamageEffect()
 
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-		BonusCoefficient: fireNovaDamage.DamageEffect().Coeff(),
+	novaConfig := spelldata.SpellConfig(&shaman.Unit, fireNovaDamageRank,
+		spelldata.Magic(core.ProcMaskSpellDamage),
+		spelldata.Proc(),
+		spelldata.Flags(SpellFlagShamanSpell|core.SpellFlagProc))
+	novaConfig.ActionID = core.ActionID{SpellID: fireNovaRank.ID, Tag: 1}
+	novaConfig.ClassSpellMask = SpellMaskFireNova
+	novaConfig.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealAoeDamage(sim, damage.Average(), spell.OutcomeMagicHitAndCrit)
+	}
+	nova := shaman.RegisterSpell(novaConfig)
 
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			spell.CalcAoeDamage(sim, fireNovaDamage.DamageEffect().Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-			spell.DealBatchedAoeDamage(sim)
-		},
-	})
-}
+	config := spelldata.SpellConfig(&shaman.Unit, fireNovaRank,
+		spelldata.Magic(core.ProcMaskSpellDamage),
+		spelldata.Flags(SpellFlagShamanSpell|SpellFlagInstant))
+	config.ClassSpellMask = SpellMaskFireNova
+	config.ExtraCastCondition = func(_ *core.Simulation, _ *core.Unit) bool {
+		totem := shaman.TotemAuras[FireTotem]
+		return totem != nil && totem.IsActive()
+	}
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, _ *core.Spell) {
+		nova.Cast(sim, target)
+	}
 
-func (shaman *Shaman) cancelFireTotems(sim *core.Simulation) {
-	shaman.MagmaTotem.AOEDot().Deactivate(sim)
-	if searingTotemDot := shaman.SearingTotem.Dot(shaman.CurrentTarget); searingTotemDot != nil {
-		searingTotemDot.Deactivate(sim)
-	}
-	if shaman.TotemOfWrath != nil {
-		shaman.TotemOfWrath.RelatedSelfBuff.Deactivate(sim)
-	}
-	if shaman.FlametongueTotem != nil {
-		shaman.FlametongueTotem.RelatedSelfBuff.Deactivate(sim)
-	}
+	shaman.FireNova = shaman.RegisterSpell(config)
 }

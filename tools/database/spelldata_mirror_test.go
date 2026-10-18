@@ -2,7 +2,7 @@ package database
 
 // The generator builds the store's rows in its own structs in spelldata_store.go, which carry its
 // bookkeeping beside the store's fields. The cost of that is a mirror which can drift: a field added
-// to the store would simply never be written, and the row would read as a zero the client never
+// to the store would simply never be written, and the row would read as a zero the game files never
 // stated. This asserts the two sides name the same fields.
 
 import (
@@ -33,6 +33,10 @@ var mirroredTypes = []struct {
 	{
 		store:  spelldata.Power{},
 		mirror: storePower{},
+	},
+	{
+		store:  spelldata.Reagent{},
+		mirror: storeReagent{},
 	},
 }
 

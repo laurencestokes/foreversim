@@ -1,9 +1,7 @@
 name: Run Tests
 on:
+    # Test pull requests against any target branch.
     pull_request:
-        branches:
-            - master
-            - forever-next
     # Reusable from other workflows (deploy, release). Their runs on master also
     # prime the Go/npm caches that pull request runs restore from.
     workflow_call:
@@ -16,10 +14,18 @@ on:
                 description: 'Commit that TestProtoVersioning diffs the protos against (defaults to remote master)'
                 required: false
                 type: string
+# Runs called from master (deploy, release) have no pull request number; the
+# run id keeps each in a group of its own so none is cancelled or queued.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+    cancel-in-progress: true
 jobs:
     build-ui:
         runs-on: ubuntu-latest
         timeout-minutes: 20
+        permissions:
+            contents: read
+            pull-requests: write
         steps:
             - name: Checkout 🛎️
               uses: actions/checkout@v5
@@ -37,6 +43,7 @@ jobs:
               uses: actions/setup-go@v6
               with:
                   go-version: 1.25.x
+                  cache: false
 
             - name: Install Protoc
               uses: arduino/setup-protoc@v3
@@ -51,7 +58,6 @@ jobs:
               uses: actions/setup-node@v5
               with:
                   node-version: 22
-                  cache: npm
 
             - name: Test Locales 💬
               run: |
@@ -76,13 +82,16 @@ jobs:
             - name: Unit tests 🧪
               run: npm run test:unit
 
+            - name: Build Storybook 📚
+              run: npm run storybook:build
+
             - name: Build 🔧
               run: |
                   make dist/forever/.dirstamp
 
     test:
         runs-on: ubuntu-latest
-        timeout-minutes: 30
+        timeout-minutes: 60
         strategy:
             fail-fast: false
             matrix:
@@ -97,6 +106,7 @@ jobs:
               uses: actions/setup-go@v6
               with:
                   go-version: 1.25.x
+                  cache: false
 
             - name: Install Protoc
               uses: arduino/setup-protoc@v3
@@ -111,7 +121,6 @@ jobs:
               uses: actions/setup-node@v5
               with:
                   node-version: 22
-                  cache: npm
 
             # TestProtoVersioning in sim/core shells out to `npx buf`, which needs node_modules.
             - name: Install npm dependencies
@@ -121,11 +130,11 @@ jobs:
               run: make sim/core/proto/api.pb.go binary_dist/dist.go
 
             # The buff manifest, the proto emitter and the buff generator's render and
-            # TS tests need no client database, and the database is not in the repo, so
+            # TS tests need no game files database, and the database is not in the repo, so
             # the tests that do need it skip. One shard runs them.
             - name: Test the buff generator
               if: matrix.shard == 0
-              run: go test ./tools/database/... ./tools/gen_buffs_proto/...
+              run: go test ./tools/database/... ./tools/gen_buffs_proto/... ./tools/race_arena/...
 
             - name: Test (shard ${{ matrix.shard }})
               env:

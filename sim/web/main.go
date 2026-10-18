@@ -112,6 +112,9 @@ var handlers = map[string]apiHandler{
 	"/statWeightCompute": {msg: func() googleProto.Message { return &proto.StatWeightsCalcRequest{} }, handle: func(msg googleProto.Message) googleProto.Message {
 		return core.StatWeightCompute(msg.(*proto.StatWeightsCalcRequest))
 	}},
+	"/statWeightTopUpPlan": {msg: func() googleProto.Message { return &proto.StatWeightsTopUpRequest{} }, handle: func(msg googleProto.Message) googleProto.Message {
+		return core.StatWeightTopUpPlan(msg.(*proto.StatWeightsTopUpRequest))
+	}},
 	"/computeStats": {msg: func() googleProto.Message { return &proto.ComputeStatsRequest{} }, handle: func(msg googleProto.Message) googleProto.Message {
 		return core.ComputeStats(msg.(*proto.ComputeStatsRequest))
 	}},
@@ -255,24 +258,7 @@ func (s *server) handleAsyncAPI(w http.ResponseWriter, r *http.Request) {
 				if progMetric == nil {
 					return
 				}
-				if progMetric.BulkStage == proto.BulkSimStage_BulkSimStageReforge && len(progMetric.OptimizedCandidates) > 0 {
-					simProgress.appendPendingOptimizedCandidates(progMetric.OptimizedCandidates)
-					// Build the candidate-free copy directly: cloning the message first would
-					// deep-copy the whole candidate batch just to drop it again.
-					simProgress.latestProgress.Store(&proto.ProgressMetrics{
-						BulkStage:           progMetric.BulkStage,
-						CompletedSims:       progMetric.CompletedSims,
-						TotalSims:           progMetric.TotalSims,
-						CompletedIterations: progMetric.CompletedIterations,
-						TotalIterations:     progMetric.TotalIterations,
-						Dps:                 progMetric.Dps,
-						Hps:                 progMetric.Hps,
-						PresimRunning:       progMetric.PresimRunning,
-						FinalBulkSimResult:  progMetric.FinalBulkSimResult,
-					})
-				} else {
-					simProgress.latestProgress.Store(progMetric)
-				}
+				simProgress.latestProgress.Store(progMetric)
 				if isFinalProgress(progMetric) {
 					return
 				}
@@ -283,8 +269,8 @@ func (s *server) handleAsyncAPI(w http.ResponseWriter, r *http.Request) {
 	s.writeAsyncAPIResult(w, simProgress.id)
 }
 
-// isFinalProgress reports whether progress carries any endpoint's final result, i.e. the async
-// run is finished. Keep in sync with the wasm copy in sim/wasm/main.go.
+// Whether progress carries any endpoint's final result, i.e. the async run is finished. Keep in
+// sync with the wasm copy in sim/wasm/main.go.
 func isFinalProgress(progress *proto.ProgressMetrics) bool {
 	return progress.FinalRaidResult != nil || progress.FinalWeightResult != nil || progress.FinalBulkSimResult != nil || progress.FinalReforgeResult != nil
 }
@@ -330,26 +316,6 @@ func (s *server) setupAsyncServer() {
 			return
 		}
 		latest := progress.latestProgress.Load().(*proto.ProgressMetrics)
-		pendingOptimizedCandidates := progress.peekPendingOptimizedCandidates()
-		// The stored message may be served again on a later poll, so clone before mutating -
-		// but at most once, since after the first clone we own the copy (the clone's
-		// sub-messages included).
-		ownedCopy := false
-		ensureOwnedCopy := func() {
-			if !ownedCopy {
-				latest = googleProto.Clone(latest).(*proto.ProgressMetrics)
-				ownedCopy = true
-			}
-		}
-		if latest.FinalBulkSimResult != nil && len(latest.FinalBulkSimResult.OptimizedCandidates) > 0 {
-			remainingOptimizedCandidates := progress.filterUndeliveredOptimizedCandidates(latest.FinalBulkSimResult.OptimizedCandidates)
-			ensureOwnedCopy()
-			latest.FinalBulkSimResult.OptimizedCandidates = remainingOptimizedCandidates
-		}
-		if len(pendingOptimizedCandidates) > 0 {
-			ensureOwnedCopy()
-			latest.OptimizedCandidates = pendingOptimizedCandidates
-		}
 		outbytes, err := googleProto.Marshal(latest)
 		if err != nil {
 			log.Printf("[ERROR] Failed to marshal result: %s", err.Error())
@@ -359,12 +325,11 @@ func (s *server) setupAsyncServer() {
 
 		w.Header().Add("Content-Type", "application/x-protobuf")
 		if _, err := w.Write(outbytes); err != nil {
-			// Nothing reached the client, so leave both the pending candidates and the
-			// cached progress in place for the next poll rather than dropping them.
+			// Nothing reached the client, so leave the cached progress in place for the next
+			// poll rather than dropping it.
 			log.Printf("[ERROR] Failed to write async progress response: %s", err.Error())
 			return
 		}
-		progress.markOptimizedCandidatesDelivered(pendingOptimizedCandidates)
 
 		// If this was the last result, delete the cache for this simulation.
 		if isFinalProgress(latest) {
@@ -531,7 +496,7 @@ func (s *server) runServer(useFS bool, host string, launchBrowser bool, simName 
 	}
 }
 
-// handleAPI is generic handler for any api function using protos.
+// The generic handler for any api function using protos.
 func handleAPI(w http.ResponseWriter, r *http.Request) {
 	endpoint := r.URL.Path
 

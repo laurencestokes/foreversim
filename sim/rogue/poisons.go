@@ -1,245 +1,163 @@
 package rogue
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Poisons are consumable imbues, not class spells, so gen_spelldata writes no table for them.
-// The numbers below are the ones our Forever sim reads off beta client 1.60.1.69893, where each
-// poison hits for about a third less than Classic's:
-//
-//	Instant Poison rank 6 (11340): 76-100 damage, 20% chance
-//	Deadly Poison rank 5 (25347): 23 damage a tick, 5 stacks over 12 sec, 30% chance
-//	Wound Poison rank 4 (13227): no damage, -135 healing, 5 stacks, 30% chance
-//
-// Attack power scaling is server-side, so the client rows carry no coefficient. The devs give 0.5%
-// of attack power for Instant and 0.45% for Deadly (forever-bugs #100, 2026-09-23). Deadly's share
-// is per tick per stack: beta log 2701 (Salty, AP ~363, rank 1 at 6 a tick, Vile Poisons ~1.2 from
-// Instant Poison II) ticks ~8.8 a stack, against 9.2 per tick and 7.7 spread over the 4 ticks.
-const (
-	instantImbueID = 26891
-	woundImbueID   = 27188
-	deadlyImbueID  = 27186
-
-	instantPoisonSpellID int32 = 11340
-	deadlyPoisonSpellID  int32 = 25347
-	woundPoisonSpellID   int32 = 13227
-
-	instantPoisonBaseDamage = 76.0
-	instantPoisonVariance   = 24.0
-	deadlyPoisonTickDamage  = 23.0
-	instantPoisonAPShare    = 0.005
-	deadlyPoisonAPShare     = 0.0045
+// The poison items whose weapon imbue casts a rank of Deadly or Instant Poison. Each is the item's
+// consumable effect, in place of the generic imbue builder, which would apply Deadly Poison's
+// stacking damage over time as one.
+var (
+	deadlyPoisonItemIDs  = []int32{2892, 2893, 8984, 8985, 20844}
+	instantPoisonItemIDs = []int32{6947, 6949, 6950, 8926, 8927, 8928}
 )
 
-func (rogue *Rogue) applyPoisons() {
-	rogue.applyDeadlyPoison()
-	rogue.applyWoundPoison()
-	rogue.applyInstantPoison()
-}
-
-// The chance a weapon hit applies a poison: the poison's own base, plus Improved Poisons, plus
-// Venom while it is up. Read at proc time so Venom's share can come and go.
-func (rogue *Rogue) poisonProcChance(base float64) float64 {
-	return base + spellData.ImprovedPoisons.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CHANCE_OF_SUCCESS)).FractionAt(rogue.Talents.ImprovedPoisons) +
-		rogue.additivePoisonBonusChance
-}
-
-func (rogue *Rogue) registerDeadlyPoisonSpell() {
-	if rogue.getPoisonProcMask(deadlyImbueID) == core.ProcMaskUnknown {
-		return
-	}
-
-	rogue.deadlyPoisonTick = rogue.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: deadlyPoisonSpellID, Tag: 100},
-		SpellSchool:    core.SpellSchoolNature,
-		DefenseType:    core.DefenseTypeMagic,
-		ProcMask:       core.ProcMaskSpellDamageProc,
-		ClassSpellMask: RogueSpellDeadlyPoison,
-		Flags:          core.SpellFlagPoison | core.SpellFlagPassiveSpell | core.SpellFlagProc,
-
-		DamageMultiplier:         1,
-		DamageMultiplierAdditive: 1,
-		ThreatMultiplier:         1,
-
-		Dot: core.DotConfig{
-			Aura: core.Aura{
-				Label:     "Deadly Poison",
-				MaxStacks: 5,
-				Duration:  time.Second * 12,
-			},
-			NumberOfTicks: 4,
-			TickLength:    time.Second * 3,
-
-			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				share := deadlyPoisonAPShare * float64(dot.GetStacks())
-				dot.Snapshot(target, deadlyPoisonTickDamage*float64(dot.GetStacks())+share*dot.Spell.MeleeAttackPower(target))
-				dot.SnapshotAttackPowerShare(target, share, false)
-			},
-			// The dot is 25349, which carries Periodic Can Crit in the client (25347 is the imbue).
-			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.Spell.OutcomeTickMagicCrit)
-			},
-		},
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcAndDealOutcome(sim, target, spell.OutcomeMagicHit)
-			if !result.Landed() {
-				return
+func init() {
+	for _, itemID := range deadlyPoisonItemIDs {
+		core.NewConsumableEffect(itemID, func(agent core.Agent) {
+			if rogueAgent, ok := agent.(RogueAgent); ok {
+				rogueAgent.GetRogue().applyDeadlyPoison(core.GetConsumableByID(itemID))
 			}
-
-			dot := spell.Dot(target)
-			if dot.IsActive() {
-				dot.Refresh(sim)
-				if dot.GetStacks() < dot.MaxStacks {
-					dot.AddStack(sim)
-				}
-			} else {
-				dot.Apply(sim)
-				dot.SetStacks(sim, 1)
+		})
+	}
+	for _, itemID := range instantPoisonItemIDs {
+		core.NewConsumableEffect(itemID, func(agent core.Agent) {
+			if rogueAgent, ok := agent.(RogueAgent); ok {
+				rogueAgent.GetRogue().applyInstantPoison(core.GetConsumableByID(itemID))
 			}
-			dot.TakeSnapshot(sim)
-		},
-	})
-	rogue.DeadlyPoison = rogue.deadlyPoisonTick
+		})
+	}
 }
 
-func (rogue *Rogue) registerWoundPoisonSpell() {
-	if rogue.getPoisonProcMask(woundImbueID) == core.ProcMaskUnknown {
-		return
+// Whether a hand of the main set or of the item swap set carries the consumable's imbue.
+func (rogue *Rogue) carriesImbue(consumable core.Consumable) bool {
+	if consumable.TemporaryEnchant == nil {
+		return false
 	}
-
-	woundPoisonDebuffAura := core.Aura{
-		Label:     "Wound Poison",
-		ActionID:  core.ActionID{SpellID: woundPoisonSpellID},
-		Duration:  time.Second * 15,
-		MaxStacks: 5,
-		// The healing debuff has no effect on a DPS sim.
+	enchantID := consumable.TemporaryEnchant.EffectID
+	for _, slot := range []proto.ItemSlot{proto.ItemSlot_ItemSlotMainHand, proto.ItemSlot_ItemSlotOffHand} {
+		if rogue.Equipment[slot].HasTempEnchant(enchantID) || rogue.ItemSwap.GetUnequippedItemBySlot(slot).HasTempEnchant(enchantID) {
+			return true
+		}
 	}
-
-	rogue.WoundPoisonDebuffAuras = rogue.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
-		return target.RegisterAura(woundPoisonDebuffAura)
-	})
-
-	rogue.WoundPoison = rogue.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: woundPoisonSpellID},
-		SpellSchool:    core.SpellSchoolNature,
-		DefenseType:    core.DefenseTypeMagic,
-		ProcMask:       core.ProcMaskSpellDamageProc,
-		ClassSpellMask: RogueSpellWoundPoison,
-		Flags:          core.SpellFlagPoison | core.SpellFlagPassiveSpell | core.SpellFlagProc,
-
-		DamageMultiplier:         1,
-		DamageMultiplierAdditive: 1,
-		ThreatMultiplier:         1,
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			// Forever's Wound Poison deals no damage; it only stacks the healing debuff.
-			result := spell.CalcAndDealOutcome(sim, target, spell.OutcomeMagicHit)
-			if !result.Landed() {
-				return
-			}
-
-			aura := rogue.WoundPoisonDebuffAuras.Get(target)
-			if !aura.IsActive() {
-				aura.Activate(sim)
-				aura.SetStacks(sim, 1)
-				return
-			}
-			aura.Refresh(sim)
-			if aura.GetStacks() < aura.MaxStacks {
-				aura.AddStack(sim)
-			}
-		},
-
-		RelatedAuraArrays: rogue.WoundPoisonDebuffAuras.ToMap(),
-	})
+	return false
 }
 
-func (rogue *Rogue) registerInstantPoisonSpell() {
-	if rogue.getPoisonProcMask(instantImbueID) == core.ProcMaskUnknown {
-		return
+// The rank of the ladder the consumable's imbue casts, 0 where it casts none of them.
+func poisonRank(ladder spelldata.Ladder, consumable core.Consumable) int32 {
+	var rank int32
+	if consumable.TemporaryEnchant == nil {
+		return rank
 	}
-
-	rogue.InstantPoison = rogue.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: instantPoisonSpellID},
-		SpellSchool:    core.SpellSchoolNature,
-		DefenseType:    core.DefenseTypeMagic,
-		ProcMask:       core.ProcMaskSpellDamageProc,
-		ClassSpellMask: RogueSpellInstantPoison,
-		Flags:          core.SpellFlagPoison | core.SpellFlagPassiveSpell | core.SpellFlagProc,
-
-		DamageMultiplier:         1,
-		DamageMultiplierAdditive: 1,
-		ThreatMultiplier:         1,
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			damage := sim.Roll(instantPoisonBaseDamage, instantPoisonBaseDamage+instantPoisonVariance) + instantPoisonAPShare*spell.MeleeAttackPower(target)
-			spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMagicHitAndCrit)
-		},
-	})
+	for _, effect := range consumable.TemporaryEnchant.EnchantEffects {
+		ladder.Each(func(n int32, s *spelldata.Spell) {
+			if s.ID == effect.BuffId {
+				rank = n
+			}
+		})
+	}
+	return rank
 }
 
-func (rogue *Rogue) getPoisonProcMask(poisonId int32) core.ProcMask {
-	var mask core.ProcMask
-	if rogue.Consumables.MhImbueId == poisonId {
-		mask |= core.ProcMaskMeleeMH
+// The highest rank of the ladder that any imbue the rogue carries casts. Both hands and both weapon
+// sets share the one poison spell, so a lower rank on another weapon procs at this one.
+func (rogue *Rogue) highestPoisonRank(ladder spelldata.Ladder) *spelldata.Spell {
+	var highest int32
+	for _, id := range rogue.SelectedConsumableIDs() {
+		consumable := core.GetConsumableByID(id)
+		if rank := poisonRank(ladder, consumable); rank > highest && rogue.carriesImbue(consumable) {
+			highest = rank
+		}
 	}
-	if rogue.Consumables.OhImbueId == poisonId {
-		mask |= core.ProcMaskMeleeOH
-	}
-	return mask
+	return ladder.Rank(highest)
 }
 
-// The three imbues share a shape: a weapon proc on the hand it is on, rolled against a chance
-// Improved Poisons and Venom both add to, which is why the roll is inside the handler.
-func (rogue *Rogue) applyPoisonProc(name string, imbueID int32, baseChance float64, cast func(*core.Simulation, *core.Unit)) {
-	procMask := rogue.getPoisonProcMask(imbueID)
-	if procMask == core.ProcMaskUnknown {
-		return
-	}
-
+// Casts the poison off the melee hits of the weapons carrying the consumable's imbue, at their own
+// speeds, following the weapons through an item swap.
+func (rogue *Rogue) registerPoisonProc(consumable core.Consumable, chance float64, poison *core.Spell) {
 	rogue.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               name,
-		Outcome:            core.OutcomeLanded,
-		Callback:           core.CallbackOnSpellHitDealt,
-		TriggerImmediately: true,
-		ProcMask:           procMask,
-		IsWeaponProc:       true,
-
+		Name:                consumable.Name,
+		ActionID:            core.ActionID{ItemID: consumable.Id},
+		Outcome:             core.OutcomeLanded,
+		Callback:            core.CallbackOnSpellHitDealt,
+		TriggerImmediately:  true,
+		ProcMask:            core.ProcMaskMelee,
+		IsWeaponProc:        true,
+		ProcSpellClassFlags: poison.ClassFlags,
+		DPM: rogue.NewDynamicLegacyProcForTempEnchant(consumable.TemporaryEnchant.EffectID, 0, func(core.ProcMask) float64 {
+			return chance
+		}),
 		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			if sim.Proc(rogue.poisonProcChance(baseChance), name) {
-				cast(sim, result.Target)
-			}
+			poison.Cast(sim, result.Target)
 		},
 	})
 }
 
-func (rogue *Rogue) applyDeadlyPoison() {
-	rogue.applyPoisonProc("Deadly Poison", deadlyImbueID, 0.3, func(sim *core.Simulation, target *core.Unit) {
-		rogue.DeadlyPoison.Cast(sim, target)
-	})
-}
+func (rogue *Rogue) registerDeadlyPoisonSpell(deadlyPoisonRank *spelldata.Spell) {
+	config := spelldata.SpellConfig(&rogue.Unit, deadlyPoisonRank, spelldata.Magic(core.ProcMaskSpellDamageProc))
+	config.ClassSpellMask = RogueSpellDeadlyPoison
+	tick := deadlyPoisonRank.PeriodicEffect()
+	numTicks := deadlyPoisonRank.Duration().Seconds() / tick.Period().Seconds()
+	apScaling := 0.0045 / numTicks // Confirmed by Zirene
 
-func (rogue *Rogue) applyWoundPoison() {
-	rogue.applyPoisonProc("Wound Poison", woundImbueID, 0.3, func(sim *core.Simulation, target *core.Unit) {
-		rogue.WoundPoison.Cast(sim, target)
-	})
-}
-
-func (rogue *Rogue) applyInstantPoison() {
-	rogue.applyPoisonProc("Instant Poison", instantImbueID, 0.2, func(sim *core.Simulation, target *core.Unit) {
-		rogue.InstantPoison.Cast(sim, target)
-	})
-}
-
-// Instant Poison leaves nothing behind, so only the two lingering poisons count.
-func (rogue *Rogue) isPoisoned(target *core.Unit) bool {
-	if rogue.deadlyPoisonTick != nil && rogue.deadlyPoisonTick.Dot(target).IsActive() {
-		return true
+	config.Dot = spelldata.DotConfig(deadlyPoisonRank, tick)
+	config.Dot.OnTick = func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
+		stacks := dot.GetStacks()
+		baseTick := tick.Average()
+		apFactor := dot.Spell.MeleeAttackPower(target) * apScaling
+		dot.Spell.CalcAndDealPeriodicDamage(sim, target, (baseTick+apFactor)*float64(stacks), deadlyPoisonRank.TickOutcome(dot))
 	}
-	return rogue.WoundPoisonDebuffAuras != nil && rogue.WoundPoisonDebuffAuras.Get(target).IsActive()
+
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcAndDealOutcome(sim, target, spell.OutcomeMagicHit)
+		if !result.Landed() {
+			return
+		}
+
+		dot := spell.Dot(target)
+		if dot.IsActive() {
+			dot.Refresh(sim)
+			dot.AddStack(sim)
+		} else {
+			dot.Apply(sim)
+			dot.SetStacks(sim, 1)
+		}
+	}
+
+	rogue.DeadlyPoison = rogue.RegisterSpell(config)
+}
+
+func (rogue *Rogue) registerInstantPoisonSpell(instantPoisonRank *spelldata.Spell) {
+	ipBaseDamage := instantPoisonRank.DamageEffect().Average()
+	config := spelldata.SpellConfig(&rogue.Unit, instantPoisonRank, spelldata.Magic(core.ProcMaskSpellDamageProc))
+	config.ClassSpellMask = RogueSpellInstantPoison
+	apScaling := 0.005 // Confirmed by Zirene
+
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealDamage(sim, target, ipBaseDamage+apScaling*spell.MeleeAttackPower(target), spell.OutcomeMagicHitAndCrit)
+	}
+
+	rogue.InstantPoison = rogue.RegisterSpell(config)
+}
+
+func (rogue *Rogue) applyDeadlyPoison(consumable core.Consumable) {
+	if !rogue.carriesImbue(consumable) {
+		return
+	}
+	if rogue.DeadlyPoison == nil {
+		rogue.registerDeadlyPoisonSpell(rogue.highestPoisonRank(spellData.DeadlyPoison))
+	}
+	rogue.registerPoisonProc(consumable, 0.3, rogue.DeadlyPoison)
+}
+
+func (rogue *Rogue) applyInstantPoison(consumable core.Consumable) {
+	if !rogue.carriesImbue(consumable) {
+		return
+	}
+	if rogue.InstantPoison == nil {
+		rogue.registerInstantPoisonSpell(rogue.highestPoisonRank(spellData.InstantPoison))
+	}
+	rogue.registerPoisonProc(consumable, 0.2, rogue.InstantPoison) //Confirmed in game 9/30/2026
 }

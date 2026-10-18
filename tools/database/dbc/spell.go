@@ -88,7 +88,7 @@ func (s *Spell) IsWeaponProcAura() bool {
 }
 
 // Reports whether the spell is barred from critically striking. Seal of Light, Judgement of Wisdom,
-// Sweeping Strikes and Vampiric Embrace are the shape: effects the client resolves at a flat amount.
+// Sweeping Strikes and Vampiric Embrace are the shape: effects that resolve at a flat amount in game.
 // A damage proc built from one of these has to roll an outcome that cannot crit, or it gains crit
 // damage the game never gives it.
 func (s *Spell) CannotCrit() bool {

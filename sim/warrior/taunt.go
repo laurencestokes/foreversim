@@ -2,39 +2,20 @@ package warrior
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+var tauntRank = spellData.Taunt.Highest()
+
 func (warrior *Warrior) registerTaunt() {
-	tauntRank := spellData.Taunt.Highest()
+	config := spelldata.SpellConfig(&warrior.Unit, tauntRank, spelldata.Flags(core.SpellFlagAPL))
+	config.ProcMask = core.ProcMaskEmpty
+	config.ThreatMultiplier = 1
+	config.Cast.DefaultCast.NonEmpty = true
 
-	warrior.Taunt = warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: tauntRank.ID},
-		SpellSchool:    core.SpellSchoolPhysical,
-		DefenseType:    core.DefenseTypeMagic,
-		ProcMask:       core.ProcMaskEmpty,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: SpellMaskTaunt,
-		MaxRange:       float64(tauntRank.MaxRange),
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealOutcome(sim, target, spell.OutcomeAlwaysHit)
+	}
 
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				NonEmpty: true,
-			},
-			IgnoreHaste: true,
-			CD: core.Cooldown{
-				Timer:    warrior.NewTimer(),
-				Duration: cooldownOf(tauntRank),
-			},
-		},
-
-		ThreatMultiplier: 1,
-
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return warrior.StanceMatches(DefensiveStance)
-		},
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealOutcome(sim, target, spell.OutcomeAlwaysHit)
-		},
-	})
+	warrior.Taunt = warrior.RegisterSpell(config)
 }

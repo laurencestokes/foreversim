@@ -1,83 +1,40 @@
 package shaman
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-const (
-	// This could be value or bitflag if we ended up needing multiple flags at the same time.
-	//1 to 5 are used by MaelstromWeapon Stacks
-	CastTagLightningOverload int32 = 6
-)
+// The rows Lightning Overload casts, one for each rank of Lightning Bolt and of Chain Lightning, in rank
+// order. No effect of the game files names them.
+var lightningBoltOverloadRanks = spelldata.Ranked(408439, 408440, 408441, 408442, 408443, 408472, 408473, 408474, 408475, 408477)
+var chainLightningOverloadRanks = spelldata.Ranked(408479, 408481, 408482, 408484)
 
-type ShamSpellConfig struct {
-	ActionID            core.ActionID
-	Rank                int32
-	BaseFlatCost        int32
-	BaseCastTime        time.Duration
-	IsElementalOverload bool
-	BonusCoefficient    float64
-	BounceReduction     float64
-	SpellSchool         core.SpellSchool
-	Overloads           map[int32][]*core.Spell
-	ClassSpellMask      int64
+// The tag the results label an overload by.
+const CastTagLightningOverload int32 = 6
+
+// Each rank, with the overload row of the same rank number as the copy Lightning Overload casts. The
+// copy reports under the spell id of the rank it copies, tagged CastTagLightningOverload.
+func (shaman *Shaman) registerWithOverloads(ranks, overloads spelldata.Ladder, newConfig func(*spelldata.Spell, *core.Spell) core.SpellConfig) {
+	ranks.Each(func(_ int32, rank *spelldata.Spell) {
+		overloadConfig := newConfig(overloads.Rank(rank.RankNumber()), nil)
+		overloadConfig.ActionID = core.ActionID{SpellID: rank.ID, Tag: CastTagLightningOverload}
+		overload := shaman.RegisterSpell(overloadConfig)
+		shaman.RegisterSpell(newConfig(rank, overload))
+	})
 }
 
-// Shared precomputation logic for LB and CL.
-// Needs isElementalOverload, actionID, BaseFlatCost, baseCastTime, bonusCoefficient fields of the shamSpellConfig
-func (shaman *Shaman) newElectricSpellConfig(config ShamSpellConfig) core.SpellConfig {
-	flags := SpellFlagShamanSpell | SpellFlagFocusable
-	if config.IsElementalOverload {
-		flags |= core.SpellFlagPassiveSpell | core.SpellFlagProc
-	} else {
-		flags |= core.SpellFlagAPL
+// Lightning Bolt and Chain Lightning, and the copy of either that Lightning Overload casts. The copy is
+// a row of its own, with half the coefficient and damage of its own, cast with no cast time or cost. Its
+// row states no threat and lacks Not a Proc, so only listeners that can proc from procs hear its hits.
+func (shaman *Shaman) newElectricSpellConfig(rank *spelldata.Spell, isOverload bool) core.SpellConfig {
+	opts := []spelldata.SpellOpt{
+		spelldata.Magic(core.ProcMaskSpellDamage),
+		spelldata.Flags(SpellFlagShamanSpell | SpellFlagFocusable),
+	}
+	if isOverload {
+		opts = append(opts, spelldata.Proc(), spelldata.Flags(core.SpellFlagProc))
 	}
 
-	spell := core.SpellConfig{
-		ActionID:       config.ActionID,
-		SpellSchool:    core.SpellSchoolNature,
-		DefenseType:    core.DefenseTypeMagic,
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          flags,
-		ClassSpellMask: config.ClassSpellMask,
-		Rank:           config.Rank,
-
-		ManaCost: core.ManaCostOptions{
-			FlatCost: core.TernaryInt32(config.IsElementalOverload, 0, config.BaseFlatCost),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				CastTime: config.BaseCastTime,
-				GCD:      core.GCDDefault,
-			},
-			ModifyCast: shaman.holdSwingDuringCast,
-		},
-
-		DamageMultiplier: 1,
-		BonusCoefficient: config.BonusCoefficient,
-		ThreatMultiplier: 1,
-	}
-
-	if config.IsElementalOverload {
-		spell.ActionID.Tag = CastTagLightningOverload
-		spell.ManaCost.FlatCost = 0
-		spell.Cast.DefaultCast.CastTime = 0
-		spell.Cast.DefaultCast.GCD = 0
-		spell.Cast.DefaultCast.Cost = 0
-		spell.Cast.ModifyCast = nil
-		spell.MetricSplits = 0
-		spell.ThreatMultiplier = 0
-	}
-
-	return spell
-}
-
-// A hard cast holds the swing and restarts it when the cast completes, even when no swing was due
-// before then (beta logs 2701, 2712). An instant cast leaves it alone.
-func (shaman *Shaman) holdSwingDuringCast(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
-	if castTime := shaman.ApplyCastSpeedForSpell(cast.CastTime, spell); castTime > 0 {
-		shaman.AutoAttacks.StopMeleeUntil(sim, sim.CurrentTime+castTime)
-	}
+	return spelldata.SpellConfig(&shaman.Unit, rank, opts...)
 }

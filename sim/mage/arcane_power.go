@@ -2,52 +2,31 @@ package mage
 
 import (
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+var arcanePowerRank = spellData.ArcanePower.Highest()
+
+// Arcane Power
+// https://www.wowhead.com/forever/spell=12042
+//
+// "For the next 15 sec, your spells deal 30% more damage while costing 30% more mana to cast."
 func (mage *Mage) registerArcanePowerSpell() {
-	if !mage.Talents.ArcanePower {
-		return
+	mage.ArcanePowerAura = mage.RegisterAura(spelldata.AuraConfig(arcanePowerRank))
+
+	// Effect 1's SPELLMOD_DAMAGE raises the direct hits and effect 3's SPELLMOD_DOT the ticks.
+	spelldata.ParseEffects(&mage.Character, mage.ArcanePowerAura, arcanePowerRank)
+
+	config := spelldata.SpellConfig(&mage.Unit, arcanePowerRank, spelldata.Flags(core.SpellFlagAPL|core.SpellFlagNoOnCastComplete))
+	config.ClassSpellMask = MageSpellArcanePower
+
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
+		mage.ArcanePowerAura.Activate(sim)
 	}
 
-	arcanePowerRank := spellData.ArcanePower.Highest()
-	actionID := core.ActionID{SpellID: arcanePowerRank.ID}
-	damage := arcanePowerRank.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).Average(core.CharacterLevel) / 100
+	config.RelatedSelfBuff = mage.ArcanePowerAura
 
-	mage.ArcanePowerAura = mage.RegisterAura(core.Aura{
-		Label:    "Arcane Power",
-		ActionID: actionID,
-		Duration: arcanePowerRank.Duration(),
-	}).AttachSpellMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll &^ MageSpellFrostfireBolt,
-		FloatValue: damage,
-		Kind:       core.SpellMod_DamageDone_Flat,
-	}).AttachSpellMod(core.SpellModConfig{
-		// The SPELLMOD_DOT mask leaves out Frostfire Bolt: its hit takes the bonus, its DoT does not.
-		ClassMask:  MageSpellFrostfireBolt,
-		FloatValue: damage,
-		Kind:       core.SpellMod_DirectDamageDone_Flat,
-	}).AttachSpellMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll,
-		FloatValue: arcanePowerRank.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).Average(core.CharacterLevel) / 100,
-		Kind:       core.SpellMod_PowerCost_Pct_Add,
-	})
-
-	spell := mage.RegisterSpell(core.SpellConfig{
-		ActionID:       actionID,
-		Flags:          core.SpellFlagNoOnCastComplete | core.SpellFlagAPL,
-		ClassSpellMask: MageSpellArcanePower,
-		Cast: core.CastConfig{
-			CD: core.Cooldown{
-				Timer:    mage.NewTimer(),
-				Duration: max(arcanePowerRank.Cooldown(), arcanePowerRank.CategoryCooldown()),
-			},
-		},
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
-			mage.ArcanePowerAura.Activate(sim)
-		},
-		RelatedSelfBuff: mage.ArcanePowerAura,
-	})
+	spell := mage.RegisterSpell(config)
 
 	mage.AddMajorCooldown(core.MajorCooldown{
 		Spell: spell,

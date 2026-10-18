@@ -2,47 +2,25 @@ package warrior
 
 import (
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+var shieldWallRank = spellData.ShieldWall.Highest()
+
 func (warrior *Warrior) registerShieldWall() {
-	shieldWallRank := spellData.ShieldWall.Highest()
+	aura := warrior.RegisterAura(spelldata.AuraConfig(shieldWallRank))
+	spelldata.ParseEffects(&warrior.Character, aura, shieldWallRank)
 
-	actionID := core.ActionID{SpellID: shieldWallRank.ID}
-	aura := warrior.RegisterAura(core.Aura{
-		Label:    "Shield Wall",
-		ActionID: actionID,
-		Duration: shieldWallRank.Duration(),
-	}).AttachMultiplicativePseudoStatBuff(
-		&warrior.PseudoStats.DamageTakenMultiplier,
-		1+shieldWallRank.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_TAKEN, 127).Percent(),
-	)
+	config := spelldata.SpellConfig(&warrior.Unit, shieldWallRank)
 
-	spell := warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       actionID,
-		DefenseType:    core.DefenseTypeMelee,
-		ClassSpellMask: SpellMaskShieldWall,
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		aura.Activate(sim)
+	}
 
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: shieldWallRank.GCD(),
-			},
-			IgnoreHaste: true,
-			CD: core.Cooldown{
-				Timer:    warrior.NewTimer(),
-				Duration: cooldownOf(shieldWallRank),
-			},
-		},
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return warrior.StanceMatches(DefensiveStance) && warrior.PseudoStats.CanBlock
-		},
+	config.RelatedSelfBuff = aura
 
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			aura.Activate(sim)
-		},
-		RelatedSelfBuff: aura,
-	})
+	spell := warrior.RegisterSpell(config)
 
 	warrior.deactivateWithoutShield(aura)
 

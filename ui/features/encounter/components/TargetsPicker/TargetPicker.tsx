@@ -1,17 +1,22 @@
+import { ConnectedBooleanPicker } from '@features/inputs/components/ConnectedBooleanPicker';
+import { ConnectedChoiceField } from '@features/inputs/components/ConnectedChoiceField';
+import { ConnectedNumberField } from '@features/inputs/components/ConnectedTextField';
 import { Target as TargetProto } from '@generated/proto/common';
 import { useDisplayMetrics } from '@sim/hooks/useDisplayMetrics';
+import { useStoreSubscribe } from '@sim/hooks/useStoreSubscribe';
 import type { Encounter } from '@sim/raid/encounter';
-import { BooleanPicker } from '@ui-kit/BooleanPicker';
-import { EnumPicker } from '@ui-kit/EnumPicker';
-import { NumberPicker } from '@ui-kit/NumberPicker';
-import { PickerGroup } from '@ui-kit/PickerGroup';
-import { useMemo } from 'react';
+import { subscribeEncounterField } from '@sim/state/subscriptions';
+import { Field } from '@ui-kit/Field';
+import { FieldGrid } from '@ui-kit/FieldGrid';
+import { type ReactNode, useMemo } from 'react';
 
 import { TargetInputsPicker } from './TargetInputsPicker';
 import {
 	aiConfig,
 	ALL_TARGET_STATS,
 	booleanConfigs,
+	creatureFamiliesOf,
+	creatureFamilyConfig,
 	levelConfig,
 	mobTypeConfig,
 	npcConfig,
@@ -21,6 +26,26 @@ import {
 	tankIndexConfig,
 	type TargetFieldContext,
 } from './utils/configs';
+
+export interface TargetPickerViewProps {
+	/** Who the target is: NPC preset, AI, level, mob type, creature family, tank and the target's own inputs. */
+	identity: ReactNode;
+	stats: ReactNode;
+	/** The fields only a threat sim reads; without them an empty column keeps the three-column grid. */
+	threat?: ReactNode;
+}
+
+export const TargetPickerView = ({ identity, stats, threat }: TargetPickerViewProps) => (
+	<Field testId="target-picker-root" className="grid grid-cols-1 gap-2 xl:grid-cols-3">
+		<FieldGrid data-testid="target-picker-section">{identity}</FieldGrid>
+		<FieldGrid data-testid="target-picker-section">{stats}</FieldGrid>
+		{threat ? (
+			<FieldGrid data-testid="target-picker-section">{threat}</FieldGrid>
+		) : (
+			<div className="hidden xl:block" data-testid="target-picker-section-placeholder" aria-hidden="true" />
+		)}
+	</Field>
+);
 
 export interface TargetPickerProps {
 	encounter: Encounter;
@@ -42,12 +67,11 @@ export const TargetPicker = ({ encounter, targetIndex }: TargetPickerProps) => {
 	const ai = useMemo(() => aiConfig(context), [context]);
 	const level = useMemo(() => levelConfig(context), [context]);
 	const mobType = useMemo(() => mobTypeConfig(context), [context]);
+	const targetMobType = useStoreSubscribe(subscribeEncounterField(encounter, 'targets'), () => context.getTarget().mobType);
+	const creatureFamily = useMemo(() => creatureFamilyConfig(context, targetMobType), [context, targetMobType]);
 	const tankIndex = useMemo(() => tankIndexConfig(context), [context]);
 	const stats = useMemo(
-		() =>
-			ALL_TARGET_STATS.filter(entry => showThreatMetrics || !entry.extraClassNames.includes('threat-metrics')).map(entry =>
-				statConfig(context, entry.stat, entry.tooltip, entry.extraClassNames),
-			),
+		() => ALL_TARGET_STATS.filter(entry => showThreatMetrics || !entry.threatMetrics).map(entry => statConfig(context, entry.stat, entry.tooltip)),
 		[context, showThreatMetrics],
 	);
 	const numbers = useMemo(() => numberConfigs(context), [context]);
@@ -55,35 +79,34 @@ export const TargetPicker = ({ encounter, targetIndex }: TargetPickerProps) => {
 	const spellSchool = useMemo(() => spellSchoolConfig(context), [context]);
 
 	return (
-		<div
-			className="ui-field grid grid-cols-1 gap-3 xl:grid-cols-3 [&_[data-input-root]:is(:last-child)]:mb-0 [&_[data-input-root]:is(:only-child)]:mb-0"
-			data-testid="target-picker-root">
-			<PickerGroup data-testid="target-picker-section">
-				<EnumPicker modObject={null} config={npc} />
-				<EnumPicker modObject={null} config={ai} />
-				<EnumPicker modObject={null} config={level} />
-				<EnumPicker modObject={null} config={mobType} />
-				{showThreatMetrics && <EnumPicker modObject={null} config={tankIndex} />}
-				<TargetInputsPicker encounter={encounter} targetIndex={targetIndex} />
-			</PickerGroup>
-			<PickerGroup data-testid="target-picker-section">
-				{stats.map(config => (
-					<NumberPicker key={config.id} modObject={null} config={config} />
-				))}
-			</PickerGroup>
-			{showThreatMetrics ? (
-				<PickerGroup data-testid="target-picker-section">
-					{numbers.map(config => (
-						<NumberPicker key={config.id} modObject={null} config={config} />
-					))}
-					{booleans.map(config => (
-						<BooleanPicker key={config.id} modObject={null} config={config} />
-					))}
-					<EnumPicker modObject={null} config={spellSchool} />
-				</PickerGroup>
-			) : (
-				<div className="hidden xl:block" data-testid="target-picker-section-placeholder" aria-hidden="true" />
-			)}
-		</div>
+		<TargetPickerView
+			identity={
+				<>
+					<ConnectedChoiceField modObject={null} config={npc} />
+					<ConnectedChoiceField modObject={null} config={ai} />
+					<ConnectedChoiceField modObject={null} config={mobType} />
+					{creatureFamiliesOf(targetMobType).length > 0 && <ConnectedChoiceField modObject={null} config={creatureFamily} />}
+					<ConnectedChoiceField modObject={null} config={level} />
+					{showThreatMetrics && <ConnectedChoiceField modObject={null} config={tankIndex} />}
+					<TargetInputsPicker encounter={encounter} targetIndex={targetIndex} />
+				</>
+			}
+			stats={stats.map(config => (
+				<ConnectedNumberField key={config.id} modObject={null} config={config} />
+			))}
+			threat={
+				showThreatMetrics && (
+					<>
+						{numbers.map(config => (
+							<ConnectedNumberField key={config.id} modObject={null} config={config} />
+						))}
+						{booleans.map(config => (
+							<ConnectedBooleanPicker key={config.id} modObject={null} config={config} />
+						))}
+						<ConnectedChoiceField modObject={null} config={spellSchool} />
+					</>
+				)
+			}
+		/>
 	);
 };

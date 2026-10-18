@@ -1,8 +1,6 @@
 package paladin
 
 import (
-	"fmt"
-
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/spelldata"
@@ -14,39 +12,30 @@ var HolyShieldRankMap = spellData.HolyShield
 // Holy Shield (talent)
 // https://www.wowhead.com/forever/spell=20928
 //
-// Increases chance to block by 20% for 10 sec, and deals 221 Holy damage for each attack blocked
-// while active. Damage caused by Holy Shield causes 20% additional threat. Each block expends a
-// charge. 4 charges.
-//
-// The per-block damage and its spell power share sit on the proc-trigger-damage aura effect,
-// beside the block chance on an aura of its own.
+// Increases chance to block by 30% for 10 sec, and deals 221 Holy damage for each attack blocked
+// while active. Damage caused by Holy Shield causes 20% additional threat.
 func (paladin *Paladin) registerHolyShield(_ int32, rank *spelldata.Spell) {
 	actionID := core.ActionID{SpellID: rank.ID}
 	damageEffect := rank.Effect(dbcenums.A_PROC_TRIGGER_DAMAGE, 0)
-	damage := damageEffect.Average(core.CharacterLevel)
-	blockPercent := rank.Effect(dbcenums.A_MOD_BLOCK_PERCENT, 0).BaseValue() // stats.BlockPercent is in percent: 30, not 0.3
+	damage := damageEffect.Mean()
+	blockPercent := rank.Effect(dbcenums.A_MOD_BLOCK_PERCENT, 0).BaseValue()
 	charges := int32(rank.ProcCharges)
 
-	procSpell := paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       actionID.WithTag(2),
-		SpellSchool:    core.SpellSchoolHoly,
-		DefenseType:    core.DefenseTypeMagic,
-		ProcMask:       core.ProcMaskEmpty,
-		Flags:          core.SpellFlagNoOnCastComplete | core.SpellFlagPassiveSpell | core.SpellFlagBinary,
-		ClassSpellMask: SpellMaskHolyShieldProc,
-
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1.2,
-		BonusCoefficient: damageEffect.Coeff(),
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMagicHit)
-		},
-	})
+	// The per-block damage has no row of its own: it is the shield's own proc-trigger-damage effect.
+	procConfig := spelldata.SpellConfig(&paladin.Unit, rank, spelldata.Magic(core.ProcMaskEmpty), spelldata.Proc(),
+		spelldata.Tag(2), spelldata.Flags(core.SpellFlagBinary))
+	procConfig.ClassSpellMask = SpellMaskHolyShieldProc
+	procConfig.Flags &^= core.SpellFlagHelpful // The row's first effect is the block chance on the paladin.
+	procConfig.BonusCoefficient = damageEffect.Coeff()
+	procConfig.ThreatMultiplier = 1.2 // The tooltip's 20% additional threat.
+	procConfig.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMagicHit)
+	}
+	procSpell := paladin.RegisterSpell(procConfig)
 
 	var holyShieldAura *core.Aura
 	holyShieldAura = paladin.RegisterAura(core.Aura{
-		Label:     fmt.Sprintf("Holy Shield%s Rank %d", paladin.Label, rank.RankNumber()),
+		Label:     rank.RankedLabel(&paladin.Unit),
 		ActionID:  actionID,
 		Duration:  rank.Duration(),
 		MaxStacks: charges,
@@ -65,35 +54,14 @@ func (paladin *Paladin) registerHolyShield(_ int32, rank *spelldata.Spell) {
 		holyShieldAura.AttachMultiplicativePseudoStatBuff(&paladin.PseudoStats.BlockValueMultiplier, paladin.holyShieldBlockValueMultiplier)
 	}
 
-	paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       actionID,
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    rank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskEmpty,
-		Flags:          core.SpellFlagAPL | core.SpellFlagHelpful,
-		ClassSpellMask: SpellMaskHolyShield,
-		Rank:           rank.RankNumber(),
-
-		ManaCost: rank.ManaCost(),
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: rank.GCD(),
-			},
-			CD: core.Cooldown{
-				Timer:    paladin.sharedTimer(&paladin.holyShieldTimer),
-				Duration: cooldown(rank),
-			},
-		},
-
-		ExtraCastCondition: func(_ *core.Simulation, _ *core.Unit) bool {
-			return paladin.PseudoStats.CanBlock
-		},
-
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
-			holyShieldAura.Activate(sim)
-			holyShieldAura.SetStacks(sim, charges)
-		},
-
-		RelatedSelfBuff: holyShieldAura,
-	})
+	// The row requires a shield, which the cast requirement checks.
+	config := spelldata.SpellConfig(&paladin.Unit, rank, spelldata.Flags(core.SpellFlagAPL))
+	config.ProcMask = core.ProcMaskEmpty
+	config.ClassSpellMask = SpellMaskHolyShield
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
+		holyShieldAura.Activate(sim)
+		holyShieldAura.SetStacks(sim, charges)
+	}
+	config.RelatedSelfBuff = holyShieldAura
+	paladin.RegisterSpell(config)
 }

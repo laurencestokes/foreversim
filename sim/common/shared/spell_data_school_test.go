@@ -6,11 +6,11 @@ import (
 	"github.com/wowsims/forever/sim/core"
 )
 
-// The generator emits a school by name and the client states it as a bit. Those only agree because
-// core's SpellSchool constants were put on the client's bits, and nothing else would notice if they
+// The generator emits a school by name and the game files state it as a bit. Those only agree because
+// core's SpellSchool constants were put on the game files' bits, and nothing else would notice if they
 // drifted apart - every conversion in core is a switch over the names.
-func TestSpellSchoolBitsMatchTheClient(t *testing.T) {
-	// SpellMisc.SchoolMask, as the client numbers it.
+func TestSpellSchoolBitsMatchTheGameFiles(t *testing.T) {
+	// SpellMisc.SchoolMask, as the game files number it.
 	for _, c := range []struct {
 		clientBit byte
 		school    core.SpellSchool
@@ -25,7 +25,7 @@ func TestSpellSchoolBitsMatchTheClient(t *testing.T) {
 		{64, core.SpellSchoolArcane, "Arcane"},
 	} {
 		if byte(c.school) != c.clientBit {
-			t.Errorf("%s is bit %d in the client and %d in core", c.name, c.clientBit, byte(c.school))
+			t.Errorf("%s is bit %d in the game files and %d in core", c.name, c.clientBit, byte(c.school))
 		}
 	}
 }

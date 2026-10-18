@@ -1,12 +1,5 @@
-// Assembles the race arena's per-spec lists into the one file the race tier list page reads,
-// and sorts every race on every list into a tier.
-//
-// Each spec's TestRaceArena (sim/arenalib/race_arena.go) writes its own lists, because `go test`
-// runs packages concurrently and a shared file would be a race. This merges them, measures each
-// race against its list's best, and records which commit produced the numbers: as with the build
-// arena, the committed file is the cache and the commit is its key.
-//
-// Usage: go run ./tools/race_arena <race-arena-out-dir> [ui/app/race_arena/results.json]
+// Scores the race arena simulations and writes the committed tier lists.
+// Usage: go run ./tools/race_arena <output-directory> [ui/app/race_arena/results.json]
 package main
 
 import (
@@ -20,10 +13,6 @@ import (
 	"strings"
 	"time"
 )
-
-// The reviewed client build. Build 70094 leaves the sim's 70009 client tables,
-// including the racial rows, unchanged (docs/data-changes/2026-09-29-client-1.60.1.70094.md).
-const clientBuild = "1.60.1.70425"
 
 // The fight every list is run in: the leaderboard's one target (core.MakeSingleTargetEncounter).
 const (
@@ -64,8 +53,7 @@ func tierFor(behind float64) string {
 	return tiers[len(tiers)-1].Name
 }
 
-// Mirrors sim/arenalib.RaceList and RaceRow. Duplicated rather than imported, as tools/arena
-// does, because that package is a test harness.
+// The lists written by tools/race_arena/simulate.
 type rawList struct {
 	Spec           string   `json:"spec"`
 	Class          string   `json:"class"`
@@ -120,14 +108,13 @@ type list struct {
 }
 
 type output struct {
-	Commit      string    `json:"commit"`
-	Generated   time.Time `json:"generated"`
-	Iterations  int       `json:"iterations"`
-	ClientBuild string    `json:"clientBuild"`
-	Fight       fight     `json:"fight"`
-	Tiers       []tier    `json:"tiers"`
-	Noise       noise     `json:"noise"`
-	Lists       []list    `json:"lists"`
+	Commit     string    `json:"commit"`
+	Generated  time.Time `json:"generated"`
+	Iterations int       `json:"iterations"`
+	Fight      fight     `json:"fight"`
+	Tiers      []tier    `json:"tiers"`
+	Noise      noise     `json:"noise"`
+	Lists      []list    `json:"lists"`
 }
 
 type fight struct {
@@ -172,11 +159,10 @@ func main() {
 	}
 
 	out := output{
-		Commit:      commit(),
-		Generated:   time.Now().UTC().Truncate(time.Second),
-		ClientBuild: clientBuild,
-		Fight:       fight{fightSeconds, targetLevel, targetArmor},
-		Tiers:       tiers,
+		Commit:    commit(),
+		Generated: time.Now().UTC().Truncate(time.Second),
+		Fight:     fight{fightSeconds, targetLevel, targetArmor},
+		Tiers:     tiers,
 	}
 	for _, r := range raw {
 		if out.Iterations != 0 && r.Iterations != out.Iterations {
@@ -268,11 +254,10 @@ func racials(raceName string, class string, target string, weaponRacial bool) st
 	switch raceName {
 	case "Human":
 		add(true, "Ruthless (+2% crit)")
-		add(weaponRacial, "sword crit")
+
 		add(manaUser, "+5% Spirit")
 	case "Dwarf":
-		add(true, "Earth Fury (+2% crit damage)")
-		add(weaponRacial, "mace crit")
+		add(weaponRacial, "Earth Fury (+2% crit damage with a mace)")
 		add(target == "Beast", "Big Game Hunter")
 	case "Night Elf":
 		add(true, "Elune's Light")
@@ -283,7 +268,7 @@ func racials(raceName string, class string, target string, weaponRacial bool) st
 	case "Orc":
 		add(true, "Blood Fury")
 		add(true, "Savage (+1% crit)")
-		add(weaponRacial, "axe crit")
+
 	case "Undead":
 		add(true, "Touch of the Grave")
 	case "Tauren":
@@ -291,7 +276,7 @@ func racials(raceName string, class string, target string, weaponRacial bool) st
 	case "Troll":
 		add(true, "Berserking")
 		add(target == "Beast", "Beast Slaying")
-	case "Skyborne":
+	case "Skyborne", "High Order Skyborne", "Windshaper Skyborne":
 		add(true, "Wind Blessed (+3% haste)")
 		add(target == "Elemental", "Elemental Insight")
 	}

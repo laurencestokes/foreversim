@@ -5,7 +5,7 @@
 // consults them but the local .idx always wins for resident files).
 // Copyright (c) 2024 Martin Benjamins. MIT License — see tools/db2tool/NOTICES.md.
 
-// Package tact reads World of Warcraft client files either out of a local
+// Package tact reads World of Warcraft game files either out of a local
 // CASC install (.build.info picks the build, then root → encoding → .idx →
 // data.NNN → BLTE resolves a file data id to its bytes) or straight off
 // Blizzard's CDN (see cdn.go), which swaps the .idx/data.NNN step for archive

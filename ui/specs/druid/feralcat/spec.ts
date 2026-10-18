@@ -1,11 +1,10 @@
+import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
-import { APLAction, APLListItem, APLRotation, APLRotation_Type as APLRotationType } from '@generated/proto/apl';
+import { APLRotation, APLRotation_Type as APLRotationType } from '@generated/proto/apl';
 import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
-import { Cooldowns, ItemSlot, PseudoStat, Spec, Stat, TristateEffect } from '@generated/proto/common';
-import { FeralCatDruid_Rotation as DruidRotation } from '@generated/proto/druid';
+import { ItemSlot, PseudoStat, Spec, Stat, TristateEffect } from '@generated/proto/common';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
-import { masterEpWeights } from '@sim/proto/master_ep_weights';
 import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
@@ -22,7 +21,7 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 	warnings: [],
 
 	// Extra stats shown in consumables picker (beyond epStats).
-	consumableStats: [Stat.StatMeleeHasteRating, Stat.StatMana, Stat.StatSpirit, Stat.StatMP5],
+	consumableStats: [Stat.StatHasteRating, Stat.StatMana, Stat.StatSpirit, Stat.StatMP5],
 
 	// All stats for which EP should be calculated.
 	epStats: [
@@ -31,14 +30,13 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 		Stat.StatAttackPower,
 		Stat.StatFeralAttackPower,
 		Stat.StatPhysicalDamage,
-		Stat.StatMeleeHitRating,
+		Stat.StatHitRating,
 		Stat.StatExpertiseRating,
-		Stat.StatMeleeCritRating,
-		Stat.StatMeleeHasteRating,
+		Stat.StatCritRating,
+		Stat.StatHasteRating,
 		Stat.StatArmorPenetration,
 	],
-	gemStats: [Stat.StatAgility, Stat.StatStrength],
-	epPseudoStats: [],
+	epPseudoStats: [PseudoStat.PseudoStatMainHandDps],
 	// Reference stat against which to calculate EP. I think all classes use either spell power or attack power.
 	epReferenceStat: Stat.StatAgility,
 	// Which stats to display in the Character Stats section, at the bottom of the left-hand sidebar.
@@ -53,11 +51,6 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 			Stat.StatAttackPower,
 			Stat.StatMana,
 			Stat.StatArmorPenetration,
-			Stat.StatArcaneResistance,
-			Stat.StatFireResistance,
-			Stat.StatFrostResistance,
-			Stat.StatNatureResistance,
-			Stat.StatShadowResistance,
 		],
 		[
 			PseudoStat.PseudoStatMeleeHitPercent,
@@ -69,75 +62,64 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 
 	defaults: {
 		// Default equipped gear.
-		gear: Presets.DEFAULT_GEAR.gear,
+		gear: Presets.PreRaidGear.gear,
 		// Default EP weights for sorting gear in the gear picker.
-		// Master's weights (percent stats per 1%), in our ratings.
-		epWeights: masterEpWeights({
-			Strength: 2.4,
-			Agility: 2.43,
-			Intellect: 0.61,
-			Spirit: 0.38,
-			MP5: 0.79,
-			AttackPower: 1,
-			MeleeHit: 26.59,
-			MeleeCrit: 28.68,
-			Expertise: 26.59,
-			Mana: 0.03,
-			FeralAttackPower: 1,
-			BonusPhysicalDamage: 13.33,
-			MeleeSpeedMultiplier: 16.5,
-		}),
+		epWeights: Presets.PreRaidEp,
 		statCaps: (() => {
-			return new Stats().withPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, 9).withPseudoStat(PseudoStat.PseudoStatExpertisePercent, 6.5);
+			return new Stats().withPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, 8).withPseudoStat(PseudoStat.PseudoStatExpertisePercent, 6.5);
 		})(),
 		other: Presets.OtherDefaults,
 		// Default consumes settings.
 		consumables: Presets.DefaultConsumables,
 		// Default rotation settings.
 		rotationType: APLRotationType.TypeAuto,
-		// Default talents.
-		talents: Presets.FeralTalents.data,
+		// Genesis, nature's majesty, nature's reach, ferocity, heart of the wild, shredding attacks,
+		// savage fury, sharpened claws, shifting power, predatory strikes, improved shifting power,
+		// leader of the pack, natural instinct, rend and tear, berserk, furor, naturalist.
+		// Shifting Power is absent until that talent is taken.
+		talents: Presets.CatTalents.data,
 		// Default spec-specific settings.
 		specOptions: Presets.DefaultOptions,
 		// Default raid/party buffs settings.
-		// Master's page (currentSettings on a fresh profile); its raid-wide Strength of Earth,
-		// Battle Shout, Leader of the Pack and Mana Spring are party buffs here.
 		raidBuffs: RaidBuffs.create({
 			arcaneBrilliance: true,
+			prayerOfSpirit: true,
 			giftOfTheWild: true,
 			prayerOfFortitude: true,
-			prayerOfSpirit: true,
+			windfuryTotem: true,
+			strengthOfEarthTotem: true,
+			battleShout: TristateEffect.TristateEffectRegular,
 		}),
 		partyBuffs: PartyBuffs.create({
-			battleShout: TristateEffect.TristateEffectRegular,
-			leaderOfThePack: true,
 			manaSpringTotem: TristateEffect.TristateEffectRegular,
-			strengthOfEarthTotem: true,
 		}),
-		individualBuffs: IndividualBuffs.create({}),
+		individualBuffs: IndividualBuffs.create({
+			greaterBlessingOfKings: true,
+			greaterBlessingOfMight: true,
+		}),
 		debuffs: Debuffs.create({
-			exposeArmor: true,
-			curseOfRecklessness: true,
+			judgementOfWisdom: true,
+			faerieFire: true,
 			sunderArmor: true,
+			giftOfArthas: true,
 		}),
 	},
 
 	// IconInputs to include in the 'Player' section on the settings tab.
 	playerIconInputs: [],
-	// Inputs to include in the 'Rotation' section on the settings tab.
-	rotationInputs: FeralInputs.FeralDruidRotationConfig,
 	// Buff and Debuff inputs to include/exclude, overriding the EP-based defaults.
 	includeBuffDebuffInputs: [Stat.StatMP5, Stat.StatIntellect, Stat.StatStamina],
-	excludeBuffDebuffInputs: [],
+	excludeBuffDebuffInputs: [BuffDebuffInputs.AtieshMage],
 	// Inputs to include in the 'Other' section on the settings tab.
 	otherInputs: {
 		inputs: [
-			OtherInputs.TotemTwisting,
 			OtherInputs.InputDelay,
 			OtherInputs.DistanceFromTarget,
 			OtherInputs.TankAssignment,
 			OtherInputs.InFrontOfTarget,
 			FeralInputs.CannotShredTarget,
+			FeralInputs.AssumeBleedActive,
+			FeralInputs.PrepullClearcasting,
 		],
 	},
 	itemSwapSlots: [ItemSlot.ItemSlotMainHand, ItemSlot.ItemSlotOffHand, ItemSlot.ItemSlotTrinket1, ItemSlot.ItemSlotTrinket2],
@@ -147,28 +129,26 @@ export default defineSpec<Spec.SpecFeralCatDruid>({
 	},
 
 	presets: {
-		epWeights: [],
+		epWeights: [Presets.PreRaidEpWeights, Presets.Level60EpWeights],
 		// Preset talents that the user can quickly select.
-		talents: [Presets.FeralTalents, Presets.FeralCatTalents],
-		rotations: [Presets.SIMPLE, Presets.APL, Presets.APL_SIMPLE_VAEL],
+		talents: [Presets.CatTalents, Presets.BearweaveTalents, Presets.ManaEfficientTalents, Presets.HybridTalents],
+		rotations: [
+			Presets.MONOCAT_APL,
+			Presets.SHADOWMELD_APL,
+			Presets.ENERGIZED_APL,
+			Presets.RAVAGE_APL,
+			Presets.POUNCE_APL,
+			Presets.BEARWEAVE_APL,
+			Presets.JVMES_APL,
+		],
+		builds: [Presets.BearweaveBuild],
 		// Preset gear configurations that the user can quickly select.
-		gear: Presets.GEAR_PRESETS,
+		gear: [Presets.PreRaidGear, Presets.Level60Gear],
 	},
 
+	// Auto is the Monocat APL.
 	autoRotation: (_player: Player<Spec.SpecFeralCatDruid>): APLRotation => {
-		return Presets.APL.rotation.rotation!;
-	},
-
-	simpleRotation: (_player: Player<Spec.SpecFeralCatDruid>, simple: DruidRotation, _cooldowns: Cooldowns): APLRotation => {
-		// All cooldowns (potions, sappers, runes) are fired by the Go rotation
-		// during power shifts (ClearForm → fire MCDs → CatForm), not through the APL.
-		const doRotation = APLAction.fromJsonString(
-			`{"catOptimalRotationAction":{"finishingMove":${simple.finishingMove},"biteweave":${simple.biteweave},"ripweave":${simple.ripweave},"ripMinComboPoints":${simple.ripMinComboPoints},"biteMinComboPoints":${simple.biteMinComboPoints},"mangleTrick":${simple.mangleTrick},"rakeTrick":${simple.rakeTrick},"maintainFaerieFire":${simple.maintainFaerieFire}}}`,
-		);
-
-		return APLRotation.create({
-			priorityList: [APLListItem.create({ action: doRotation })],
-		});
+		return Presets.MONOCAT_APL.rotation.rotation!;
 	},
 
 	hiddenMCDs: [],

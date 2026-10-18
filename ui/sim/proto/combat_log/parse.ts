@@ -65,7 +65,18 @@ const OUTCOME_BY_TOKEN: Record<string, Outcome> = {
 	Hit: 'hit',
 };
 
-const RESIST_BY_TOKEN: Record<string, PartialResist> = { '25': 25, '50': 50, '75': 75 };
+const RESIST_BY_TOKEN: Record<string, PartialResist> = {
+	'10': 10,
+	'20': 20,
+	'30': 30,
+	'40': 40,
+	'50': 50,
+	'60': 60,
+	'70': 70,
+	'80': 80,
+	'90': 90,
+	'100': 100,
+};
 
 // Go's time.Duration.String() can emit nanosecond-precision strings like "29.999999999s" or
 // "33.217000001s". Round these to something readable without disturbing clean values.
@@ -93,7 +104,7 @@ function durationText(seconds: number): string {
 
 // One object is allocated per line and each builder finishes it in place. The obvious shape -
 // build a params literal, then spread it into a second literal per kind - allocates twice and
-// copies nine fields per line, and measured ~30% slower than master's single constructor call.
+// copies nine fields per line, and measured ~30% slower than a single allocation per line.
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
 function newLog(
@@ -129,7 +140,7 @@ function buildResourceLog(log: PendingLog, match: RegExpExecArray): ResourceLog 
 	out.isSpend = match[1] == 'Spent';
 	out.total = match[8] !== undefined ? parseFloat(match[8]) : 0;
 	// Always assigned, including when undefined: the parity dump discovers fields with
-	// Object.keys, and the old constructor's assignment created the key either way.
+	// Object.keys, so the key must exist either way.
 	return out;
 }
 
@@ -258,7 +269,7 @@ type LogMatcher = {
 	guard: Array<string>;
 	regex: RegExp;
 	// Some patterns match lines they cannot actually build from; those fall through to the
-	// next matcher, exactly as the old `parse` chain did by returning null.
+	// next matcher.
 	valid?: (match: RegExpExecArray) => boolean;
 	// The fragment naming this line's action, e.g. '{SpellID: 48707}'.
 	idString: (match: RegExpExecArray) => string;

@@ -32,7 +32,13 @@
 					"description": "Log how each hover was resolved to the WoWSims Spelldata output channel."
 				}
 			}
-		}
+		},
+		"commands": [
+			{
+				"command": "wowsims-spelldata.changeRank",
+				"title": "WoWSims: Change SpellData Rank"
+			}
+		]
 	},
 	"x-generated": "make vscode-spelldata"
 }

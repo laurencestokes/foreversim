@@ -1,143 +1,243 @@
 import * as PresetUtils from '@app/preset_utils';
-import { ConsumesSpec, Profession, Race } from '@generated/proto/common';
-import { Rogue_Options as RogueOptions } from '@generated/proto/rogue';
+import * as Consumables from '@features/settings/model/consumables_auto_gen';
+import { ConsumesSpec, PseudoStat, Spec, Stat } from '@generated/proto/common';
+import { Rogue_Options as RogueOptions, Rogue_Rotation as RogueRotation } from '@generated/proto/rogue';
 import { SavedTalents } from '@generated/proto/ui';
+import { Stats } from '@sim/proto/stats';
 
-import BackstabAPL from './apls/combat_backstab.apl.json';
-import BackstabSweatyAPL from './apls/combat_backstab_sweaty.apl.json';
-import SinisterStrikeAPL from './apls/combat_sinister_strike.apl.json';
-import SinisterStrikeIEAAPL from './apls/combat_sinister_strike_iea.apl.json';
-import SinisterStrikeSweatyAPL from './apls/combat_sinister_strike_sweaty.apl.json';
-import HemorrhageAPL from './apls/forever_hemorrhage.apl.json';
-import MutilateAPL from './apls/forever_mutilate.apl.json';
-import BackstabLaunchGear from './gear_sets/backstab_launch.gear.json';
-import CombatBackstabP1BisGear from './gear_sets/combat_backstab_p1_bis.gear.json';
-import CombatBackstabP2BisGear from './gear_sets/combat_backstab_p2_bis.gear.json';
-import CombatBackstabPrebisGear from './gear_sets/combat_backstab_prebis.gear.json';
-import CombatSinisterStrikeP1BisGear from './gear_sets/combat_sinister_strike_p1_bis.gear.json';
-import CombatSinisterStrikeP2BisGear from './gear_sets/combat_sinister_strike_p2_bis.gear.json';
-import CombatSinisterStrikePrebisGear from './gear_sets/combat_sinister_strike_prebis.gear.json';
-import SinisterStrikeLaunchGear from './gear_sets/sinister_strike_launch.gear.json';
+import DefaultAPL from './apls/default.apl.json';
+import P1BsCombatGear from './gear_sets/p1_bscombat.gear.json';
+import P1BsSubGear from './gear_sets/p1_bssub.gear.json';
+import P1MutiGear from './gear_sets/p1_muti.gear.json';
+import P1SlowMhGear from './gear_sets/p1_slowmh.gear.json';
 
 // Preset options for this spec.
 // Eventually we will import these values for the raid sim too, so its good to
 // keep them in a separate file.
 
-// Master's rotations, talents and builds, same names and order (master ui/rogue/presets.ts).
-export const ROTATION_PRESET_BACKSTAB = PresetUtils.makePresetAPLRotation('Backstab', BackstabAPL);
-export const ROTATION_PRESET_SINISTER_STRIKE = PresetUtils.makePresetAPLRotation('Sinister Strike', SinisterStrikeAPL);
-export const ROTATION_PRESET_BACKSTAB_SWEATY = PresetUtils.makePresetAPLRotation('Backstab (Sweaty)', BackstabSweatyAPL);
-export const ROTATION_PRESET_SINISTER_STRIKE_SWEATY = PresetUtils.makePresetAPLRotation('Sinister Strike (Sweaty)', SinisterStrikeSweatyAPL);
-export const ROTATION_PRESET_SINISTER_STRIKE_IEA = PresetUtils.makePresetAPLRotation('Improved Expose Armor (SS)', SinisterStrikeIEAAPL);
-export const ROTATION_PRESET_MUTILATE = PresetUtils.makePresetAPLRotation('Mutilate', MutilateAPL);
-export const ROTATION_PRESET_HEMORRHAGE = PresetUtils.makePresetAPLRotation('Hemorrhage', HemorrhageAPL);
-export const ROTATION_PRESETS = [
-	ROTATION_PRESET_BACKSTAB,
-	ROTATION_PRESET_SINISTER_STRIKE,
-	ROTATION_PRESET_BACKSTAB_SWEATY,
-	ROTATION_PRESET_SINISTER_STRIKE_SWEATY,
-	ROTATION_PRESET_SINISTER_STRIKE_IEA,
-	ROTATION_PRESET_MUTILATE,
-	ROTATION_PRESET_HEMORRHAGE,
-];
+export const TALENTS_MUTILATE_ASN = {
+	name: 'Asn Muti',
+	data: SavedTalents.create({
+		talentsString: '00532310151501031-302303202014',
+	}),
+};
+export const TALENTS_MUTILATE_COM = {
+	name: 'Combat Muti',
+	data: SavedTalents.create({
+		talentsString: '00532310101401-302303202015152-001',
+	}),
+};
+export const TALENTS_COMBAT_SS = {
+	name: 'Combat SS',
+	data: SavedTalents.create({
+		talentsString: '005323101012-32030320201515231',
+	}),
+};
+export const TALENTS_COMBAT_BS = {
+	name: 'Combat BS',
+	data: SavedTalents.create({
+		talentsString: '00532310101-32030320201515231-002',
+	}),
+};
+export const TALENTS_SUB_HEMO = {
+	name: 'Subtlety Hemo',
+	data: SavedTalents.create({
+		talentsString: '005323101014--4323200300013211501',
+	}),
+};
+export const TALENTS_SUB_BS = {
+	name: 'Subtlety BS',
+	data: SavedTalents.create({
+		talentsString: '0053031-3203-4320203300013211051',
+	}),
+};
 
-export const BackstabTalents = PresetUtils.makePresetTalents('Backstab', SavedTalents.create({ talentsString: '005302005-30230320201515231-102' }));
-export const SinisterStrikeTalents = PresetUtils.makePresetTalents('Sinister Strike', SavedTalents.create({ talentsString: '00530310501-32003311201515231' }));
-export const SinisterStrikeIEATalents = PresetUtils.makePresetTalents(
-	'Improved Expose Armor (SS)',
-	SavedTalents.create({ talentsString: '005303125-32003311201515131' }),
+export const DEFAULT_APL = PresetUtils.makePresetAPLRotation('Direct APL', DefaultAPL);
+
+export const DEFAULT_SIMPLE_ROTATION = RogueRotation.create({ useBackstab: false, useExposeArmor: false });
+export const SIMPLE_ROTATION = PresetUtils.makePresetSimpleRotation('Configurable', Spec.SpecRogue, DEFAULT_SIMPLE_ROTATION);
+const SIMPLE_BACKSTAB_BUILD_ROTATION = PresetUtils.makePresetSimpleRotation(
+	'Configurable',
+	Spec.SpecRogue,
+	RogueRotation.create({ useBackstab: true, useExposeArmor: false }),
 );
-export const MutilateTalents = PresetUtils.makePresetTalents('Mutilate', SavedTalents.create({ talentsString: '00530310551021051-302303202004' }));
-// The community builds (named with their point split, so the rankings page runs them).
-export const CombatDualWieldTalents = PresetUtils.makePresetTalents(
-	'Combat Dual-Wield 15/33/3',
-	SavedTalents.create({ talentsString: '1053231-22530300001515231-012' }),
+
+export const P1_BS_COMBAT_GEAR = PresetUtils.makePresetGear('Backstab Combat', P1BsCombatGear, { devOnly: true });
+export const P1_MUTI_GEAR = PresetUtils.makePresetGear('Mutilate', P1MutiGear, { devOnly: true });
+export const P1_SLOW_MH_GEAR = PresetUtils.makePresetGear('Slow Main Hand', P1SlowMhGear, { devOnly: true });
+export const P1_BS_SUB_GEAR = PresetUtils.makePresetGear('Backstab Subtlety', P1BsSubGear, { devOnly: true });
+
+// Preset options for EP weights
+export const EP_PRESET_COMBAT_SINISTER = PresetUtils.makePresetEpWeights(
+	'Combat Sinister',
+	Stats.fromMap(
+		{
+			[Stat.StatStamina]: 0.01,
+			[Stat.StatAgility]: 1.96,
+			[Stat.StatStrength]: 1.1,
+			[Stat.StatCritRating]: 1.7,
+			[Stat.StatHasteRating]: 1.72,
+			[Stat.StatHitRating]: 2.42,
+			[Stat.StatExpertiseRating]: 2.55,
+			[Stat.StatArmorPenetration]: 0.41,
+			[Stat.StatSpellPiercing]: 0.19,
+			[Stat.StatAttackPower]: 1.0,
+			[Stat.StatPhysicalDamage]: 7.97,
+		},
+		{
+			[PseudoStat.PseudoStatMainHandDps]: 10.57,
+			[PseudoStat.PseudoStatOffHandDps]: 2.93,
+		},
+	),
 );
-export const AssassinationMutilateTalents = PresetUtils.makePresetTalents(
-	'Assassination Mutilate 31/20/0',
-	SavedTalents.create({ talentsString: '02532010531201051-225303000005' }),
+
+export const EP_PRESET_COMBAT_DAGS = PresetUtils.makePresetEpWeights(
+	'Combat Daggers',
+	Stats.fromMap(
+		{
+			[Stat.StatStamina]: 0.01,
+			[Stat.StatAgility]: 1.95,
+			[Stat.StatStrength]: 1.1,
+			[Stat.StatCritRating]: 1.68,
+			[Stat.StatHasteRating]: 1.7,
+			[Stat.StatHitRating]: 2.35,
+			[Stat.StatExpertiseRating]: 2.21,
+			[Stat.StatArmorPenetration]: 0.43,
+			[Stat.StatSpellPiercing]: 0.21,
+			[Stat.StatAttackPower]: 1.0,
+			[Stat.StatPhysicalDamage]: 9.9,
+		},
+		{
+			[PseudoStat.PseudoStatMainHandDps]: 10.18,
+			[PseudoStat.PseudoStatOffHandDps]: 2.97,
+		},
+	),
 );
-export const SubtletyHemoTalents = PresetUtils.makePresetTalents(
-	'Subtlety Hemo 15/0/36',
-	SavedTalents.create({ talentsString: '125320101--5320003310013211551' }),
+
+export const EP_PRESET_SUBTLETY = PresetUtils.makePresetEpWeights(
+	'Subtlety',
+	Stats.fromMap(
+		{
+			[Stat.StatStamina]: 0.01,
+			[Stat.StatAgility]: 1.93,
+			[Stat.StatStrength]: 1.1,
+			[Stat.StatCritRating]: 1.63,
+			[Stat.StatHasteRating]: 1.43,
+			[Stat.StatHitRating]: 2.12,
+			[Stat.StatExpertiseRating]: 2.42,
+			[Stat.StatArmorPenetration]: 0.33,
+			[Stat.StatSpellPiercing]: 0.16,
+			[Stat.StatAttackPower]: 1.0,
+			[Stat.StatPhysicalDamage]: 6.83,
+		},
+		{
+			[PseudoStat.PseudoStatMainHandDps]: 10.47,
+			[PseudoStat.PseudoStatOffHandDps]: 2.27,
+		},
+	),
 );
-export const TALENT_PRESETS = [
-	BackstabTalents,
-	SinisterStrikeTalents,
-	SinisterStrikeIEATalents,
-	MutilateTalents,
-	CombatDualWieldTalents,
-	AssassinationMutilateTalents,
-	SubtletyHemoTalents,
-];
-export const DefaultTalents = SinisterStrikeTalents;
+
+export const EP_PRESET_ASSASSINATION = PresetUtils.makePresetEpWeights(
+	'Assassination',
+	Stats.fromMap(
+		{
+			[Stat.StatStamina]: 0.01,
+			[Stat.StatAgility]: 2.06,
+			[Stat.StatStrength]: 1.1,
+			[Stat.StatCritRating]: 2.02,
+			[Stat.StatHasteRating]: 1.93,
+			[Stat.StatHitRating]: 2.8,
+			[Stat.StatExpertiseRating]: 2.77,
+			[Stat.StatArmorPenetration]: 0.4,
+			[Stat.StatSpellPiercing]: 0.65,
+			[Stat.StatAttackPower]: 1.0,
+			[Stat.StatPhysicalDamage]: 10.55,
+		},
+		{
+			[PseudoStat.PseudoStatMainHandDps]: 8.44,
+			[PseudoStat.PseudoStatOffHandDps]: 4.16,
+		},
+	),
+);
 
 export const DefaultOptions = RogueOptions.create({
 	classOptions: {},
 });
 
-// Master's consumables, as the Forever client's items (master's Greater Arcane Elixir does nothing
-// for a rogue and is left off). Instant/Deadly are this sim's Forever poison ids.
 export const DefaultConsumables = ConsumesSpec.create({
-	flaskId: 13512, // Flask of Supreme Power
-	battleElixirId: 13452, // Elixir of the Mongoose
-	strengthBuffId: 12451, // Juju Power
-	attackPowerBuffId: 12460, // Juju Might
-	zanzaId: 8412, // Ground Scorpok Assay
-	dragonbreathChili: true,
-	foodId: 13928, // Grilled Squid
-	conjuredId: 7676, // Thistle Tea
-	mhImbueId: 26891, // Instant Poison
-	ohImbueId: 27186, // Deadly Poison
-	goblinSapper: true,
+	elixirIds: [Consumables.ElixirOfTheMongoose.id, Consumables.ElixirOfGreaterFortitude.id, Consumables.ElixirOfFerocity.id, Consumables.JujuMight.id],
+	foodId: Consumables.SwiftstrikeSteak.id,
+	offensivePotId: Consumables.MajorFrenzyPotion.id,
+	conjuredId: Consumables.ThistleTea.id,
+	mhImbueId: Consumables.DenseWeightstone.id,
+	ohImbueId: Consumables.DenseSharpeningStone.id,
+	mhWeaponImbueId: Consumables.InstantPoisonVI.id,
+	ohWeaponImbueId: Consumables.DeadlyPoisonIV.id,
+});
+
+const FlippedPoisons = ConsumesSpec.create({
+	...DefaultConsumables,
+	mhWeaponImbueId: Consumables.DeadlyPoisonIV.id,
+	ohWeaponImbueId: Consumables.InstantPoisonVI.id,
+});
+
+const IP_MH_Settings = {
+	name: 'Default',
+	consumables: DefaultConsumables,
+};
+const _DP_MH_Settings = {
+	name: 'Flipped Poisons',
+	consumables: FlippedPoisons,
+};
+
+export const PRESET_BUILD_MUTILATE_ASN = PresetUtils.makePresetBuild('Asn Muti', {
+	talents: TALENTS_MUTILATE_ASN,
+	rotation: SIMPLE_ROTATION,
+	gear: P1_MUTI_GEAR,
+	settings: IP_MH_Settings,
+	epWeights: EP_PRESET_ASSASSINATION,
+});
+
+export const PRESET_BUILD_MUTILATE_COM = PresetUtils.makePresetBuild('Combat Muti', {
+	talents: TALENTS_MUTILATE_COM,
+	rotation: SIMPLE_ROTATION,
+	gear: P1_MUTI_GEAR,
+	settings: IP_MH_Settings,
+	epWeights: EP_PRESET_COMBAT_DAGS,
+});
+
+export const PRESET_BUILD_COMBAT_SS = PresetUtils.makePresetBuild('Combat SS', {
+	talents: TALENTS_COMBAT_SS,
+	rotation: SIMPLE_ROTATION,
+	gear: P1_SLOW_MH_GEAR,
+	settings: IP_MH_Settings,
+	epWeights: EP_PRESET_COMBAT_SINISTER,
+});
+
+export const PRESET_BUILD_COMBAT_BS = PresetUtils.makePresetBuild('Combat BS', {
+	talents: TALENTS_COMBAT_BS,
+	rotation: SIMPLE_BACKSTAB_BUILD_ROTATION,
+	gear: P1_BS_COMBAT_GEAR,
+	settings: IP_MH_Settings,
+	epWeights: EP_PRESET_COMBAT_DAGS,
+});
+
+export const PRESET_BUILD_SUB_HEMO = PresetUtils.makePresetBuild('Subtlety Hemo', {
+	talents: TALENTS_SUB_HEMO,
+	rotation: SIMPLE_ROTATION,
+	gear: P1_SLOW_MH_GEAR,
+	settings: IP_MH_Settings,
+	epWeights: EP_PRESET_SUBTLETY,
+});
+
+export const PRESET_BUILD_SUB_BS = PresetUtils.makePresetBuild('Subtlety BS', {
+	talents: TALENTS_SUB_BS,
+	rotation: SIMPLE_BACKSTAB_BUILD_ROTATION,
+	gear: P1_BS_SUB_GEAR,
+	settings: IP_MH_Settings,
+	epWeights: EP_PRESET_SUBTLETY,
 });
 
 export const OtherDefaults = {
-	reactionTime: 200, // master's default
 	distanceFromTarget: 5,
-	profession1: Profession.Engineering,
-	race: Race.RaceDwarf,
 };
-
-// Our Forever sim's gear presets (master ui/<spec>/gear_sets).
-export const GEAR_BACKSTAB_LAUNCH = PresetUtils.makePresetGear('Backstab Launch', BackstabLaunchGear);
-export const GEAR_SINISTER_STRIKE_LAUNCH = PresetUtils.makePresetGear('Sinister Strike Launch', SinisterStrikeLaunchGear);
-export const GEAR_COMBAT_BACKSTAB_PREBIS = PresetUtils.makePresetGear('Backstab Pre-BiS', CombatBackstabPrebisGear);
-export const GEAR_COMBAT_SINISTER_STRIKE_PREBIS = PresetUtils.makePresetGear('Sinister Strike Pre-BiS', CombatSinisterStrikePrebisGear);
-export const GEAR_COMBAT_BACKSTAB_P1_BIS = PresetUtils.makePresetGear('Backstab P1 BiS', CombatBackstabP1BisGear);
-export const GEAR_COMBAT_SINISTER_STRIKE_P1_BIS = PresetUtils.makePresetGear('Sinister Strike P1 BiS', CombatSinisterStrikeP1BisGear);
-export const GEAR_COMBAT_BACKSTAB_P2_BIS = PresetUtils.makePresetGear('Backstab P2 BiS', CombatBackstabP2BisGear);
-export const GEAR_COMBAT_SINISTER_STRIKE_P2_BIS = PresetUtils.makePresetGear('Sinister Strike P2 BiS', CombatSinisterStrikeP2BisGear);
-export const DEFAULT_GEAR = GEAR_COMBAT_SINISTER_STRIKE_PREBIS;
-export const GEAR_PRESETS = [
-	GEAR_BACKSTAB_LAUNCH,
-	GEAR_SINISTER_STRIKE_LAUNCH,
-	GEAR_COMBAT_BACKSTAB_PREBIS,
-	GEAR_COMBAT_SINISTER_STRIKE_PREBIS,
-	GEAR_COMBAT_BACKSTAB_P1_BIS,
-	GEAR_COMBAT_SINISTER_STRIKE_P1_BIS,
-	GEAR_COMBAT_BACKSTAB_P2_BIS,
-	GEAR_COMBAT_SINISTER_STRIKE_P2_BIS,
-];
-
-export const BuildBackstab = PresetUtils.makePresetBuild('Backstab', {
-	gear: GEAR_COMBAT_BACKSTAB_P2_BIS,
-	talents: BackstabTalents,
-	rotation: ROTATION_PRESET_BACKSTAB,
-});
-export const BuildSinisterStrike = PresetUtils.makePresetBuild('Sinister Strike', {
-	gear: GEAR_COMBAT_SINISTER_STRIKE_P2_BIS,
-	talents: SinisterStrikeTalents,
-	rotation: ROTATION_PRESET_SINISTER_STRIKE,
-});
-export const BuildIEA = PresetUtils.makePresetBuild('IEA', {
-	gear: GEAR_COMBAT_SINISTER_STRIKE_P2_BIS,
-	talents: SinisterStrikeIEATalents,
-	rotation: ROTATION_PRESET_SINISTER_STRIKE_IEA,
-});
-export const BuildMutilate = PresetUtils.makePresetBuild('Mutilate', {
-	gear: GEAR_COMBAT_BACKSTAB_P2_BIS,
-	talents: MutilateTalents,
-	rotation: ROTATION_PRESET_MUTILATE,
-});
-export const BUILD_PRESETS = [BuildBackstab, BuildSinisterStrike, BuildIEA, BuildMutilate];

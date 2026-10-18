@@ -24,7 +24,13 @@ func RegisterRestorationShaman() {
 }
 
 func NewRestorationShaman(character *core.Character, options *proto.Player) *RestorationShaman {
-	selfBuffs := shaman.SelfBuffs{}
+	classOptions := options.GetRestorationShaman().GetOptions().GetClassOptions()
+
+	selfBuffs := shaman.SelfBuffs{
+		ShieldProcrate: classOptions.GetShieldProcrate(),
+		ImbueMH:        classOptions.GetImbueMh(),
+		ImbueMHSwap:    classOptions.GetImbueMhSwap(),
+	}
 
 	resto := &RestorationShaman{
 		Shaman: shaman.NewShaman(character, options.TalentsString, selfBuffs),
@@ -65,9 +71,6 @@ func (resto *RestorationShaman) Initialize() {
 	// procMask := core.ProcMaskUnknown
 	// if resto.HasMHWeapon() {
 	// 	procMask |= core.ProcMaskMeleeMH
-	// }
-	// if resto.HasOHWeapon() {
-	// 	procMask |= core.ProcMaskMeleeOH
 	// }
 	// resto.RegisterEarthlivingImbue(procMask)
 

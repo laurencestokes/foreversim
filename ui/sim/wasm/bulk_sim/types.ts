@@ -1,4 +1,4 @@
-import { BulkGearCandidate, BulkSimRequest, BulkSimStage, BulkSimStageMetrics, DistributionMetrics, ErrorOutcome } from '@generated/proto/api';
+import { BulkSimRequest, BulkSimStage, BulkSimStageMetrics, DistributionMetrics, ErrorOutcome } from '@generated/proto/api';
 import { EquipmentSpec } from '@generated/proto/common';
 
 export const getBulkSimBaselineGear = (request: BulkSimRequest) => request.baseRequest!.raid!.parties[0].players[0].equipment!;
@@ -33,9 +33,4 @@ export type ConcurrentBulkSimStageResult = {
 export type ConcurrentBulkSimCandidateTask = {
 	candidate: ConcurrentBulkSimCandidate;
 	idx: number;
-};
-
-export type BulkSimReforgeCandidateTask = {
-	candidate: BulkGearCandidate;
-	position: number;
 };

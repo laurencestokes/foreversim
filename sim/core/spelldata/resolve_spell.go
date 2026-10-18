@@ -9,7 +9,7 @@ import (
 	"github.com/wowsims/forever/sim/core/dbcenums"
 )
 
-// An addition to the resolved config for what the client does not state: the proc mask, the metrics
+// An addition to the resolved config for what the game files do not state: the proc mask, the metrics
 // the sim keeps and the flags a row cannot justify.
 type SpellOpt func(*core.SpellConfig, *Spell)
 
@@ -59,29 +59,47 @@ func (e *Effect) HitsAnArea() bool {
 	return slices.Contains(areaEnemyTargets, e.Target[0]) || slices.Contains(areaEnemyTargets, e.Target[1])
 }
 
-// What the client states about a spell, as the fields core registers it through. The caller adds the
-// proc mask, ApplyEffects and anything the client does not carry to the returned value before handing
-// it to RegisterSpell: the resolver fills the row's own fields and nothing else.
+// What the game files state about a spell, as the fields core registers it through. The caller adds
+// the proc mask, ApplyEffects and anything the game files do not carry to the returned value before
+// handing it to RegisterSpell: the resolver fills the row's own fields and nothing else.
 //
 // The unit is needed for the cooldown timers, so a config is built where the sim has a character,
 // not at package init. MaxTargets has no SpellConfig field; a caller that needs the row's cap reads
 // s.MaxTargets itself.
 func SpellConfig(unit *core.Unit, s *Spell, opts ...SpellOpt) core.SpellConfig {
 	config := core.SpellConfig{
-		ActionID:     core.ActionID{SpellID: s.ID},
-		Rank:         rankOf(s),
-		SpellSchool:  s.SpellSchool(),
-		DefenseType:  s.DefenseTypeCore(),
-		ClassFlags:   s.ClassFlags,
-		Flags:        rowFlags(s),
-		MissileSpeed: float64(s.Speed),
-		MinRange:     float64(s.MinRange),
-		MaxRange:     float64(s.MaxRange),
-		Cast:         castConfig(unit, s),
+		ActionID:    core.ActionID{SpellID: s.ID},
+		Rank:        rankOf(s),
+		SpellSchool: s.SpellSchool(),
+		DefenseType: s.DefenseTypeCore(),
+		ClassFlags:  s.ClassFlags,
+		Flags:       rowFlags(s),
+		MinRange:    float64(s.MinRange),
+		MaxRange:    float64(s.MaxRange),
+		Cast:        castConfig(unit, s),
+
+		MissileSpeed:       float64(s.Speed),
+		MissileMinDuration: s.MissileMinDuration(),
 
 		CastRequirement: s.CastRequirement(),
 	}
 	applyCost(&config, s)
+	// Forever moves the minimum range of a bow, gun or crossbow shot from the 8 yd the row states to
+	// core.MinRangedRange.
+	if s.MinRange != 0 && s.EquipClass == dbcenums.ITEM_CLASS_WEAPON && s.EquipSubclass&(dbcenums.ITEM_SUBCLASS_BIT_WEAPON_BOW|dbcenums.ITEM_SUBCLASS_BIT_WEAPON_GUNS|dbcenums.ITEM_SUBCLASS_BIT_WEAPON_CROSSBOW) != 0 {
+		config.MinRange = core.MinRangedRange
+	}
+	// The row's range is to the caster's target; damage over an area around the caster, or around the
+	// point the triggering spell chose, needs none.
+	if damage := s.DamageEffect(); damage.HitsAnArea() && (damage.Target[0] == dbcenums.TARGET_DEST_CASTER || damage.Target[0] == dbcenums.TARGET_SRC_CASTER || damage.Target[0] == dbcenums.TARGET_DEST_DEST) {
+		config.MaxRange = 0
+	}
+	if threat := s.firstOfType(dbcenums.E_THREAT, dbcenums.E_THREAT_ALL); threat != NilEffect {
+		config.FlatThreatBonus = threat.Average()
+		config.ThreatAPCoefficient = threat.APCoeff()
+	} else {
+		config.FlatThreatBonus = float64(s.FlatThreat)
+	}
 	if s.IsBleed() {
 		config.DamageMultiplier = 1
 		config.ThreatMultiplier = 1
@@ -96,29 +114,37 @@ func SpellConfig(unit *core.Unit, s *Spell, opts ...SpellOpt) core.SpellConfig {
 
 // The proc mask, the melee metrics bucket and the multipliers an ability needs, for a physical spell.
 func Melee(mask core.ProcMask) SpellOpt {
-	return func(config *core.SpellConfig, _ *Spell) {
+	return func(config *core.SpellConfig, s *Spell) {
 		config.ProcMask = mask
 		config.Flags |= core.SpellFlagMeleeMetrics | core.SpellFlagAPL
 		config.DamageMultiplier = 1
-		config.ThreatMultiplier = 1
+		config.ThreatMultiplier = threatMultiplier(s)
 		config.Cast.IgnoreHaste = true
 	}
 }
 
-// The same for a spell that scales with spell power, whose share of it the row states on the effect
-// that deals the damage, or heals where the spell has no damaging effect.
+// The same for a spell that scales with spell power, whose share of it and whose roll the row states
+// on the effect that deals the damage, or heals where the spell has no damaging effect.
 func Magic(mask core.ProcMask) SpellOpt {
 	return func(config *core.SpellConfig, s *Spell) {
 		config.ProcMask = mask
 		config.Flags |= core.SpellFlagAPL
 		config.DamageMultiplier = 1
-		config.ThreatMultiplier = 1
+		config.ThreatMultiplier = threatMultiplier(s)
 		config.BonusCoefficient = spellPowerCoeff(s)
+		config.DirectVariance = amountEffect(s).DirectVariance()
 	}
 }
 
+func threatMultiplier(s *Spell) float64 {
+	if s.GeneratesNoThreat() {
+		return 0
+	}
+	return 1
+}
+
 // A spell another spell or an aura casts: it is out of the rotation Melee and Magic put it in, it
-// does not feed on-cast effects, and it has no cast, cost, cooldown or form requirement of its own even when it shares
+// does not feed on-cast effects, and it has no cast, cost, cooldown, cast requirement or flat threat of its own even when it shares
 // the row of the ability that casts it, the way the warrior's Blood Craze heal and Whirlwind's
 // off-hand strike are registered. Its damage and healing are still measured, its casts are not: the
 // metrics aggregator counts no cast for a passive spell, so a sub-spell whose casts the sim reports -
@@ -133,13 +159,26 @@ func Proc() SpellOpt {
 		config.RageCost = core.RageCostOptions{}
 		config.EnergyCost = core.EnergyCostOptions{}
 		config.FocusCost = core.FocusCostOptions{}
+		config.FlatThreatBonus = 0
+		config.ThreatAPCoefficient = 0
 	}
 }
 
-// Flags the client does not state, such as the sim's own metrics and rotation flags.
+// Flags the game files do not state, such as the sim's own metrics and rotation flags.
 func Flags(flags core.SpellFlag) SpellOpt {
 	return func(config *core.SpellConfig, _ *Spell) {
 		config.Flags |= flags
+	}
+}
+
+// RemoveFlags clears specific flags from the configuration that should not be present.
+//
+// Ex: ArcaneMissilesTickSpell is NotAProc so you cant use Proc() SpellOpt, so it ends up being castable through APL
+//
+// Usage: spelldata.RemoveFlags(core.SpellFlagAPL)
+func RemoveFlags(flags core.SpellFlag) SpellOpt {
+	return func(config *core.SpellConfig, _ *Spell) {
+		config.Flags &^= flags
 	}
 }
 
@@ -150,26 +189,68 @@ func Tag(tag int32) SpellOpt {
 	}
 }
 
+// The forms, caster auras, weapon or shield, out-of-combat state and target creature types the row
+// requires. A shield is the only armor a castable spell asks for. The creature types limit the cast
+// only on a spell cast on an enemy unit: Bestial Wrath's Beast is the pet it lands on, and Holy Wrath's
+// Undead and Demon are the enemies its area hits.
+//
+// A ranked row whose only effect that does something is the periodic is refused while a higher rank
+// of its dot is up: Shadow Word: Pain, Renew, Corruption, Rend, and Rip and Rupture, whose dummy
+// effects do nothing by themselves. A row with any other effect casts, and only its periodic stays off.
 func (s *Spell) CastRequirement() core.CastRequirement {
-	return core.CastRequirement{
+	r := core.CastRequirement{
 		Forms:             s.StanceMask,
 		ExcludedForms:     s.StanceExclude,
 		CasterForm:        s.CastableInCasterForm(),
 		NotShapeshifted:   s.NotShapeshifted(),
 		CasterAura:        s.CasterAura,
 		ExcludeCasterAura: s.ExcludeCasterAura,
+		NotInCombat:       s.HasAttr(dbcenums.ATTR_INDEX_BASE, dbcenums.ATTR_NOT_IN_COMBAT),
+
+		NotUnderHigherRank: s.RankNumber() > 0 && s.onlyPeriodicActs(),
 	}
+	switch s.EquipClass {
+	case dbcenums.ITEM_CLASS_WEAPON:
+		r.Weapon = core.EquipRequirement{SubclassMask: s.EquipSubclass, InvTypeMask: s.EquipInvType, Hand: RequiredHand(s)}
+	case dbcenums.ITEM_CLASS_ARMOR:
+		r.Shield = s.EquipSubclass&dbcenums.ITEM_SUBCLASS_BIT_ARMOR_SHIELD != 0
+	}
+	if s.EffectN(1).Target[0] == dbcenums.TARGET_UNIT_TARGET_ENEMY {
+		for _, mobType := range MobTypes(s.TargetCreatureType) {
+			r.TargetMobTypes |= 1 << mobType
+		}
+	}
+	return r
+}
+
+// A periodic is an effect with a tick period, the one DotConfig builds a dot from.
+func (s *Spell) onlyPeriodicActs() bool {
+	var acting []*Effect
+	for i := range s.Effects {
+		if e := &s.Effects[i]; !e.isInert() {
+			acting = append(acting, e)
+		}
+	}
+	return len(acting) == 1 && acting[0].PeriodMs > 0
+}
+
+func (e *Effect) isInert() bool {
+	return e.Type == dbcenums.E_DUMMY || e.Type == dbcenums.E_SCRIPT_EFFECT || e.Aura == dbcenums.A_DUMMY
 }
 
 func spellPowerCoeff(s *Spell) float64 {
+	return amountEffect(s).Coeff()
+}
+
+func amountEffect(s *Spell) *Effect {
 	if e := s.DamageEffect(); e != NilEffect {
-		return e.Coeff()
+		return e
 	}
-	return s.HealEffect().Coeff()
+	return s.HealEffect()
 }
 
 // Spell.NameSubtext_lang, which is "Rank 4" on a ranked spell and a word like "Passive" or
-// "Shapeshift" on a handful of others. A spell the client shows no rank on answers 0, which is what
+// "Shapeshift" on a handful of others. A spell the game files show no rank on answers 0, which is what
 // the APL UI reads as "this spell has no ranks".
 func rankOf(s *Spell) int32 {
 	digits, ranked := strings.CutPrefix(s.Rank, "Rank ")
@@ -184,7 +265,7 @@ func rankOf(s *Spell) int32 {
 }
 
 // The flags the row's attributes and targets state. Everything else is the caller's: a flag the
-// client does not carry is not invented here.
+// game files do not carry is not invented here.
 func rowFlags(s *Spell) core.SpellFlag {
 	var flags core.SpellFlag
 	if s.IsPassive() {
@@ -199,6 +280,9 @@ func rowFlags(s *Spell) core.SpellFlag {
 	if s.PushedBack() {
 		flags |= core.SpellFlagPushback
 	}
+	if s.KeepsCombatTimers() {
+		flags |= core.SpellFlagKeepsSwingTimer
+	}
 	// Helpful decides who the APL casts the spell on, so it follows the first effect's target. An
 	// attack whose first effect is a self side-effect reads as helpful here and the caller clears it.
 	if slices.Contains(helpfulTargets, s.EffectN(1).Target[0]) {
@@ -211,8 +295,8 @@ func rowFlags(s *Spell) core.SpellFlag {
 // cooldowns: for a caller that runs the spell on cooldowns of its own.
 func Cast(s *Spell) core.CastConfig {
 	// Haste shortens a cast and the GCD it spends, which is the school's business rather than the hit
-	// table's: the shouts, Taunt, Piercing Howl and Thunder Clap are physical spells the client files
-	// under the magic defense type, and they ignore haste like every other ability.
+	// table's: the shouts, Taunt, Piercing Howl and Thunder Clap are physical spells the game files
+	// put under the magic defense type, and they ignore haste like every other ability.
 	cast := core.CastConfig{
 		DefaultCast: core.Cast{CastTime: s.CastTime()},
 		IgnoreHaste: s.SpellSchool() == core.SpellSchoolPhysical,
@@ -258,8 +342,8 @@ func categoryTimer(unit *core.Unit, s *Spell) *core.Timer {
 //
 // Only the first bar: 45 rows state a second one - 44 of them combo points beside energy - and the
 // sim has one cost per spell, so the caller spends the rest itself. A bar the sim does not model,
-// which is the client's -2 health on Bloodrage, resolves to no cost at all and leaves the cast as it
-// found it rather than declaring a cost the spell does not take.
+// which is the game files' -2 health on Bloodrage, resolves to no cost at all and leaves the cast
+// as it found it rather than declaring a cost the spell does not take.
 func applyCost(config *core.SpellConfig, s *Spell) {
 	if len(s.Powers) == 0 {
 		return
@@ -273,7 +357,10 @@ func applyCost(config *core.SpellConfig, s *Spell) {
 
 	switch powerType {
 	case dbcenums.POWER_MANA:
-		config.ManaCost = s.ManaCost()
+		config.ManaCost = core.ManaCostOptions{FlatCost: cost}
+		if costPct > 0 {
+			config.ManaCost.BaseCostPercent = costPct
+		}
 	case dbcenums.POWER_RAGE:
 		config.RageCost = core.RageCostOptions{Cost: cost, Refund: s.MissRefund()}
 	case dbcenums.POWER_ENERGY:

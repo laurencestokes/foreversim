@@ -1,82 +1,99 @@
 # Running the sim locally
 
-**Source of truth:** `vite.config.mts`, `vite.build-workers.mts`, `tools/vite/spec_pages.mts`, and
-the `devserver` / `rundevserver` / `devmode` / `host` targets in the makefile. Read the target before
-copying a command out of here:
+**Source of truth:** `vite.config.mts`, `vite.build-workers.mts`, `tools/vite/spec_pages.mts`, the `devserver` /
+`rundevserver` / `devmode` / `host` targets in the makefile, `ui/worker/local_worker.ts`, and for Storybook
+`.storybook/main.ts` and the `storybook:*` scripts in `package.json`. Read a target before copying a command from here:
 
 ```
-/usr/bin/grep -n "^devserver:\|^rundevserver:\|^devmode:\|^host:" -A6 makefile
+/usr/bin/grep -n "^devserver:\|^rundevserver:\|^devmode:\|^host:" -A8 makefile
 ```
 
 ## The normal path
 
-`npm start` is `cross-env WATCH=1 make devmode`: it builds the Go dev server, starts
-`vite serve --host` and `vite.build-workers.mts` alongside it, and reloads the Go binary through
-`air`. Use it unless you need something the sections below describe.
+`npm start` is `cross-env WATCH=1 make devmode`: it builds the Go dev server, runs `vite serve --host` and the worker
+build beside it, and reloads the Go binary through `air`. Use it unless you need one of the setups below.
 
-## Two things a plain `vite` dev server cannot do
+## Two things a plain vite dev server cannot do
 
-**It cannot run sims.** The worker's backend fetch fails on localhost. Sims need the Go host.
+**Run sims on its own.** Under `vite serve`, `/forever/sim_worker.js` is mapped to `ui/worker/local_worker.ts`, which
+sends every sim request to a Go host at `http://localhost:3333`. Without one, sims fail.
 
-**It half-renders spec pages with ZERO console errors unless the worker bundles exist first.**
-`ui/sim/workers/worker_pool.ts` resolves the worker at `/forever/sim_worker.js`, and the dev server has
-middleware that serves `/forever/**` out of `dist/forever/`. With no bundle there the probe simply hangs:
-`waitForInit()` never resolves → `loadSettings` never runs → defaults are never applied → the page
-looks structurally fine and is empty of settings. Build them first:
-
-```
-npx tsx vite.build-workers.mts     # → dist/forever/{local,net,sim}_worker.js (+ highs.wasm)
-```
-
-A fresh worktree also needs the gitignored generated files before anything type-checks or builds —
-see the last section of `verification.md`.
-
-Copying per-spec `ui/**/index.html` from a built checkout is **not** a step and has not been for a
-while: `tools/vite/spec_pages.mts` serves every spec URL itself from `ui/index_template.html`
-through `transformIndexHtml`, and 301s the bare `/forever/<class>/<spec>` to the trailing-slash form the
-way the production static host does. Only an _unknown_ spec URL falls through to vite's SPA
-fallback, which serves the landing page — so "I got the landing page" means the URL is not in
-`discoverSpecPages()`, i.e. there is no `ui/specs/<class>/<spec>/spec.ts(x)`.
-
-## Running REAL sims
-
-The Go host serves `dist/forever` from disk and answers the worker's sim requests natively — stats,
-Simulate, reference swap and timeline tooltips all work.
+**Render spec pages without the worker bundles.** `ui/sim/workers/worker_pool.ts` loads the worker from
+`/forever/sim_worker.js`, which the dev server serves out of `dist/forever/`. With no bundle there, `waitForInit()`
+never resolves, `loadSettings` never runs and the page looks structurally fine but has no settings, with no console
+error. Build the workers first:
 
 ```
-make binary_dist/dist.go          # stub package so ./sim/web compiles — no built checkout needed
-make wasm                         # dist/forever/lib.wasm.gz (needs Go)
-npx tsx vite.build-workers.mts    # dist/forever/*_worker.js
-npx vite build                    # dist/forever bundle + the 17 per-spec index.html
-cp -r assets dist/forever/assets      # `make` does this; a plain `vite build` does not
+npx tsx vite.build-workers.mts     # dist/forever/{local,net,sim}_worker.js and highs.wasm
+```
+
+A fresh worktree also needs the generated files (`verification.md`, last section).
+
+`tools/vite/spec_pages.mts` serves every spec URL from `ui/index_template.html`, and redirects the bare
+`/forever/<class>/<spec>` to the trailing-slash form as the production host does. Only an unknown spec URL falls through
+to the landing page, so getting the landing page means there is no `ui/specs/<class>/<spec>/spec.ts(x)` for that URL.
+
+## Running real sims
+
+The Go host serves `dist/forever` from disk and answers the worker's sim requests natively, so stats, Simulate,
+reference swap and timeline tooltips all work. The short form:
+
+```
+make dist/forever/.dirstamp       # wasm, workers, the vite bundle, protos and the asset copy
 make devserver                    # go build -o wowsimforever ./sim/web
-./wowsimforever --usefs=true --launch=false --host=":3333"
+tail -f /dev/null | ./wowsimforever --usefs=true --launch=false --host=":<port>"
 ```
 
-Then `http://localhost:3333/forever/<class>/<spec>/`. `make rundevserver` runs the last two steps for
-you, and `make dist/forever/.dirstamp` replaces the middle three (it also copies the assets).
+Then open `http://localhost:<port>/forever/<class>/<spec>/`. `make rundevserver` runs the server on `:3333` for you.
+Start the server with stdin held open (`tail -f /dev/null |`, run in the background): with stdin closed it answers once
+and then waits on its command prompt. Pick a free port, since other sessions may run their own server, and stop yours by
+its PID. `pkill -f` or `pkill -x wowsimforever` would also kill other sessions' servers and their stdin holders.
 
-Without `dist/forever/assets` the page half-renders with JSON parse errors from the DB fetch — that
-error text is the signature of a missing asset copy, not of a broken database.
+Without `dist/forever/assets` the page half-renders with JSON parse errors from the database fetch: that is a missing
+asset copy (`make` does it; a plain `vite build` does not), not a broken database. Do not `rm -rf dist`: `vite build`
+restores only the bundles, and the database and assets come from other tooling. Copy `dist` to a scratch directory and
+serve that on its own port if you need an isolated build, for example the parent commit's for a comparison.
 
-Do not `rm -rf dist`. `vite build` restores the bundles only; the database and assets come from
-other tooling, and you will have broken the worktree. Copy `dist` to a scratch directory and serve
-that on its own port if you need an isolated measurement.
+## Screenshots
 
-## What to look at once it is up
+A change to rendering, layout or interaction gets screenshots of the real sim, because no gate shows the page. Drive it
+with headless `playwright-core`. It is not a dependency of this repo, so use a local install whose browser build is in
+`~/.cache/ms-playwright` (a `chromium_headless_shell-*` matching that install's version). What works:
 
-A spec page that came up correctly has its settings pickers populated and its sidebar stats filled
-in. An empty settings tab is the worker-probe hang above, not a rendering bug. Get the expected
-shape by serving a known-good build of the parent branch on a second port and comparing the same
-URL, rather than trusting a remembered element count — those numbers rot faster than anything else
-in a document like this.
+- Block `**/*wowhead.com/**` with `page.route` so tooltips and icons do not hang the page or redirect it.
+- Load with `waitUntil: 'load'` and then wait about 8 seconds; the page never reaches `networkidle`.
+- Icon pickers open on hover, and their trigger is a Wowhead link, so a click navigates away. Hover, never click.
+- Screenshot the element (`locator.screenshot()`) rather than the page, and find it by its `data-testid`
+  (`ui/STYLING.md` §5).
+- Headless Chromium may draw overlay scrollbars, so a layout that depends on scrollbar width can differ from a desktop
+  browser.
+- To load a realistic build, edit the page's `…__currentSettings__` localStorage key, or paste an
+  `IndividualSimSettings` JSON into Import → JSON, and reload.
 
-There is no _committed_ browser or perf harness. `tools/browser-perf/` (timings) is **untracked**:
-it exists wherever its owner made it and nowhere else — not in a fresh clone, not in CI, and not
-necessarily in the worktree you are in. It is not in this clone's `.git/info/exclude` today (only
-`tools/state-snapshots/` is), and that file is never committed anyway: it lives in the shared common
-git dir, so a rule in it applies to every worktree of this clone and travels with none of them.
+Compare against a build of the parent commit on a second port rather than a remembered element count.
 
-So: check before you rely on it (`/usr/bin/ls tools/browser-perf/`), and do not tell anyone else a
-path is there. If it is not present and you need APL-edit timings, drive the page
-with Playwright yourself and record the protocol in the PR.
+There is no perf harness in this tree. For APL-edit timings, drive the page the same way and record the protocol in the
+PR.
+
+## Storybook
+
+```
+npm run storybook:dev      # http://localhost:6006
+npm run storybook:build    # storybook-static/ (gitignored)
+```
+
+Both need the generated TS files like every other build (the story fixtures import `@generated/proto/*`), but not the
+Go host, the worker bundles or `dist/`: stories render against stub hosts.
+
+`.storybook/main.ts` collects `ui/**/*.mdx` and `ui/**/*.stories.tsx` and points the vite builder at
+`.storybook/vite.config.ts`. The builder would load `vite.config.mts` by default, which carries the site build's plugins;
+the Storybook config takes only `UI_ALIASES` from it, plus React, Tailwind and the i18next loader. `staticDirs` serves
+`assets/` under `/forever/assets`, where fonts and spec backgrounds are root-absolute. `.storybook/preview.tsx` imports
+`.storybook/storybook.css` (the Storybook stylesheet entry, see `ui/STYLING.md`), the i18n config and
+`ui/shared/page_boot.ts`, stubs `gtag`, and adds the spec toolbar and the `withSimUi` frame;
+`.storybook/preview-head.html` loads the Wowhead tooltip script.
+
+## Fork deployment
+
+`SITE_BASE` selects the production URL prefix. The race arena is an additional page at
+`/forever/race_arena/`; `docs/race-arena.md` describes its build and Pages deployment.

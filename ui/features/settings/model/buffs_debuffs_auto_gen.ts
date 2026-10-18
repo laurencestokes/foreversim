@@ -10,7 +10,8 @@ import {
 	makeMultistateIndividualBuffInput,
 	makeMultistatePartyBuffInput,
 	makeTristatePartyBuffInput,
-} from '@ui-kit/icon_inputs';
+	makeTristateRaidBuffInput,
+} from '@features/inputs/icon_inputs';
 
 import type { RenderableStatOptions } from './stat_options';
 
@@ -20,61 +21,36 @@ export const BloodPact = makeBooleanPartyBuffInput({
 	label: 'Blood Pact',
 });
 
-export const BattleShout = makeTristatePartyBuffInput({
-	actionId: ActionId.fromSpellId(25289),
-	impId: ActionId.fromSpellId(23563),
-	fieldName: 'battleShout',
-	label: 'Battle Shout',
-});
-
 export const DevotionAura = makeBooleanPartyBuffInput({
 	actionId: ActionId.fromSpellId(10293),
 	fieldName: 'devotionAura',
 	label: 'Devotion Aura',
 });
 
-export const LeaderOfThePack = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(24932),
-	fieldName: 'leaderOfThePack',
-	label: 'Leader of the Pack',
-});
-
 export const ManaSpringTotem = makeTristatePartyBuffInput({
-	actionId: ActionId.fromSpellId(10494),
+	actionId: ActionId.fromSpellId(10497),
 	impId: ActionId.fromSpellId(16187),
 	fieldName: 'manaSpringTotem',
 	label: 'Mana Spring Totem',
 });
 
 export const ManaTideTotems = makeMultistatePartyBuffInput({
-	actionId: ActionId.fromSpellId(17360),
+	actionId: ActionId.fromSpellId(1325256),
 	numStates: 5,
 	fieldName: 'manaTideTotems',
 	label: 'Mana Tide Totem',
 });
 
-export const MoonkinAura = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(24907),
-	fieldName: 'moonkinAura',
-	label: 'Moonkin Aura',
-});
-
 // retribution_aura: the hand-written input shows itself for tank specs only, since a damage shield only matters on the unit being hit; a role gate no manifest
 // row carries.
 
-// retribution_aura_spell_power: retired: Retribution Aura reads the spell power of the unit it is on, not the paladin's (beta logs 2729-2736), so nothing reads
-// this; the row stays so the party fields after it keep their proto numbers.
+// retribution_aura_spell_power: the Holy spell power of the paladin providing Retribution Aura, which driveRetributionAura scales the damage with; a sim input
+// with no spell source, rendered under Other Inputs.
 
 export const ConcentrationAura = makeBooleanPartyBuffInput({
 	actionId: ActionId.fromSpellId(19746),
 	fieldName: 'concentrationAura',
 	label: 'Concentration Aura',
-});
-
-export const TrueshotAura = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(20905),
-	fieldName: 'trueshotAura',
-	label: 'Trueshot Aura',
 });
 
 export const AtieshMage = makeMultistatePartyBuffInput({
@@ -91,29 +67,45 @@ export const AtieshWarlock = makeMultistatePartyBuffInput({
 	label: 'Atiesh - Warlock',
 });
 
-export const StrengthOfEarthTotem = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(25362),
-	fieldName: 'strengthOfEarthTotem',
-	label: 'Strength of Earth Totem',
+export const AtieshDruid = makeMultistatePartyBuffInput({
+	actionId: ActionId.fromSpellId(28145),
+	numStates: 5,
+	fieldName: 'atieshDruid',
+	label: 'Atiesh - Druid',
 });
 
-export const GraceOfAirTotem = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(25360),
-	fieldName: 'graceOfAirTotem',
-	label: 'Grace of Air Totem',
+export const AtieshPriest = makeMultistatePartyBuffInput({
+	actionId: ActionId.fromSpellId(28144),
+	numStates: 5,
+	fieldName: 'atieshPriest',
+	label: 'Atiesh - Priest',
 });
 
-export const WindfuryTotem = makeBooleanPartyBuffInput({
-	actionId: ActionId.fromSpellId(10610),
-	fieldName: 'windfuryTotem',
-	label: 'Windfury Totem',
+export const StoneskinTotem = makeTristatePartyBuffInput({
+	actionId: ActionId.fromSpellId(10408),
+	impId: ActionId.fromSpellId(16258),
+	fieldName: 'stoneskinTotem',
+	label: 'Stoneskin Totem',
 });
 
-// atiesh_druid: no settings input over this field.
+export const Darkspear = makeBooleanPartyBuffInput({
+	actionId: ActionId.fromSpellId(16939),
+	fieldName: 'darkspear',
+	label: 'Darkspear',
+});
 
-// atiesh_priest: no settings input over this field.
+export const AdmiralsHat = makeBooleanPartyBuffInput({
+	actionId: ActionId.fromSpellId(12022),
+	fieldName: 'admiralsHat',
+	label: "Admiral's Hat",
+});
 
-// totem_twisting: sim behaviour toggle with no spell source; rendered under Other Inputs.
+export const DarkInspiration = makeMultistatePartyBuffInput({
+	actionId: ActionId.fromSpellId(1326168),
+	numStates: 6,
+	fieldName: 'darkInspiration',
+	label: 'Dark Inspiration',
+});
 
 export const ArcaneBrilliance = makeBooleanRaidBuffInput({
 	actionId: ActionId.fromSpellId(23028),
@@ -131,12 +123,6 @@ export const GiftOfTheWild = makeBooleanRaidBuffInput({
 	actionId: ActionId.fromSpellId(21850),
 	fieldName: 'giftOfTheWild',
 	label: 'Gift of the Wild',
-});
-
-export const Thorns = makeBooleanRaidBuffInput({
-	actionId: ActionId.fromSpellId(9910),
-	fieldName: 'thorns',
-	label: 'Thorns',
 });
 
 export const PrayerOfFortitude = makeBooleanRaidBuffInput({
@@ -170,27 +156,82 @@ export const ShadowResistanceAura = makeBooleanRaidBuffInput({
 });
 
 export const FireResistanceTotem = makeBooleanRaidBuffInput({
-	actionId: ActionId.fromSpellId(10535),
+	actionId: ActionId.fromSpellId(10538),
 	fieldName: 'fireResistanceTotem',
 	label: 'Fire Resistance Totem',
 });
 
 export const FrostResistanceTotem = makeBooleanRaidBuffInput({
-	actionId: ActionId.fromSpellId(10477),
+	actionId: ActionId.fromSpellId(10479),
 	fieldName: 'frostResistanceTotem',
 	label: 'Frost Resistance Totem',
 });
 
 export const NatureResistanceTotem = makeBooleanRaidBuffInput({
-	actionId: ActionId.fromSpellId(10599),
+	actionId: ActionId.fromSpellId(10601),
 	fieldName: 'natureResistanceTotem',
 	label: 'Nature Resistance Totem',
+});
+
+export const StrengthOfEarthTotem = makeBooleanRaidBuffInput({
+	actionId: ActionId.fromSpellId(25361),
+	fieldName: 'strengthOfEarthTotem',
+	label: 'Strength of Earth Totem',
+});
+
+export const GraceOfAirTotem = makeBooleanRaidBuffInput({
+	actionId: ActionId.fromSpellId(25359),
+	fieldName: 'graceOfAirTotem',
+	label: 'Grace of Air Totem',
+});
+
+export const WindfuryTotem = makeBooleanRaidBuffInput({
+	actionId: ActionId.fromSpellId(10614),
+	fieldName: 'windfuryTotem',
+	label: 'Windfury Totem',
+});
+
+export const FlametongueTotem = makeBooleanRaidBuffInput({
+	actionId: ActionId.fromSpellId(16387),
+	fieldName: 'flametongueTotem',
+	label: 'Flametongue Totem',
+});
+
+export const BattleShout = makeTristateRaidBuffInput({
+	actionId: ActionId.fromSpellId(25289),
+	impId: ActionId.fromSpellId(23563),
+	fieldName: 'battleShout',
+	label: 'Battle Shout',
+});
+
+export const TrueshotAura = makeBooleanRaidBuffInput({
+	actionId: ActionId.fromSpellId(20906),
+	fieldName: 'trueshotAura',
+	label: 'Trueshot Aura',
+});
+
+export const FuriousHowl = makeBooleanRaidBuffInput({
+	actionId: ActionId.fromSpellId(24597),
+	fieldName: 'furiousHowl',
+	label: 'Furious Howl',
 });
 
 export const AspectOfTheWild = makeBooleanRaidBuffInput({
 	actionId: ActionId.fromSpellId(20190),
 	fieldName: 'aspectOfTheWild',
 	label: 'Aspect of the Wild',
+});
+
+export const LeaderOfThePack = makeBooleanRaidBuffInput({
+	actionId: ActionId.fromSpellId(17007),
+	fieldName: 'leaderOfThePack',
+	label: 'Leader of the Pack',
+});
+
+export const MoonkinAura = makeBooleanRaidBuffInput({
+	actionId: ActionId.fromSpellId(24858),
+	fieldName: 'moonkinAura',
+	label: 'Moonkin Aura',
 });
 
 export const GreaterBlessingOfKings = makeBooleanIndividualBuffInput({
@@ -229,6 +270,12 @@ export const PowerInfusions = makeMultistateIndividualBuffInput({
 	label: 'Power Infusions',
 });
 
+export const Thorns = makeBooleanIndividualBuffInput({
+	actionId: ActionId.fromSpellId(9910),
+	fieldName: 'thorns',
+	label: 'Thorns',
+});
+
 export const HuntersMark = makeBooleanDebuffInput({
 	actionId: ActionId.fromSpellId(14325),
 	fieldName: 'huntersMark',
@@ -236,19 +283,19 @@ export const HuntersMark = makeBooleanDebuffInput({
 });
 
 export const JudgementOfTheCrusader = makeBooleanDebuffInput({
-	actionId: ActionId.fromSpellId(20303),
+	actionId: ActionId.fromSpellId(20308),
 	fieldName: 'judgementOfTheCrusader',
 	label: 'Judgement of the Crusader',
 });
 
 export const JudgementOfLight = makeBooleanDebuffInput({
-	actionId: ActionId.fromSpellId(20346),
+	actionId: ActionId.fromSpellId(20349),
 	fieldName: 'judgementOfLight',
 	label: 'Judgement of Light',
 });
 
 export const JudgementOfWisdom = makeBooleanDebuffInput({
-	actionId: ActionId.fromSpellId(20355),
+	actionId: ActionId.fromSpellId(20357),
 	fieldName: 'judgementOfWisdom',
 	label: 'Judgement of Wisdom',
 });
@@ -319,6 +366,48 @@ export const ScorpidSting = makeBooleanDebuffInput({
 	label: 'Scorpid Sting',
 });
 
+export const HexOfWeakness = makeBooleanDebuffInput({
+	actionId: ActionId.fromSpellId(19285),
+	fieldName: 'hexOfWeakness',
+	label: 'Hex of Weakness',
+});
+
+export const DemoralizingScreech = makeBooleanDebuffInput({
+	actionId: ActionId.fromSpellId(24579),
+	fieldName: 'demoralizingScreech',
+	label: 'Demoralizing Screech',
+});
+
+export const CurseOfWeakness = makeBooleanDebuffInput({
+	actionId: ActionId.fromSpellId(11708),
+	fieldName: 'curseOfWeakness',
+	label: 'Curse of Weakness',
+});
+
+export const DustCloud = makeBooleanDebuffInput({
+	actionId: ActionId.fromSpellId(1265911),
+	fieldName: 'dustCloud',
+	label: 'Dust Cloud',
+});
+
+export const ArmorShatter = makeBooleanDebuffInput({
+	actionId: ActionId.fromSpellId(16928),
+	fieldName: 'armorShatter',
+	label: 'Armor Shatter',
+});
+
+export const Vindication = makeBooleanDebuffInput({
+	actionId: ActionId.fromSpellId(9452),
+	fieldName: 'vindication',
+	label: 'Vindication',
+});
+
+export const Thunderfury = makeBooleanDebuffInput({
+	actionId: ActionId.fromSpellId(21992),
+	fieldName: 'thunderfury',
+	label: 'Thunderfury',
+});
+
 export const GENERATED_RAID_BUFFS_CONFIG: RenderableStatOptions[] = [
 	{
 		config: ArcaneBrilliance,
@@ -327,17 +416,12 @@ export const GENERATED_RAID_BUFFS_CONFIG: RenderableStatOptions[] = [
 	},
 	{
 		config: PrayerOfSpirit,
-		stats: [Stat.StatSpirit, Stat.StatSpellDamage],
+		stats: [Stat.StatSpirit],
 		ownerClass: Class.ClassPriest,
 	},
 	{
 		config: GiftOfTheWild,
 		stats: [Stat.StatArmor, Stat.StatStrength, Stat.StatAgility, Stat.StatIntellect, Stat.StatSpirit, Stat.StatStamina],
-		ownerClass: Class.ClassDruid,
-	},
-	{
-		config: Thorns,
-		stats: [Stat.StatDefenseRating, Stat.StatStamina],
 		ownerClass: Class.ClassDruid,
 	},
 	{
@@ -347,7 +431,7 @@ export const GENERATED_RAID_BUFFS_CONFIG: RenderableStatOptions[] = [
 	},
 	{
 		config: PrayerOfShadowProtection,
-		stats: [Stat.StatShadowResistance, Stat.StatStamina],
+		stats: [Stat.StatShadowResistance],
 		ownerClass: Class.ClassPriest,
 	},
 	{
@@ -381,69 +465,6 @@ export const GENERATED_RAID_BUFFS_CONFIG: RenderableStatOptions[] = [
 		ownerClass: Class.ClassShaman,
 	},
 	{
-		config: AspectOfTheWild,
-		stats: [Stat.StatNatureResistance],
-		ownerClass: Class.ClassHunter,
-	},
-];
-
-export const GENERATED_PARTY_BUFFS_CONFIG: RenderableStatOptions[] = [
-	{
-		config: BloodPact,
-		stats: [Stat.StatStamina],
-		ownerClass: Class.ClassWarlock,
-	},
-	{
-		config: BattleShout,
-		stats: [Stat.StatAttackPower],
-		ownerClass: Class.ClassWarrior,
-	},
-	{
-		config: DevotionAura,
-		stats: [Stat.StatArmor],
-		ownerClass: Class.ClassPaladin,
-	},
-	{
-		config: LeaderOfThePack,
-		stats: [Stat.StatMeleeCritRating, Stat.StatSpellCritRating],
-		ownerClass: Class.ClassDruid,
-	},
-	{
-		config: ManaSpringTotem,
-		stats: [Stat.StatMP5],
-		ownerClass: Class.ClassShaman,
-	},
-	{
-		config: ManaTideTotems,
-		stats: [Stat.StatMP5],
-		ownerClass: Class.ClassShaman,
-	},
-	{
-		config: MoonkinAura,
-		stats: [Stat.StatMeleeCritRating, Stat.StatSpellCritRating],
-		ownerClass: Class.ClassDruid,
-	},
-	{
-		config: ConcentrationAura,
-		stats: [Stat.StatDefenseRating],
-		ownerClass: Class.ClassPaladin,
-	},
-	{
-		config: TrueshotAura,
-		stats: [Stat.StatRangedAttackPower],
-		ownerClass: Class.ClassHunter,
-	},
-	{
-		config: AtieshMage,
-		stats: [Stat.StatSpellDamage, Stat.StatHealingPower],
-		ownerClass: Class.ClassMage,
-	},
-	{
-		config: AtieshWarlock,
-		stats: [Stat.StatSpellDamage, Stat.StatHealingPower],
-		ownerClass: Class.ClassWarlock,
-	},
-	{
 		config: StrengthOfEarthTotem,
 		stats: [Stat.StatStrength],
 		ownerClass: Class.ClassShaman,
@@ -457,6 +478,107 @@ export const GENERATED_PARTY_BUFFS_CONFIG: RenderableStatOptions[] = [
 		config: WindfuryTotem,
 		stats: [Stat.StatAttackPower],
 		ownerClass: Class.ClassShaman,
+	},
+	{
+		config: FlametongueTotem,
+		stats: [Stat.StatAttackPower],
+		ownerClass: Class.ClassShaman,
+	},
+	{
+		config: BattleShout,
+		stats: [Stat.StatAttackPower],
+		ownerClass: Class.ClassWarrior,
+	},
+	{
+		config: TrueshotAura,
+		stats: [Stat.StatRangedAttackPower],
+		ownerClass: Class.ClassHunter,
+	},
+	{
+		config: FuriousHowl,
+		stats: [Stat.StatAttackPower],
+		ownerClass: Class.ClassHunter,
+	},
+	{
+		config: AspectOfTheWild,
+		stats: [Stat.StatNatureResistance],
+		ownerClass: Class.ClassHunter,
+	},
+	{
+		config: LeaderOfThePack,
+		stats: [Stat.StatAttackPower],
+		ownerClass: Class.ClassDruid,
+	},
+	{
+		config: MoonkinAura,
+		stats: [Stat.StatSpellDamage],
+		ownerClass: Class.ClassDruid,
+	},
+];
+
+export const GENERATED_PARTY_BUFFS_CONFIG: RenderableStatOptions[] = [
+	{
+		config: BloodPact,
+		stats: [Stat.StatStamina],
+		ownerClass: Class.ClassWarlock,
+	},
+	{
+		config: DevotionAura,
+		stats: [Stat.StatArmor],
+		ownerClass: Class.ClassPaladin,
+	},
+	{
+		config: ManaSpringTotem,
+		stats: [Stat.StatMP5],
+		ownerClass: Class.ClassShaman,
+	},
+	{
+		config: ManaTideTotems,
+		stats: [Stat.StatMP5],
+		ownerClass: Class.ClassShaman,
+	},
+	{
+		config: ConcentrationAura,
+		stats: [Stat.StatSpellDamage, Stat.StatHealingPower],
+		ownerClass: Class.ClassPaladin,
+	},
+	{
+		config: AtieshMage,
+		stats: [Stat.StatCritRating],
+		ownerClass: Class.ClassMage,
+	},
+	{
+		config: AtieshWarlock,
+		stats: [Stat.StatSpellDamage, Stat.StatHealingPower],
+		ownerClass: Class.ClassWarlock,
+	},
+	{
+		config: AtieshDruid,
+		stats: [Stat.StatMP5],
+		ownerClass: Class.ClassDruid,
+	},
+	{
+		config: AtieshPriest,
+		stats: [Stat.StatHealingPower],
+		ownerClass: Class.ClassPriest,
+	},
+	{
+		config: StoneskinTotem,
+		stats: [Stat.StatDefenseRating],
+		ownerClass: Class.ClassShaman,
+	},
+	{
+		config: Darkspear,
+		stats: [Stat.StatCritRating],
+	},
+	{
+		config: AdmiralsHat,
+		stats: [Stat.StatStamina],
+	},
+	{
+		config: DarkInspiration,
+		stats: [Stat.StatSpirit],
+		ownerClass: Class.ClassPriest,
 	},
 ];
 
@@ -483,15 +605,20 @@ export const GENERATED_INDIVIDUAL_BUFFS_CONFIG: RenderableStatOptions[] = [
 	},
 	{
 		config: PowerInfusions,
-		stats: [Stat.StatSpellHasteRating],
+		stats: [Stat.StatSpellDamage, Stat.StatHealingPower],
 		ownerClass: Class.ClassPriest,
+	},
+	{
+		config: Thorns,
+		stats: [Stat.StatDefenseRating, Stat.StatStamina],
+		ownerClass: Class.ClassDruid,
 	},
 ];
 
 export const GENERATED_DEBUFFS_CONFIG: RenderableStatOptions[] = [
 	{
 		config: HuntersMark,
-		stats: [Stat.StatRangedAttackPower, Stat.StatAttackPower],
+		stats: [Stat.StatRangedAttackPower],
 		ownerClass: Class.ClassHunter,
 	},
 	{
@@ -521,7 +648,7 @@ export const GENERATED_DEBUFFS_CONFIG: RenderableStatOptions[] = [
 	},
 	{
 		config: FaerieFire,
-		stats: [Stat.StatAttackPower, Stat.StatMeleeHitRating],
+		stats: [Stat.StatAttackPower],
 		ownerClass: Class.ClassDruid,
 	},
 	{
@@ -562,5 +689,38 @@ export const GENERATED_DEBUFFS_CONFIG: RenderableStatOptions[] = [
 		config: ScorpidSting,
 		stats: [Stat.StatStamina, Stat.StatDefenseRating],
 		ownerClass: Class.ClassHunter,
+	},
+	{
+		config: HexOfWeakness,
+		stats: [Stat.StatStamina, Stat.StatDefenseRating],
+		ownerClass: Class.ClassPriest,
+	},
+	{
+		config: DemoralizingScreech,
+		stats: [Stat.StatStamina, Stat.StatDefenseRating],
+		ownerClass: Class.ClassHunter,
+	},
+	{
+		config: CurseOfWeakness,
+		stats: [Stat.StatStamina, Stat.StatDefenseRating],
+		ownerClass: Class.ClassWarlock,
+	},
+	{
+		config: DustCloud,
+		stats: [Stat.StatAttackPower],
+		ownerClass: Class.ClassHunter,
+	},
+	{
+		config: ArmorShatter,
+		stats: [Stat.StatAttackPower],
+	},
+	{
+		config: Vindication,
+		stats: [Stat.StatStamina, Stat.StatDefenseRating],
+		ownerClass: Class.ClassPaladin,
+	},
+	{
+		config: Thunderfury,
+		stats: [Stat.StatNatureDamage, Stat.StatStamina, Stat.StatDefenseRating],
 	},
 ];

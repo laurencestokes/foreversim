@@ -2,6 +2,7 @@ package spelldata
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
@@ -62,10 +63,38 @@ func EquipAuraRow(s *Spell) *Spell {
 	return kept
 }
 
+// The auras an item's aura shape leaves out of a row without refusing it: a movement speed change,
+// which the sim has no movement for. Cold Basilisk Eye's 1139 slows the enemy's movement beside its
+// attacks.
+var itemAuraIgnored = []dbcenums.EffectAuraType{dbcenums.A_MOD_DECREASE_SPEED}
+
+// The positions of the row's aura effects on the target that an item's aura shape parses: the ones
+// EffectsOn names, less the auras it leaves out and, on the wearer, the damage shields it attaches
+// beside the parse.
+func ItemAuraParsedOn(s *Spell, target AuraTarget) []int32 {
+	return slices.DeleteFunc(EffectsOn(s, target), func(i int32) bool {
+		aura := s.EffectN(int(i)).Aura
+		return slices.Contains(itemAuraIgnored, aura) || (target == AuraOnWearer && aura == dbcenums.A_DAMAGE_SHIELD)
+	})
+}
+
+// The damage shields the row puts on the wearer, which an item's aura shape attaches to the wearer's
+// aura rather than parsing.
+func ItemAuraDamageShields(s *Spell) []*Effect {
+	var shields []*Effect
+	for _, i := range EffectsOn(s, AuraOnWearer) {
+		if e := s.EffectN(int(i)); e.Aura == dbcenums.A_DAMAGE_SHIELD {
+			shields = append(shields, e)
+		}
+	}
+	return shields
+}
+
 // What an item's aura shape leaves out of a row, one reason per effect: an effect that is not an
 // aura, one landing on a unit the shape does not reach, and one the parser skips on the unit it lands
 // on; and a row restricted to an area group that names no area type. Empty means every effect of the
-// row is attached. An equipped row is parsed the way ParseStatic
+// row is attached or left out on purpose: a movement speed change is dropped, and a damage shield on the
+// wearer is attached by hand. An equipped row is parsed the way ParseStatic
 // parses it, onto the wearer and its pets; any other is an aura applied for the row's duration.
 //
 // The parser answers by parsing: each target's effects are parsed onto a character of its own that
@@ -96,14 +125,14 @@ func ItemAuraUnsupported(s *Spell, equipped bool) []string {
 	}
 
 	for _, target := range []AuraTarget{AuraOnWearer, AuraOnPet, AuraOnEnemy} {
-		positions := EffectsOn(s, target)
+		positions := ItemAuraParsedOn(s, target)
 		if len(positions) == 0 || (equipped && target == AuraOnEnemy) {
 			continue
 		}
 
 		for _, e := range scratchParse(s, target, equipped, positions).Skipped {
-			unsupported = append(unsupported, fmt.Sprintf("effect %d %s misc %d is not parsed on %s",
-				e.Index+1, auraName(e.Aura), e.Misc, auraTargetNames[target]))
+			unsupported = append(unsupported, fmt.Sprintf("effect %d %s misc %d is not parsed on %s%s",
+				e.Index+1, auraName(e.Aura), e.Misc, auraTargetNames[target], reasonNote(e.Reason)))
 		}
 	}
 

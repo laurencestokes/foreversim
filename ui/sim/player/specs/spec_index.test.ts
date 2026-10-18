@@ -1,8 +1,7 @@
 // specIndex selects a spec's talent tree. It reads like a spec ordinal, nothing consumes it
-// today, and a wrong value therefore sits unnoticed until something does: the pre-port tree
-// shipped RestorationDruid as 3 against a three-tree class, which threw and took the rest of
-// that page's construction with it, and FeralBearDruid as 2, which silently selected
-// Restoration's tree. This pins every spec against the real tree data.
+// today, and a wrong value therefore sits unnoticed until something does: an index past a
+// three-tree class throws and takes the rest of that page's construction with it, and an index
+// one off silently selects a neighbouring tree. This pins every spec against the real tree data.
 import { Spec } from '@generated/proto/common';
 import { classTalentsConfig } from '@sim/talents/factory';
 import { describe, expect, it } from 'vitest';
@@ -28,10 +27,6 @@ const EXPECTED_TREE: Partial<Record<Spec, string>> = {
 const ALL_SPECS = (Object.values(Spec) as Array<Spec>).filter((spec): spec is Spec => typeof spec === 'number' && spec !== Spec.SpecUnknown);
 
 describe('specIndex', () => {
-	it('covers all 18 TBC specs', () => {
-		expect(ALL_SPECS.length).toBe(18);
-	});
-
 	it.each(ALL_SPECS.map(spec => [Spec[spec], spec] as const))('%s indexes a talent tree that exists', (_name, spec) => {
 		const playerSpec = PlayerSpecs.fromProto(spec);
 		const trees = classTalentsConfig[playerSpec.classID];

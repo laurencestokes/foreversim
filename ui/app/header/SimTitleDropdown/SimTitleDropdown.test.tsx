@@ -1,7 +1,8 @@
 import { Spec } from '@generated/proto/common';
+import i18n from '@i18n/config';
+import { translatePlayerSpec } from '@i18n/localization';
 import { PlayerClasses } from '@sim/player/classes/index';
 import { PlayerSpecs } from '@sim/player/specs/index';
-import { textClassNameForClass } from '@sim/proto/utils';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
@@ -24,17 +25,9 @@ describe('SimTitleDropdown', () => {
 
 		const rows = classRows();
 		expect(rows).toHaveLength(PlayerClasses.naturalOrder.length);
-		expect(rows.map(row => row.tagName)).toEqual(rows.map(() => 'BUTTON'));
 		expect(rows.map(row => row.getAttribute('role'))).toEqual(rows.map(() => 'menuitem'));
 		expect(rows.map(row => row.getAttribute('aria-haspopup'))).toEqual(rows.map(() => 'menu'));
 		expect(within(screen.getAllByTestId('sim-title-popup')[0]).getAllByRole('menuitem')).toHaveLength(PlayerClasses.naturalOrder.length);
-	});
-
-	it('colours each class row with that class', () => {
-		openRoot();
-
-		const expected = PlayerClasses.naturalOrder.map(playerClass => textClassNameForClass(playerClass));
-		expect(classRows().map(row => expected.find(name => row.classList.contains(name)))).toEqual(expected);
 	});
 
 	it('opens a class row onto that class’s spec links', () => {
@@ -47,6 +40,19 @@ describe('SimTitleDropdown', () => {
 		expect(row.getAttribute('aria-expanded')).toBe('true');
 		const links = within(screen.getAllByTestId('sim-title-popup')[1]).getAllByRole('menuitem') as Array<HTMLAnchorElement>;
 		expect(links.map(link => new URL(link.href).pathname)).toEqual(Object.values(warrior.specs).map(spec => spec.simLink));
-		expect(links.every(link => link.classList.contains(textClassNameForClass(warrior)))).toBe(true);
+	});
+
+	it('titles a one-sim class’s link All Specializations, and a spec’s link by its spec', () => {
+		openRoot();
+		const specTitles = (playerClass: (typeof PlayerClasses.naturalOrder)[number]) => {
+			open(classRows()[PlayerClasses.naturalOrder.indexOf(playerClass)]);
+			const popup = screen.getAllByTestId('sim-title-popup').at(-1)!;
+			return within(popup)
+				.getAllByTestId('sim-link-title')
+				.map(title => title.textContent);
+		};
+
+		expect(specTitles(PlayerClasses.Hunter)).toEqual([i18n.t('landing.home.allSpecs')]);
+		expect(specTitles(PlayerClasses.Warrior)).toEqual(Object.values(PlayerClasses.Warrior.specs).map(spec => translatePlayerSpec(spec)));
 	});
 });

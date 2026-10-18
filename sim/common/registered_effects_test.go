@@ -5,24 +5,39 @@
 // regeneration has to answer - what became live, and what stopped being live. A checkout without it
 // writes it on the first run.
 //
-// Needs the database: an effect registered for an item this client does not ship is skipped, so
+// Needs the database: an effect registered for an item the game files do not ship is skipped, so
 // without it the list would name items no sim can equip.
 package common_test
 
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 
+	assetsdb "github.com/wowsims/forever/assets/database"
 	"github.com/wowsims/forever/sim/common"
 	"github.com/wowsims/forever/sim/core"
 )
 
 const registeredEffectsPath = "forever/registered_effects.txt"
 
+var registerAllEffects = sync.OnceFunc(common.RegisterAllEffects)
+
 func TestRegisteredEffects(t *testing.T) {
-	common.RegisterAllEffects()
+	registerAllEffects()
+	db := assetsdb.Load()
+
+	var itemIDs []int32
+	for _, item := range db.Items {
+		itemIDs = append(itemIDs, item.Id)
+	}
+	var enchantIDs []int32
+	for _, enchant := range db.Enchants {
+		enchantIDs = append(enchantIDs, enchant.EffectId)
+	}
 
 	var out strings.Builder
 	out.WriteString("# The items and enchants sim/common registers an effect for, written by\n")
@@ -30,12 +45,12 @@ func TestRegisteredEffects(t *testing.T) {
 	out.WriteString("#   UPDATE_REGISTERED_EFFECTS=1 GOARCH=amd64 go test --tags=with_db ./sim/common/ -run TestRegisteredEffects -count=1\n")
 
 	out.WriteString("\n# items\n")
-	for _, id := range core.RegisteredItemEffectIDs() {
+	for _, id := range registered(itemIDs, core.HasItemEffect) {
 		fmt.Fprintf(&out, "%d %s\n", id, itemName(id))
 	}
 
 	out.WriteString("\n# enchants\n")
-	for _, id := range core.RegisteredEnchantEffectIDs() {
+	for _, id := range registered(enchantIDs, core.HasEnchantEffect) {
 		fmt.Fprintf(&out, "%d %s\n", id, enchantName(id))
 	}
 
@@ -60,6 +75,12 @@ func TestRegisteredEffects(t *testing.T) {
 	t.Errorf("%s is not what the sim registers; once the moves above are the intended ones, rewrite the baseline:\n"+
 		"  UPDATE_REGISTERED_EFFECTS=1 GOARCH=amd64 go test --tags=with_db ./sim/common/ -run TestRegisteredEffects -count=1",
 		registeredEffectsPath)
+}
+
+// The ids the game files ship that an effect is registered for, each once, in id order.
+func registered(shipped []int32, hasEffect func(int32) bool) []int32 {
+	slices.Sort(shipped)
+	return slices.DeleteFunc(slices.Compact(shipped), func(id int32) bool { return !hasEffect(id) })
 }
 
 // The lines one side has and the other does not, which on a sorted list is exactly what appeared and
@@ -91,9 +112,6 @@ func changedLines(committed string, registered string) []string {
 func itemName(id int32) string {
 	if item := core.GetItemByID(id); item != nil {
 		return item.Name
-	}
-	if gem, ok := core.GetGemByID(id); ok {
-		return gem.Name
 	}
 	return "?"
 }

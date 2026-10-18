@@ -1,154 +1,105 @@
 # Conventions, spec authoring, and decisions already made
 
-**Source of truth:** `.oxfmtrc.json` for formatting, `ui/README.md` for authoring a spec,
-`ui/STYLING.md` for styling/state/locating elements, `.oxlintrc.json` for anything that is actually
-enforced.
+**Source of truth:** `.oxfmtrc.json` for formatting, `.oxlintrc.json` for what is enforced, `ui/STYLING.md` for
+styling, component state and locating elements, `ui/README.md` ("How to author a spec") for the spec surface, and
+`ui/specs/` itself for what a spec looks like.
 
 ## Formatting
 
-`oxfmt` is the formatter, not prettier — prettier is not a dependency of this repo. `npm run fmt` is
-`npx oxfmt . --check`, so its scope is the whole repo: the markdown in `.github/skills/`, the
-workflows, `docker-compose.yml` and the JSON schemas are formatted too, and CI checks them. What it
-skips is `ignorePatterns` in `.oxfmtrc.json`, all of it data rather than source: `assets/**`, whose
-database is written by `gen_db`; `**/test-fixtures/*.json`, which here is the reforge parity set
-under `sim/core/reforge_optimizer/`; and the per-spec preset JSON and talent trees. Anything
-`.gitignore` already hides is skipped as well, which is how generated output stays out.
+`oxfmt` is the formatter; prettier is not a dependency. `npm run fmt` is `npx oxfmt . --check` over the whole repo,
+including the markdown in `.github/skills/`, the workflows and the JSON schemas, so run it after editing any of them.
+It skips `ignorePatterns` in `.oxfmtrc.json` (generated files, `assets/**` and the per-spec preset and talent JSON,
+whose reformatting would be a diff nobody can review) and anything `.gitignore` hides. A new preset JSON directory
+needs its own ignore entry. Print the config:
 
 ```
 node -e "console.log(require('./.oxfmtrc.json'))"
 ```
 
-Today that is tabs, width 4, `printWidth` 160, single quotes, semicolons, trailing commas
-everywhere, `arrowParens: "avoid"`. Import order is `simple-import-sort` through oxlint, so
-`npm run lint:js:fix` sorts and `npm run fmt:fix` formats; run both on files you touched and on
-nothing else.
+Import order is `simple-import-sort` through oxlint, so `npm run lint:js:fix` sorts and `npm run fmt:fix` formats. Run
+both on the files you touched and nothing else.
 
-oxfmt also sorts Tailwind classes, and **each `clsx` argument is sorted separately** — an argument
-boundary is a sort barrier. So `clsx('text-red-500 flex', 'p-2 items-center')` formats to
-`clsx('flex text-red-500', 'items-center p-2')`: sorted within each group, never across them. On a
-`className` (or any attribute in `sortTailwindcss.attributes`) a static list should therefore be one
-plain string — `className="flex items-center p-2 text-red-500"` — which gets a single canonical
-sort and drops a render-time call. The inverse holds on a **module-level const**, where a bare
-string is not sorted at all: there `clsx` is the only reason the formatter looks at it, so
-`const ROW_CLASS = clsx(…)` in `ui/features/gear/components/SelectorModal/ItemList.tsx` keeps its
-call and must not be "simplified" away. Use `clsx` when an argument is conditional or a variable,
-never to wrap or line-break a fixed list.
+oxfmt also sorts Tailwind classes, per `clsx` argument and in the attributes `sortTailwindcss.attributes` lists. What
+that means for writing a class list (one plain string on a `className`, `clsx` kept on a module-level const) is in
+`ui/STYLING.md` §1.
 
-`.oxfmtrc.json` deliberately ignores the preset JSON (`ui/**/apls/*.apl.json`,
-`ui/**/builds/*.build.json`, `ui/**/gear_sets/*.gear.json` — check the current list with the command
-above, since a new preset JSON category needs its own entry). Reformatting one of those is a diff
-nobody can review. Its ignore list also still names `ui/worker/highs.js`, which no longer exists —
-the solver comes from the npm `highs` package now.
+## JSX
 
-Stylesheets: Tailwind utilities, no SCSS or Bootstrap anywhere in `ui/`. A component that needs
-reusable multi-utility classes or state/descendant selectors gets a co-located
-`ui/ui-kit/<Name>/<Name>.css` of `ui-*` `@apply` classes, `@import`ed from `ui/styles/style.css`.
-`npm run lint:css` is stylelint over `ui/**/*.css`. Full conventions — token policy, `ui-*` classes,
-`data-*` state, locating elements, the class-hook gates — are in `ui/STYLING.md`.
+Every `.tsx` file is React: `tsconfig.json` sets `jsx: react-jsx` / `jsxImportSource: react`, and there is no per-file
+pragma. A `.tsx` file with no JSX in it should be `.ts`.
 
-## JSX dialect
+## Generated files and fixtures
 
-React is the **only** dialect. `tsconfig.json` is `jsx: react-jsx` / `jsxImportSource: react` and
-both vite configs use the automatic runtime, so every `.tsx` file is a React file and there is no
-per-file opt-out: the `@jsxImportSource` pragma, the `tsx-vanilla` package and the shim under
-`ui/shared/` that they routed to are all gone, along with the vanilla widget stack that used them.
-A `.tsx` file with no JSX in it should be `.ts`.
-
-## Fixtures and generated files
-
-- **Never** regenerate `tools/state-snapshots/golden.json`, a `.results` file or a `.test.json`
-  reforge fixture to make a gate pass, and never commit one without asking. Diff first, then ask.
-- **Never** hand-edit anything under `ui/generated/` or any `*_auto_gen.ts` — regenerate through the
-  makefile.
-- **Never** run `gen_db` concurrently with another copy of itself.
+- Regenerate a `.results` file or a `.test.json` optimizer fixture only when the change means to move it, and never to
+  make a gate pass. Diff first and ask before committing one.
+- Never hand-edit anything under `ui/generated/` or any `*_auto_gen.ts`; regenerate through the makefile.
 
 ## Authoring a spec
 
-`ui/README.md`'s "How to author a spec" is the long version; this is the shape and the traps. The
-README is enforced by nothing, so prefer this file and the code where they disagree.
+`ui/README.md` has the long version. A spec is data: `ui/specs/<class>/<spec>/spec.ts` default-exports one
+`defineSpec({...})`, beside `presets.ts` and, where needed, `inputs.ts`. There is no per-spec page, `index.ts` or
+`SimHostObject` subclass: `SimHostObject` is concrete, takes a `SpecDefinition<S>`, and runs the behaviour slots
+(`features`, then `reforge`, then `derivedSettings`) at the end of its constructor.
 
-A spec is **data**. `ui/specs/<class>/<spec>/spec.ts` default-exports one `defineSpec({...})` and is
-the only code file the spec owns besides `presets.ts` / `inputs.ts`. There is no `sim.ts`, no
-per-spec `index.ts`, and no `SimHostObject` subclass anywhere — `SimHostObject` is concrete and
-takes a `SpecDefinition<S>`, running the behaviour slots (`features` → `reforge` →
-`derivedSettings`) as its last constructor statements, exactly where a subclass body used to run.
+Adding a spec is three edits:
 
-Adding one is three edits and no page:
+1. `ui/specs/<class>/<spec>/spec.ts`. Use `.ts`; promote to `.tsx` only if the spec renders a React element.
+2. A `PlayerSpec` class in `ui/sim/player/specs/<class>.ts` with its `launch: { phase, status }`, exported through
+   `ui/sim/player/specs/index.ts`. That field is the only record of launch status: the spec page's
+   `ui/app/header/SimTitleDropdown/` and the landing page's class menu (`ui/app/landing/landing_classes.ts`) both read
+   it from `PlayerSpecs`.
+3. A theme block in `ui/styles/theme/specs.css`, in both halves: the class-grouped `--theme-color` lists and the
+   per-spec `--theme-background-image` rule (`ui/STYLING.md` §1).
 
-1. `ui/specs/<class>/<spec>/spec.ts`. Use `.ts`: **no TBC spec carries real JSX.** The source port
-   had two specs with a computed reforge tooltip; TBC has no equivalent. Of TBC's two pre-port
-   `.tsx` spec files, mage/dps's carried no JSX whatsoever and warlock/dps's only JSX was
-   tsx-vanilla DOM construction, which the React port replaced outright; neither file survives.
-   Promote to `.tsx` only if a spec genuinely renders a React element.
-2. A `PlayerSpec` class in `ui/sim/player/specs/<class>.ts` with its `launch: { phase, status }`,
-   exported through `ui/sim/player/specs/index.ts`. That field is the single source of truth for
-   launch status: `ui/app/header/SimTitleDropdown/` reads it on a spec page, and the landing page
-   (`ui/app/landing/`, entered from `ui/app/landing_entry.tsx`) builds its class menu and its per-spec
-   status badges from `PlayerSpecs` via `ui/app/landing/landing_classes.ts`, not a hand-written list.
-3. A theme block in `ui/styles/theme/specs.css`. TBC's pre-port `_sim.scss` per spec sets both a
-   `--theme-color` (shared per class, e.g. every warrior spec references `$warrior`) and its own
-   background image (`dps-warrior` and `protection-warrior` use two different files) — 17 blocks,
-   not one per class. The source port is structured identically: class-grouped selector lists carry
-   `--theme-color`/`--theme-color-foreground`, and a separate per-spec rule carries
-   `--theme-background-image`. A new spec needs an entry in both halves (see `ui/STYLING.md`).
+`tools/vite/spec_pages.mts` globs `ui/specs/*/*/spec.ts(x)`, so the page appears at `/forever/<class>/<spec>/` with no
+build-config edit and no HTML file.
 
-`tools/vite/spec_pages.mts` globs `ui/specs/*/*/spec.ts(x)`, so the page at `/forever/<class>/<spec>/`
-appears with no build-config edit and no html anywhere. Check the count with
-`/usr/bin/find ui/specs -name 'spec.ts' -o -name 'spec.tsx' | wc -l`; the golden harness covers the
-same set.
+Preset data: gear sets, APLs and builds are JSON under the spec folder (`gear_sets/`, `apls/`, `builds/`), built into
+presets by the `make*` helpers in `ui/app/preset_utils.ts`. EP weights, talents (one `talentsString`, since there are
+no glyphs and no per-talent enum) and anything that needs a callback such as `onLoad` stay TS in `presets.ts`. Rules
+that several specs of one class share live in `ui/specs/<class>/shared/`; only the classes that need it have one.
+
+**Every new gearset passes `devOnly: true`** to `makePresetGear`, and a `makePresetBuildFromJSON` build takes that
+gearset as its `gear`, until the gearset is released. Without the flag it shows on wowsims.com: `spec_entry.tsx` drops
+dev-only gear outside the dev server and the Cloudflare Pages previews (`isPreviewOrDevMode` in `ui/sim/utils/env.ts`).
+Removing the flag is the release, so a change does it only when asked to release that gearset.
 
 Two traps:
 
-- **A shared `DerivedSetting` must be typed `DerivedSetting<any>`.** `Player<S>` is invariant in
-  `S`, so `DerivedSetting<A | B>` is not assignable to `DerivedSetting<A>` and tsc rejects it via
-  `autoRotationGenerator`. Annotate the callback's `player` parameter to keep the body checked
-  against the union. The input helpers _are_ generic-friendly across a union; only `DerivedSetting`
-  is not.
-- **A custom settings section is data, never DOM.** Declare `sections: [CustomSection]` (typed in
-  `ui/sim/spec_config.ts`) and `ui/features/settings/components/CustomSection/CustomSection.tsx`
-  renders it, from `ui/app/tabs/SettingsTabBody.tsx`, through the same `ContentBlock` + picker path
-  the standard sections use. `sections` is the only shape — the older `customSections` (an array of
-  functions returning a `ContentBlock`) was deprecated and is now deleted.
-  `ui/specs/shaman/shared/inputs.ts` is the worked example.
-
-Rules shared by several specs of one class live in `ui/specs/<class>/shared/`
-(`{inputs,presets,derived}.ts`). Constants used by more than one class — the melee-hit/expertise and
-spell-hit `statCaps` builders, and the shared encounter protos (single-target and whichever raid
-encounters more than one class's presets reference) — live in
-`ui/sim/presets/{stat_caps,encounters}.ts` and export raw protos/`Stats` for a class's
-`shared/presets.ts` to wrap, because `ui/sim` cannot import `@app`.
-
-Proto-serialisable preset data lives as JSON, never a TS literal: gear, APLs, builds, EP weights and
-talents under `ui/specs/<class>/<spec>/`. EP JSON stores enum fields **by name** (`"StatCritRating"`)
-so the file survives a proto regeneration. TBC's `SavedTalents` is a single `talentsString` field
-(no glyphs, no per-talent enum), so a talent preset is just that string, not enum-resolved JSON.
-Anything that references a TS symbol or a callback — a computed EP preset via `.withStat()`, an
-`onLoad` handler — stays a TS literal.
+- **A shared `DerivedSetting` must be typed `DerivedSetting<any>`.** `Player<S>` is invariant in `S`, so
+  `DerivedSetting<A | B>` is not assignable to `DerivedSetting<A>`. Annotate the callback's `player` parameter to keep
+  the body checked against the union.
+- **A custom settings section is data, never DOM.** Declare it in `sections` as a `CustomSection`
+  (`ui/sim/spec_config.ts`); `ui/features/settings/components/CustomSection/CustomSection.tsx` renders it from
+  `ui/app/tabs/SettingsTabBody.tsx` through the same path as the standard sections. `CursesSection` in
+  `ui/specs/warlock/dps/inputs.ts` is a worked example.
 
 ## Localization
 
-TBC ships one locale, `en`. Every new user-facing string ships in `assets/locales/en/`, and a new key
-needs a matching property in `schemas/<name>.schema.json` (`additionalProperties: false`). See
-`verification.md`. There is no second locale to keep in register with, so a key added to `en` is the
-whole change.
+`en` is the only locale. A new user-facing string goes into `assets/locales/en/`, and its key needs a matching property
+in `schemas/<name>.schema.json` (`verification.md`, "Locales"). With no second locale, that is the whole change.
 
-## TBC quirks that look like bugs
+## Code that looks dead but is not
 
-- There is no raid sim UI, and never has been — TBC's individual sim models a one-party raid, and the
-  `Raid` and `Party` model classes in `ui/sim` exist for that reason, not because a fuller raid sim UI
-  was cut.
-- `PartyBuffs` (`proto/buffs.proto`) is a real, populated message here (`ferocious_inspiration`,
-  `blood_pact`, `moonkin_aura`, `leader_of_the_pack`, …) — unlike the source port's tree, where the
-  same message is empty and the party-buff code paths are vestigial. Do not carry that assumption
-  over: TBC's party-buff slice, subscription and picker are live code.
+- There is no raid sim UI. The individual sim models a one-party raid, which is why `Raid` and `Party` exist in
+  `ui/sim`.
+- `PartyBuffs` (`proto/buffs.proto`) is a populated message, and its party-buff slice, subscription and picker are live.
 
-## Decisions already made — do not re-litigate without new evidence
+## Decisions already made
 
-| Decision                                                     | Why                                                                                                                                                                                           |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `import/no-cycle` is off                                     | rejected on the source port's equivalent tree at 188 warnings; 63 here (46 `ui/sim`, 17 `ui/features`) — still a triage project, see `references/layers.md`. Cycles are caught by the harness |
-| Aliases are `tsconfig` `paths`, not `package.json` `imports` | `tsc` under `moduleResolution: "bundler"` does not resolve `#foo/*`                                                                                                                           |
-| Only `ui/app` may `createRoot`                               | lint-banned in ui-kit and features; createRoot-per-leaf was rejected                                                                                                                          |
-| `sections` is the only custom-section shape                  | one renderer, not two; `customSections` was deprecated, then deleted                                                                                                                          |
-| The move tool is gone                                        | move by hand and re-sort imports (see `layers.md`)                                                                                                                                            |
-| `oxfmt`, not prettier                                        | prettier is not a dependency; do not add a second formatter for `ui/`                                                                                                                         |
+Reopen one only with new evidence.
+
+| Decision                                                            | Why                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `import/no-cycle` is off                                            | the existing cycles are a triage project (`layers.md`); review catches new ones                                                                                                                                                                                                                                      |
+| Aliases are `tsconfig` `paths`                                      | `tsc` under `moduleResolution: "bundler"` does not resolve `package.json` `#foo/*` imports                                                                                                                                                                                                                           |
+| Only `ui/app` may `createRoot`                                      | one React root per page, not one per leaf; lint-banned in the kit and features                                                                                                                                                                                                                                       |
+| `sections` is the only custom-section shape                         | one renderer                                                                                                                                                                                                                                                                                                         |
+| `oxfmt`, not prettier                                               | one formatter for the repo                                                                                                                                                                                                                                                                                           |
+| The kit is controlled; the store binding is in `ui/features/inputs` | a kit picker takes `value` / `onChange` and never names `@sim` state, so it renders in a story with no host; `InputConfig`, `useInput` and the `Connected*` adapters are the one place a picker meets the store                                                                                                      |
+| Storybook is the component registry                                 | the catalogue comes from the code, so there is no hand-kept list to go stale                                                                                                                                                                                                                                         |
+| Stories run as tests                                                | `ui/testing/storybook/stories.test.tsx` mounts every story in `npm run test:unit`, so a story cannot rot unnoticed                                                                                                                                                                                                   |
+| One stylesheet body, `ui/styles/main.css`, with two entries         | production excludes stories, `ui/testing/storybook` and `ui/design-system`; Storybook adds them back (`ui/STYLING.md` §7)                                                                                                                                                                                            |
+| Views are props-only; containers keep the hooks                     | a view renders in a story from plain props, and the store reads stay in one greppable place per feature (`ui/README.md`, "Placement rules")                                                                                                                                                                          |
+| Component state is a `data-*` attribute                             | styling and tests key on the same attribute (`data-kept`, `data-customised`, …), never on a state class (`ui/STYLING.md` §3)                                                                                                                                                                                         |
+| Tests pin behaviour and props, never classes                        | a test asserts what a user action or a prop changes: output, a callback, a store read or write, a `data-*` or ARIA attribute. No "it renders" case where a story exists, no case that only exercises Base UI, and one behaviour is tested at one layer. One test file per component unless its `vi.mock` set differs |

@@ -104,9 +104,10 @@ export const isEqualAPLRotation = (player: Player<Spec>, rotation?: APLRotation,
 	}
 };
 
+// The offensive potion before the pull, which a stat potion is drunk for so its buff covers the opening.
 export function prepullPotionAction(doAt?: string): APLPrepullAction {
 	return APLPrepullAction.fromJsonString(
-		`{"action":{"castSpell":{"spellId":{"otherId":"OtherActionPotion"}}},"doAtValue":{"const":{"val":"${doAt || '-1s'}"}}}`,
+		`{"action":{"castSpell":{"spellId":{"otherId":"OtherActionOffensivePotion"}}},"doAtValue":{"const":{"val":"${doAt || '-1s'}"}}}`,
 	);
 }
 
@@ -131,6 +132,47 @@ export function simpleCooldownActions(cooldowns: Cooldowns): Array<APLAction> {
 			const schedule = cd.timings.map(timing => timing.toFixed(1) + 's').join(', ');
 			return scheduledCooldownAction(schedule, cd.id!);
 		});
+}
+
+/**
+ * Hides castSpell actions, in the priority list and in action groups, for every cooldown the user
+ * has scheduled with at least one timing, so a preset's own logic for that spell cannot fire before
+ * or between the user's timings. Items are hidden, not removed, so list indices stay stable.
+ * Mutates the given rotation, so pass a clone.
+ * Matches on the spell, item or other id and ignores tag and rank, because the sim takes the whole
+ * shared-timer family out of autocast anyway.
+ * A cooldown with no timings is left alone: its schedule action is invalid and gets dropped, so
+ * hiding the preset's line would mean the spell is never cast.
+ */
+export function hideScheduledCooldownCasts(rotation: APLRotation, cooldowns: Cooldowns): void {
+	const scheduled = new Set(
+		cooldowns.cooldowns
+			.filter(cd => cd.timings.length > 0)
+			.map(cd => rawIdKey(cd.id))
+			.filter(key => key !== null),
+	);
+	if (!scheduled.size) return;
+
+	for (const item of [...rotation.priorityList, ...rotation.groups.flatMap(group => group.actions)]) {
+		const action = item.action?.action;
+		if (action?.oneofKind !== 'castSpell') continue;
+		const key = rawIdKey(action.castSpell.spellId);
+		if (key !== null && scheduled.has(key)) item.hide = true;
+	}
+}
+
+function rawIdKey(id: ActionIdProto | undefined): string | null {
+	const rawId = id?.rawId;
+	switch (rawId?.oneofKind) {
+		case 'spellId':
+			return `spell:${rawId.spellId}`;
+		case 'itemId':
+			return `item:${rawId.itemId}`;
+		case 'otherId':
+			return `other:${rawId.otherId}`;
+		default:
+			return null;
+	}
 }
 
 export function standardCooldownDefaults(cooldowns: Cooldowns, prepotAt?: string, startAutocastCDsAt?: string): [Array<APLPrepullAction>, Array<APLAction>] {

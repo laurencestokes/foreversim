@@ -1,23 +1,58 @@
 import * as PresetUtils from '@app/preset_utils';
+import * as Consumables from '@features/settings/model/consumables_auto_gen';
 import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
-import { ConsumesSpec, Profession, Race, TristateEffect, UnitReference } from '@generated/proto/common';
+import { ConsumesSpec, Profession, Race, Stat, TristateEffect, UnitReference } from '@generated/proto/common';
 import { BalanceDruid_Options as BalanceDruidOptions } from '@generated/proto/druid';
 import { SavedTalents } from '@generated/proto/ui';
+import { Stats } from '@sim/proto/stats';
 
 import DefaultAPL from './apls/default.apl.json';
-import LaunchAPL from './apls/launch.apl.json';
-import LaunchGear from './gear_sets/launch.gear.json';
-import P0BisGear from './gear_sets/p0.bis.gear.json';
-import P1BisGear from './gear_sets/p1.bis.gear.json';
-import P2BisGear from './gear_sets/p2.bis.gear.json';
+import P1GearJson from './gear_sets/p1.gear.json';
+import PreBiSGearJson from './gear_sets/prebis.gear.json';
 
-// Starfire only: better than Launch for builds without Eclipse and Improved Wrath, worse (8-27%) with them.
-export const StandardRotation = PresetUtils.makePresetAPLRotation('Starfire (no Eclipse)', DefaultAPL);
-// Master's Launch rotation (Wrath-led, Starfire on Eclipse), the one its arena ranks.
-export const LaunchRotation = PresetUtils.makePresetAPLRotation('Launch', LaunchAPL);
+export const StandardRotation = PresetUtils.makePresetAPLRotation('Default', DefaultAPL);
 
-export const BalanceTalents = PresetUtils.makePresetTalents('Balance', SavedTalents.create({ talentsString: '5532220115001351--505302' }));
-export const MoonkinTalents = PresetUtils.makePresetTalents('Moonkin 38/0/13', SavedTalents.create({ talentsString: '5502220115501351--055003' }));
+export const StandardTalents = PresetUtils.makePresetTalents('Moonkin', SavedTalents.create({ talentsString: '5532220115501351--505' }));
+
+// Dungeon drops, world-drop greens with the "of Magic" suffix and crafted items whose reagents include no
+// raid materials; no reputation or PvP rewards, and no Scourge Invasion drops. The neck is a Dire Maul
+// quest reward. The cloak, the rings, the trinkets and the idol are sold by the Undermine Trader in
+// Stranglethorn Vale. The staff, and the Pristine Scale and Fel Leather the leggings take, have no known source.
+export const PreBiSGear = PresetUtils.makePresetGear('Pre-BiS', PreBiSGearJson, { devOnly: true });
+
+export const P1Gear = PresetUtils.makePresetGear('P1', P1GearJson, { devOnly: true });
+
+// Measured on the P1 gear with the Moonkin talents and the default consumables and buffs.
+export const P1EpWeights = PresetUtils.makePresetEpWeights(
+	'P1',
+	Stats.fromMap({
+		[Stat.StatIntellect]: 0.28,
+		[Stat.StatSpirit]: 0,
+		[Stat.StatSpellDamage]: 1,
+		[Stat.StatArcaneDamage]: 0.68,
+		[Stat.StatNatureDamage]: 0.32,
+		[Stat.StatHitRating]: 1.48,
+		[Stat.StatCritRating]: 0.76,
+		[Stat.StatHasteRating]: 0.99,
+		[Stat.StatMP5]: 0.15,
+	}),
+);
+
+// Measured on the Pre-BiS gear with the Moonkin talents and the default consumables and buffs.
+export const PreBiSEpWeights = PresetUtils.makePresetEpWeights(
+	'Pre-BiS',
+	Stats.fromMap({
+		[Stat.StatIntellect]: 0.2,
+		[Stat.StatSpirit]: 0,
+		[Stat.StatSpellDamage]: 1,
+		[Stat.StatArcaneDamage]: 0.68,
+		[Stat.StatNatureDamage]: 0.32,
+		[Stat.StatHitRating]: 1.45,
+		[Stat.StatCritRating]: 0.76,
+		[Stat.StatHasteRating]: 0.95,
+		[Stat.StatMP5]: 0,
+	}),
+);
 
 export const DefaultOptions = BalanceDruidOptions.create({
 	classOptions: {
@@ -25,49 +60,41 @@ export const DefaultOptions = BalanceDruidOptions.create({
 	},
 });
 
-// Defaults below are what master's ui/balance_druid (the Forever site before the switch) opens
-// with: its page drops the Fire Resistance Aura, blessings, Judgement of Wisdom and Stormstrike
-// its presets name.
 export const DefaultRaidBuffs = RaidBuffs.create({
 	arcaneBrilliance: true,
-	fireResistanceTotem: true,
 	giftOfTheWild: true,
+	prayerOfFortitude: true,
 	prayerOfSpirit: true,
 });
 
 export const DefaultPartyBuffs = PartyBuffs.create({
 	manaSpringTotem: TristateEffect.TristateEffectRegular,
-	moonkinAura: true,
 });
 
-export const DefaultIndividualBuffs = IndividualBuffs.create({});
+export const DefaultIndividualBuffs = IndividualBuffs.create({
+	greaterBlessingOfKings: true,
+	greaterBlessingOfWisdom: true,
+});
 
 export const DefaultDebuffs = Debuffs.create({
-	faerieFire: true,
+	curseOfElements: true,
+	judgementOfWisdom: true,
 });
 
 export const DefaultConsumables = ConsumesSpec.create({
-	flaskId: 13512, // Flask of Supreme Power
-	spellPowerElixirId: 13454, // Greater Arcane Elixir
-	guardianElixirId: 20007, // Mageblood Elixir
-	zanzaId: 8423, // Cerebral Cortex Compound
-	foodId: 18254, // Runn Tum Tuber Surprise
-	potId: 13444, // Major Mana Potion
-	mhImbueId: 25122, // Brilliant Wizard Oil
+	conjuredId: Consumables.DemonicRune.id,
+	elixirIds: [Consumables.GreaterArcaneElixir.id, Consumables.ElixirOfNaturePower.id, Consumables.ElixirOfTheOwl.id, Consumables.GreaterMagebloodElixir.id],
+	explosiveId: Consumables.SAFTCleverDynamite.id,
+	flaskId: Consumables.FlaskOfSupremePower.id,
+	foodId: Consumables.LobsterStew.id,
+	mhImbueId: Consumables.BrilliantWizardOil.id,
+	offensivePotId: Consumables.MajorSpellblastingPotion.id,
+	resourcePotId: Consumables.MajorManaPotion.id,
 });
 
 export const OtherDefaults = {
-	reactionTime: 200, // master's default
-	distanceFromTarget: 15,
-	profession1: Profession.Engineering,
+	distanceFromTarget: 20,
+	profession1: Profession.Enchanting,
 	profession2: Profession.Tailoring,
-	race: Race.RaceTauren,
+	race: Race.RaceNightElf,
 };
-
-// Our Forever sim's gear presets (master ui/<spec>/gear_sets).
-export const GEAR_LAUNCH = PresetUtils.makePresetGear('Launch', LaunchGear);
-export const GEAR_P0_BIS = PresetUtils.makePresetGear('Pre-BiS', P0BisGear);
-export const GEAR_P1_BIS = PresetUtils.makePresetGear('P1 BiS', P1BisGear);
-export const GEAR_P2_BIS = PresetUtils.makePresetGear('P2 BiS', P2BisGear);
-export const DEFAULT_GEAR = GEAR_P0_BIS;
-export const GEAR_PRESETS = [GEAR_LAUNCH, GEAR_P0_BIS, GEAR_P1_BIS, GEAR_P2_BIS];

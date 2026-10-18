@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# Moves a built dist/forever from /forever/ to $SITE_BASE (e.g. /Forever/next/ on a fork's Pages site).
-# Build with SITE_BASE set too: vite's base covers what it generates, this covers the '/forever/' the UI
-# hard-codes (icons, css urls, worker and wasm paths). Hosts such as wowhead.com/forever/ are left alone.
-# ponytail: text rewrite of the bundle; move the UI onto import.meta.env.BASE_URL if it ever grows a case this misses.
+# Rewrites literal /forever/ asset paths to $SITE_BASE for a fork's Pages site.
+# Build with SITE_BASE set too, so generated URLs, class links and workers use the same path.
+# Hosts such as wowhead.com/forever/ are left alone.
 set -euo pipefail
 : "${SITE_BASE:?set SITE_BASE, e.g. /Forever/next/}"
 dir=${1:-dist/forever}

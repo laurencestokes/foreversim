@@ -11,7 +11,7 @@ import { TalentTreePicker } from './TalentTreePicker';
 // icon cases see what was asked for, and recording the ranks shows what the lookup was keyed on.
 const { lookedUpRanks } = vi.hoisted(() => ({ lookedUpRanks: [] as Array<number | undefined> }));
 
-vi.mock('@ui-kit/hooks/useActionId', () => ({
+vi.mock('@sim/hooks/useActionId', () => ({
 	useActionId: (actionId: { spellId?: number; rank?: number }) => {
 		lookedUpRanks.push(actionId.rank);
 		return { iconUrl: `icon-${actionId.spellId}`, name: '', href: '', ready: true };
@@ -120,6 +120,13 @@ describe('TalentTreePicker icons', () => {
 		expect(talents()[0].getAttribute('href')).toContain('rank=1');
 	});
 
+	it('keeps the wowhead touch tooltip and adds no role or tab stop, since mousedown commits the spend', () => {
+		tree('');
+		expect(talents()[0].hasAttribute('data-disable-wowhead-touch-tooltip')).toBe(false);
+		expect(talents()[0].hasAttribute('role')).toBe(false);
+		expect(talents()[0].hasAttribute('tabindex')).toBe(false);
+	});
+
 	it('keys the icon lookup on rank 1 whatever the points, so spending one never blanks the cell', () => {
 		lookedUpRanks.length = 0;
 		tree('35');
@@ -135,16 +142,6 @@ describe('TalentTreePicker tier gating', () => {
 		expect(talents()[4].dataset.canAdd).toBe('false');
 	});
 
-	it('allows it once the tier is met', () => {
-		tree('5');
-		expect(talents()[4].dataset.canAdd).toBe('true');
-	});
-
-	it('gates on points spent anywhere in the tree, not on character level', () => {
-		tree('00005');
-		expect(talents()[4].dataset.canAdd).toBe('true');
-	});
-
 	it('leaves the string untouched when a gated click is rejected', () => {
 		const { onChange, written } = tree('4');
 		fireEvent.mouseDown(talents()[4], { button: 0 });
@@ -153,27 +150,29 @@ describe('TalentTreePicker tier gating', () => {
 	});
 });
 
-describe('TalentTreePicker prerequisites', () => {
-	it('refuses a talent whose prerequisite is unfilled', () => {
-		tree('50');
-		expect(talents()[5].dataset.canAdd).toBe('false');
-	});
-
-	it('allows it once the prerequisite is full', () => {
-		tree('51');
-		expect(talents()[5].dataset.canAdd).toBe('true');
-	});
-
-	it('refuses to free a prerequisite that a spent child depends on', () => {
+describe('TalentTreePicker broken talents', () => {
+	it('frees a prerequisite a spent child depends on, and the child keeps its point', () => {
 		const { written } = tree('510001');
 		fireEvent.mouseDown(talents()[1], { button: 2 });
-		expect(written()).toBe('510001');
+		expect(written()).toBe('500001');
 	});
 
-	it('frees it once the child is empty', () => {
-		const { written } = tree('51');
-		fireEvent.mouseDown(talents()[1], { button: 2 });
-		expect(written()).toBe('5');
+	it('marks a child whose prerequisite is not full as broken', () => {
+		tree('500001');
+		expect(talents()[5].dataset.broken).toBe('true');
+		expect(talents()[0].dataset.broken).toBe('false');
+	});
+
+	it('marks a talent whose tier lost a point as broken, and leaves the arrow above it dark', () => {
+		tree('310005');
+		expect(talents()[5].dataset.broken).toBe('true');
+		expect(talents()[1].dataset.broken).toBe('false');
+		expect(arrows()[0].dataset.reqActive).toBeUndefined();
+	});
+
+	it('leaves the child unbroken when its tier and prerequisite are full', () => {
+		tree('510001');
+		expect(talents()[5].dataset.broken).toBe('false');
 	});
 });
 
@@ -188,7 +187,7 @@ describe('TalentTreePicker arrows', () => {
 		expect(arrow.style.gridColumn).toBe('2 / 2');
 	});
 
-	it('lights the arrow only when the child can take a point or is already full', () => {
+	it('lights the arrow only when the child can take a point or holds points', () => {
 		tree('50');
 		expect(arrows()[0].dataset.reqActive).toBeUndefined();
 		document.body.innerHTML = '';
@@ -254,6 +253,13 @@ describe('TalentTreePicker touch', () => {
 		fireEvent.touchStart(talents()[0]);
 		fireEvent.touchEnd(talents()[0]);
 		expect(written()).toBe('');
+	});
+
+	it('clears a broken talent on a tap, since it cannot take another point', () => {
+		const { written } = tree('310001');
+		fireEvent.touchStart(talents()[5]);
+		fireEvent.touchEnd(talents()[5]);
+		expect(written()).toBe('31');
 	});
 
 	it('clears the talent on a long press, and the release that follows changes nothing', () => {

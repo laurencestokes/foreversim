@@ -3,7 +3,6 @@ package proto;
 
 option go_package = "./proto";
 
-import "common.proto";
 // DO NOT REMOVE THE COMMENTS
 // BEGIN GENERATED
 // HunterTalents message.
@@ -65,102 +64,104 @@ message HunterTalents {
 
 // END GENERATED
 
-enum HunterStingType {
-	NoSting = 0;
-	ScorpidSting = 1;
-	SerpentSting = 2;
-}
-
 message HunterOptions {
+	// The quivers the client's items describe, one a ranged attack speed, named as the generated
+	// sim/hunter/ammo_auto_gen.go keys them and numbered by their item id, so the UI lists them from
+	// this enum alone. The most speed first, which is the order the UI shows them in.
 	enum QuiverBonus {
-		QuiverNone = 0;
-		Speed10 = 1;
-		Speed11 = 2;
-		Speed12 = 3;
-		Speed13 = 4;
-		Speed14 = 5;
-		Speed15 = 6;
+		QuiverNone                = 0;
+		AncientSinewWrappedLamina = 18714;
+		QuickdrawQuiver           = 8217;
+		HeavyQuiver               = 7371;
+		QuiverOfTheNightWatch     = 3605;
+		HuntingQuiver             = 3573;
 	}
 	QuiverBonus quiver_bonus = 1;
 
-	// Forever is a Classic-era realm: the TBC ammo this message used to list does not exist there.
+	// The arrows the client's items describe, named as the generated sim/hunter/ammo_auto_gen.go
+	// keys them and numbered by their item id, so the UI lists them from this enum alone. The most
+	// damage first, which is the order the UI shows them in.
 	enum Ammo {
-		AmmoNone = 0;
-		// 25
-		RazorArrow = 1;
-		SolidShot = 2;
-		// 40
-		JaggedArrow = 3;
-		AccurateSlugs = 4;
-		// 50
-		MithrilGyroShot = 5;
-		RockshardPellets = 6;
-		// 60
-		IceThreadedArrow = 7;
-		ThoriumHeadedArrow = 8;
-		Doomshot = 9;
-		IceThreadedBullet = 10;
-		ThoriumShells = 11;
-		MiniatureCannonBalls = 12;
+		AmmoNone           = 0;
+		SwiftfeatherArrow  = 274387;
+		ThoriumHeadedArrow = 18042;
+		IceThreadedArrow   = 19316;
+		ExplosiveArrow     = 10579;
+		JaggedArrow        = 11285;
+		PrecisionArrow     = 9399;
+		FeatheredArrow     = 3464;
+		RazorArrow         = 3030;
+		SharpArrow         = 2515;
+		RoughArrow         = 2512;
 	}
 	Ammo ammo = 2;
 
+	// The families the client's "Pet - <family>" skill lines describe, named as the generated
+	// sim/hunter/pet_families_auto_gen.go keys them.
 	enum PetType {
-		PetNone = 0;
-		Cat = 1;
-		WindSerpent = 2;
-		Wolf = 3;
-		Bat = 4;
-		Bear = 5;
-		Owl = 6;
-		Boar = 7;
-		CarrionBird = 8;
-		Crab = 9;
-		Crocolisk = 10;
-		Gorilla = 11;
-		Hyena = 12;
-		Raptor = 13;
-		Scorpid = 14;
-		Spider = 15;
+		PetNone     = 0;
+		Bat         = 1;
+		Bear        = 2;
+		BirdOfPrey  = 3;
+		Boar        = 4;
+		CarrionBird = 5;
+		Cat         = 6;
+		CoreHound   = 7;
+		Crab        = 8;
+		Crocilisk   = 9;
+		Fox         = 10;
+		Gorilla     = 11;
+		Hyena       = 12;
+		Raptor      = 13;
+		Scorpid     = 14;
+		Spider      = 15;
 		Tallstrider = 16;
-		Turtle = 17;
+		Turtle      = 17;
+		WindSerpent = 18;
+		Wolf        = 19;
 	}
 	PetType pet_type = 3;
 
-	// The tamed pet's weapon speed, which sets both its swing timer and its damage range.
-	enum PetAttackSpeed {
-		One = 0;
-		OneTwo = 1;
-		OneThree = 2;
-		OneFour = 3;
-		OneFive = 4;
-		OneSix = 5;
-		OneSeven = 6;
-		Two = 7;
-		TwoFour = 8;
-		TwoFive = 9;
-	}
-	PetAttackSpeed pet_attack_speed = 6;
-
-	bool pet_single_ability = 4;
 	double pet_uptime = 5;
+
+	// Beast Training, the part of it that changes the pet's damage: whether Cobra Reflexes is
+	// taught, and Pet Aggression's rank, 0 for untrained.
+	bool cobra_reflexes = 6;
+	int32 pet_aggression = 7;
+
+	// The Faster Attack or Slower Attack passive the tamed creature carries on top of the 2 s swing
+	// every pet has, named as the hunter's spell store fields the passives.
+	enum PetAttackSpeed {
+		PetAttackSpeedNone = 0;
+		SlowerAttackIII    = 1;
+		SlowerAttackII     = 2;
+		FasterAttackI      = 3;
+		FasterAttackII     = 4;
+		FasterAttackIII    = 5;
+		FasterAttackIV     = 6;
+		FasterAttackV      = 7;
+		FasterAttackVI     = 8;
+		FasterAttackVII    = 9;
+	}
+	PetAttackSpeed pet_attack_speed = 12;
 }
 
 message Hunter {
 	message Rotation {
-		RotationType type = 9;
-		HunterStingType sting = 5;
-
-		bool melee_weave = 1;
-		bool weave_only_raptor = 2;
-		int32 time_to_weave = 8;
+		// Where the hunter stands: at range, walking in for each melee swing, or in melee range.
+		enum Playstyle {
+			Turret = 0;
+			Weave  = 1;
+			Melee  = 2;
+		}
+		reserved 1;
+		int32 time_to_weave = 2;
 		bool use_multi = 3;
 		bool use_arcane = 4;
-
-		// Switch to Aspect of the Viper when mana goes below this percent.
-		double viper_start_mana_percent = 6;
-		// Switch back to Aspect of the Hawk when mana goes above this percent.
-		double viper_stop_mana_percent = 7;
+		Playstyle playstyle = 5;
+		bool use_aimed = 6;
+		bool use_sniper = 7;
+		bool use_hawk = 8;
 	}
 	message Options {
 		HunterOptions class_options = 1;

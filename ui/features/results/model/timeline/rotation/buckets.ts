@@ -20,7 +20,10 @@ export const ORDERED_RESOURCE_TYPES: Array<ResourceType> = [
 	ResourceType.ResourceTypeGenericResource,
 ];
 
-export const PERCENTAGE_RESOURCES: Array<ResourceType> = [ResourceType.ResourceTypeHealth, ResourceType.ResourceTypeMana];
+export const PERCENTAGE_RESOURCES: Array<ResourceType> = [ResourceType.ResourceTypeHealth];
+
+// Resources that regenerate in steps too small to read a number each: their row draws the level as a bar.
+export const FILL_RESOURCES: Array<ResourceType> = [ResourceType.ResourceTypeMana, ResourceType.ResourceTypeEnergy, ResourceType.ResourceTypeFocus];
 
 export const AURA_AS_RESOURCE: ActionId[] = [
 	// Item Swap
@@ -43,15 +46,19 @@ export const AURA_AS_RESOURCE: ActionId[] = [
 
 	// Mage
 	ActionId.fromSpellId(148022), // Icicle
+
+	// Warlock
+	ActionId.fromItemId(6265), // Soul Shards
 ];
 export const IDS_TO_GROUP_FOR_ROTATION: Array<number> = [
-	5171, // Rogue - Slice and Dice
-	2098, // Rogue - Eviscerate
-	1943, // Rogue - Rupture
-	51690, // Rogue - Killing Spree
-	32645, // Rogue - Envenom
-	16511, // Rogue - Hemorrhage
-	121471, // Rogue - Shadow Blades
+	6774, // Rogue - Slice and Dice
+	11300, // Rogue - Eviscerate
+	11275, // Rogue - Rupture
+	11198, // Rogue - Expose Armor
+	5019, // Wand - Shoot (the channel and its shots)
+	10438, // Shaman - Searing Totem (the totem and its attacks)
+	10587, // Shaman - Magma Totem (the totem and its pulses)
+	16387, // Shaman - Flametongue Totem (the totem and its strikes)
 ];
 
 export function makeRowKey(section: SectionId, kind: string, bucketKey: string): string {

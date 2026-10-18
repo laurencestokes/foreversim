@@ -1,14 +1,12 @@
-// Persisted gem-optimizer settings, extracted from the ReforgeOptimizer
+// Persisted gear-optimizer settings, extracted from the ReforgeOptimizer
 // component (ui/features/reforge/components/ReforgePanel) so the state surface is UI-free.
-// TBC has no item reforging: the "reforge" naming is inherited from the MoP port and what the
-// optimizer actually chooses is gems and socket bonuses.
+// There is no item reforging: "reforge" is only the optimizer's name.
 // Values live in the sim store (`reforge[player.storeKey]`) with per-field
 // version counters; this class is the facade over that slice.
 // Serialization lands in IndividualSimSettings.reforgeSettings.
 import { ReforgeSettings as ReforgeSettingsProto } from '@generated/proto/api';
-import { ItemQuality, ItemSlot, Stat } from '@generated/proto/common';
+import { ItemSlot, Stat } from '@generated/proto/common';
 
-import { CURRENT_PHASE, Phase } from '../constants/other';
 import type { Player } from '../player/player';
 import { StatCap, Stats } from '../proto/stats';
 import { batch } from '../state/batch';
@@ -22,23 +20,20 @@ export interface ReforgeSettingsDefaults {
 }
 
 export class ReforgeSettings {
-	private readonly player: Player<any>;
 	private readonly defaults: ReforgeSettingsDefaults;
-	// The stats this spec is willing to gem for. A gem is only a candidate if every stat it carries
-	// is in this list, so specs list stats they weight at 0 (Stamina, spell penetration) to keep
-	// those gems selectable. It cannot be derived from the pre-cap EPs for exactly that reason.
+	// Written into the proto's ep_stats; neither the optimizer nor the enchant options read them,
+	// and the cache key leaves them out.
 	private readonly epStats: ReadonlyArray<Stat>;
 	readonly store: SimStore;
 	readonly storeKey: number;
 
 	constructor(player: Player<any>, defaults: ReforgeSettingsDefaults, epStats: ReadonlyArray<Stat> = []) {
-		this.player = player;
 		this.defaults = defaults;
 		this.epStats = epStats;
 		this.store = player.sim.store;
 		this.storeKey = player.storeKey;
 
-		// Seed the slice (emit-less, like the old field initializers).
+		// Seed the slice without notifying.
 		seedKeyed(this.store, 'reforge', this.storeKey, {
 			statCaps: defaults.statCaps || new Stats(),
 			breakpointLimits: new Stats(),
@@ -47,9 +42,7 @@ export class ReforgeSettings {
 			softCapBreakpoints: [],
 			freezeItemSlots: false,
 			frozenItemSlots: [],
-			maxGemPhase: CURRENT_PHASE,
-			maxGemQuality: ItemQuality.ItemQualityEpic,
-			disableUniqueGems: false,
+			useEnchantPresets: false,
 			undershootCaps: new Stats(),
 			v: zeroVersions(REFORGE_FIELDS),
 		});
@@ -60,7 +53,7 @@ export class ReforgeSettings {
 	}
 
 	// Writes `patch` and bumps the given counters in one store write. No bumps
-	// = the old silent field assignment.
+	// = a silent write.
 	private write(patch: Partial<Omit<ReforgeSlice, 'v'>>, bumps: ReadonlyArray<ReforgeField> = []) {
 		patchKeyed(this.store, 'reforge', this.storeKey, patch, bumps);
 	}
@@ -88,15 +81,15 @@ export class ReforgeSettings {
 	get frozenItemSlots(): Set<ItemSlot> {
 		return new Set(this.slice.frozenItemSlots as ItemSlot[]);
 	}
+	get useEnchantPresets(): boolean {
+		return this.slice.useEnchantPresets;
+	}
 	get undershootCaps(): Stats {
 		return this.slice.undershootCaps;
 	}
-	// Silent assignment (no emit), matching the old direct field write.
+	// Silent assignment (no emit).
 	set undershootCaps(value: Stats) {
 		this.write({ undershootCaps: value });
-	}
-	get disableUniqueGems(): boolean {
-		return this.slice.disableUniqueGems;
 	}
 
 	setStatCaps(newStatCaps: Stats) {
@@ -150,25 +143,10 @@ export class ReforgeSettings {
 		return (this.slice.frozenItemSlots as ItemSlot[]).includes(slot);
 	}
 
-	// ---- the gem pool knobs. TBC-only: MoP's reforger has no counterpart for any of them.
-	setMaxGemPhase(phase: number) {
-		this.write({ maxGemPhase: phase }, ['maxGemPhase']);
-	}
-
-	getMaxGemPhase(): number {
-		return this.slice.maxGemPhase;
-	}
-
-	setMaxGemQuality(quality: ItemQuality) {
-		this.write({ maxGemQuality: quality }, ['maxGemQuality']);
-	}
-
-	getMaxGemQuality(): ItemQuality {
-		return this.slice.maxGemQuality;
-	}
-
-	setDisableUniqueGems(disableUniqueGems: boolean) {
-		this.write({ disableUniqueGems }, ['disableUniqueGems']);
+	setUseEnchantPresets(newValue: boolean) {
+		if (this.useEnchantPresets !== newValue) {
+			this.write({ useEnchantPresets: newValue }, ['useEnchantPresets']);
+		}
 	}
 
 	// A preset build carries a *partial* ReforgeSettings — vanilla's type was literally
@@ -176,10 +154,6 @@ export class ReforgeSettings {
 	// sets it, and anything it leaves out keeps the value `applyDefaults()` gave it.
 	// `fromProto` is the deserialization path and replaces every field, which resets the
 	// spec's soft-cap breakpoints, stat caps and frozen slots to proto zero values.
-	//
-	// The field list is vanilla's: `maxGemQuality` and `disableUniqueGems` are deliberately
-	// absent, because vanilla never read them out of a build either. Mage's P3 preset sets
-	// `disableUniqueGems: true` and it has never had an effect.
 	applyPreset(proto: ReforgeSettingsProto) {
 		batch(() => {
 			if (proto.useCustomEpValues) this.setUseCustomEPValues(proto.useCustomEpValues);
@@ -192,7 +166,7 @@ export class ReforgeSettings {
 			// guard here empties the slots a user pinned in the optimizer on every preset click.
 			if (proto.frozenItemSlots.length) this.setFrozenItemSlots(proto.frozenItemSlots);
 			if (proto.breakpointLimits) this.setBreakpointLimits(Stats.fromProto(proto.breakpointLimits));
-			if (proto.maxGemPhase) this.setMaxGemPhase(proto.maxGemPhase);
+			if (proto.useEnchantPresets) this.setUseEnchantPresets(proto.useEnchantPresets);
 		});
 	}
 
@@ -204,9 +178,7 @@ export class ReforgeSettings {
 			this.setFreezeItemSlots(proto.freezeItemSlots);
 			this.setFrozenItemSlots(proto.frozenItemSlots);
 			this.setBreakpointLimits(Stats.fromProto(proto.breakpointLimits));
-			this.setDisableUniqueGems(proto.disableUniqueGems);
-			this.setMaxGemPhase(proto.maxGemPhase || Phase.Launch);
-			this.setMaxGemQuality(proto.maxGemQuality || ItemQuality.ItemQualityEpic);
+			this.setUseEnchantPresets(proto.useEnchantPresets);
 		});
 	}
 
@@ -218,10 +190,8 @@ export class ReforgeSettings {
 			frozenItemSlots: [...this.frozenItemSlots],
 			breakpointLimits: this.breakpointLimits.toProto(),
 			statCaps: this.statCaps.toProto(),
-			disableUniqueGems: this.disableUniqueGems,
-			maxGemPhase: this.getMaxGemPhase(),
-			maxGemQuality: this.getMaxGemQuality(),
 			epStats: [...this.epStats],
+			useEnchantPresets: this.useEnchantPresets,
 		});
 	}
 
@@ -233,9 +203,7 @@ export class ReforgeSettings {
 			this.setStatCaps(this.defaults.statCaps || new Stats());
 			this.setBreakpointLimits(this.defaults.breakpointLimits || new Stats());
 			this.setSoftCapBreakpoints(this.defaults.softCapBreakpoints || []);
-			this.setDisableUniqueGems(false);
-			this.setMaxGemPhase(this.player.sim.getPhase());
-			this.setMaxGemQuality(ItemQuality.ItemQualityEpic);
+			this.setUseEnchantPresets(false);
 		});
 	}
 }

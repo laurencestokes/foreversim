@@ -196,6 +196,7 @@ func newSimWithEnv(env *Environment, simOptions *proto.SimOptions, signals simsi
 	rseed := simOptions.RandomSeed
 	if rseed == 0 {
 		rseed = time.Now().UnixNano()
+		simOptions.RandomSeed = rseed
 	}
 
 	return &Simulation{
@@ -436,7 +437,7 @@ func (sim *Simulation) reset() {
 
 	sim.Environment.reset(sim)
 
-	sim.initManaTickAction()
+	sim.enableManaTicks()
 }
 
 func (sim *Simulation) PrePull() {
@@ -642,24 +643,24 @@ func (sim *Simulation) AddPendingAction(pa *PendingAction) {
 	//}
 	pa.consumed = false
 	pa.cancelled = false
-	for index, v := range sim.pendingActions[1:] {
+	// The queue is sorted with the next action at the end, and most new actions
+	// are near-term, so scan from the end to find the insertion point.
+	pas := sim.pendingActions
+	k := len(pas)
+	for k > 1 {
+		v := pas[k-1]
 		if v.NextActionAt < pa.NextActionAt || (v.NextActionAt == pa.NextActionAt && v.Priority >= pa.Priority) {
-			//if sim.Log != nil {
-			//	sim.Log("Adding action at index %d for time %s", index - len(sim.pendingActions), pa.NextActionAt)
-			//	for i := index; i < len(sim.pendingActions); i++ {
-			//		sim.Log("Upcoming action at %s", sim.pendingActions[i].NextActionAt)
-			//	}
-			//}
-			sim.pendingActions = append(sim.pendingActions, pa)
-			copy(sim.pendingActions[index+2:], sim.pendingActions[index+1:])
-			sim.pendingActions[index+1] = pa
-			return
+			k--
+			continue
 		}
+		break
 	}
-	//if sim.Log != nil {
-	//	sim.Log("Adding action at end for time %s", pa.NextActionAt)
-	//}
-	sim.pendingActions = append(sim.pendingActions, pa)
+	pas = append(pas, pa)
+	if k < len(pas)-1 {
+		copy(pas[k+1:], pas[k:])
+		pas[k] = pa
+	}
+	sim.pendingActions = pas
 }
 
 // Use this for any "fire and forget" delayed actions where your code does not
@@ -675,6 +676,16 @@ func (sim *Simulation) GetConsumedPendingActionFromPool() *PendingAction {
 	pa.CleanUp = nil
 	pa.cancelled = false
 	return pa
+}
+
+// Runs the action at the current time, once the event in progress and its callbacks are done. It
+// goes ahead of the rotation and regen due at this time, and after any swing or task due then.
+func (sim *Simulation) RunAfterCurrentEvent(action func(*Simulation)) {
+	pa := sim.GetConsumedPendingActionFromPool()
+	pa.NextActionAt = sim.CurrentTime
+	pa.Priority = ActionPriorityDOT
+	pa.OnAction = action
+	sim.AddPendingAction(pa)
 }
 
 func (sim *Simulation) RegisterExecutePhaseCallback(callback func(sim *Simulation, isExecute int32)) {

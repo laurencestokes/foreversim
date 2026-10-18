@@ -2,62 +2,52 @@ package warlock
 
 import (
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
+	"github.com/wowsims/forever/sim/core/stats"
 )
 
+// A channel on the caster: each second it fires Hellfire Effect at every enemy nearby, and burns the caster
+// for the same, spell power included. An area effect that ticks rolls hit on every tick, and crit unless
+// Hellfire Effect's row bars it.
 func (warlock *Warlock) registerHellfire() {
-	rank := spellData.Hellfire.Highest()
-	// The self-burn tick: effect 1 is the periodic trigger that fires Hellfire Effect.
-	tick := rank.Effect(dbcenums.A_PERIODIC_DAMAGE, 0)
-	// Each tick fires Hellfire Effect at the enemies around the warlock. Its row marked it Cannot Crit
-	// up to client 70124; 70170 dropped the flag, so the area hits crit wherever the row allows it.
-	burnCanCrit := !rank.Effect(dbcenums.A_PERIODIC_TRIGGER_SPELL, 0).Trigger().CannotCrit()
+	rankedSpell := spellData.Hellfire.ByID(11684)
+	channelTick := rankedSpell.PeriodicEffect()
+	selfBurn := rankedSpell.EffectN(2)
 
-	warlock.Hellfire = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    core.DefenseTypeMagic,
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagChanneled | core.SpellFlagAPL,
-		ClassSpellMask: WarlockSpellHellfire,
+	effectRow := rankedSpell.EffectN(1).Trigger()
+	effectHit := effectRow.DamageEffect()
+	cannotCrit := effectRow.CannotCrit()
 
-		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
-		Cast:     core.CastConfig{DefaultCast: core.Cast{GCD: rank.GCD()}},
+	// Fired by the channel; hits every enemy in range
+	effectConfig := spelldata.SpellConfig(&warlock.Unit, effectRow, spelldata.Magic(core.ProcMaskSpellDamage), spelldata.Proc())
+	effectConfig.ClassSpellMask = WarlockSpellHellfire
+	effectConfig.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		outcome := spell.OutcomeMagicHitAndCrit
+		if cannotCrit {
+			outcome = spell.OutcomeMagicHit
+		}
+		for _, target := range sim.Encounter.ActiveTargetUnits {
+			spell.CalcAndDealDamage(sim, target, effectHit.Average(), outcome)
+		}
+	}
+	hellfireEffect := warlock.RegisterSpell(effectConfig)
 
-		DamageMultiplierAdditive: 1,
-		DamageMultiplier:         1,
-		ThreatMultiplier:         1,
+	config := spelldata.SpellConfig(&warlock.Unit, rankedSpell, spelldata.Magic(core.ProcMaskSpellDamage))
+	config.ClassSpellMask = WarlockSpellHellfire
 
-		Dot: core.DotConfig{
-			Aura: core.Aura{
-				Label: "Hellfire",
-			},
+	// TODO: The burn on the caster is taken as health lost, not as Fire damage its resistance could reduce.
+	config.Dot = spelldata.DotConfig(rankedSpell, channelTick)
+	config.Dot.SelfOnly = true
+	config.Dot.OnTick = func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
+		hellfireEffect.Cast(sim, target)
+		spellPower := warlock.GetStat(stats.SpellDamage) + warlock.GetStat(stats.FireDamage)
+		warlock.RemoveHealth(sim, selfBurn.Average()+selfBurn.Coeff()*spellPower)
+	}
 
-			IsAOE:                true,
-			TickLength:           tick.Period(),
-			NumberOfTicks:        int32(rank.Duration() / tick.Period()),
-			HasteReducesDuration: true,
-			AffectedByCastSpeed:  true,
-			BonusCoefficient:     tick.Coeff(),
+	// Channel on the caster
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		spell.AOEDot().Apply(sim)
+	}
 
-			OnTick: func(sim *core.Simulation, _ *core.Unit, dot *core.Dot) {
-				// Rolled once: the warlock burns exactly what it deals.
-				tickDamage := tick.Average(core.CharacterLevel)
-
-				outcome := dot.Spell.OutcomeTickMagicHitNoHitCounter
-				if burnCanCrit {
-					outcome = dot.Spell.OutcomeTickMagicHitAndCrit
-				}
-				dot.Spell.CalcPeriodicAoeDamage(sim, tickDamage, outcome)
-				// No stop at low health: the sim has no healer, and Life Tap already spends past 0.
-				// Stopping clipped every channel after ~18 s into one-tick recasts at full mana cost.
-				dot.Spell.DealBatchedPeriodicDamage(sim)
-				warlock.RemoveHealth(sim, tickDamage)
-			},
-		},
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.AOEDot().Apply(sim)
-		},
-	})
+	warlock.Hellfire = warlock.RegisterSpell(config)
 }

@@ -6,68 +6,47 @@ import (
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// TODO: was Ranks(7, 6); Forever's Flamestrike tops out at rank 6, so only that remains.
-var FlameStrikeRankMap = spelldata.Ranked(spellData.Flamestrike.Rank(6).ID)
+// Only the highest rank is registered: the mage casts the rank configured here, not every rank
+// spellData.Flamestrike lists.
+func (mage *Mage) registerFlamestrikeSpells() {
+	mage.registerFlamestrikeSpell(spellData.Flamestrike.Len(), spellData.Flamestrike.Highest())
+}
 
-// Flamestrike
-// https://www.wowhead.com/forever/spell=10216
-//
-// Calls down a pillar of fire, burning all enemies within the area for X Fire damage and an additional
-// Y Fire damage over 8 sec. Only one Flamestrike can be active per Mage at a time.
-func (mage *Mage) registerFlamestrike(rankConfig *spelldata.Spell) {
-	actionID := core.ActionID{SpellID: rankConfig.ID}
-	// Flamestrike's periodic damage is the spell FlamestrikeTriggered casts each tick, at the same
-	// rank; the tick length is Flamestrike's own periodic dummy.
-	tick := spellData.FlamestrikeTriggered.Rank(rankConfig.RankNumber()).DamageEffect()
-	tickLength := rankConfig.Effect(dbcenums.A_PERIODIC_DUMMY, 0).Period()
+// The burn is its own spell (MageSpellFlamestrikeDot) on the cast's row, tagged like Fireball's DoT so
+// the two share a header: every 2 sec it deals the same rank of spellData.FlamestrikeTriggered to each
+// enemy in the area, and rolls a crit unless the tick's row bars it. The cast's row names no tick
+// spell, only an area trigger, so the two pair by rank.
+func (mage *Mage) registerFlamestrikeSpell(rank int32, castRank *spelldata.Spell) {
+	tickRank := spellData.FlamestrikeTriggered.Rank(rank)
+	tickDamage := tickRank.DamageEffect()
+	cannotCrit := tickRank.CannotCrit()
 
-	spell := mage.RegisterSpell(core.SpellConfig{
-		ActionID:       actionID,
-		SpellSchool:    rankConfig.SpellSchool(),
-		DefenseType:    rankConfig.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: MageSpellFlamestrike,
-		MaxRange:       float64(rankConfig.MaxRange),
-		Rank:           rankConfig.RankNumber(),
+	dotConfig := spelldata.SpellConfig(&mage.Unit, castRank, spelldata.Magic(core.ProcMaskSpellDamage), spelldata.Proc(), spelldata.Tag(1))
+	dotConfig.ClassSpellMask = MageSpellFlamestrikeDot
+	dotConfig.Dot = spelldata.DotConfig(castRank, castRank.Effect(dbcenums.A_PERIODIC_DUMMY, 0),
+		spelldata.RankLabel(castRank, &mage.Unit))
+	dotConfig.Dot.IsAOE = true
+	dotConfig.Dot.BonusCoefficient = tickDamage.Coeff()
+	dotConfig.Dot.OnTick = func(sim *core.Simulation, _ *core.Unit, dot *core.Dot) {
+		outcome := dot.Spell.OutcomeTickMagicHitAndCrit
+		if cannotCrit {
+			outcome = dot.OutcomeTickMagicHit
+		}
+		dot.Spell.CalcAndDealPeriodicAoeDamage(sim, tickDamage.Average(), outcome)
+	}
+	dotConfig.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		spell.AOEDot().Apply(sim)
+	}
+	dotSpell := mage.RegisterSpell(dotConfig)
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(rankConfig.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD:      rankConfig.GCD(),
-				CastTime: rankConfig.CastTime(),
-			},
-		},
+	config := spelldata.SpellConfig(&mage.Unit, castRank, spelldata.Magic(core.ProcMaskSpellDamage))
+	config.ClassSpellMask = MageSpellFlamestrike
+	config.RelatedDotSpell = dotSpell
 
-		DamageMultiplier: 1,
-		BonusCoefficient: rankConfig.DamageEffect().Coeff(),
-		ThreatMultiplier: 1,
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealAoeDamageWithVariance(sim, spell.OutcomeMagicHitAndCrit, rollDamage(castRank.DamageEffect()))
+		dotSpell.Cast(sim, target)
+	}
 
-		Dot: core.DotConfig{
-			IsAOE: true,
-			Aura: core.Aura{
-				ActionID: actionID,
-				Label:    "Flamestrike" + mage.Label + " " + rankConfig.Rank,
-			},
-			NumberOfTicks:    int32(rankConfig.Duration() / tickLength),
-			TickLength:       tickLength,
-			BonusCoefficient: tick.Coeff(),
-			OnTick: func(sim *core.Simulation, _ *core.Unit, dot *core.Dot) {
-				// The area tick row (1279990) carries no Cannot Crit bit, and beta logs show the ticks crit
-				// (foreverlogs 2668: 16 of 276).
-				dot.Spell.CalcAndDealPeriodicAoeDamage(sim, tick.Average(core.CharacterLevel), dot.Spell.OutcomeTickMagicHitAndCrit)
-			},
-		},
-
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealAoeDamageWithVariance(sim, spell.OutcomeMagicHitAndCrit, func(sim *core.Simulation, _ *core.Spell) float64 {
-				return rankConfig.DamageEffect().Roll(sim, core.CharacterLevel)
-			})
-			spell.AOEDot().Apply(sim)
-		},
-	})
-
-	mage.Flamestrike = append(mage.Flamestrike, spell)
+	mage.RegisterSpell(config)
 }

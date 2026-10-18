@@ -28,7 +28,7 @@ func (value *APLValueSelectedPotion) Type() proto.APLValueType {
 	return proto.APLValueType_ValueTypeBool
 }
 func (value *APLValueSelectedPotion) GetBool(sim *Simulation) bool {
-	return value.character.Consumables.PotId == value.potionId
+	return value.character.IsPickedPotion(value.potionId)
 }
 func (value *APLValueSelectedPotion) String() string {
 	return fmt.Sprintf("Selected Potion (%d)", value.potionId)

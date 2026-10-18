@@ -2,73 +2,31 @@ package druid
 
 import (
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-var prowlRank = spellData.Prowl.Highest()
-
 func (druid *Druid) registerProwlSpell() {
-	actionID := core.ActionID{SpellID: prowlRank.ID}
-	movementSpeedMultiplier := 1 + prowlRank.Effect(dbcenums.A_MOD_DECREASE_SPEED, 0).BaseValue()/100
-
-	icd := core.Cooldown{
-		Timer:    druid.NewTimer(),
-		Duration: max(prowlRank.Cooldown(), prowlRank.CategoryCooldown()),
+	rank := spellData.Prowl.Highest()
+	druid.ProwlAura = druid.RegisterAura(spelldata.AuraConfig(rank))
+	speed := 1 + rank.EffectN(2).Percent()
+	// Attribute word 0 cancels auto attack (0x100000), which core does not read, so the aura pauses
+	// melee until a cast ends it. Dash carries ATTR_EX_1_NO_STEALTH_BREAK and does not.
+	// The not-in-combat bit keeps Prowl itself before the pull.
+	druid.ProwlAura.ApplyOnGain(func(_ *core.Aura, sim *core.Simulation) {
+		druid.MultiplyMovementSpeed(sim, speed)
+		druid.AutoAttacks.PauseMeleeBy(sim, core.NeverExpires)
+	})
+	druid.ProwlAura.ApplyOnExpire(func(_ *core.Aura, sim *core.Simulation) {
+		druid.MultiplyMovementSpeed(sim, 1/speed)
+		druid.AutoAttacks.ResumeMeleeAt(sim, 0, 0)
+	})
+	config := spelldata.SpellConfig(&druid.Unit, rank)
+	config.Flags |= core.SpellFlagAPL
+	config.ExtraCastCondition = func(_ *core.Simulation, _ *core.Unit) bool {
+		return !druid.ProwlAura.IsActive()
 	}
-
-	druid.ProwlAura = druid.RegisterAura(core.Aura{
-		Label:    "Prowl",
-		ActionID: actionID,
-		Duration: core.NeverExpires,
-
-		OnGain: func(aura *core.Aura, sim *core.Simulation) {
-			aura.Unit.MultiplyMovementSpeed(sim, movementSpeedMultiplier)
-
-			// No white swing goes out from Prowl; the opener starts it. The sim's swing timer runs from the
-			// pull anyway and would win a tie with the opener, so the rotation gets to act before each swing
-			// the way a queued Heroic Strike does.
-			druid.AutoAttacks.SetReplaceMHSwing(func(_ *core.Simulation, swing *core.Spell) *core.Spell {
-				return swing
-			})
-		},
-
-		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			aura.Deactivate(sim)
-		},
-
-		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
-			icd.Use(sim)
-			aura.Unit.MultiplyMovementSpeed(sim, 1.0/movementSpeedMultiplier)
-			druid.AutoAttacks.SetReplaceMHSwing(nil)
-		},
-	})
-
-	druid.CatFormAura.ApplyOnExpire(func(_ *core.Aura, sim *core.Simulation) {
-		if druid.ProwlAura.IsActive() {
-			druid.ProwlAura.Deactivate(sim)
-		}
-	})
-
-	druid.Prowl = druid.RegisterSpell(Any, core.SpellConfig{
-		ActionID:    actionID,
-		SpellSchool: prowlRank.SpellSchool(),
-		ProcMask:    core.ProcMaskEmpty,
-		Flags:       core.SpellFlagAPL,
-
-		Cast: core.CastConfig{
-			CD: icd,
-		},
-
-		ExtraCastCondition: func(sim *core.Simulation, _ *core.Unit) bool {
-			return sim.CurrentTime < 0
-		},
-
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
-			if !druid.InForm(Cat) {
-				druid.CatFormAura.Activate(sim)
-			}
-
-			druid.ProwlAura.Activate(sim)
-		},
-	})
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
+		druid.ProwlAura.Activate(sim)
+	}
+	druid.Prowl = druid.RegisterSpell(config)
 }

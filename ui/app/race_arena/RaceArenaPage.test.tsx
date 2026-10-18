@@ -22,7 +22,6 @@ const fixture: RaceArenaResults = {
 	commit: 'b894a61f93d96908bf18e14ee0c2173b07512652',
 	generated: '2026-09-24T12:00:00Z',
 	iterations: 50000,
-	clientBuild: '1.60.1.69977',
 	fight: { seconds: 180, targetLevel: 63, targetArmor: 3731 },
 	tiers: TIERS,
 	noise: { maxError: 0.038, maxDifference: 0.107 },
@@ -59,18 +58,14 @@ const chipsIn = (row: Element) => [...row.querySelectorAll('[data-testid="race-c
 const rowOf = (card: HTMLElement, tier: string) => card.querySelector(`[data-testid="tier-row"][data-tier="${tier}"]`)!;
 
 describe('RaceArenaPage', () => {
-	it('opens on the method and the caveats, with the thresholds and noise the results carry', () => {
+	it('explains the upstream presets, weapon rules and measured uncertainty', () => {
 		const { getByRole, getByTestId } = render(<RaceArenaPage data={fixture} />);
 		const method = getByRole('heading', { name: 'Method' }).closest('section')!;
 		expect(method.textContent).toContain('50,000 iterations per race');
 		expect(method.textContent).toContain('0.038%');
-		expect(method.textContent).toContain('build 1.60.1.69977');
-		expect(method.textContent).toContain('S within 0.5% of the best');
-		expect(method.textContent).toContain('D more than 2.5% behind');
-		const caveats = getByRole('heading', { name: 'Caveats' }).closest('section')!;
-		expect(caveats.textContent).toContain('Touch of the Grave');
-		expect(caveats.textContent).toContain('8 second buff');
-		expect(caveats.textContent).toContain('Healers and tanks are not ranked');
+		expect(method.textContent).toContain('wowsims/forever');
+		expect(method.textContent).toContain('actual weapon types');
+		expect(method.textContent).toContain('Both Skyborne races');
 		expect(getByTestId('tier-legend').querySelectorAll('li')).toHaveLength(5);
 	});
 

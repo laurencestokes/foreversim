@@ -2,67 +2,46 @@ package hunter
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-func (hunter *Hunter) registerSerpentStingSpell() {
-	rank := spellData.SerpentSting.Highest()
-	tick := rank.PeriodicEffect()
-	tickLength := tick.Period()
-	tickDamage := tick.Average(core.CharacterLevel)
-	numberOfTicks := int32(rank.Duration() / tickLength)
+var serpentStingRank = spellData.SerpentSting.Highest()
 
-	// The beta client carries no spell power coefficient on Serpent Sting at all, so Classic's
-	// stands: the full-duration 1.0 split across the ticks.
-	spellCoeff := 1.0 / float64(numberOfTicks)
-	// Nor any attack power share, but the same combat logs that fit Arcane Shot's (arcane_shot.go) put
-	// each tick at base + about 0.035 of ranged attack power, and the same aspect swap moves a tick
-	// 0.037-0.041 a point. At levels 24-30 Hunter's Mark rank 2 moves a tick 0.034 (Miss, 2712, 549
-	// ticks; Consumer, 2717) and 0.042 (Lokronn, 2695); Miss's absolute fit is 0.033.
-	const rapPerTick = 0.035
+// TODO: In-game testing required. The row states no attack power share on the tick; the Forever
+// notes say 10% of ranged attack power over the duration, 2% a tick, read at each tick.
+const serpentStingTickAPShare = 0.02
 
-	hunter.SerpentSting = hunter.RegisterRangedSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    rank.DefenseTypeCore(),
-		ClassSpellMask: HunterSpellSerpentSting,
-		ProcMask:       core.ProcMaskRangedSpecial,
-		Flags:          core.SpellFlagAPL | core.SpellFlagPoison,
-		MissileSpeed:   float64(rank.Speed),
+func (hunter *Hunter) registerSerpentSting() {
+	tick := serpentStingRank.PeriodicEffect()
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(rank.Cost()),
-		},
+	config := spelldata.SpellConfig(&hunter.Unit, serpentStingRank, spelldata.Flags(core.SpellFlagAPL))
+	// A ranged ability, as the game files' ranged-ability procs (Rapid Recuperation) see it, so the
+	// ticks crit at the ranged crit. The application deals no damage, so the on-hit listeners that
+	// require damage skip it, and the ticks reach only periodic listeners.
+	config.ProcMask = core.ProcMaskRangedSpecial
+	config.DamageMultiplier = 1
+	config.ThreatMultiplier = 1
 
-		Dot: core.DotConfig{
-			Aura: core.Aura{
-				Label: "Serpent Sting",
-				Tag:   "Sting",
-			},
-			NumberOfTicks:    numberOfTicks,
-			TickLength:       tickLength,
-			BonusCoefficient: spellCoeff,
+	config.Dot = spelldata.DotConfig(serpentStingRank, tick)
+	config.Dot.Aura.Tag = hunter.stingTag()
+	config.Dot.OnTick = func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
+		baseDamage := tick.Average() + serpentStingTickAPShare*dot.Spell.RangedAttackPower(target)
+		dot.Spell.CalcAndDealPeriodicDamage(sim, target, baseDamage, serpentStingRank.TickOutcome(dot))
+	}
 
-			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, tickDamage+rapPerTick*dot.Spell.RangedAttackPower(target))
-				dot.SnapshotAttackPowerShare(target, rapPerTick, true)
-			},
-			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, rank.TickOutcome(dot))
-			},
-		},
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcOutcome(sim, target, spell.OutcomeRangedHit)
+		spell.DealCastResult(sim, result)
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcOutcome(sim, target, spell.OutcomeRangedHitNoHitCounter)
+		spell.WaitTravelTime(sim, func(sim *core.Simulation) {
+			if result.Landed() {
+				dot := spell.Dot(target)
+				dropOtherSting(sim, dot.Aura)
+				dot.Apply(sim)
+			}
+			spell.DealOutcome(sim, result)
+		})
+	}
 
-			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
-				spell.DealOutcome(sim, result)
-
-				// Serpent Sting is our only sting, so there is no other sting of ours to knock off; another
-				// hunter's stays up beside it (it used to be removed, and two hunters kept undoing each other).
-				if result.Landed() {
-					spell.Dot(target).Apply(sim)
-				}
-			})
-		},
-	})
+	hunter.RegisterSpell(config)
 }

@@ -5,8 +5,9 @@ package database
 // reason, so the list of what the sim cannot model is reviewed rather than discovered. That file is a
 // local baseline, not tracked: a checkout without it writes it on the first run.
 //
-// Reads the committed capture and the committed store, so it needs no client database: the roots are
-// the ones the item, enchant and set tables gave, and the rows are the ones the sim itself reads.
+// Reads the committed capture and the committed store, so it needs no game files database: the
+// roots are the ones the item, enchant and set tables gave, and the rows are the ones the sim
+// itself reads.
 
 import (
 	"fmt"
@@ -28,7 +29,7 @@ func TestEveryReachableProcIsSupportedOrListed(t *testing.T) {
 
 	var out strings.Builder
 	out.WriteString("# Every proc reachable from an item, an enchant or a set bonus that the sim does not\n")
-	out.WriteString("# register as the client states it, as \"<spell id> <reason>\". Written by\n")
+	out.WriteString("# register as the game files state it, as \"<spell id> <reason>\". Written by\n")
 	out.WriteString("# TestEveryReachableProcIsSupportedOrListed in tools/database. Regenerate with\n")
 	out.WriteString("#   UPDATE_UNSUPPORTED_PROCS=1 go test ./tools/database/ -run TestEveryReachableProcIsSupportedOrListed -count=1\n")
 	out.WriteString("#\n")
@@ -76,19 +77,19 @@ func TestEveryReachableProcIsSupportedOrListed(t *testing.T) {
 		unsupportedProcsPath)
 }
 
-// Why the sim cannot build the listener the client describes, in the shape that refuses least. A
+// Why the sim cannot build the listener the game files describe, in the shape that refuses least. A
 // weapon proc's listener is the item's rather than the row's, so a row that states no proc mask at
 // all is not refused for it - Annihilator's 16928 is that shape.
 func itemProcReasons(row *spelldata.Spell) []string {
-	reasons := spelldata.ItemProcUnsupported(row, false)
-	if asWeaponProc := spelldata.ItemProcUnsupported(row, true); len(asWeaponProc) < len(reasons) {
+	reasons := spelldata.ItemProcUnsupportedWithRate(row, false, 0)
+	if asWeaponProc := spelldata.ItemProcUnsupportedWithRate(row, true, 0); len(asWeaponProc) < len(reasons) {
 		return asWeaponProc
 	}
 	return reasons
 }
 
 // Every row carrying a proc trigger that an item, enchant or set spell reaches, in id order. The
-// walk follows the client's trigger edges, which is how a proc hangs below the spell an item names.
+// walk follows the game files' trigger edges, which is how a proc hangs below the spell an item names.
 func reachableProcs(roots []int32) []*spelldata.Spell {
 	seen := map[int32]bool{}
 	var procs []*spelldata.Spell

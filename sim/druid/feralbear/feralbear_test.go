@@ -3,7 +3,6 @@ package feralbear
 import (
 	"testing"
 
-	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
@@ -21,12 +20,19 @@ func TestFeralBear(t *testing.T) {
 			Race:       proto.Race_RaceNightElf,
 			OtherRaces: []proto.Race{proto.Race_RaceTauren},
 
-			// Naked: the generated item database does not carry the Forever gear our sim tests
-			// with yet, and gives the rest TBC-shaped stats.
-			GearSet: core.GearSetCombo{Label: "Naked", GearSet: &proto.EquipmentSpec{}},
+			GearSet: core.GetGearSet("../../../ui/specs/druid/feralbear/gear_sets", "default"),
 
-			Talents:     DefaultTalents,
+			Talents: DefaultTalents,
+			OtherTalentSets: []core.TalentsCombo{
+				{Label: "Hybrid", Talents: HybridTalents},
+			},
+
 			SpecOptions: core.SpecOptionsCombo{Label: "Standard", SpecOptions: DefaultSpecOptions},
+			OtherSpecOptions: []core.SpecOptionsCombo{
+				{Label: "BleedAssumed", SpecOptions: &proto.Player_FeralBearDruid{FeralBearDruid: &proto.FeralBearDruid{
+					Options: &proto.FeralBearDruid_Options{StartingRage: 25, AssumeBleedActive: true},
+				}}},
+			},
 
 			Rotation: core.GetAplRotation("../../../ui/specs/druid/feralbear/apls", "default"),
 
@@ -64,15 +70,43 @@ func TestFeralBear(t *testing.T) {
 				proto.Stat_StatBonusArmor,
 				proto.Stat_StatDodgeRating,
 				proto.Stat_StatDefenseRating,
-				proto.Stat_StatMeleeHitRating,
+				proto.Stat_StatHitRating,
 				proto.Stat_StatExpertiseRating,
 			},
 		},
 	}))
 }
 
-// Our Forever sim's Bear Tank build, 0/31/20.
-const DefaultTalents = "-50032302120132010501-0550325"
+func BenchmarkSimulate(b *testing.B) {
+	rsr := &proto.RaidSimRequest{
+		Raid: core.SinglePlayerRaidProto(
+			&proto.Player{
+				Class:         proto.Class_ClassDruid,
+				Race:          proto.Race_RaceNightElf,
+				TalentsString: DefaultTalents,
+				Equipment:     core.GetGearSet("../../../ui/specs/druid/feralbear/gear_sets", "default").GearSet,
+				Consumables:   DefaultConsumables,
+				Spec:          DefaultSpecOptions,
+				Rotation:      core.GetAplRotation("../../../ui/specs/druid/feralbear/apls", "default").Rotation,
+			},
+			nil, nil, nil,
+		),
+		Encounter: &proto.Encounter{
+			Duration: 300,
+			Targets:  []*proto.Target{core.NewDefaultTarget()},
+		},
+		SimOptions: core.AverageDefaultSimTestOptions,
+	}
+
+	core.RaidBenchmark(b, rsr)
+}
+
+// The bear UI default. Balance 9 is for Nature's Reach (melee hit) and Nature's Majesty (melee crit).
+// Feral Instinct raises only Swipe, which a single target never sees.
+const DefaultTalents = "0500220000000000-55200322120132012551-0000000000000000"
+
+// The bear UI's Hybrid preset (presets.ts HybridTalents).
+const HybridTalents = "0500220000000000-35230332121132212051-0000000000000000"
 
 var DefaultSpecOptions = &proto.Player_FeralBearDruid{
 	FeralBearDruid: &proto.FeralBearDruid{
@@ -83,19 +117,10 @@ var DefaultSpecOptions = &proto.Player_FeralBearDruid{
 }
 
 var DefaultConsumables = &proto.ConsumesSpec{
-	GuardianElixirId: 9088, // Gift of Arthas
-	GoblinSapper:     true,
-}
-
-// The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
-func TestArena(t *testing.T) {
-	arenalib.Run(t, arenalib.Spec{
-		Dir:         "feral_tank_druid",
-		UI:          "druid/feralbear",
-		Class:       proto.Class_ClassDruid,
-		Race:        proto.Race_RaceTauren,
-		SpecOptions: DefaultSpecOptions,
-		Role:        arenalib.Melee,
-		IsTank:      true,
-	})
+	DefensivePotId: 13455,                // Greater Stoneshield Potion
+	ElixirIds:      []int32{13452, 9088}, // Elixir of the Mongoose, Gift of Arthas
+	FoodId:         21023,                // Dirge's Kickin' Chimaerok Chops
+	ConjuredId:     9421,                 // Major Healthstone
+	// Goblin Sapper Charge, Scroll of Agility IV, Scroll of Strength IV, Scroll of Protection IV
+	ExtraIds: []int32{10646, 10309, 10310, 10305},
 }

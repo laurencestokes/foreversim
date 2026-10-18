@@ -1,5 +1,5 @@
 import i18n from '@i18n/config';
-import { REPO_NEW_ISSUE_URL } from '@sim/constants/other';
+import { ISSUES_REPO, REPO_NEW_ISSUE_URL } from '@sim/constants/other';
 import { ActionId } from '@sim/proto/action_id';
 import { SimError } from '@sim/sim';
 import { toastManager } from '@ui-kit/Toast';
@@ -50,12 +50,17 @@ export async function reportSimCrash(error: any, ctx: CrashReportContext): Promi
 		return;
 	}
 
+	if (!ISSUES_REPO) {
+		alert(errorStr);
+		return;
+	}
+
 	if (window.confirm(i18n.t('sim.crash_report.confirm_title') + '\n' + errorStr + '\n' + i18n.t('sim.crash_report.confirm_message'))) {
 		// Splice out just the line numbers
 		const hash = hashCode(errorStr);
 		const link = ctx.toLink();
 		const rngSeed = ctx.getLastUsedRngSeed();
-		fetch('https://api.github.com/search/issues?q=is:issue+is:open+repo:laurencestokes/foreversim+' + hash)
+		fetch('https://api.github.com/search/issues?q=is:issue+is:open+repo:' + ISSUES_REPO + '+' + hash)
 			.then(resp => {
 				resp.json().then(issues => {
 					if (issues.total_count > 0) {

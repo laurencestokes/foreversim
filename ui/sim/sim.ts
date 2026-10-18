@@ -3,15 +3,16 @@ import {
 	BulkCandidatesResult,
 	BulkCombinationCountRequest,
 	BulkCombinationCountResult,
+	BulkEnchantSlotOptions,
 	BulkGearCandidate,
 	BulkSettings,
 	BulkSimRequest,
 	BulkSimResult,
 	ComputeStatsRequest,
+	type ComputeStatsResult,
 	ErrorOutcome,
 	ErrorOutcomeType,
 	PlayerStats,
-	ProgressMetrics,
 	Raid as RaidProto,
 	RaidSimRequest,
 	RaidSimResult,
@@ -22,13 +23,15 @@ import {
 	SimType,
 	StatWeightsRequest,
 	StatWeightsResult,
+	StatWeightsTarget,
+	StatWeightsTargetMetric,
 } from '@generated/proto/api';
 import {
 	ArmorType,
+	ConsumableType,
+	Encounter as EncounterProto,
 	EquipmentSpec,
 	Faction,
-	GemColor,
-	ItemSlot,
 	Profession,
 	PseudoStat,
 	RangedWeaponType,
@@ -37,52 +40,48 @@ import {
 	UnitReference_Type as UnitType,
 	WeaponType,
 } from '@generated/proto/common';
-import { SimDatabase, SimGem } from '@generated/proto/db';
 import { DatabaseFilters, RaidFilterOption, SimSettings as SimSettingsProto, SourceFilterOption } from '@generated/proto/ui';
+import i18n from '@i18n/config';
 import { getLang } from '@i18n/locale_service';
 import { SimRequest } from '@worker/types';
 
 import { hasTouch } from '../shared/pointer';
 import { makeBulkGearDatabase, makeBulkItemDatabaseFromSpecs } from './bulk/gear_database';
-import {
-	BULK_CACHE_PROGRESS_CHECK_MODULO,
-	BULK_CACHE_YIELD_BUDGET_MS,
-	type BulkSimReforgeCacheProgress,
-	getBulkSimReforgeCacheData,
-	writeBulkSimReforgeCacheResults,
-} from './bulk/reforge_cache';
-import { throwIfAborted } from './bulk/utils';
+import { dedupeGearSets, throwIfAborted } from './bulk/utils';
 import { CURRENT_PHASE, LOCAL_STORAGE_PREFIX } from './constants/other';
 import { Player, UnitMetadata } from './player/player';
+import { addPartyBuffItems } from './proto/buff_items';
 import { Database } from './proto/database';
 import { Gear } from './proto/gear';
-import { getReforgeCacheGearKey } from './proto/items';
 import { extendPlayerProtoWithMissingEffects } from './proto/proto_migration';
 import { SimResult } from './proto/sim_result';
 import { StatCap, Stats } from './proto/stats';
 import { Encounter } from './raid/encounter';
 import { Raid } from './raid/raid';
 import { SimRuns } from './sim_runs';
-import { RequestTypes, SimSignalManager } from './sim_signal_manager';
+import { RequestTypes, SimSignalManager, type SimSignals } from './sim_signal_manager';
 import { batch } from './state/batch';
 import type { Env } from './state/env';
 import { Emitter } from './state/events';
-import { cacheRelevantReforgeRequest, getReforgeGemOptions, makeReforgeConfigRequestFields } from './state/reforge_request';
+import { makeReforgeConfigRequestFields } from './state/reforge_request';
 import { createSimStore, patchSlice, SimSettingsSlice, UISlice } from './state/sim_store';
 import { subscribeStatsInputs, subscribeUiField } from './state/subscriptions';
-import { distinct, getEnumValues } from './utils/collections';
+import { getEnumValues } from './utils/collections';
 import { environmentOf } from './utils/env';
-import { hashString, noop, sleep } from './utils/misc';
+import { hashString, noop } from './utils/misc';
 import { runConcurrentBulkSim, runConcurrentSim, runConcurrentStatWeights } from './wasm';
 import { generateRequestId, WorkerPool, WorkerProgressCallback } from './workers/worker_pool';
 
 export const WASM_CONCURRENCY_STORAGE_KEY = `${LOCAL_STORAGE_PREFIX}_wasmconcurrency`;
+// Without the spec prefix, so every spec page shares the one setting.
+export const SHOW_POWER_TOOLS_STORAGE_KEY = `${LOCAL_STORAGE_PREFIX}_showpowertools`;
 export type ReforgeOptimizeConfig = {
 	gear: Gear;
 	preCapEPWeights: Stats;
 	undershootCaps: Stats;
 	settings: ReforgeSettings;
 	softCaps: StatCap[];
+	enchantOptions: BulkEnchantSlotOptions[];
 	debug?: boolean;
 };
 
@@ -105,18 +104,15 @@ export type RunSimOptions = {
 	raw?: boolean;
 };
 
-// Core Sim module which deals only with api types, no UI-related stuff.
-// The backend cannot tell an inactive meta gem from an active one, so an unmet
-// meta requirement would still grant its stats. Mirrors ui/core/sim.ts.
-const gearAsBackendSpec = (gear: Gear): EquipmentSpec => {
-	const spec = gear.asSpec();
-	const headIdx = gear.getItemSlots().indexOf(ItemSlot.ItemSlotHead);
-	if (headIdx >= 0 && gear.hasInactiveMetaGem()) {
-		spec.items[headIdx].metaGemDisabled = true;
-	}
-	return spec;
+export type StatWeightsOptions = {
+	iterations?: number; // Unset uses the sim's iteration setting; a target ignores it and sizes its first pass itself.
+	targetEpCi?: number; // The 90% ± of each targeted EP to reach by adding iterations; unset runs the iterations once.
+	maxIterationMultiplier?: number;
+	targetMetrics?: StatWeightsTargetMetric[]; // The metrics the target applies to; unset means DPS only.
+	hpsReferenceStat?: Stat; // The stat HPS EP divides by; unset means the EP reference stat.
 };
 
+// Core Sim module which deals only with api types, no UI-related stuff.
 export class Sim {
 	private readonly workerPool: WorkerPool;
 
@@ -176,6 +172,7 @@ export class Sim {
 			}
 		}
 		this.setWasmConcurrency(wasmConcurrencySetting);
+		this.setShowPowerTools(this.env.storage.getItem(SHOW_POWER_TOOLS_STORAGE_KEY) === 'true');
 
 		this.signalManager = new SimSignalManager();
 		this.runs = new SimRuns(this.store, this.signalManager);
@@ -202,9 +199,8 @@ export class Sim {
 	}
 
 	// True only while loadIndividualSettings is applying stored settings; see the
-	// stats subscription in the constructor. Replaces a guard that recognised the
-	// load by its EventID being 0, which stopped working once subscribers minted
-	// their own ids instead of receiving the originating one.
+	// stats subscription in the constructor. Subscribers mint their own event ids,
+	// so the load cannot be recognised by its EventID.
 	private applyingLoadedSettings = false;
 
 	// Runs `apply` with the initial-settings-load flag set. Anything that does not
@@ -262,30 +258,17 @@ export class Sim {
 		const raidProto = this.raid.toProto(false, true);
 		this.modifyRaidProto(raidProto);
 
-		// Remove any inactive meta gems, since the backend doesn't have its own validation.
 		raidProto.parties.forEach(party => {
 			party.players.forEach(player => {
 				if (!player.equipment) {
 					return;
 				}
 
-				let gear = this.db.lookupEquipmentSpec(player.equipment);
-				let gearChanged = false;
-
 				const isEnchanter = [player.profession1, player.profession2].includes(Profession.Enchanting);
 
 				// Remove ring enchants if not an enchanter.
 				if (!isEnchanter) {
-					gear = gear.withoutEnchanting();
-					gearChanged = true;
-				}
-
-				// An inactive meta gem is flagged rather than removed, so that flag still has to reach
-				// the backend even when nothing else about the gear changed. Dropping the second half
-				// of this condition leaves an enchanter — the only player whose gear is otherwise
-				// untouched here — simming an unmet meta gem's full stats.
-				if (gearChanged || gear.hasInactiveMetaGem()) {
-					player.equipment = gearAsBackendSpec(gear);
+					player.equipment = this.db.lookupEquipmentSpec(player.equipment).withoutEnchanting().asSpec();
 				}
 
 				extendPlayerProtoWithMissingEffects(player, this.db);
@@ -316,43 +299,58 @@ export class Sim {
 
 	private requireRunnableSetup() {
 		if (this.raid.isEmpty()) {
-			throw new Error('Raid is empty! Try adding some players first.');
+			throw new Error(i18n.t('sim.run_errors.raid_empty'));
 		} else if (this.encounter.getTargets().length < 1) {
-			throw new Error('Encounter has no targets! Try adding some targets first.');
+			throw new Error(i18n.t('sim.run_errors.no_targets'));
 		}
+	}
+
+	// Runs `run` registered as `type`, so an abort of that type or of every type reaches its signals.
+	private async runRegistered<T>(type: RequestTypes, run: (signals: SimSignals) => Promise<T>): Promise<T> {
+		this.requireRunnableSetup();
+
+		const signals = this.signalManager.registerRunning(type);
+		try {
+			await this.waitForInit();
+			return await run(signals);
+		} catch (error) {
+			if (error instanceof SimError) throw error;
+			console.error(error);
+			throw new Error(i18n.t('sim.run_errors.sim_failed'));
+		} finally {
+			this.signalManager.unregisterRunning(signals);
+		}
+	}
+
+	// An aborted run comes back with its error set; any other error throws.
+	private async simulate(request: RaidSimRequest, onProgress: WorkerProgressCallback, signals: SimSignals): Promise<RaidSimResult> {
+		// Only use worker based concurrency when running wasm (local sim has native threading),
+		// and never for a lone iteration, which has nothing to split.
+		const result =
+			request.simOptions!.iterations > 1 && (await this.shouldUseWasmConcurrency())
+				? await runConcurrentSim(request, this.workerPool, onProgress, signals)
+				: await this.workerPool.raidSimAsync(request, onProgress, signals);
+		if (result.error && result.error.type == ErrorOutcomeType.ErrorOutcomeError) throw new SimError(result.error.message);
+		return result;
 	}
 
 	runSim(options: RunSimOptions & { raw: true }): Promise<[RaidSimRequest, RaidSimResult] | ErrorOutcome>;
 	runSim(options?: RunSimOptions & { raw?: false }): Promise<SimResult | ErrorOutcome>;
-	async runSim(options: RunSimOptions = {}): Promise<SimResult | ErrorOutcome | [RaidSimRequest, RaidSimResult]> {
-		this.requireRunnableSetup();
-
-		const signals = this.signalManager.registerRunning(RequestTypes.IndividualSim);
-		try {
-			await this.waitForInit();
-
+	runSim(options: RunSimOptions = {}): Promise<SimResult | ErrorOutcome | [RaidSimRequest, RaidSimResult]> {
+		return this.runRegistered(RequestTypes.IndividualSim, async (signals): Promise<SimResult | ErrorOutcome | [RaidSimRequest, RaidSimResult]> => {
 			const request = this.makeRaidSimRequest(options);
 			const player = request.raid!.parties[0].players[0];
 
 			if (options.gear) {
 				const gear = Sim.prepareGear(options.gear, [player.profession1, player.profession2].includes(Profession.Enchanting));
 				player.database = gear.toDatabase(this.db);
-				player.equipment = gearAsBackendSpec(gear);
+				addPartyBuffItems(player.database, this.db, request.raid!.parties[0].buffs);
+				player.equipment = gear.asSpec();
 				if (player.consumables) player.consumables = gear.adjustImbues(player.consumables);
 			}
 
-			const onProgress = options.onProgress ?? noop;
-			// Only use worker based concurrency when running wasm (local sim has native threading),
-			// and never for a lone iteration, which has nothing to split.
-			const result =
-				request.simOptions!.iterations > 1 && (await this.shouldUseWasmConcurrency())
-					? await runConcurrentSim(request, this.workerPool, onProgress, signals)
-					: await this.workerPool.raidSimAsync(request, onProgress, signals);
-
-			if (result.error) {
-				if (result.error.type != ErrorOutcomeType.ErrorOutcomeError) return result.error;
-				throw new SimError(result.error.message);
-			}
+			const result = await this.simulate(request, options.onProgress ?? noop, signals);
+			if (result.error) return result.error;
 
 			if (options.raw) return [request, result];
 
@@ -361,13 +359,12 @@ export class Sim {
 				this.simResultEmitter.emit(simResult);
 			}
 			return simResult;
-		} catch (error) {
-			if (error instanceof SimError) throw error;
-			console.error(error);
-			throw new Error('Something went wrong running your sim. Reload the page and try again.');
-		} finally {
-			this.signalManager.unregisterRunning(signals);
-		}
+		});
+	}
+
+	// Runs a request built by makeRaidSimRequest as `type`, emitting no result. An aborted run comes back with its error set.
+	runRaidSimRequest(request: RaidSimRequest, type: RequestTypes, onProgress: WorkerProgressCallback): Promise<RaidSimResult> {
+		return this.runRegistered(type, signals => this.simulate(request, onProgress, signals));
 	}
 
 	// Normalizes gear for a sim/bulk/reforge request
@@ -379,31 +376,11 @@ export class Sim {
 		return gear;
 	}
 
-	// Extends a request's SimDatabase with the optimizer's gem options, so the backend
-	// optimizer can resolve them.
-	private augmentDatabaseForReforge(database: SimDatabase, gemOptions: Array<{ id: number; name: string; color: GemColor; stats: number[] }>): void {
-		database.gems = distinct(
-			database.gems.concat(
-				gemOptions.map(gem =>
-					SimGem.create({
-						id: gem.id,
-						name: gem.name,
-						color: gem.color,
-						stats: gem.stats.slice(),
-					}),
-				),
-			),
-			(a, b) => a.id == b.id,
-		);
-	}
-
 	async runBulkSim(
-		gearSets: Gear[],
 		onProgress: WorkerProgressCallback,
-		reforgeConfig?: ReforgeOptimizeConfig,
-		bulkSettings?: BulkSettings,
-		onCacheRestoreProgress?: (progress: BulkSimReforgeCacheProgress) => void,
+		bulkSettings: BulkSettings,
 		abortSignal?: AbortSignal,
+		encounterOverride?: EncounterProto,
 	): Promise<BulkSimResult | ErrorOutcome> {
 		this.requireRunnableSetup();
 
@@ -413,27 +390,26 @@ export class Sim {
 
 			const requestId = generateRequestId(SimRequest.bulkSimAsync);
 			const baseRequest = this.makeRaidSimRequest();
+			if (encounterOverride) {
+				baseRequest.encounter = EncounterProto.clone(encounterOverride);
+			}
 			baseRequest.requestId = requestId;
 			baseRequest.simOptions!.debugFirstIteration = false;
 			baseRequest.simOptions!.debug = false;
 
 			const player = baseRequest.raid!.parties[0].players[0];
 			const isEnchanter = [player.profession1, player.profession2].includes(Profession.Enchanting);
-			const prepareGear = (gear: Gear) => Sim.prepareGear(gear, isEnchanter);
 
-			const baselineGear = prepareGear(this.raid.getActivePlayers()[0].getGear());
-			const bulkReforgeRequest = reforgeConfig ? this.makeBulkSimReforgeRequest(reforgeConfig) : undefined;
+			const baselineGear = Sim.prepareGear(this.raid.getActivePlayers()[0].getGear(), isEnchanter);
 			if (!this.getFixedRngSeed()) {
 				// Derive the seed from the run's content instead of Math.random(): the same
 				// setup then reproduces bit-identical results (the whole pipeline is
 				// deterministic given a seed), while any change to the setup draws a fresh
-				// sample. An explicit fixed RNG seed still takes precedence above. The three
+				// sample. An explicit fixed RNG seed still takes precedence above. The two
 				// parts are hashed individually (they are already JSON) and the digests
 				// combined, avoiding a second full serialization pass.
 				const contentHash = hashString(
-					hashString(EquipmentSpec.toJsonString(baselineGear.asSpec())) +
-						hashString(bulkSettings ? BulkSettings.toJsonString(bulkSettings) : String(gearSets.length)) +
-						hashString(bulkReforgeRequest ? ReforgeOptimizeRequest.toJsonString(cacheRelevantReforgeRequest(bulkReforgeRequest)) : ''),
+					hashString(EquipmentSpec.toJsonString(baselineGear.asSpec())) + hashString(BulkSettings.toJsonString(bulkSettings)),
 				);
 				const contentSeed = Number(BigInt('0x' + contentHash.slice(0, 8)));
 				baseRequest.simOptions!.randomSeed = BigInt(contentSeed);
@@ -442,166 +418,33 @@ export class Sim {
 				this.setLastUsedRngSeed(contentSeed);
 			}
 			const useWasmBulkSim = await this.isWasm();
-			const backendBuildCandidates = !useWasmBulkSim && !!bulkSettings;
-			const preparedGearSets = gearSets.map(prepareGear);
-			let preparedCandidates: Array<{ index: number; spec: EquipmentSpec; gearKey: string }> | undefined = undefined;
-			if (backendBuildCandidates && bulkSettings) {
+			// The native sim generates the candidates itself when the request carries none.
+			let candidates: BulkGearCandidate[] = [];
+			if (useWasmBulkSim) {
 				const bulkCandidatesResult = await this.getBulkCandidates(bulkSettings);
 				if (bulkCandidatesResult.error) {
-					throw new Error(bulkCandidatesResult.error.message || 'Failed to build bulk candidates');
+					throw new SimError(bulkCandidatesResult.error.message || i18n.t('sim.run_errors.bulk_candidates_failed'));
 				}
-
-				const totalCandidates = bulkCandidatesResult.candidates.length;
-				onCacheRestoreProgress?.({
-					stage: 'candidate-build',
-					processedCandidates: 0,
-					totalCandidates,
-					restoredCandidates: 0,
-				});
-				const candidates: Array<{ index: number; spec: EquipmentSpec; gearKey: string }> = [];
-				const frozenItemSlots =
-					bulkReforgeRequest?.settings?.freezeItemSlots && bulkReforgeRequest.settings.frozenItemSlots.length
-						? bulkReforgeRequest.settings.frozenItemSlots
-						: undefined;
-				let lastYieldAt = performance.now();
-				let lastProgressEmitAt = lastYieldAt;
-				const reportCandidateBuildProgress = (processedCandidates: number) => {
-					if (processedCandidates % BULK_CACHE_PROGRESS_CHECK_MODULO !== 0 && processedCandidates !== totalCandidates) return;
-					const now = performance.now();
-					if (processedCandidates !== totalCandidates && now - lastProgressEmitAt < BULK_CACHE_YIELD_BUDGET_MS) return;
-					onCacheRestoreProgress?.({
-						stage: 'candidate-build',
-						processedCandidates,
-						totalCandidates,
-						restoredCandidates: 0,
-					});
-					lastProgressEmitAt = now;
-				};
-				for (let i = 0; i < bulkCandidatesResult.candidates.length; i++) {
-					throwIfAborted(abortSignal);
-					const candidate = bulkCandidatesResult.candidates[i];
-					if (candidate.gear) {
-						// Prepare spec (remove ring enchants for a non-enchanter) before computing cache key
-						// so cache key matches what would be computed from prepared Gear objects
-						const preparedGear = prepareGear(this.db.lookupEquipmentSpec(candidate.gear));
-						const preparedSpec = preparedGear.asSpec();
-						candidates.push({
-							index: candidate.index,
-							spec: preparedSpec,
-							gearKey: getReforgeCacheGearKey(preparedSpec, frozenItemSlots),
-						});
-					}
-					reportCandidateBuildProgress(i + 1);
-
-					// Periodically yield so large candidate lists do not block popup/UI rendering.
-					if (i % 2000 === 0) {
-						const yieldNow = performance.now();
-						if (yieldNow - lastYieldAt >= BULK_CACHE_YIELD_BUDGET_MS) {
-							await sleep(0);
-							lastYieldAt = performance.now();
-						}
-					}
-				}
-				preparedCandidates = candidates;
+				const gearSets = bulkCandidatesResult.candidates.flatMap(candidate => (candidate.gear ? [candidate.gear] : []));
+				candidates = dedupeGearSets(gearSets, [baselineGear.asSpec()]).map((gear, index) => ({ index, gear }));
 			}
-			const bulkReforgeCacheData = bulkReforgeRequest
-				? await getBulkSimReforgeCacheData({
-						player: this.raid.getActivePlayers()[0],
-						gearSets: backendBuildCandidates ? undefined : preparedGearSets,
-						candidateSpecs: preparedCandidates?.map(candidate => candidate.spec),
-						candidateGearKeys: preparedCandidates?.map(candidate => candidate.gearKey),
-						candidateIndices: preparedCandidates?.map(candidate => candidate.index),
-						db: this.db,
-						reforgeRequest: bulkReforgeRequest,
-						raidBuffs: this.raid.getBuffs(),
-						partyBuffs: this.raid.getActivePlayers()[0].getParty()?.getBuffs(),
-						debuffs: this.raid.getDebuffs(),
-						onProgress: onCacheRestoreProgress,
-						signal: abortSignal,
-					})
-				: undefined;
 			throwIfAborted(abortSignal);
-			const cachedOptimizedGearSets = bulkReforgeCacheData?.cachedOptimizedGearSets ?? [];
-			const bulkGearDatabase =
-				backendBuildCandidates && bulkSettings
-					? makeBulkItemDatabaseFromSpecs(this.db, baselineGear, bulkSettings.items)
-					: makeBulkGearDatabase(this.db, [baselineGear, ...preparedGearSets, ...cachedOptimizedGearSets]);
-			if (bulkReforgeRequest) {
-				this.augmentDatabaseForReforge(bulkGearDatabase, bulkReforgeRequest.gemOptions);
-			}
+			const bulkGearDatabase = makeBulkItemDatabaseFromSpecs(this.db, baselineGear, bulkSettings);
 			player.database = player.database ? Database.mergeSimDatabases(player.database, bulkGearDatabase) : bulkGearDatabase;
 			player.equipment = baselineGear.asSpec();
 			baseRequest.raid!.parties[0].players[0] = player;
 			throwIfAborted(abortSignal);
-			const requestCandidates =
-				bulkReforgeCacheData?.candidates ??
-				preparedCandidates?.map(candidate => ({ index: candidate.index, gear: candidate.spec })) ??
-				preparedGearSets.map((gear, index) => ({ index, gear: gear.asSpec() }));
 			const bulkRequest = BulkSimRequest.create({
 				requestId,
 				baseRequest,
-				candidates: requestCandidates,
-				optimizedCandidates: bulkReforgeCacheData?.optimizedCandidates ?? [],
+				candidates,
 				topResults: 5,
-				// `||`, not `??`: `iterationsPerCombo` is a proto3 scalar, so an unset one arrives as 0
-				// rather than undefined and `??` would run the high stage with zero iterations.
-				highStageIterations: bulkSettings?.iterationsPerCombo || this.getIterations(),
-				reforgeRequest: bulkReforgeRequest,
 				bulkSettings,
 			});
-			let result: BulkSimResult;
-			// Incremental cache writes for reforge results as candidates complete; keys written
-			// here are excluded from the final catch-all write below.
-			const cacheWrites: Promise<void>[] = [];
-			const incrementallyWrittenKeys = new Set<string>();
-			const writeCacheEntriesIncrementally = (candidates: BulkGearCandidate[]) => {
-				if (!bulkReforgeCacheData) return;
-				const cacheEntries: Array<{ key: string; optimizedGear: EquipmentSpec }> = [];
-				for (const candidate of candidates) {
-					const cacheKey = bulkReforgeCacheData.cacheKeysByCandidateIndex.get(candidate.index);
-					if (!cacheKey || !candidate.gear) {
-						continue;
-					}
-					incrementallyWrittenKeys.add(cacheKey);
-					cacheEntries.push({ key: cacheKey, optimizedGear: candidate.gear });
-				}
-				if (cacheEntries.length) {
-					cacheWrites.push(bulkReforgeCacheData.cache.setGearMany(cacheEntries));
-				}
-			};
 			// Only use worker based concurrency when running wasm. Local sim has native threading.
-			if (useWasmBulkSim) {
-				const pendingCandidates: BulkGearCandidate[] = [];
-				const onReforgeCandidateOptimized = (candidate: BulkGearCandidate, optimizedGear: EquipmentSpec) => {
-					pendingCandidates.push(BulkGearCandidate.create({ index: candidate.index, gear: optimizedGear }));
-					if (pendingCandidates.length >= 500) {
-						writeCacheEntriesIncrementally(pendingCandidates.splice(0));
-					}
-				};
-				result = await runConcurrentBulkSim(bulkRequest, this.workerPool, onProgress, signals, onReforgeCandidateOptimized);
-				writeCacheEntriesIncrementally(pendingCandidates.splice(0));
-			} else {
-				// Wrap onProgress to also write partial reforge candidates to cache incrementally
-				const wrappedOnProgress: WorkerProgressCallback = (progress: ProgressMetrics) => {
-					onProgress(progress);
-					if (progress.optimizedCandidates?.length) {
-						writeCacheEntriesIncrementally(progress.optimizedCandidates);
-					}
-				};
-				result = await this.workerPool.bulkSimAsync(bulkRequest, wrappedOnProgress, signals);
-			}
-			// Wait for all incremental cache writes, then write any candidates that never came
-			// through a partial update (e.g. solves that deduplicated onto another candidate).
-			await Promise.all(cacheWrites);
-			if (bulkReforgeCacheData && result.optimizedCandidates?.length) {
-				const remainingCandidates = result.optimizedCandidates.filter(candidate => {
-					const cacheKey = bulkReforgeCacheData.cacheKeysByCandidateIndex.get(candidate.index);
-					return cacheKey && !incrementallyWrittenKeys.has(cacheKey);
-				});
-				if (remainingCandidates.length) {
-					await writeBulkSimReforgeCacheResults(remainingCandidates, bulkReforgeCacheData);
-				}
-			}
+			const result = useWasmBulkSim
+				? await runConcurrentBulkSim(bulkRequest, this.workerPool, onProgress, signals)
+				: await this.workerPool.bulkSimAsync(bulkRequest, onProgress, signals);
 			if (result.error) {
 				if (result.error.type != ErrorOutcomeType.ErrorOutcomeError) return result.error;
 				throw new SimError(result.error.message);
@@ -611,7 +454,7 @@ export class Sim {
 		} catch (error) {
 			if (error instanceof SimError) throw error;
 			console.error(error);
-			throw new Error('Something went wrong running your bulk sim. Reload the page and try again.');
+			throw new Error(i18n.t('sim.run_errors.bulk_sim_failed'));
 		} finally {
 			this.signalManager.unregisterRunning(signals);
 		}
@@ -622,7 +465,7 @@ export class Sim {
 		const player = baseRequest.raid!.parties[0].players[0];
 		const isEnchanter = [player.profession1, player.profession2].includes(Profession.Enchanting);
 		const baselineGear = Sim.prepareGear(this.raid.getActivePlayers()[0].getGear(), isEnchanter);
-		const bulkGearDatabase = makeBulkItemDatabaseFromSpecs(this.db, baselineGear, bulkSettings.items);
+		const bulkGearDatabase = makeBulkItemDatabaseFromSpecs(this.db, baselineGear, bulkSettings);
 		player.database = player.database ? Database.mergeSimDatabases(player.database, bulkGearDatabase) : bulkGearDatabase;
 		player.equipment = baselineGear.asSpec();
 		baseRequest.raid!.parties[0].players[0] = player;
@@ -654,28 +497,35 @@ export class Sim {
 	}
 
 	// Stats for a hypothetical gear set, without touching the player's own current stats or
-	// metadata. Used by the gem optimizer and by batch simming.
+	// metadata. Used by the gear optimizer.
 	async getCharacterStatsForGear(gear: Gear): Promise<PlayerStats> {
 		await this.waitForInit();
 
 		const raidProto = this.getModifiedRaidProto();
 		const player = raidProto.parties[0].players[0];
 		player.database = gear.toDatabase(this.db);
-		player.equipment = gearAsBackendSpec(gear);
+		addPartyBuffItems(player.database, this.db, raidProto.parties[0].buffs);
+		player.equipment = gear.asSpec();
 		extendPlayerProtoWithMissingEffects(player, this.db);
-		raidProto.parties[0].players[0] = player;
 
-		const result = await this.workerPool.computeStats(
-			ComputeStatsRequest.create({
-				raid: raidProto,
-				encounter: this.encounter.toProto(),
-			}),
-		);
+		const result = await this.computeRaidStats(raidProto);
 		if (result.errorResult != '') {
 			this.crashEmitter.emit(new SimError(result.errorResult));
 		}
 
 		return result.raidStats!.parties[0].players[0];
+	}
+
+	// The stats of `raidProto`, a raid from getModifiedRaidProto() the caller has edited, without touching the players' own
+	// current stats or metadata. An error comes back in `errorResult` for the caller to raise.
+	async computeRaidStats(raidProto: RaidProto): Promise<ComputeStatsResult> {
+		await this.waitForInit();
+		return this.workerPool.computeStats(
+			ComputeStatsRequest.create({
+				raid: raidProto,
+				encounter: this.encounter.toProto(),
+			}),
+		);
 	}
 
 	// This should be invoked internally whenever stats might have changed.
@@ -726,24 +576,28 @@ export class Sim {
 		});
 	}
 
-	// Returns the stats for Player 0 without triggering any metadata updates.
-	// Can be used for Suggest Gems / Batch Simming without interfering with the UI.
+	// Runs the gear optimizer for Player 0 without triggering any metadata updates or touching the UI.
 	async reforgeOptimize(config: ReforgeOptimizeConfig): Promise<ReforgeOptimizeResult> {
 		const signals = this.signalManager.registerRunning(RequestTypes.ReforgeOptimize);
 		try {
 			await this.waitForInit();
-			const gemOptions = getReforgeGemOptions(this.db);
 			const raid = this.getModifiedRaidProto();
 			const player = raid.parties[0].players[0];
-			player.database = config.gear.toDatabase(this.db);
-			this.augmentDatabaseForReforge(player.database, gemOptions);
+			// The WASM sim has no enchant table of its own, so the enchants the optimizer may pick ship with the gear.
+			player.database = makeBulkGearDatabase(
+				this.db,
+				[config.gear],
+				[],
+				config.enchantOptions.flatMap(options => options.effectIds),
+			);
+			addPartyBuffItems(player.database, this.db, raid.parties[0].buffs);
 			player.equipment = config.gear.asSpec();
 			raid.parties[0].players[0] = player;
 
 			const request = ReforgeOptimizeRequest.create({
 				requestId: generateRequestId(SimRequest.reforgeOptimizeAsync),
 				raid,
-				...makeReforgeConfigRequestFields(config, this.db),
+				...makeReforgeConfigRequestFields(config),
 				debug: config.debug ?? false,
 			});
 			const result = await this.workerPool.reforgeOptimizeAsync(request, signals);
@@ -756,19 +610,13 @@ export class Sim {
 		}
 	}
 
-	private makeBulkSimReforgeRequest(config: ReforgeOptimizeConfig): ReforgeOptimizeRequest {
-		return ReforgeOptimizeRequest.create({
-			requestId: generateRequestId(SimRequest.reforgeOptimizeAsync),
-			...makeReforgeConfigRequestFields(config, this.db),
-		});
-	}
-
 	async statWeights(
 		player: Player<any>,
 		epStats: Array<Stat>,
 		epPseudoStats: Array<PseudoStat>,
 		epReferenceStat: Stat,
 		onProgress: WorkerProgressCallback,
+		options: StatWeightsOptions = {},
 	): Promise<StatWeightsResult> {
 		this.requireRunnableSetup();
 
@@ -784,7 +632,7 @@ export class Sim {
 				.includes(player.getRaidIndex())
 				? [UnitReference.create({ type: UnitType.Player, index: 0 })]
 				: [];
-			// `toDatabase()` fills items, enchants and gems only, so without this the request carries
+			// `toDatabase()` fills items and enchants only, so without this the request carries
 			// no consumables or spell effects. lib.wasm is built without the `with_db` tag, so a
 			// worker that has not already handled a full sim request cannot resolve them and computes
 			// the stat's sub-sims with no flask, elixir, food or potion.
@@ -798,7 +646,7 @@ export class Sim {
 				debuffs: this.raid.getDebuffs(),
 				encounter: this.encounter.toProto(),
 				simOptions: SimOptions.create({
-					iterations: this.getIterations(),
+					iterations: options.iterations ?? this.getIterations(),
 					randomSeed: BigInt(this.nextRngSeed()),
 					debug: false,
 				}),
@@ -807,6 +655,15 @@ export class Sim {
 				statsToWeigh: epStats,
 				pseudoStatsToWeigh: epPseudoStats,
 				epReferenceStat: epReferenceStat,
+				hpsReferenceStat: options.hpsReferenceStat ?? epReferenceStat,
+				target:
+					options.targetEpCi === undefined
+						? undefined
+						: StatWeightsTarget.create({
+								epCi: options.targetEpCi,
+								maxIterationMultiplier: options.maxIterationMultiplier,
+								metrics: options.targetMetrics,
+							}),
 			});
 
 			const signals = this.signalManager.registerRunning(RequestTypes.StatWeights);
@@ -826,7 +683,7 @@ export class Sim {
 			} catch (error) {
 				if (error instanceof SimError) throw error;
 				console.error(error);
-				throw new Error('Something went wrong calculating your stat weights. Reload the page and try again.');
+				throw new Error(i18n.t('sim.run_errors.stat_weights_failed'));
 			} finally {
 				this.signalManager.unregisterRunning(signals);
 			}
@@ -883,18 +740,19 @@ export class Sim {
 	}
 
 	static MAX_RNG_SEED = Math.pow(2, 32) - 1;
+	// Never 0: the sim replaces a 0 seed with the clock, so a seed shared by several requests would not hold.
 	private nextRngSeed(): number {
 		let rngSeed = 0;
 		if (this.getFixedRngSeed()) {
 			rngSeed = this.getFixedRngSeed();
 		} else {
-			rngSeed = Math.floor(Math.random() * Sim.MAX_RNG_SEED);
+			rngSeed = Math.floor(Math.random() * Sim.MAX_RNG_SEED) + 1;
 		}
 
 		this.setLastUsedRngSeed(rngSeed);
 		return rngSeed;
 	}
-	// Counts as a change on every call (like the old unconditional write), so
+	// Counts as a change on every call, so
 	// subscribers watch the version counter, not the value.
 	private setLastUsedRngSeed(rngSeed: number) {
 		this.store.setState(s => ({ sim: { ...s.sim, lastUsedRngSeed: rngSeed, lastUsedRngSeedVersion: s.sim.lastUsedRngSeedVersion + 1 } }));
@@ -906,6 +764,19 @@ export class Sim {
 	getFilters(): DatabaseFilters {
 		// Make a defensive copy
 		return DatabaseFilters.clone(this.store.getState().sim.filters);
+	}
+	// The consumable pickers' minimum level by ConsumableType, where the filters set none.
+	static readonly DEFAULT_MIN_CONSUMABLE_LVL: Partial<Record<ConsumableType, number>> = {
+		[ConsumableType.ConsumableTypePotion]: 40,
+		[ConsumableType.ConsumableTypeFlask]: 0,
+		[ConsumableType.ConsumableTypeElixir]: 40,
+		[ConsumableType.ConsumableTypeScroll]: 40,
+		[ConsumableType.ConsumableTypeExplosive]: 30,
+		[ConsumableType.ConsumableTypeImbue]: 40,
+		[ConsumableType.ConsumableTypeWeaponImbue]: 40,
+	};
+	getMinConsumableLvl(type: ConsumableType): number {
+		return this.store.getState().sim.filters.minConsumableLvl[type] ?? Sim.DEFAULT_MIN_CONSUMABLE_LVL[type] ?? 0;
 	}
 	setFilters(newFilters: DatabaseFilters) {
 		if (DatabaseFilters.equals(newFilters, this.store.getState().sim.filters)) {
@@ -939,9 +810,9 @@ export class Sim {
 		if (newShowThreatMetrics != this.ui.showThreatMetrics) this.setUi({ showThreatMetrics: newShowThreatMetrics });
 	}
 
-	// Upstream ORs in "threat metrics on, and the player is a tank", with its own tank list. TBC's
-	// is a plain field read, and `toProto` serializes whatever this returns — so the derived form
-	// writes showHealingMetrics: true into all three tank specs' saved settings.
+	// A plain field read with no "threat metrics on, and the player is a tank" term: `toProto`
+	// serializes whatever this returns, so a derived form would write showHealingMetrics: true into
+	// every tank spec's saved settings.
 	getShowHealingMetrics(): boolean {
 		return this.ui.showHealingMetrics;
 	}
@@ -954,6 +825,16 @@ export class Sim {
 	}
 	setShowExperimental(newShowExperimental: boolean) {
 		if (newShowExperimental != this.ui.showExperimental) this.setUi({ showExperimental: newShowExperimental });
+	}
+
+	getShowPowerTools(): boolean {
+		return this.ui.showPowerTools;
+	}
+	setShowPowerTools(newShowPowerTools: boolean) {
+		if (newShowPowerTools != this.ui.showPowerTools) {
+			this.env.storage.setItem(SHOW_POWER_TOOLS_STORAGE_KEY, newShowPowerTools.toString());
+			this.setUi({ showPowerTools: newShowPowerTools });
+		}
 	}
 
 	getWasmConcurrency(): number {
@@ -1002,6 +883,7 @@ export class Sim {
 	static readonly ALL_RANGED_WEAPON_TYPES = (getEnumValues(RangedWeaponType) as Array<RangedWeaponType>).filter(v => v != 0);
 	static readonly ALL_SOURCES = (getEnumValues(SourceFilterOption) as Array<SourceFilterOption>).filter(v => v != 0);
 	static readonly ALL_RAIDS = (getEnumValues(RaidFilterOption) as Array<RaidFilterOption>).filter(v => v != 0);
+	static readonly DEFAULT_ITERATIONS = 12500;
 
 	toProto(): SimSettingsProto {
 		const filters = this.getFilters();
@@ -1054,7 +936,7 @@ export class Sim {
 			const filters = proto.filters || this.defaultFilters();
 			if (filters.armorTypes.length == 0) {
 				if (this.type == SimType.SimTypeIndividual) {
-					// TBC has no armor specialization, so a class can wear every armor type it
+					// There is no armor specialization, so a class can wear every armor type it
 					// is proficient in -- a druid leather and cloth, a shaman mail down to cloth.
 					filters.armorTypes = this.raid.getActivePlayers()[0].getPlayerClass().armorTypes.slice();
 				} else {
@@ -1070,6 +952,8 @@ export class Sim {
 			if (filters.sources.length == 0) {
 				filters.sources = Sim.ALL_SOURCES.slice();
 			}
+			// A binary link keeps raid values the enum reserves.
+			filters.raids = filters.raids.filter(raid => Sim.ALL_RAIDS.some(known => known === raid));
 			if (filters.raids.length == 0) {
 				filters.raids = Sim.ALL_RAIDS.slice();
 			}
@@ -1080,7 +964,7 @@ export class Sim {
 	applyDefaults(isTankSim: boolean, isHealingSim: boolean) {
 		this.fromProto(
 			SimSettingsProto.create({
-				iterations: 12500,
+				iterations: Sim.DEFAULT_ITERATIONS,
 				phase: CURRENT_PHASE,
 				faction: Faction.Alliance,
 				showDamageMetrics: !isHealingSim,
@@ -1096,15 +980,15 @@ export class Sim {
 	}
 
 	defaultFilters(): DatabaseFilters {
-		const { favoriteItems = [], favoriteGems = [], favoriteRandomSuffixes = [], favoriteReforges = [], favoriteEnchants = [] } = this.getFilters();
+		const { favoriteItems = [], favoriteRandomSuffixes = [], favoriteReforges = [], favoriteEnchants = [], statFilters } = this.getFilters();
 		return DatabaseFilters.create({
 			oneHandedWeapons: true,
 			twoHandedWeapons: true,
 			favoriteItems,
-			favoriteGems,
 			favoriteEnchants,
 			favoriteRandomSuffixes,
 			favoriteReforges,
+			statFilters,
 		});
 	}
 }

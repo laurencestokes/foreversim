@@ -9,8 +9,6 @@ type BuffHooks struct {
 	ApplyBuffs func(char *Character, raid *proto.RaidBuffs, party *proto.PartyBuffs, individual *proto.IndividualBuffs)
 
 	ApplyDebuffs func(target *Unit, debuffs *proto.Debuffs, raid *proto.Raid)
-
-	GiftOfArthasAura func(target *Unit) *Aura
 }
 
 var buffHooks *BuffHooks

@@ -17,6 +17,8 @@ export type TalentLocation = {
 	colIdx: number;
 };
 
+export const locationKey = (location: TalentLocation): string => `${location.rowIdx},${location.colIdx}`;
+
 export type TalentConfig<TalentsProto> = {
 	fieldName?: keyof TalentsProto | string;
 

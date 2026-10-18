@@ -5,45 +5,26 @@ import (
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Every rank is registered: a rotation can drop to a cheaper rank when mana runs short.
+// Only the highest rank is registered: the mage casts the rank configured here, not every rank
+// spellData.Frostbolt lists.
 func (mage *Mage) registerFrostboltSpell() {
-	spellData.Frostbolt.Each(func(_ int32, rank *spelldata.Spell) { mage.registerFrostboltRank(rank) })
+	//Rank 10 is last trainer taught spell
+	mage.registerFrostboltRank(spellData.Frostbolt.Len(), spellData.Frostbolt.Rank(10))
 }
 
-func (mage *Mage) registerFrostboltRank(frostboltRank *spelldata.Spell) {
-	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: frostboltRank.ID},
-		SpellSchool:    frostboltRank.SpellSchool(),
-		DefenseType:    frostboltRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL | core.SpellFlagBinary,
-		ClassSpellMask: MageSpellFrostbolt,
-		MaxRange:       float64(frostboltRank.MaxRange),
-		Rank:           frostboltRank.RankNumber(),
-		MissileSpeed:   float64(frostboltRank.Speed),
+func (mage *Mage) registerFrostboltRank(_ int32, rank *spelldata.Spell) {
+	damage := rank.DamageEffect()
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(frostboltRank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD:      frostboltRank.GCD(),
-				CastTime: frostboltRank.CastTime(),
-			},
-		},
+	// Binary: a spell with a non-damage effect (the slow) is resisted whole or not at all, which the
+	// row does not state.
+	config := spelldata.SpellConfig(&mage.Unit, rank,
+		spelldata.Magic(core.ProcMaskSpellDamage), spelldata.Flags(core.SpellFlagBinary))
+	config.ClassSpellMask = MageSpellFrostbolt
 
-		DamageMultiplier: 1,
-		BonusCoefficient: frostboltRank.DamageEffect().Coeff(),
-		ThreatMultiplier: 1,
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcDamage(sim, target, damage.Average(), spell.OutcomeMagicHitAndCrit)
+		spell.DealDamageAfterTravel(sim, result)
+	}
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, frostboltRank.DamageEffect().Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-			if mage.procFingersOfFrost != nil {
-				mage.procFingersOfFrost(sim, spell, result)
-			}
-			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
-				spell.DealDamage(sim, result)
-			})
-		},
-	})
+	mage.RegisterSpell(config)
 }

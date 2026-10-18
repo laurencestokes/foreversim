@@ -5,76 +5,60 @@ import (
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-var ChainLightningRankMap = spellData.ChainLightning
-
-// Lightning Overload's Chain Lightning, one client row per rank (client 1.60.1.70205). Not exactly
-// half the rank: its damage grows 1.25-1.5x faster per level, so rank 4 at 60 averages 66, not 63.
-var chainLightningOverloadRanks = spelldata.Ranked(408479, 408481, 408482, 408484)
+var chainLightningRanks = castableRanks(spellData.ChainLightning)
 
 func (shaman *Shaman) registerChainLightningSpell() {
-	maxHits := min(3, shaman.Env.TotalTargetCount())
-	sharedCDTimer := shaman.NewTimer()
-	shaman.ChainLightningOverloads = make(map[int32][]*core.Spell, ChainLightningRankMap.Len())
-	ChainLightningRankMap.Each(func(rank int32, config *spelldata.Spell) {
-		shaman.newChainLightningSpell(config, rank, false, sharedCDTimer)
-		for range maxHits {
-			shaman.ChainLightningOverloads[rank] = append(shaman.ChainLightningOverloads[rank], shaman.newChainLightningSpell(config, rank, true, nil))
-		}
-	})
+	shaman.registerWithOverloads(chainLightningRanks, chainLightningOverloadRanks, shaman.newChainLightningSpellConfig)
 }
 
-func (shaman *Shaman) newChainLightningSpell(config *spelldata.Spell, rank int32, isElementalOverload bool, sharedCDTimer *core.Timer) *core.Spell {
-	damage := config.DamageEffect()
-	if isElementalOverload {
-		damage = chainLightningOverloadRanks.Rank(rank).DamageEffect()
+// The cast, with the overload it may trigger; the overload itself, from its own row, where overload is
+// nil. Both jump alike, so an overload reaches as many targets as the cast, starting on the target that
+// triggered it.
+func (shaman *Shaman) newChainLightningSpellConfig(rank *spelldata.Spell, overload *core.Spell) core.SpellConfig {
+	config := shaman.newElectricSpellConfig(rank, overload == nil)
+	config.ClassSpellMask = SpellMaskChainLightning
+	if overload == nil {
+		config.ClassSpellMask = SpellMaskChainLightningOverload
 	}
-	shamConfig := ShamSpellConfig{
-		ActionID:            core.ActionID{SpellID: config.ID},
-		Rank:                rank,
-		IsElementalOverload: isElementalOverload,
-		BaseFlatCost:        int32(config.Cost()),
-		BonusCoefficient:    damage.Coeff(),
-		SpellSchool:         core.SpellSchoolNature,
-		Overloads:           shaman.ChainLightningOverloads,
-		BounceReduction:     0.7,
-		ClassSpellMask:      core.TernaryInt64(isElementalOverload, SpellMaskChainLightningOverload, SpellMaskChainLightning),
-		BaseCastTime:        config.CastTime(),
-	}
-	spellConfig := shaman.newElectricSpellConfig(shamConfig)
-	if !isElementalOverload {
-		spellConfig.MaxRange = float64(config.MaxRange)
-		spellConfig.Cast.CD = core.Cooldown{
-			Timer:    sharedCDTimer,
-			Duration: max(config.Cooldown(), config.CategoryCooldown()),
-		}
-	}
-	maxHits := int32(3)
-	maxHits = min(maxHits, shaman.Env.TotalTargetCount())
 
-	spellConfig.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-		curTarget := target
-		bounce := shamConfig.BounceReduction + shaman.ChainLightningBounceBonus
+	// The effect states the targets the bolt reaches and what each jump keeps.
+	damage := rank.DamageEffect()
+	maxHits := int32(damage.ChainTargets)
+	bounce := float64(damage.ChainAmp)
 
-		// Damage calculation and DealDamage are in separate loops so that e.g. a spell power proc
-		// can't proc on the first target and apply to the second
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 		numHits := min(maxHits, shaman.Env.ActiveTargetCount())
 		results := make([]*core.SpellResult, numHits)
-		for hitIndex := range numHits {
-			baseDamage := damage.Roll(sim, core.CharacterLevel)
-			results[hitIndex] = spell.CalcDamage(sim, curTarget, baseDamage, spell.OutcomeMagicHitAndCrit)
 
+		// Every hit is rolled before any lands, so a proc off the first target cannot raise the
+		// damage of the next.
+		curTarget := target
+		for hitIndex := range numHits {
+			results[hitIndex] = spell.CalcDamage(sim, curTarget, damage.Average(), spell.OutcomeMagicHitAndCrit)
 			curTarget = sim.Environment.NextActiveTargetUnit(curTarget)
 			spell.DamageMultiplier *= bounce
 		}
 
-		for hitIndex := range numHits {
-			if !isElementalOverload && results[hitIndex].Landed() && sim.Proc(shaman.GetOverloadChance()/3, "Chain Lightning Elemental Overload") {
-				shamConfig.Overloads[rank][hitIndex].Cast(sim, results[hitIndex].Target)
-			}
-			spell.DealDamage(sim, results[hitIndex])
+		// Each target the cast hits rolls its own overload, at a third of Lightning Bolt's chance. An
+		// overload rolls none of its own. DealDamage disposes the result, so Landed is read first.
+		//
+		// TODO: Ingame test needed: the tooltip of 408438 states one chance for both spells.
+		var overloadTargets []*core.Unit
+		for _, result := range results {
+			landed, hitTarget := result.Landed(), result.Target
+			spell.DealDamage(sim, result)
 			spell.DamageMultiplier /= bounce
+			if overload != nil && landed && sim.Proc(shaman.GetOverloadChance()/3, "Lightning Overload") {
+				overloadTargets = append(overloadTargets, hitTarget)
+			}
+		}
+
+		// The overloads are priced once every hit of the cast has landed, so a debuff charge one of
+		// those hits spends, such as Stormstrike's, does not also raise an overload that jumps there.
+		for _, overloadTarget := range overloadTargets {
+			overload.Cast(sim, overloadTarget)
 		}
 	}
 
-	return shaman.RegisterSpell(spellConfig)
+	return config
 }

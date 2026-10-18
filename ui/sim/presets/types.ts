@@ -14,7 +14,7 @@ export interface PresetBase {
 	tooltip?: string;
 	enableWhen?: (obj: Player<any>) => boolean;
 	onLoad?: (player: Player<any>) => void;
-	// TBC-only grouping, read by ui/app's preset group picker: which content phase a
+	// Grouping read by ui/app's preset group picker: which content phase a
 	// preset belongs to, and an optional named section within that phase.
 	phase?: Phase;
 	group?: string;
@@ -28,8 +28,10 @@ export interface PresetOptionsBase extends Pick<PresetBase, 'onLoad'> {
 
 export interface PresetGear extends PresetBase {
 	gear: EquipmentSpec;
+	// Shown only on the dev server and the pull request previews, see `isPreviewOrDevMode`.
+	devOnly?: boolean;
 }
-export interface PresetGearOptions extends PresetOptionsBase, Pick<PresetBase, 'tooltip'> {
+export interface PresetGearOptions extends PresetOptionsBase, Pick<PresetBase, 'tooltip'>, Pick<PresetGear, 'devOnly'> {
 	faction?: Faction;
 }
 

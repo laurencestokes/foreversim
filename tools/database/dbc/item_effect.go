@@ -3,14 +3,13 @@ package dbc
 import (
 	"fmt"
 	"maps"
-	"math"
 	"slices"
-	"strings"
 
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
+	"github.com/wowsims/forever/tools/database/overrides"
 )
 
 // Kept apart from the item's stats so the sim can apply them per encounter.
@@ -113,10 +112,17 @@ func assignTrigger(e *ItemEffect, statsSpellID int, pe *proto.ItemEffect) {
 		proc := &proto.ProcEffect{
 			IcdMs: procIcdMs(spTop, statsSP),
 		}
-		// The column is the roll only where it is one: 0 means the client states no rate at all and
-		// anything above 100 is its "the rate lives elsewhere" sentinel. A proc whose rate is not in
-		// the spell data reaches the sim through the spell store, where an override answers it.
-		if spTop.ProcChance > 0 && spTop.ProcChance <= 100 {
+		// The column is the roll only where it is one: 0 means the game files state no rate at all and
+		// 100 or more is its "fires on its own condition" sentinel. A weapon's rate then comes from
+		// the hand-kept WeaponProcs table, onto the effect; a row for a column that has become a roll is
+		// stale, and refused so the number does not outlive its reason.
+		if ppm := overrides.WeaponProcPPM(int32(e.ParentItemID), int32(e.SpellID)); ppm > 0 {
+			if spTop.ProcChance > 0 && spTop.ProcChance < 100 {
+				panic(fmt.Sprintf("item %d's spell %d now states ProcChance %v, so its hand-supplied PPM is stale",
+					e.ParentItemID, e.SpellID, spTop.ProcChance))
+			}
+			proc.ProcRate = &proto.ProcEffect_Ppm{Ppm: ppm}
+		} else if spTop.ProcChance > 0 && spTop.ProcChance < 100 {
 			proc.ProcRate = &proto.ProcEffect_ProcChance{
 				ProcChance: float64(spTop.ProcChance) / 100,
 			}
@@ -218,10 +224,10 @@ func resolveTriggerType(topType, spellID int) int {
 		return topType
 	}
 
-	// Carrying A_PROC_TRIGGER_SPELL is not on its own a proc. The client also uses that aura to hang
-	// a permanent sub-aura off an equip effect: Leggings of Beast Mastery and Void Star Talisman
-	// grant pet stats that way, with no proc mask, no chance and no duration, and promoting them
-	// emitted a proc with no rate at all. Something has to say when it would fire.
+	// Carrying A_PROC_TRIGGER_SPELL is not on its own a proc. The game files also use that aura to
+	// hang a permanent sub-aura off an equip effect: Leggings of Beast Mastery and Void Star
+	// Talisman grant pet stats that way, with no proc mask, no chance and no duration, and
+	// promoting them emitted a proc with no rate at all. Something has to say when it would fire.
 	//
 	// The chance-on-hit weapons are unaffected: the database types those CHANCE_ON_HIT itself, so
 	// they return above without being promoted here.
@@ -255,29 +261,7 @@ func buildBaseStatScalingProps(spellID int, itemSpellID int) *proto.ScalingItemE
 			}
 			// TBC ANNI: Items can have "static" ItemEffects that don't have a duration.
 			// We need to parse these into stats just as is done for ItemSparse data.
-			stat := ConvertEffectAuraToStatIndex(se.EffectAura, se.EffectMiscValues[0])
-			if stat >= 0 || stat == -2 {
-				value := float64(se.EffectBasePoints)
-				// Make sure it's not Feral AP
-				if strings.Contains(dbcInstance.Spells[se.SpellID].Description, "forms only") {
-					stat = proto.Stat_StatFeralAttackPower
-				}
-				if stat == proto.Stat_StatArmorPenetration || stat == proto.Stat_StatSpellPiercing {
-					// Make these not negative
-					value = math.Abs(value)
-				}
-
-				if se.EffectAura == dbcenums.A_MOD_RESISTANCE && stat == -2 {
-					// All Resists
-					total[stats.ArcaneResistance] += value
-					total[stats.FireResistance] += value
-					total[stats.FrostResistance] += value
-					total[stats.NatureResistance] += value
-					total[stats.ShadowResistance] += value
-				} else {
-					total[int32(stat)] += value
-				}
-
+			if addEquipAuraStat(&total, se, float64(se.EffectBasePoints)) {
 				continue
 			}
 
@@ -445,12 +429,7 @@ func MergeItemEffectsForAllStates(parsed *proto.UIItem) []*proto.ItemEffect {
 			equipPseudoStats := make([]float64, stats.PseudoStatsLen)
 			addedStats, addedPseudoStats := AddEquipSpellStats(&equipStats, equipPseudoStats, baseEff.SpellID)
 
-			if len(props.Stats) > 0 || addedStats || addedPseudoStats {
-				// An item the client ships no stat row for came from our sim's database
-				// (forever_sim_db.json), whose stats already include its equip spells.
-				if _, fromClient := dbcInstance.Items[int(parsed.Id)]; !fromClient {
-					continue
-				}
+			if EquipSpellFolds(baseEff.SpellID) && (len(props.Stats) > 0 || addedStats || addedPseudoStats) {
 				if areaType := spelldata.AreaTypeOfGroup(dbcInstance.Spells[baseEff.SpellID].RequiredAreasID); areaType != proto.AreaType_AreaTypeUnknown {
 					addAreaStats(parsed.ScalingOptions[0], areaType, equipStats.ToProtoMap())
 					continue

@@ -107,12 +107,30 @@ func TestFlatDamageTakenNeedsAField(t *testing.T) {
 	}
 }
 
+// Flat damage done names a stat for each school of a mask, except that every magic school is spell
+// damage and every school is physical and spell damage. Spellstone's 36 is fire and shadow.
+func TestDamageDoneStatsPerSchool(t *testing.T) {
+	for mask, want := range map[int32][]stats.Stat{
+		1:   {stats.PhysicalDamage},
+		32:  {stats.ShadowDamage},
+		36:  {stats.FireDamage, stats.ShadowDamage},
+		5:   {stats.PhysicalDamage, stats.FireDamage},
+		126: {stats.SpellDamage},
+		127: {stats.PhysicalDamage, stats.SpellDamage},
+		0:   nil,
+	} {
+		if got := DamageDoneStats(mask); !slices.Equal(got, want) {
+			t.Errorf("mask %d names %v, want %v", mask, got, want)
+		}
+	}
+}
+
 // Demoralizing Shout rank 5 on a level 63 boss: without a character the unit's own level prices it,
 // three levels too high, and Level prices it at the caster's.
 func TestLevelPricesADebuffOnABoss(t *testing.T) {
 	row := &Spell{ID: 11556, Name: "Demoralizing Shout", DurationMs: 45000,
 		Effects: []Effect{{SpellID: 11556, Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_MOD_ATTACK_POWER,
-			BasePoints: -196, PPL: -1.399999976158142, SpellLevel: 54, MaxLevel: 64}}}
+			BasePoints: -196, PPL: -1.399999976158142, BaseLevel: 54, MaxLevel: 64}}}
 
 	boss := &core.Unit{Level: 63}
 
@@ -129,7 +147,7 @@ func TestLevelPricesADebuffOnABoss(t *testing.T) {
 
 // Mana Spring's talent adds a percentage of the tick and truncates it before the tick becomes mana
 // per five: 10 a tick at +5% is still 10, at +25% it is 12.
-func TestScaledByTruncatesTheClientAmount(t *testing.T) {
+func TestScaledByTruncatesTheRowAmount(t *testing.T) {
 	row := buffRow(7030, Effect{Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_PERIODIC_ENERGIZE,
 		BasePoints: 10, PeriodMs: 2000})
 	pct := func(points float64) *Effect {
@@ -274,9 +292,9 @@ func TestExclusiveSingleAura(t *testing.T) {
 func TestExclusiveFollowsTheStacks(t *testing.T) {
 	sim := &core.Simulation{}
 	target := buffTestWarrior()
-	before := target.GetStat(stats.Armor)
+	before := target.GetStat(stats.ArmorNoMods)
 
-	row := buffRow(11597, auraEffect(dbcenums.A_MOD_RESISTANCE, miscArmor, -450))
+	row := buffRow(11597, auraEffect(dbcenums.A_MOD_ARMOR_NO_MODS, miscArmor, -450))
 	row.MaxStack = 5
 	aura := target.RegisterAura(AuraConfig(row))
 	ParseEffects(nil, aura, row, Exclusive("MajorArmorReduction", true))
@@ -292,12 +310,47 @@ func TestExclusiveFollowsTheStacks(t *testing.T) {
 	if effect.Priority != 900 {
 		t.Errorf("the debuff bids %v at two stacks, want 900", effect.Priority)
 	}
-	if got := target.GetStat(stats.Armor) - before; got != -900 {
+	if got := target.GetStat(stats.ArmorNoMods) - before; got != -900 {
 		t.Errorf("armor at two stacks: %v, want -900", got)
 	}
 
 	aura.Deactivate(sim)
-	if got := target.GetStat(stats.Armor); got != before {
+	if got := target.GetStat(stats.ArmorNoMods); got != before {
+		t.Errorf("armor after the debuff fell off: %v, want %v", got, before)
+	}
+}
+
+// Under a 10% armor multiplier, each stack of the A_MOD_ARMOR_NO_MODS debuff takes its full 450 off
+// a finalized unit and gives it back on expiry.
+func TestArmorNoModsStacksOutsideThePercentModifier(t *testing.T) {
+	withRows(t, parseRows())
+	sim := &core.Simulation{}
+	target := parseWarrior()
+	target.Env = &core.Environment{}
+	ParseStatic(target, &Spell{ID: 6000, Name: "Armor Rows", ClassFlags: parseFamily, Effects: []Effect{
+		{Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_MOD_RESISTANCE, Misc: miscArmor, BasePoints: 1000},
+		{Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_MOD_ARMOR_NO_MODS, Misc: miscArmor, BasePoints: 500},
+		{Type: dbcenums.E_APPLY_AURA, Aura: dbcenums.A_MOD_RESISTANCE_PCT, Misc: miscArmor, BasePoints: 10},
+	}})
+
+	row := buffRow(11597, auraEffect(dbcenums.A_MOD_ARMOR_NO_MODS, miscArmor, -450))
+	row.MaxStack = 5
+	aura := target.RegisterAura(AuraConfig(row))
+	ParseEffects(nil, aura, row, Exclusive("MajorArmorReduction", true))
+
+	target.Finalize()
+	target.Env.State = core.Finalized
+	before := target.GetStat(stats.Armor)
+
+	aura.Activate(sim)
+	for stacks := int32(1); stacks <= 2; stacks++ {
+		aura.AddStack(sim)
+		if got, want := target.GetStat(stats.Armor), before-450*float64(stacks); math.Abs(got-want) > 1e-9 {
+			t.Errorf("armor at %d stacks: %v, want %v", stacks, got, want)
+		}
+	}
+	aura.Deactivate(sim)
+	if got := target.GetStat(stats.Armor); math.Abs(got-before) > 1e-9 {
 		t.Errorf("armor after the debuff fell off: %v, want %v", got, before)
 	}
 }

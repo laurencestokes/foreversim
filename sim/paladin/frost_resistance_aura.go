@@ -14,7 +14,7 @@ var FrostResistanceAuraRankMap = spellData.FrostResistanceAura
 // only have one Aura on them per Paladin at any one time.
 func (paladin *Paladin) registerFrostResistanceAura() {
 	FrostResistanceAuraRankMap.Each(func(_ int32, rank *spelldata.Spell) {
-		aura := buffs.FrostResistanceAura(&paladin.Character, true, auraRank(rank))
+		aura := buffs.NewSpellDataFrostResistanceAuraRank(&paladin.Character, auraRank(rank))
 		paladin.registerAuraSpell(rank, aura, SpellMaskFrostResistanceAura)
 	})
 }

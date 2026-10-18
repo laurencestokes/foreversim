@@ -76,18 +76,13 @@ enum WarriorStance {
 }
 
 message WarriorOptions {
-	reserved 1;
-	reserved "default_shout";
+	WarriorStance default_stance = 1;
 
-	WarriorStance default_stance = 2;
-
-	double starting_rage = 3;
-	bool stance_snapshot = 4;
-	bool has_bs_t2 = 5;
-	bool use_battle_shout = 6;
-
-	// Forever: ms before a queued Heroic Strike or Cleave is re-armed (sim/warrior).
-	int32 queue_delay = 7;
+	double starting_rage = 2;
+	bool stance_snapshot = 3;
+	bool has_bs_t2 = 4;
+	bool use_battle_shout = 5;
+	int32 queue_delay = 6;
 }
 
 enum DpsWarriorSpec {
@@ -110,6 +105,9 @@ message DpsWarrior {
 		bool use_recklessness = 3;
 		bool use_overpower = 4;
 		WarriorSunder sunder_armor = 5;
+		bool use_rend = 6;
+		bool use_stance_dance = 7;
+		bool use_hamstring = 8;
 	}
 
 	message Options {

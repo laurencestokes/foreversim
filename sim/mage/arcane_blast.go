@@ -2,40 +2,29 @@ package mage
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+// Only the highest rank is registered: the mage casts the rank configured here, not every rank
+// spellData.ArcaneBlast lists.
 func (mage *Mage) registerArcaneBlastSpell() {
-	if !mage.Talents.ArcaneBlast {
-		return
+	mage.registerArcaneBlastRank(spellData.ArcaneBlast.Len(), spellData.ArcaneBlast.Highest())
+}
+
+func (mage *Mage) registerArcaneBlastRank(_ int32, rank *spelldata.Spell) {
+	damage := rank.DamageEffect()
+
+	config := spelldata.SpellConfig(&mage.Unit, rank, spelldata.Magic(core.ProcMaskSpellDamage))
+	config.ClassSpellMask = MageSpellArcaneBlast
+
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealDamage(sim, target, damage.Average(), spell.OutcomeMagicHitAndCrit)
+
+		if !mage.ArcaneChargesAura.IsActive() {
+			mage.ArcaneChargesAura.Activate(sim)
+		}
+		mage.ArcaneChargesAura.AddStack(sim)
 	}
 
-	arcaneBlastRank := spellData.ArcaneBlast.Highest()
-
-	mage.ArcaneBlast = mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: arcaneBlastRank.ID},
-		SpellSchool:    arcaneBlastRank.SpellSchool(),
-		DefenseType:    arcaneBlastRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: MageSpellArcaneBlast,
-		MaxRange:       float64(arcaneBlastRank.MaxRange),
-
-		ManaCost: arcaneBlastRank.ManaCost(),
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD:      arcaneBlastRank.GCD(),
-				CastTime: arcaneBlastRank.CastTime(),
-			},
-		},
-
-		DamageMultiplier: 1,
-		BonusCoefficient: arcaneBlastRank.DamageEffect().Coeff(),
-		ThreatMultiplier: 1,
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, arcaneBlastRank.DamageEffect().Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-			mage.ArcaneBlastAura.Activate(sim)
-			mage.ArcaneBlastAura.AddStack(sim)
-		},
-	})
+	mage.RegisterSpell(config)
 }

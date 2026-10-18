@@ -1,3 +1,4 @@
+import { useEnchantPresets } from '@features/enchant-presets/hooks/useEnchantPresets';
 import type { ReforgeOptimizerModel, ReforgeOptimizerOptions } from '@features/reforge/model/reforge_optimizer';
 import type { ItemSlot } from '@generated/proto/common';
 import i18n from '@i18n/config';
@@ -15,6 +16,7 @@ import { Tooltip, tooltipAnchorProps, type TooltipRefProps } from '@ui-kit/Toolt
 import { type ReactNode, useCallback, useId, useRef, useState } from 'react';
 
 import { trackEvent, trackPageView } from '../../../../tracking/utils';
+import { useReforgeField } from '../../hooks/useReforgeField';
 import { ReforgeDoneToast } from './ReforgeDoneToast';
 import { ReforgeSettingsPanel } from './ReforgeSettingsPanel';
 import { ReforgeSoftCapsTooltip } from './ReforgeSoftCapsTooltip';
@@ -41,6 +43,9 @@ export const ReforgePanel = ({ model, options }: ReforgePanelProps) => {
 	const isCancelling = useRef(false);
 
 	const { isRunning } = useSimRun(SimRunKind.ReforgeOptimize);
+	const presetsOn = useReforgeField(model.settings, 'useEnchantPresets', () => model.settings.useEnchantPresets);
+	const presets = useEnchantPresets();
+	const needsPreset = presetsOn && !presets.some(preset => preset.checked);
 	const softCapsTooltipId = useId();
 	const settingsTooltipId = useId();
 	const settingsTooltipRef = useRef<TooltipRefProps>(null);
@@ -97,7 +102,7 @@ export const ReforgePanel = ({ model, options }: ReforgePanelProps) => {
 					{i18n.t('sidebar.buttons.suggest_reforges.reforge_optimization_failed')}
 					<p />
 					<p>
-						<b>Reason for failure:</b> <i>{String(error)}</i>
+						<b>{i18n.t('sidebar.buttons.suggest_reforges.failure_reason')}</b> <i>{String(error)}</i>
 					</p>
 				</>,
 				{ variant: 'error', delay: 10000 },
@@ -110,7 +115,7 @@ export const ReforgePanel = ({ model, options }: ReforgePanelProps) => {
 		setProgressOpen(false);
 		performance.mark('reforge-optimization-end');
 		const completionTimeInMs = performance.measure('reforge-optimization-measure', 'reforge-optimization-start', 'reforge-optimization-end').duration;
-		if (isDevMode()) console.log('Gem optimization took:', `${completionTimeInMs.toFixed(2)}ms`);
+		if (isDevMode()) console.log('Gear optimization took:', `${completionTimeInMs.toFixed(2)}ms`);
 		trackEvent({ action: 'settings', category: 'reforging', label: 'suggest_duration', value: Math.ceil(completionTimeInMs / 1000) });
 	}, []);
 
@@ -137,7 +142,7 @@ export const ReforgePanel = ({ model, options }: ReforgePanelProps) => {
 
 	const onCancel = async () => {
 		isCancelling.current = true;
-		if (isDevMode()) console.log('User cancelled gem optimization');
+		if (isDevMode()) console.log('User cancelled gear optimization');
 		try {
 			await model.abortReforgeOptimization();
 		} catch {
@@ -155,16 +160,19 @@ export const ReforgePanel = ({ model, options }: ReforgePanelProps) => {
 	return (
 		<>
 			<Button
-				size="none"
-				className="-mr-(--settings-button-width) grow px-settings-button-inset py-2"
+				variant="outline-primary"
+				className="peer col-span-full row-start-1 pr-settings-button-inset"
+				aria-label={i18n.t('sidebar.buttons.suggest_reforges.title')}
 				data-testid="suggest-reforges-action-button"
 				data-sidebar-action=""
-				disabled={isRunning}
+				disabled={isRunning || needsPreset}
+				focusableWhenDisabled={needsPreset}
+				loading={isRunning}
 				onClick={onOptimize}
 				{...tooltipAnchorProps(softCapsTooltipId)}>
-				{i18n.t('sidebar.buttons.suggest_reforges.title')}
-				<span data-testid="suggest-reforges-action-button-loading-icon">
-					<Icon name="spinner" spin />
+				{/* One line-height tall (h-lh), so the button pair is as tall as a text action such as Simulate. */}
+				<span className="flex h-lh items-center">
+					<Icon name="screwdriver-wrench" />
 				</span>
 			</Button>
 			<Popover
@@ -180,33 +188,17 @@ export const ReforgePanel = ({ model, options }: ReforgePanelProps) => {
 				align="start"
 				className="min-w-popup-min-w"
 				testId="reforge-optimiser-popover"
-				maxWidth="max-w-87.5 max-lg:max-w-settings-panel-max"
-				triggerClassName={[
-					'ui-button',
-					'ui-button-md',
-					'ui-button-primary',
-					'bg-transparent',
-					'border-transparent',
-					'hover:bg-primary-hover',
-					'hover:border-primary-hover',
-					'focus-visible:bg-primary-hover',
-					'focus-visible:border-primary-hover',
-					'active:bg-primary-active',
-					'active:border-primary-active',
-					'data-[popup-open]:bg-primary-active',
-					'data-[popup-open]:border-primary-active',
-					'w-(--settings-button-width)',
-				]}
+				backdrop
+				maxWidthClassName="max-w-86 max-lg:max-w-settings-panel-max"
+				triggerRender={
+					<Button
+						variant="outline-primary"
+						className="col-start-2 row-start-1 w-(--settings-button-width) border-transparent bg-transparent peer-hover:peer-not-data-disabled:text-primary-foreground hover:border-primary-hover hover:bg-primary-hover focus-visible:border-primary-hover focus-visible:bg-primary-hover active:border-primary-active active:bg-primary-active active:text-primary-foreground data-popup-open:border-primary-active data-popup-open:bg-primary-active data-popup-open:text-primary-foreground"
+					/>
+				}
 				triggerTestId="suggest-reforges-button-settings"
 				triggerProps={settingsTriggerProps}
-				trigger={
-					<>
-						<Icon name="cog" />
-						<span data-testid="suggest-reforges-button-settings-loading-icon">
-							<Icon name="spinner" spin />
-						</span>
-					</>
-				}>
+				trigger={<Icon name="gear" />}>
 				<ReforgeSettingsPanel model={model} options={options} onClose={() => setOpen(false)} />
 			</Popover>
 			<Tooltip ref={settingsTooltipRef} id={settingsTooltipId} place="bottom" content={i18n.t('sidebar.buttons.suggest_reforges.tooltip')} />
@@ -215,17 +207,26 @@ export const ReforgePanel = ({ model, options }: ReforgePanelProps) => {
 				place="bottom"
 				clickable
 				className="suggest-reforges-softcaps"
-				maxWidth="max-w-77.5"
+				maxWidth="max-w-76"
 				// The limits are read per open.
 				render={() => {
+					const title = i18n.t('sidebar.buttons.suggest_reforges.title');
 					const softCaps = model.softCapsConfigWithLimits;
-					if (!softCaps?.length) return null;
-					return (
+					const body = needsPreset ? (
+						<p className="mb-0">{i18n.t('sidebar.buttons.suggest_reforges.no_enchant_preset')}</p>
+					) : softCaps?.length ? (
 						<ReforgeSoftCapsTooltip
-							player={player}
+							playerClass={player.getClass()}
 							softCaps={softCaps}
 							additionalInformation={options?.additionalSoftCapTooltipInformation ?? {}}
 						/>
+					) : null;
+					if (!body) return title;
+					return (
+						<>
+							<p className="mb-1 font-semibold">{title}</p>
+							{body}
+						</>
 					);
 				}}
 			/>
@@ -233,15 +234,12 @@ export const ReforgePanel = ({ model, options }: ReforgePanelProps) => {
 				<ProgressTrackerDialog
 					open
 					testId="reforge-optimizer-progress-tracker"
-					title="Optimizing Gems"
+					title={i18n.t('sidebar.buttons.suggest_reforges.progress.title')}
 					state={{ stage: 'initializing' }}
 					warning={
 						<>
-							<p>
-								Gemming can be a lengthy process, especially as specific stat caps and breakpoints come into play for classes. This may take a
-								while, but be assured that the calculation will eventually complete.
-							</p>
-							<p className="mb-0">You may cancel this operation at any time using the button below.</p>
+							<p>{i18n.t('sidebar.buttons.suggest_reforges.progress.lengthy')}</p>
+							<p className="mb-0">{i18n.t('sidebar.buttons.suggest_reforges.progress.cancel_hint')}</p>
 						</>
 					}
 					onCancel={onCancel}

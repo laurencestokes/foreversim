@@ -15,7 +15,7 @@ test('the manifest carries only what VS Code reads, and says it is generated', (
 	const manifest = generatedManifest(pkg);
 	assert.deepEqual(Object.keys(manifest), [...MANIFEST_KEYS, 'x-generated']);
 	assert.equal(manifest['x-generated'], 'make vscode-spelldata');
-	assert.deepEqual(Object.keys(manifest.contributes), ['configuration']);
+	assert.deepEqual(Object.keys(manifest.contributes), ['configuration', 'commands']);
 	assert.equal(manifest.main, './out/extension.js');
 	assert.ok(manifest.contributes.configuration.properties['wowsims-spelldata.trace']);
 });

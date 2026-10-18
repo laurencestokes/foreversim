@@ -33,7 +33,7 @@ export class Raid {
 
 		// Invalidate the active-players cache synchronously on any composition /
 		// party-count write (ungated: readers inside the same batch see fresh
-		// data; previously the cache was only cleared at thaw).
+		// data).
 		subscribe(
 			s => [s.raid.composition, s.raid.numActiveParties],
 			() => {

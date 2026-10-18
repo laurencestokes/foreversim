@@ -14,7 +14,7 @@ var DevotionAuraRankMap = spellData.DevotionAura
 // them per Paladin at any one time.
 func (paladin *Paladin) registerDevotionAura() {
 	DevotionAuraRankMap.Each(func(_ int32, rank *spelldata.Spell) {
-		aura := buffs.DevotionAuraBuff(&paladin.Character, true, auraRank(rank))
+		aura := buffs.NewSpellDataDevotionAuraRank(&paladin.Character, auraRank(rank))
 		paladin.registerAuraSpell(rank, aura, SpellMaskDevotionAura)
 	})
 }

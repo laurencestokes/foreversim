@@ -1,17 +1,20 @@
 package shared
 
 import (
+	"fmt"
 	"math"
 	"testing"
 	"time"
 
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Mind Quickening Gem 19339 casts 23723, Scrolls of Blinding Light 19343 casts 23733, both on a 5 min
-// cooldown in category 1141 for 20 s. Kiss of the Spider 22954 casts 28866 on a 2 min cooldown in
-// category 1141 for 15 s.
+// Mind Quickening Gem 19339 casts 23723, Scrolls of Blinding Light 19343 casts 23733 and Kiss of the
+// Spider 22954 casts 28866. The test's on-use runs the first two on a 5 min cooldown in category 1141
+// for 20 s, and the third on a 2 min cooldown in category 1141 for 15 s.
 const (
 	mindQuickening int32 = 23723
 	blindingLight  int32 = 23733
@@ -62,6 +65,13 @@ func (got speeds) differ(want speeds) bool {
 // Using the item multiplies the wearer's speeds by the ones its row states for the row's duration, on
 // one aura, and every speed returns to what it was when the aura runs out.
 func TestOnUseSpeedBuffMultipliesTheWearersSpeedsForItsDuration(t *testing.T) {
+	haste := func(spellID int32, aura dbcenums.EffectAuraType) float64 {
+		percent := spelldata.MustFind(spellID).FirstAura(aura).BasePoints
+		needAmount(t, fmt.Sprintf("%d's %v", spellID, aura), percent)
+		return 1 + percent/100
+	}
+	duration := func(spellID int32) time.Duration { return spelldata.MustFind(spellID).Duration() }
+
 	for _, tc := range []struct {
 		name     string
 		itemID   int32
@@ -72,11 +82,16 @@ func TestOnUseSpeedBuffMultipliesTheWearersSpeedsForItsDuration(t *testing.T) {
 		duration time.Duration
 	}{
 		{"Mind Quickening Gem", 991140, proto.Class_ClassMage, proto.Race_RaceTroll,
-			testOnUse(mindQuickening, 300000, 1141, 20000), speeds{1, 1, 1.33}, 20 * time.Second},
+			testOnUse(mindQuickening, 300000, 1141, 20000),
+			speeds{1, 1, haste(mindQuickening, dbcenums.A_MOD_CASTING_SPEED_NOT_STACK)}, duration(mindQuickening)},
 		{"Scrolls of Blinding Light", 991141, proto.Class_ClassPaladin, proto.Race_RaceHuman,
-			testOnUse(blindingLight, 300000, 1141, 20000), speeds{1.25, 1, 1.33}, 20 * time.Second},
+			testOnUse(blindingLight, 300000, 1141, 20000),
+			speeds{haste(blindingLight, dbcenums.A_MOD_MELEE_HASTE_3), 1, haste(blindingLight, dbcenums.A_MOD_CASTING_SPEED_NOT_STACK)},
+			duration(blindingLight)},
 		{"Kiss of the Spider", 991142, proto.Class_ClassWarrior, proto.Race_RaceOrc,
-			testOnUse(kissOfSpider, 120000, 1141, 15000), speeds{1.2, 1.2, 1}, 15 * time.Second},
+			testOnUse(kissOfSpider, 120000, 1141, 15000),
+			speeds{haste(kissOfSpider, dbcenums.A_MOD_MELEE_HASTE_3), haste(kissOfSpider, dbcenums.A_MOD_RANGED_HASTE), 1},
+			duration(kissOfSpider)},
 	} {
 		sim, caster := newSpeedOnUseSim(t, tc.class, tc.race, map[int32]onUseTrinket{tc.itemID: {tc.effect, NewSpellDataSpeedOnUse}})
 		spell := onUseSpell(t, caster, tc.itemID)
@@ -111,8 +126,8 @@ func TestOnUseSpeedBuffMultipliesTheWearersSpeedsForItsDuration(t *testing.T) {
 	}
 }
 
-// Mind Quickening Gem's own 5 min cooldown, and its category's 20 s that Infernal Lasso 219345, also
-// in category 1141, waits out as well.
+// The test gem's own 5 min cooldown, and its category's 20 s that the test lasso, also in category
+// 1141, waits out as well.
 func TestOnUseSpeedBuffRunsOnTheItemsCooldownAndCategory(t *testing.T) {
 	const gemID, lassoID int32 = 991143, 991144
 	sim, caster := newSpeedOnUseSim(t, proto.Class_ClassMage, proto.Race_RaceTroll, map[int32]onUseTrinket{

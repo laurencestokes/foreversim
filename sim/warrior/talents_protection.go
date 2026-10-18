@@ -1,8 +1,6 @@
 package warrior
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
@@ -44,12 +42,20 @@ func (warrior *Warrior) registerProtectionTalents() {
 	warrior.registerShieldSlam()
 }
 
+func (warrior *Warrior) registerIronWill() {
+	if warrior.Talents.IronWill == 0 {
+		return
+	}
+	// The talent curve lengthens Stun and Fear by 3-15%, where the tooltip says it reduces them.
+	spelldata.ParseStatic(&warrior.Character, spellData.IronWill.Rank(warrior.Talents.IronWill))
+}
+
 func (warrior *Warrior) registerAnticipation() {
 	if warrior.Talents.Anticipation == 0 {
 		return
 	}
 
-	warrior.AddStat(stats.DefenseRating, spellData.Anticipation.ValueAt(warrior.Talents.Anticipation)*core.DefenseRatingPerDefenseLevel)
+	spelldata.ParseStatic(&warrior.Character, spellData.Anticipation.Rank(warrior.Talents.Anticipation))
 }
 
 func (warrior *Warrior) registerShieldSpecialization() {
@@ -57,64 +63,53 @@ func (warrior *Warrior) registerShieldSpecialization() {
 		return
 	}
 
-	shieldSpecializationEnergize := spellData.ShieldSpecializationTriggered.Highest()
+	talent := spellData.ShieldSpecialization.Rank(warrior.Talents.ShieldSpecialization)
 
-	// BlockPercent is in percent (5 = 5%) since the core's avoidance rework.
-	warrior.AddStat(stats.BlockPercent, spellData.ShieldSpecialization.Effect(dbcenums.A_MOD_BLOCK_PERCENT, 0).ValueAt(warrior.Talents.ShieldSpecialization))
+	// Effect 1 is the block bonus; effect 2 is the proc trigger, which the parse skips.
+	spelldata.ParseStatic(&warrior.Character, talent)
 
-	warrior.registerRageOnAvoid(
-		"Shield Specialization",
-		shieldSpecializationEnergize,
-		spellData.ShieldSpecialization.EffectAt(2).FractionAt(warrior.Talents.ShieldSpecialization),
-		core.OutcomeBlock,
-		nil,
-	)
+	warrior.registerRageOnAvoid(talent, talent.EffectN(2).Trigger(), core.OutcomeBlock, nil)
 }
 
-func (warrior *Warrior) registerRageOnAvoid(name string, energize *spelldata.Spell, chance float64, outcome core.HitOutcome, extra core.ProcExtraCondition) {
+// A chance to gain rage when an incoming attack is blocked, dodged or parried. The rate is the
+// effect ladder the tooltip's $m names, and the 100 in the proc chance column is noise; the
+// energize the triggered spell states is on the game files' 0-1000 rage bar.
+//
+// No proc mask states an outcome, so which of the three it is stays the caller's; that the hit
+// carries no damage is the row's, off its outcome hint.
+func (warrior *Warrior) registerRageOnAvoid(driver *spelldata.Spell, energize *spelldata.Spell, outcome core.HitOutcome, extra core.ProcExtraCondition) {
 	rage := energize.EnergizeEffect().Tenths()
 	rageMetrics := warrior.NewRageMetrics(core.ActionID{SpellID: energize.ID})
-	warrior.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               name,
-		ProcChance:         chance,
-		TriggerImmediately: true,
-		Outcome:            outcome,
-		Callback:           core.CallbackOnSpellHitTaken,
-		ExtraCondition:     extra,
-		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+
+	trigger := spelldata.ProcTrigger(&warrior.Character, driver,
+		func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 			warrior.AddRage(sim, rage, rageMetrics)
-		},
-	})
+		})
+	trigger.Outcome = outcome
+	trigger.TriggerImmediately = true
+	trigger.ExtraCondition = extra
+
+	warrior.MakeProcTriggerAura(trigger)
 }
 
-func (warrior *Warrior) registerIronWill() {
-	if warrior.Talents.IronWill == 0 {
-		return
-	}
-	warrior.PseudoStats.FearDurationMultiplier = spellData.IronWill.Effect(dbcenums.A_MECHANIC_DURATION_MOD, 1).MultiplierAt(warrior.Talents.IronWill)
-	warrior.PseudoStats.StunDurationMultiplier = spellData.IronWill.Effect(dbcenums.A_MECHANIC_DURATION_MOD, 12).MultiplierAt(warrior.Talents.IronWill)
-}
+var lastStandRank = spellData.LastStand.Highest()
+var lastStandBuff = spellData.LastStandTriggered.Highest()
 
 func (warrior *Warrior) registerLastStand() {
 	if !warrior.Talents.LastStand {
 		return
 	}
 
-	lastStandRank := spellData.LastStand.Highest()
-	lastStandBuff := spellData.LastStandTriggered.Highest()
 	actionID := core.ActionID{SpellID: lastStandRank.ID}
 	healthMetrics := warrior.NewHealthMetrics(actionID)
 
-	// Client 1.60.1.70291 moved the buff from A_MOD_MAX_HEALTH to A_MOD_INCREASE_HEALTH, still 30; the
-	// talent tooltip reads "30% of your maximum health", so it stays a share of maximum health.
-	healthPercent := lastStandBuff.Effect(dbcenums.A_MOD_INCREASE_HEALTH, 0).Percent()
 	var bonusHealth float64
 	aura := warrior.RegisterAura(core.Aura{
 		Label:    "Last Stand",
 		ActionID: actionID,
 		Duration: lastStandBuff.Duration(),
 		OnGain: func(aura *core.Aura, sim *core.Simulation) {
-			bonusHealth = warrior.MaxHealth() * healthPercent
+			bonusHealth = warrior.MaxHealth() * lastStandBuff.Effect(dbcenums.A_MOD_INCREASE_HEALTH, 0).Percent()
 			warrior.UpdateMaxHealth(sim, bonusHealth, healthMetrics)
 		},
 		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
@@ -122,23 +117,15 @@ func (warrior *Warrior) registerLastStand() {
 		},
 	})
 
-	spell := warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       actionID,
-		ClassSpellMask: SpellMaskLastStand,
+	config := spelldata.SpellConfig(&warrior.Unit, lastStandRank)
 
-		Cast: core.CastConfig{
-			CD: core.Cooldown{
-				Timer:    warrior.NewTimer(),
-				Duration: cooldownOf(lastStandRank),
-			},
-		},
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		aura.Activate(sim)
+	}
 
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			aura.Activate(sim)
-		},
+	config.RelatedSelfBuff = aura
 
-		RelatedSelfBuff: aura,
-	})
+	spell := warrior.RegisterSpell(config)
 
 	warrior.AddMajorCooldown(core.MajorCooldown{
 		Spell: spell,
@@ -155,11 +142,7 @@ func (warrior *Warrior) registerImprovedSunderArmor() {
 		return
 	}
 
-	warrior.AddStaticMod(core.SpellModConfig{
-		ClassMask: SpellMaskSunderArmor,
-		Kind:      core.SpellMod_PowerCost_Flat,
-		IntValue:  int32(spellData.ImprovedSunderArmor.TenthsAt(warrior.Talents.ImprovedSunderArmor)),
-	})
+	spelldata.ParseStatic(&warrior.Character, spellData.ImprovedSunderArmor.Rank(warrior.Talents.ImprovedSunderArmor))
 }
 
 func (warrior *Warrior) registerImprovedShieldWall() {
@@ -167,12 +150,10 @@ func (warrior *Warrior) registerImprovedShieldWall() {
 		return
 	}
 
-	warrior.AddStaticMod(core.SpellModConfig{
-		ClassMask: SpellMaskShieldWall,
-		Kind:      core.SpellMod_Cooldown_Flat,
-		TimeValue: time.Duration(spellData.ImprovedShieldWall.ValueAt(warrior.Talents.ImprovedShieldWall)) * time.Millisecond,
-	})
+	spelldata.ParseStatic(&warrior.Character, spellData.ImprovedShieldWall.Rank(warrior.Talents.ImprovedShieldWall))
 }
+
+var concussionBlowRank = spellData.ConcussionBlow.Highest()
 
 // TODO: In-game testing if this generates threat
 func (warrior *Warrior) registerConcussionBlow() {
@@ -180,91 +161,40 @@ func (warrior *Warrior) registerConcussionBlow() {
 		return
 	}
 
-	concussionBlowRank := spellData.ConcussionBlow.Highest()
+	config := spelldata.SpellConfig(&warrior.Unit, concussionBlowRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
 
-	warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: concussionBlowRank.ID},
-		ClassSpellMask: SpellMaskConcussionBlow,
-		SpellSchool:    core.SpellSchoolPhysical,
-		DefenseType:    core.DefenseTypeMelee,
-		ProcMask:       core.ProcMaskMeleeMHSpecial,
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		MaxRange:       core.MaxMeleeRange,
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcAndDealOutcome(sim, target, spell.OutcomeMeleeSpecialHit)
 
-		RageCost: core.RageCostOptions{
-			Cost:   int32(concussionBlowRank.Cost()),
-			Refund: concussionBlowRank.MissRefund(),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				NonEmpty: true,
-			},
-			IgnoreHaste: true,
-			CD: core.Cooldown{
-				Timer:    warrior.NewTimer(),
-				Duration: cooldownOf(concussionBlowRank),
-			},
-		},
+		if !result.Landed() {
+			spell.IssueRefund(sim)
+		}
+	}
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcAndDealOutcome(sim, target, spell.OutcomeMeleeSpecialHit)
-
-			if !result.Landed() {
-				spell.IssueRefund(sim)
-			}
-		},
-	})
+	warrior.RegisterSpell(config)
 }
+
+var shieldSlamRank = spellData.ShieldSlam.Highest()
 
 func (warrior *Warrior) registerShieldSlam() {
 	if !warrior.Talents.ShieldSlam {
 		return
 	}
 
-	shieldSlamRank := spellData.ShieldSlam.Highest()
+	config := spelldata.SpellConfig(&warrior.Unit, shieldSlamRank, spelldata.Melee(core.ProcMaskMeleeOHSpecial))
+	// TODO: In-game testing needed for threat multiplier / flat threat
+	config.FlatThreatBonus = 0
 
-	warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: shieldSlamRank.ID},
-		ClassSpellMask: SpellMaskShieldSlam,
-		SpellSchool:    shieldSlamRank.SpellSchool(),
-		DefenseType:    shieldSlamRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskMeleeOHSpecial, // struck with the shield (upstream b6ce30c972)
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		MaxRange:       core.MaxMeleeRange,
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		baseDamage := shieldSlamRank.DamageEffect().Roll(sim) + warrior.BlockDamageReduction()
+		result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
 
-		RageCost: core.RageCostOptions{
-			Cost:   int32(shieldSlamRank.Cost()),
-			Refund: shieldSlamRank.MissRefund(),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: shieldSlamRank.GCD(),
-			},
-			IgnoreHaste: true,
-			CD: core.Cooldown{
-				Timer:    warrior.NewTimer(),
-				Duration: cooldownOf(shieldSlamRank),
-			},
-		},
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return warrior.PseudoStats.CanBlock
-		},
+		if !result.Landed() {
+			spell.IssueRefund(sim)
+		}
+	}
 
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-		// Not in the client table; our Classic value until measured in game.
-		FlatThreatBonus: 254 * 2,
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			// Rank 4 rolls 655 +-2.3% (640-670) off the row.
-			baseDamage := shieldSlamRank.DamageEffect().Roll(sim, core.CharacterLevel) + warrior.BlockDamageReduction()
-			result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
-
-			if !result.Landed() {
-				spell.IssueRefund(sim)
-			}
-		},
-	})
+	warrior.RegisterSpell(config)
 }
 
 func (warrior *Warrior) registerFocusedRage() {
@@ -272,11 +202,7 @@ func (warrior *Warrior) registerFocusedRage() {
 		return
 	}
 
-	warrior.AddStaticMod(core.SpellModConfig{
-		ClassMask: SpellMaskFocusedRage,
-		Kind:      core.SpellMod_PowerCost_Flat,
-		IntValue:  int32(spellData.FocusedRage.TenthsAt(warrior.Talents.FocusedRage)),
-	})
+	spelldata.ParseStatic(&warrior.Character, spellData.FocusedRage.Rank(warrior.Talents.FocusedRage))
 }
 
 func (warrior *Warrior) registerMasterOfDefense() {
@@ -284,17 +210,13 @@ func (warrior *Warrior) registerMasterOfDefense() {
 		return
 	}
 
-	masterOfDefenseEnergize := spellData.MasterOfDefenseTriggered.Highest()
+	talent := spellData.MasterOfDefense.Rank(warrior.Talents.MasterOfDefense)
 
-	warrior.registerRageOnAvoid(
-		"Master of Defense",
-		masterOfDefenseEnergize,
-		spellData.MasterOfDefense.FractionAt(warrior.Talents.MasterOfDefense),
-		core.OutcomeDodge|core.OutcomeParry,
+	// A shield has to be equipped, which the row does not state.
+	warrior.registerRageOnAvoid(talent, talent.EffectN(1).Trigger(), core.OutcomeDodge|core.OutcomeParry,
 		func(_ *core.Simulation, _ *core.Spell, _ *core.SpellResult) bool {
 			return warrior.PseudoStats.CanBlock
-		},
-	)
+		})
 }
 
 func (warrior *Warrior) registerImprovedRevenge() {
@@ -302,11 +224,7 @@ func (warrior *Warrior) registerImprovedRevenge() {
 		return
 	}
 
-	warrior.AddStaticMod(core.SpellModConfig{
-		ClassMask:  SpellMaskRevenge,
-		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.ImprovedRevenge.FractionAt(warrior.Talents.ImprovedRevenge),
-	})
+	spelldata.ParseStatic(&warrior.Character, spellData.ImprovedRevenge.Rank(warrior.Talents.ImprovedRevenge))
 }
 
 func (warrior *Warrior) registerImprovedDisarm() {
@@ -314,11 +232,7 @@ func (warrior *Warrior) registerImprovedDisarm() {
 		return
 	}
 
-	warrior.AddStaticMod(core.SpellModConfig{
-		ClassMask: SpellMaskDisarm,
-		Kind:      core.SpellMod_Cooldown_Flat,
-		TimeValue: time.Duration(spellData.ImprovedDisarm.ValueAt(warrior.Talents.ImprovedDisarm)) * time.Millisecond,
-	})
+	spelldata.ParseStatic(&warrior.Character, spellData.ImprovedDisarm.Rank(warrior.Talents.ImprovedDisarm))
 }
 
 func (warrior *Warrior) registerImprovedShieldBash() {
@@ -326,28 +240,27 @@ func (warrior *Warrior) registerImprovedShieldBash() {
 		return
 	}
 
-	improvedShieldBashSilence := spellData.ImprovedShieldBashTriggered.Highest()
+	talent := spellData.ImprovedShieldBash.Rank(warrior.Talents.ImprovedShieldBash)
+	silence := talent.EffectN(1).Trigger()
 
 	// TODO: nothing in the sim reads a silence on an enemy, so the aura only shows up in metrics.
 	silenceAuras := warrior.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
-		return target.GetOrRegisterAura(core.Aura{
-			Label:    "Shield Bash - Silence",
-			ActionID: core.ActionID{SpellID: improvedShieldBashSilence.ID},
-			Duration: improvedShieldBashSilence.Duration(),
-		})
+		return target.GetOrRegisterAura(spelldata.AuraConfig(silence, spelldata.Label("Shield Bash - Silence")))
 	})
 
-	warrior.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Improved Shield Bash",
-		ProcChance:         spellData.ImprovedShieldBash.FractionAt(warrior.Talents.ImprovedShieldBash),
-		TriggerImmediately: true,
-		ClassSpellMask:     SpellMaskShieldBash,
-		Outcome:            core.OutcomeLanded,
-		Callback:           core.CallbackOnSpellHitDealt,
-		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+	// The rate is the effect ladder the tooltip's $m1 names, and the 100 in the proc chance column
+	// is noise. The one ability it fires on is a shape no proc mask states, so the row's listener
+	// is narrowed to Shield Bash by hand.
+	trigger := spelldata.ProcTrigger(&warrior.Character, talent,
+		func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 			silenceAuras.Get(result.Target).Activate(sim)
-		},
-	})
+		})
+	trigger.ExtraCondition = func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
+		return spellData.ShieldBash.Contains(spell)
+	}
+	trigger.TriggerImmediately = true
+
+	warrior.MakeProcTriggerAura(trigger)
 }
 
 func (warrior *Warrior) registerBastion() {
@@ -355,22 +268,13 @@ func (warrior *Warrior) registerBastion() {
 		return
 	}
 
-	damageMod := warrior.AddDynamicMod(core.SpellModConfig{
-		School:     core.SpellSchoolPhysical,
-		Kind:       core.SpellMod_DamageDone_Pct,
-		FloatValue: spellData.Bastion.FractionAt(warrior.Talents.Bastion),
-	})
-
-	if warrior.PseudoStats.CanBlock {
-		damageMod.Activate()
-	}
+	// The row raises the physical school and states the shield, but the parse never scopes to a
+	// shield, so it is the caller's condition, re-read on an off-hand swap.
+	parsed := spelldata.ParseStatic(&warrior.Character, spellData.Bastion.Rank(warrior.Talents.Bastion),
+		spelldata.Conditional(func() bool { return warrior.PseudoStats.CanBlock }))
 
 	warrior.RegisterItemSwapCallback([]proto.ItemSlot{proto.ItemSlot_ItemSlotOffHand}, func(sim *core.Simulation, slot proto.ItemSlot) {
-		if warrior.PseudoStats.CanBlock {
-			damageMod.Activate()
-		} else {
-			damageMod.Deactivate()
-		}
+		parsed.Refresh(sim)
 	})
 }
 
@@ -379,10 +283,5 @@ func (warrior *Warrior) registerImprovedThunderClap() {
 		return
 	}
 
-	// Slowing effect implemented in thunder_clap.go
-	warrior.AddStaticMod(core.SpellModConfig{
-		ClassMask: SpellMaskThunderClap,
-		Kind:      core.SpellMod_PowerCost_Flat,
-		IntValue:  int32(spellData.ImprovedThunderClap.TenthsAt(warrior.Talents.ImprovedThunderClap)),
-	})
+	spelldata.ParseStatic(&warrior.Character, spellData.ImprovedThunderClap.Rank(warrior.Talents.ImprovedThunderClap))
 }

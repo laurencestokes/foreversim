@@ -97,7 +97,7 @@ func (unit *Unit) GetOrInitTimer(timer **Timer) *Timer {
 	return *timer
 }
 
-// The category is the client's SpellCategory: casting any spell in it puts the whole category on
+// The category is the game files' SpellCategory: casting any spell in it puts the whole category on
 // cooldown. Created through NewTimer, so it is reset with the unit's other timers each iteration.
 func (unit *Unit) CategoryTimer(category int32) *Timer {
 	if unit.categoryTimers == nil {

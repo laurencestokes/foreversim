@@ -25,7 +25,7 @@ func TestAuraConfigFromARow(t *testing.T) {
 	}
 }
 
-// The client states a permanent aura as -1, and its charges in the field the stacks share.
+// The game files state a permanent aura as -1, and its charges in the field the stacks share.
 func TestAuraConfigPermanentRowAndCharges(t *testing.T) {
 	withRows(t, resolverRows())
 	aura := AuraConfig(Find(900))

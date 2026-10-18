@@ -16,7 +16,7 @@ var rankEnumTypes = []struct {
 	{"EffectAuraType", func(value int32) (string, bool) { return dbcenums.Named(dbcenums.EffectAuraType(value)) }},
 }
 
-// Renders the enum values the store's rows state. A value the client data carries but dbcenums has
+// Renders the enum values the store's rows state. A value the game files carry but dbcenums has
 // not named keeps its number, marked so a reader is not left looking for a constant, rather than
 // failing the build.
 type rankEnumNamer struct{}

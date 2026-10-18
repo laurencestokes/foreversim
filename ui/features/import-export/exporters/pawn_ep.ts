@@ -20,6 +20,7 @@ const STAT_NAMES: Record<Stat, string> = {
 	[Stat.StatParryRating]: 'ParryRating',
 	[Stat.StatHealth]: 'Health',
 	[Stat.StatBonusArmor]: 'Armor2',
+	[Stat.StatArmorNoMods]: '',
 	[Stat.StatHealingPower]: '',
 	[Stat.StatSpellDamage]: 'SpellDamage',
 	[Stat.StatArcaneDamage]: '',
@@ -29,14 +30,11 @@ const STAT_NAMES: Record<Stat, string> = {
 	[Stat.StatNatureDamage]: '',
 	[Stat.StatShadowDamage]: '',
 	[Stat.StatPhysicalDamage]: '',
-	[Stat.StatSpellHitRating]: '',
-	[Stat.StatSpellCritRating]: '',
-	[Stat.StatSpellHasteRating]: '',
+	[Stat.StatHitRating]: 'HitRating',
+	[Stat.StatCritRating]: 'CritRating',
+	[Stat.StatHasteRating]: 'HasteRating',
 	[Stat.StatSpellPiercing]: '',
 	[Stat.StatFeralAttackPower]: '',
-	[Stat.StatMeleeHitRating]: '',
-	[Stat.StatMeleeCritRating]: '',
-	[Stat.StatMeleeHasteRating]: '',
 	[Stat.StatArmorPenetration]: '',
 	[Stat.StatDefenseRating]: '',
 	[Stat.StatBlockRating]: '',
@@ -79,7 +77,7 @@ export const PAWN_EP_EXPORTER: ExporterDefinition = {
 		});
 
 		return (
-			`( Pawn: v1: "${player.getPlayerSpec().friendlyName} Forever Sim Weights": Class=${player.getPlayerClass().friendlyName},` +
+			`( Pawn: v1: "${player.getPlayerSpec().friendlyName} WoWSims Weights": Class=${player.getPlayerClass().friendlyName},` +
 			Object.keys(namesToWeights)
 				.map(statName => `${statName}=${namesToWeights[statName].toFixed(3)}`)
 				.join(',') +

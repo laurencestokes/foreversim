@@ -11,12 +11,13 @@
 #
 # A path is only checked when it is unambiguous: it must start with a real
 # top-level directory or be a known root file, and contain no glob or
-# placeholder character (* < { … space). A trailing `:<line>` is stripped, so a
+# placeholder character (* < … space). One `{a,b}` group is expanded, so
+# `dir/{a,b}.ts` checks both files. A trailing `:<line>` is stripped, so a
 # `file.ts:123` citation is checked as the file. Generated and build output is
-# skipped because it is absent in a clean checkout by design — that covers
+# skipped because it is absent in a clean checkout by design: that covers
 # ui/generated, dist, tmp, binary_dist, node_modules and every *_auto_gen.ts.
-# Anything this skill deliberately names as *not* existing, or as present only
-# through .git/info/exclude, goes in ABSENT_BY_DESIGN below.
+# Anything this skill deliberately names as *not* existing goes in ABSENT_BY_DESIGN
+# below.
 
 set -eu
 
@@ -24,27 +25,31 @@ here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo=$(CDPATH= cd -- "$here/../../.." && pwd)
 cd "$repo"
 
-# Paths this skill names precisely because they are gone or uncommitted.
-ABSENT_BY_DESIGN="tools/browser-perf/
-tools/state-snapshots
-tools/state-snapshots/
-tools/state-snapshots/golden.json
-tools/state-snapshots/memory_env.ts
-tools/state-snapshots/snapshot.ts
-ui/core
-ui/scss
-ui/index.ts
-ui/sim/proto/action_id/dom.ts
-ui/worker/highs.js"
+# Paths this skill names precisely because they do not exist (space-separated).
+ABSENT_BY_DESIGN=""
 
 fail=0
+
+expand_braces() {
+	case $1 in
+	*'{'*'}'*)
+		pre=${1%%\{*}
+		rest=${1#*\{}
+		body=${rest%%\}*}
+		post=${rest#*\}}
+		echo "$body" | tr ',' '\n' | while read -r alt; do echo "$pre$alt$post"; done
+		;;
+	*) echo "$1" ;;
+	esac
+}
 
 # --- 1. paths -------------------------------------------------------------
 paths=$(cat "$here"/SKILL.md "$here"/references/*.md |
 	grep -o '`[^`]*`' |
 	tr -d '`' |
-	grep -E '^(ui|tools|assets|schemas|proto|sim|cmd|docs)/|^\.github/|^(package\.json|tsconfig\.json|makefile|test-locales\.mjs|vite\.[a-z.-]*mts|vitest\.config\.mts|\.oxlintrc\.json|\.oxfmtrc\.json|STATE_UI_SEPARATION_PLAN\.md)$' |
-	grep -Ev '[*<{ ]|…' |
+	grep -E '^(ui|tools|assets|schemas|proto|sim|cmd|docs)/|^\.github/|^(package\.json|tsconfig\.json|makefile|test-locales\.mjs|vite\.[a-z.-]*mts|vitest\.config\.mts|\.oxlintrc\.json|\.oxfmtrc\.json)$' |
+	grep -Ev '[*< ]|…' |
+	while read -r p; do expand_braces "$p"; done |
 	grep -Ev '^(ui/generated|dist|tmp|binary_dist|node_modules)/|_auto_gen\.ts$' |
 	sed -E 's/:[0-9]+$//' |
 	sort -u)

@@ -1,8 +1,8 @@
 # WoWSims Spelldata hover
 
-Hover a spell id in Go, JSON or TypeScript and read the client's row: what the spell is, a table of
+Hover a spell id in Go, JSON or TypeScript and read the game files' row: what the spell is, a table of
 the header columns, and a table of the effects - each worded where the shape is known and always
-over the client's own literal.
+over the game files' own literal.
 
 The ids it recognises are the ones hand-written code states: `spelldata.MustFind(11574)`,
 `spelldata.Find(116)`, `spellData.Rend.ByID(11574)`, `core.ActionID{SpellID: 11574}`, an APL file's
@@ -16,7 +16,12 @@ wherever the package uses it; a name bound to a value read off a rank, `executeB
 declaration line each accessor answers for itself: `EffectN(1)` the effect and every accessor that reads
 something off it, `Average(core.CharacterLevel)` the value and the doc comment `sim/core/spelldata`
 writes on that accessor. The cursor on `SpellConfig` in a `spelldata.SpellConfig(...)` call shows the
-config the resolver builds from the row and the options, each field with the step that filled it.
+config the resolver builds from the row and the options, each field with the step that filled it; on
+`SpellModConfig` in a `core.SpellModConfig{...}` literal, the fields it can read and the weapon its
+Equip fields require. A hit, crit or rating effect names the weapon rule the parse applies to it. A
+`Ladder.Each` callback parameter, `rank` in `func(_ int32, rank *spelldata.Spell)` and in the function
+the callback passes it to, hovers as the highest rank, and the hover on the parameter links the other
+ranks: a click hovers it as that rank until the server restarts.
 
 ## How it answers
 

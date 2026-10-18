@@ -2,10 +2,10 @@ package database
 
 // Pins what the generator emits for each shape a row can take, from synthetic
 // rows that cover every branch of the templates, and builds the result against
-// sim/core/buffs so that a generated Meta or constructor call that no longer
-// compiles against sim/core/buffs/meta.go is noticed here.
+// sim/core/buffs so that a generated Meta or constructor call that does not
+// compile against sim/core/buffs/meta.go is noticed here.
 //
-// Needs no client database. Set UPDATE_BUFF_FIXTURES=1 to rewrite the fixtures
+// Needs no game files database. Set UPDATE_BUFF_FIXTURES=1 to rewrite the fixtures
 // after a deliberate change.
 
 import (
@@ -46,7 +46,7 @@ func syntheticBuffRows() []ResolvedBuff {
 			},
 			Scope: buffmanifest.ScopeParty, Proto: buffmanifest.ProtoTristate,
 			Go: "SynthManaSpring", Name: "Mana Spring Totem",
-			SpellID: 10494, CastSpellID: 10494, Supported: true,
+			SpellID: 10494, CastSpellID: 10494, Totem: true, Supported: true,
 			Spell:         spell(10494, core.SpellSchoolNature, 0, mana),
 			TalentRanks:   5,
 			TalentSpellID: 16187, TalentPosition: 1,
@@ -74,7 +74,7 @@ func syntheticBuffRows() []ResolvedBuff {
 				Field: "battle_shout", Category: "SynthBattleShout",
 				SingleAura: true, Driver: true,
 			},
-			Scope: buffmanifest.ScopeParty, Proto: buffmanifest.ProtoTristate,
+			Scope: buffmanifest.ScopeRaid, Proto: buffmanifest.ProtoTristate,
 			Go: "SynthBattleShout", Name: "Battle Shout",
 			SpellID: 25289, CastSpellID: 25289, DurationMs: 180000, Supported: true,
 			Spell: spell(25289, core.SpellSchoolPhysical, 180000, aura(dbcenums.A_MOD_ATTACK_POWER, 0, 139)),
@@ -88,7 +88,7 @@ func syntheticBuffRows() []ResolvedBuff {
 			Go: "SynthDevotionAura", Name: "Devotion Aura",
 			SpellID: 10293, CastSpellID: 10293, DurationMs: 600000, Supported: true,
 			Spell: spell(10293, core.SpellSchoolHoly, 600000,
-				aura(dbcenums.A_MOD_RESISTANCE, 1, 735),
+				aura(dbcenums.A_MOD_ARMOR_NO_MODS, 1, 735),
 				aura(dbcenums.A_MOD_HEALING_PCT, 0, 0)),
 			TalentRanks:          2,
 			TalentScalesDuration: true,
@@ -107,7 +107,7 @@ func syntheticBuffRows() []ResolvedBuff {
 			BuffSpec: buffmanifest.BuffSpec{Field: "frost_resistance_totem"},
 			Scope:    buffmanifest.ScopeRaid, Proto: buffmanifest.ProtoBool,
 			Go: "SynthFrostResistanceTotem", Name: "Frost Resistance Totem",
-			SpellID: 10477, CastSpellID: 10477, Supported: true,
+			SpellID: 10477, CastSpellID: 10477, Totem: true, Supported: true,
 			Spell: spell(10477, core.SpellSchoolNature, 0, aura(dbcenums.A_MOD_RESISTANCE, 16, 60)),
 		},
 		{
@@ -151,7 +151,7 @@ func syntheticBuffRows() []ResolvedBuff {
 			},
 			Scope: buffmanifest.ScopeParty, Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindFlag,
 			Go:     "SynthAbsent",
-			Reason: "the client has no row for it",
+			Reason: "the game files have no row for it",
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
@@ -166,7 +166,7 @@ func syntheticBuffRows() []ResolvedBuff {
 			BuffSpec: buffmanifest.BuffSpec{
 				Field: "thorns", Category: "Thorns",
 			},
-			Scope: buffmanifest.ScopeRaid, Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindDamageShield,
+			Scope: buffmanifest.ScopeIndividual, Proto: buffmanifest.ProtoBool, Kind: buffmanifest.KindDamageShield,
 			Go: "SynthThorns", Name: "Thorns",
 			SpellID: 9910, CastSpellID: 9910, DurationMs: 600000, Supported: true,
 			Spell:         spell(9910, core.SpellSchoolNature, 600000, aura(dbcenums.A_DAMAGE_SHIELD, 0, 18)),
@@ -182,7 +182,7 @@ func syntheticBuffRows() []ResolvedBuff {
 			Go: "SynthSunderArmor", Name: "Sunder Armor",
 			SpellID: 11597, CastSpellID: 11597, DurationMs: 30000, Supported: true,
 			Spell: func() *spelldata.Spell {
-				s := spell(11597, core.SpellSchoolPhysical, 30000, aura(dbcenums.A_MOD_RESISTANCE, 1, -450))
+				s := spell(11597, core.SpellSchoolPhysical, 30000, aura(dbcenums.A_MOD_ARMOR_NO_MODS, 1, -450))
 				s.MaxStack = 5
 				return s
 			}(),
@@ -196,7 +196,7 @@ func syntheticBuffRows() []ResolvedBuff {
 			Go: "SynthExposeArmor", Name: "Expose Armor",
 			SpellID: 11198, CastSpellID: 11198, DurationMs: 30000, Supported: true,
 			Spell: spell(11198, core.SpellSchoolPhysical, 30000, spelldata.Effect{Type: dbcenums.E_APPLY_AURA,
-				Aura: dbcenums.A_MOD_RESISTANCE, Misc: 1, PointsPerResource: -450}),
+				Aura: dbcenums.A_MOD_ARMOR_NO_MODS, Misc: 1, PointsPerResource: -450}),
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
@@ -244,6 +244,25 @@ func renderSyntheticBuffFiles(t *testing.T) map[string][]byte {
 	return files
 }
 
+// A cast is a totem when it summons into a totem slot; any other summon, or a slot named by
+// another effect, is not.
+func TestTotemIsASummonIntoATotemSlot(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		effects []storeEffect
+		want    bool
+	}{
+		{"totem slot", []storeEffect{{Type: dbcenums.E_SUMMON, Misc2: totemSlotSummonProperties[0]}}, true},
+		{"other summon", []storeEffect{{Type: dbcenums.E_SUMMON, Misc2: 1}}, false},
+		{"slot on another effect", []storeEffect{{Type: dbcenums.E_APPLY_AURA, Misc2: totemSlotSummonProperties[0]}}, false},
+		{"no effects", nil, false},
+	} {
+		if got := summonsTotem(storeSpell{Effects: tc.effects}); got != tc.want {
+			t.Errorf("%s: a totem %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
 func TestRenderedBuffFilesMatchTheFixtures(t *testing.T) {
 	files := renderSyntheticBuffFiles(t)
 
@@ -262,7 +281,7 @@ func TestRenderedBuffFilesMatchTheFixtures(t *testing.T) {
 		}
 		if string(committed) != string(rendered) {
 			line, want, got := firstDifference(committed, rendered)
-			t.Errorf("%s no longer matches what the generator emits, from line %d:\n  committed: %s\n  rendered:  %s\n"+
+			t.Errorf("%s differs from what the generator emits, from line %d:\n  committed: %s\n  rendered:  %s\n"+
 				"rewrite it with `UPDATE_BUFF_FIXTURES=1 go test ./tools/database/`",
 				fixture, line, want, got)
 		}
@@ -285,6 +304,7 @@ func TestRenderedBuffFilesCompile(t *testing.T) {
 	overlay := map[string]string{}
 	for name, rendered := range renderSyntheticBuffFiles(t) {
 		body := strings.ReplaceAll(string(rendered), "func applyGenerated", "func synthApplyGenerated")
+		body = strings.ReplaceAll(body, "var debuffMetas", "var synthDebuffMetas")
 		path := filepath.Join(dir, filepath.Base(name))
 		if err := os.WriteFile(path, []byte(body), 0644); err != nil {
 			t.Fatal(err)
@@ -296,24 +316,24 @@ func TestRenderedBuffFilesCompile(t *testing.T) {
 	if err := os.WriteFile(drivers, []byte("package buffs\n\n"+
 		"import (\n\t\"github.com/wowsims/forever/sim/core\"\n\t\"github.com/wowsims/forever/sim/core/proto\"\n)\n\n"+
 		"func driveSynthInnervates(char *core.Character, individual *proto.IndividualBuffs) {\n"+
-		"\tcore.NewGeneratedExternalCD(char, SynthInnervatesAura(&char.Unit, false, 0),"+
-		" core.GeneratedExternalCD{NumSources: individual.Innervates,"+
+		"\tnewGeneratedExternalCD(char, NewSpellDataSynthInnervatesAura(&char.Unit, false, 0),"+
+		" generatedExternalCD{NumSources: individual.Innervates,"+
 		" Cooldown: SynthInnervatesCooldown(), Type: core.CooldownTypeMana})\n}\n\n"+
-		"func driveSynthBattleShout(char *core.Character, _ *proto.PartyBuffs) {\n"+
-		"\tcore.ApplyFixedShoutAura(char, SynthBattleShoutAura(&char.Unit, false, 0),"+
+		"func driveSynthBattleShout(char *core.Character, _ *proto.RaidBuffs) {\n"+
+		"\tapplyFixedShoutAura(char, NewSpellDataSynthBattleShoutAura(&char.Unit, false, 0),"+
 		" SynthBattleShoutCategory)\n}\n\n"+
 		"func driveSynthSunderArmor(target *core.Unit, _ *proto.Debuffs, _ *proto.Raid) {\n"+
-		"\tcore.MakePermanent(SynthSunderArmorAura(target, false, 0))\n}\n\n"+
+		"\tcore.MakePermanent(NewSpellDataSynthSunderArmorAura(target, false, 0))\n}\n\n"+
 		"func driveSynthAtieshMage(char *core.Character, party *proto.PartyBuffs) {\n"+
-		"\tcore.MakePermanent(SynthAtieshMageAura(&char.Unit, false, 0,"+
+		"\tcore.MakePermanent(NewSpellDataSynthAtieshMageAura(&char.Unit, false, 0,"+
 		" float64(party.AtieshMage)))\n}\n\n"+
 		"func driveSynthPowerInfusions(char *core.Character, individual *proto.IndividualBuffs) {\n"+
-		"\tcore.NewGeneratedExternalCD(char, SynthPowerInfusionsAura(&char.Unit, false, 0),"+
-		" core.GeneratedExternalCD{NumSources: individual.PowerInfusions,"+
+		"\tnewGeneratedExternalCD(char, NewSpellDataSynthPowerInfusionsAura(&char.Unit, false, 0),"+
+		" generatedExternalCD{NumSources: individual.PowerInfusions,"+
 		" Cooldown: SynthPowerInfusionsCooldown(), Type: core.CooldownTypeDPS})\n}\n\n"+
 		"func driveSynthManaTide(char *core.Character, party *proto.PartyBuffs) {\n"+
-		"\tcore.NewGeneratedExternalCD(char, SynthManaTideAura(&char.Unit, false, 0),"+
-		" core.GeneratedExternalCD{NumSources: party.ManaTideTotems,"+
+		"\tnewGeneratedExternalCD(char, NewSpellDataSynthManaTideAura(&char.Unit, false, 0),"+
+		" generatedExternalCD{NumSources: party.ManaTideTotems,"+
 		" Cooldown: SynthManaTideCooldown(), Type: core.CooldownTypeMana})\n}\n"), 0644); err != nil {
 		t.Fatal(err)
 	}

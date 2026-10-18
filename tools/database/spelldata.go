@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/tools/database/dbc"
@@ -16,7 +15,7 @@ func IsWeaponDamageEffect(effect dbc.SpellEffectType) bool {
 		effect == dbcenums.E_NORMALIZED_WEAPON_DMG
 }
 
-// The client states a flat threat amount on the abilities whose point is threat: Feint and Cower
+// The game files state a flat threat amount on the abilities whose point is threat: Feint and Cower
 // shed it, Distracting Shot adds it. 22 ranked spells across four families carry one.
 func IsThreatEffect(effect dbc.SpellEffectType) bool {
 	return effect == dbcenums.E_THREAT || effect == dbcenums.E_THREAT_ALL
@@ -30,22 +29,8 @@ func RequireSpellCastTimes(helper *DBHelper) error {
 	if helper.tableExists("SpellCastTimes") {
 		return nil
 	}
-	return errors.New("the client database has no SpellCastTimes table, so every generated cast time would " +
+	return errors.New("the game files database has no SpellCastTimes table, so every generated cast time would " +
 		"be zero - add \"SpellCastTimes\" to tools/database/generator-settings.json and re-run `make db`")
-}
-
-// Whether the spell carries the Passive attribute: never cast, only applied.
-func SpellIsPassive(db *sql.DB, spellID int32) (bool, error) {
-	return spellHasAttribute(db, spellID, dbcenums.ATTR_INDEX_BASE, dbcenums.ATTR_PASSIVE)
-}
-
-// Whether the flag is set in SpellMisc.Attributes[attrIndex]; false for a spell with no SpellMisc row.
-func spellHasAttribute(db *sql.DB, spellID int32, attrIndex int, flag uint32) (bool, error) {
-	var set bool
-	err := scanOptional(db, fmt.Sprintf(
-		`SELECT (COALESCE(json_extract(Attributes, '$[%d]'), 0) & %d) != 0 FROM SpellMisc WHERE SpellID = ? AND DifficultyID = 0`,
-		attrIndex, flag), spellID, &set)
-	return set, err
 }
 
 // A spell with no row in one of the optional tables is ordinary - most spells have no cooldown - and

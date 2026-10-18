@@ -5,12 +5,11 @@ import { ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import * as Mechanics from '@sim/constants/mechanics';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
-import { masterEpWeights } from '@sim/proto/master_ep_weights';
+import { WeaponSkillGroup } from '@sim/player/weapon_skill_groups';
 import { StatCap, Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
 import * as ShamanInputs from '../shared/inputs';
-import * as EnhancementInputs from './inputs';
 import * as Presets from './presets';
 
 export default defineSpec<Spec.SpecEnhancementShaman>({
@@ -28,17 +27,16 @@ export default defineSpec<Spec.SpecEnhancementShaman>({
 		Stat.StatAgility,
 		Stat.StatIntellect,
 		Stat.StatAttackPower,
-		Stat.StatMeleeHitRating,
-		Stat.StatMeleeCritRating,
-		Stat.StatMeleeHasteRating,
+		Stat.StatHitRating,
+		Stat.StatCritRating,
+		Stat.StatHasteRating,
 		Stat.StatExpertiseRating,
 		Stat.StatArmorPenetration,
 		Stat.StatSpellDamage,
 		Stat.StatNatureDamage,
-		Stat.StatSpellHitRating,
-		Stat.StatSpellCritRating,
+		Stat.StatSpellPiercing,
 	],
-	epPseudoStats: [PseudoStat.PseudoStatMainHandDps, PseudoStat.PseudoStatOffHandDps],
+	epPseudoStats: [PseudoStat.PseudoStatMainHandDps],
 	// Reference stat against which to calculate EP.
 	epReferenceStat: Stat.StatAttackPower,
 	consumableStats: [Stat.StatMana, Stat.StatMP5],
@@ -55,11 +53,7 @@ export default defineSpec<Spec.SpecEnhancementShaman>({
 			Stat.StatArmorPenetration,
 			Stat.StatSpellDamage,
 			Stat.StatNatureDamage,
-			Stat.StatArcaneResistance,
-			Stat.StatFireResistance,
-			Stat.StatFrostResistance,
-			Stat.StatNatureResistance,
-			Stat.StatShadowResistance,
+			Stat.StatSpellPiercing,
 		],
 		[
 			PseudoStat.PseudoStatMeleeHitPercent,
@@ -71,39 +65,22 @@ export default defineSpec<Spec.SpecEnhancementShaman>({
 			PseudoStat.PseudoStatExpertisePercent,
 		],
 	),
+	displayWeaponSkillGroups: [WeaponSkillGroup.Melee],
 
 	defaults: {
 		// Default equipped gear.
-		gear: Presets.DEFAULT_GEAR.gear,
+		gear: Presets.DefaultGear.gear,
 		// Default EP weights for sorting gear in the gear picker.
-		// Master's weights (percent stats per 1%), in our ratings.
-		epWeights: masterEpWeights({
-			Intellect: 0.02,
-			Agility: 1.12,
-			Strength: 2.29,
-			SpellPower: 1.15,
-			FirePower: 0.63,
-			NaturePower: 0.48,
-			SpellHit: 0.03,
-			SpellCrit: 1.94,
-			MP5: 0.01,
-			AttackPower: 1.0,
-			MeleeHit: 9.62,
-			MeleeCrit: 14.8,
-			FireResistance: 0.5,
-			MainHandDps: 8.15,
-			OffHandDps: 5.81,
-			MeleeSpeedMultiplier: 5.81,
-		}),
+		epWeights: Presets.PreBiSEpWeights.epWeights,
 		statCaps: (() => {
 			const expCap = new Stats().withPseudoStat(PseudoStat.PseudoStatExpertisePercent, 6.5);
 			return expCap;
 		})(),
 		softCapBreakpoints: (() => {
 			const meleeHitSoftCapConfig = StatCap.fromPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, {
-				breakpoints: [9, 20, 28],
+				breakpoints: [8, 20, 27],
 				capType: StatCapType.TypeSoftCap,
-				postCapEPs: [1.9 * Mechanics.PHYSICAL_HIT_RATING_PER_HIT_PERCENT, 1.73 * Mechanics.PHYSICAL_HIT_RATING_PER_HIT_PERCENT, 0],
+				postCapEPs: [1.9 * Mechanics.HIT_RATING_PER_HIT_PERCENT, 1.73 * Mechanics.HIT_RATING_PER_HIT_PERCENT, 0],
 			});
 
 			return [meleeHitSoftCapConfig];
@@ -112,7 +89,7 @@ export default defineSpec<Spec.SpecEnhancementShaman>({
 		// Default consumes settings.
 		consumables: Presets.DefaultConsumables,
 		// Default talents.
-		talents: Presets.TalentsLevel60.data,
+		talents: Presets.StandardTalents.data,
 		// Default spec-specific settings.
 		specOptions: Presets.DefaultOptions,
 		// Default raid/party buffs settings.
@@ -123,19 +100,13 @@ export default defineSpec<Spec.SpecEnhancementShaman>({
 	},
 
 	// IconInputs to include in the 'Player' section on the settings tab.
-	playerIconInputs: [ShamanInputs.ShamanImbueMH(), EnhancementInputs.ShamanImbueOH, ShamanInputs.ShamanImbueMHSwap(), EnhancementInputs.ShamanImbueOHSwap],
+	playerIconInputs: [ShamanInputs.ShamanImbueMH(), ShamanInputs.ShamanImbueMHSwap()],
 	// Buff and Debuff inputs to include/exclude, overriding the EP-based defaults.
 	includeBuffDebuffInputs: [Stat.StatMP5, Stat.StatFireDamage],
 	excludeBuffDebuffInputs: [],
 	// Inputs to include in the 'Other' section on the settings tab.
 	otherInputs: {
-		inputs: [
-			EnhancementInputs.SyncTypeInput,
-			ShamanInputs.ShamanShieldProcrate(),
-			OtherInputs.InputDelay,
-			OtherInputs.TankAssignment,
-			OtherInputs.InFrontOfTarget,
-		],
+		inputs: [ShamanInputs.ShamanShieldProcrate(), OtherInputs.InputDelay, OtherInputs.TankAssignment, OtherInputs.InFrontOfTarget],
 	},
 	itemSwapSlots: [ItemSlot.ItemSlotTrinket1, ItemSlot.ItemSlotTrinket2, ItemSlot.ItemSlotMainHand, ItemSlot.ItemSlotOffHand],
 	encounterPicker: {
@@ -144,13 +115,15 @@ export default defineSpec<Spec.SpecEnhancementShaman>({
 	},
 
 	presets: {
-		epWeights: [],
+		epWeights: [Presets.PreBiSEpWeights],
 		// Preset talents that the user can quickly select.
-		talents: Presets.TalentPresets,
+		talents: [Presets.StandardTalents],
 		// Preset rotations that the user can quickly select.
 		rotations: [Presets.ROTATION_PRESET_DEFAULT],
 		// Preset gear configurations that the user can quickly select.
-		gear: Presets.GEAR_PRESETS,
+		gear: [Presets.DefaultGear],
+		// Preset builds that the user can quickly select.
+		builds: [Presets.TestingBuild],
 	},
 
 	autoRotation: (_: Player<Spec.SpecEnhancementShaman>): APLRotation => {

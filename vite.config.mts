@@ -17,13 +17,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const BASE_PATH = path.resolve(__dirname, 'ui');
-// Every ui/<page>/index.html besides the landing page and the spec pages.
-export const PRODUCT_PAGES = ['arena', 'bis', 'changelog', 'dps_rankings', 'evidence', 'race_arena', 'scrub', 'stat_weights'];
 export const OUT_DIR = path.join(__dirname, 'dist', 'forever');
 
 // The ui/ path aliases. Mirrored by `compilerOptions.paths` in tsconfig.json and by the
-// layering rules in .oxlintrc.json; shared with vite.harness.mts from here so the two vite
-// configs cannot drift.
+// layering rules in .oxlintrc.json; shared with vitest.config.mts from here so the site build and
+// the unit tests cannot drift.
 export const UI_ALIASES: Record<string, string> = {
 	'@sim': path.resolve(BASE_PATH, 'sim'),
 	'@generated': path.resolve(BASE_PATH, 'generated'),
@@ -33,6 +31,7 @@ export const UI_ALIASES: Record<string, string> = {
 	'@app': path.resolve(BASE_PATH, 'app'),
 	'@specs': path.resolve(BASE_PATH, 'specs'),
 	'@i18n': path.resolve(BASE_PATH, 'i18n'),
+	'@testing': path.resolve(BASE_PATH, 'testing'),
 };
 
 function serveExternalAssets() {
@@ -116,7 +115,6 @@ function determineContentType(filePath: string) {
 
 export const getBaseConfig = ({ command, mode }: ConfigEnv) =>
 	({
-		// A fork's Pages site serves it elsewhere (deploy.yml sets SITE_BASE, then tools/site_base.sh fixes the hard-coded paths).
 		base: process.env.SITE_BASE || '/forever/',
 		root: BASE_PATH,
 		resolve: {
@@ -137,6 +135,9 @@ export default defineConfig(({ command, mode }) => {
 		path.resolve(__dirname, 'sim/core/bulk/candidates.go'),
 		path.resolve(__dirname, 'tools/database/gen_character_constants_ts.go'),
 		path.resolve(__dirname, 'tools/database/gen_bulksim_constants.ts.go'),
+		path.resolve(__dirname, 'sim/core/consumes_imbues.go'),
+		path.resolve(__dirname, 'sim/core/bulk/statistics.go'),
+		path.resolve(__dirname, 'tools/database/gen_sim_tables_ts.go'),
 	];
 
 	return {
@@ -167,6 +168,12 @@ export default defineConfig(({ command, mode }) => {
 				enableBuild: false,
 			}),
 		],
+		// GitHub Actions sets GITHUB_REPOSITORY in every job, so the issue links point at whichever
+		// repository built this page. A fork's build files its issues on the fork.
+		define: {
+			'import.meta.env.VITE_SITE_BASE': JSON.stringify(process.env.SITE_BASE || '/forever/'),
+			'import.meta.env.VITE_GITHUB_REPOSITORY': JSON.stringify(process.env.GITHUB_REPOSITORY ?? ''),
+		},
 		oxc: {
 			jsx: {
 				runtime: 'automatic',
@@ -179,8 +186,7 @@ export default defineConfig(({ command, mode }) => {
 				// The per-spec pages are added by the specPages plugin.
 				input: {
 					'ui/index.html': path.resolve(BASE_PATH, 'index.html'),
-					// Forever's product pages, each a React tree mounted by app/<page>_entry.tsx.
-					...Object.fromEntries(PRODUCT_PAGES.map(page => [`ui/${page}/index.html`, path.resolve(BASE_PATH, page, 'index.html')])),
+					race_arena: path.resolve(BASE_PATH, 'race_arena/index.html'),
 					// The single spec page. `specPages` copies the processed result to
 					// `<class>/<spec>/index.html` and drops this path from the bundle; the key only
 					// names the page's js/css ([name] in the *FileNames below), not its html output.

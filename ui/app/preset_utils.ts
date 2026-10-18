@@ -64,9 +64,10 @@ const makePresetGearHelper = (name: string, gear: EquipmentSpec, options: Preset
 		gear,
 		enableWhen: !!conditions.length ? (player: Player<any>) => conditions.every(cond => cond(player)) : undefined,
 		onLoad: options?.onLoad,
-		// TBC-only: the gear tab groups its preset chips by phase and named group.
+		// The gear tab groups its preset chips by phase and named group.
 		phase: options.phase,
 		group: options.group,
+		devOnly: options.devOnly,
 	};
 };
 
@@ -101,8 +102,8 @@ const makePresetEpWeightHelper = (name: string, epWeights: Stats, options?: Pres
 	};
 };
 
-// JSON shape for presets/ep/*.ep.json. Enum keys are stored as names (e.g. "StatCritRating") so
-// they stay stable across proto regenerations, rather than as the numeric enum values.
+// JSON shape for an EP preset read from a file. Enum keys are stored as names (e.g. "StatCritRating") so
+// they stay stable across proto regenerations. No spec reads one: spec EP weights are TS literals in presets.ts.
 export type PresetEpWeightsJson = {
 	name: string;
 	stats?: Partial<Record<keyof typeof Stat, number>>;

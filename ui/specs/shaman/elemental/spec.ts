@@ -3,8 +3,7 @@ import { APLRotation } from '@generated/proto/apl';
 import { ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
-import { masterEpWeights } from '@sim/proto/master_ep_weights';
-import { DEFAULT_HYBRID_CASTER_GEM_STATS, Stats, UnitStat } from '@sim/proto/stats';
+import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
 import * as ShamanInputs from '../shared/inputs';
@@ -22,14 +21,17 @@ export default defineSpec<Spec.SpecElementalShaman>({
 	// All stats for which EP should be calculated.
 	epStats: [
 		Stat.StatIntellect,
+		Stat.StatSpirit,
 		Stat.StatSpellDamage,
+		Stat.StatFireDamage,
 		Stat.StatNatureDamage,
-		Stat.StatSpellHitRating,
-		Stat.StatSpellCritRating,
-		Stat.StatSpellHasteRating,
+		Stat.StatSpellPiercing,
+		Stat.StatHitRating,
+		Stat.StatCritRating,
+		Stat.StatHasteRating,
 		Stat.StatMP5,
 	],
-	epPseudoStats: [PseudoStat.PseudoStatSchoolHitPercentNature],
+	epPseudoStats: [],
 	// Reference stat against which to calculate EP.
 	epReferenceStat: Stat.StatSpellDamage,
 	// Which stats to display in the Character Stats section, at the bottom of the left-hand sidebar.
@@ -41,46 +43,23 @@ export default defineSpec<Spec.SpecElementalShaman>({
 			Stat.StatIntellect,
 			Stat.StatSpellDamage,
 			Stat.StatNatureDamage,
+			Stat.StatSpellPiercing,
 			Stat.StatMP5,
-			Stat.StatArcaneResistance,
-			Stat.StatFireResistance,
-			Stat.StatFrostResistance,
-			Stat.StatNatureResistance,
-			Stat.StatShadowResistance,
 		],
-		[
-			PseudoStat.PseudoStatSpellCritPercent,
-			PseudoStat.PseudoStatSpellHastePercent,
-			PseudoStat.PseudoStatSpellHitPercent,
-			PseudoStat.PseudoStatSchoolHitPercentNature,
-		],
+		[PseudoStat.PseudoStatSpellCritPercent, PseudoStat.PseudoStatSpellHastePercent, PseudoStat.PseudoStatSpellHitPercent],
 	),
-	gemStats: DEFAULT_HYBRID_CASTER_GEM_STATS,
 	defaults: {
 		// Default equipped gear.
-		gear: Presets.DEFAULT_GEAR.gear,
+		gear: Presets.DefaultGear.gear,
 		// Default EP weights for sorting gear in the gear picker.
-		// Master's weights (percent stats per 1%), in our ratings.
-		epWeights: masterEpWeights({
-			Intellect: 0.14,
-			SpellPower: 1,
-			FirePower: 0.1,
-			NaturePower: 1.0,
-			SpellHit: 12.37,
-			SpellCrit: 7.57,
-			SpellHaste: 1.49,
-			MP5: 0.02,
-			Strength: 0.01,
-			AttackPower: 0.01,
-			FireResistance: 0.01,
-		}),
+		epWeights: Presets.DefaultEpWeights.epWeights,
 		statCaps: (() => {
-			return new Stats().withPseudoStat(PseudoStat.PseudoStatSchoolHitPercentNature, 16);
+			return new Stats().withPseudoStat(PseudoStat.PseudoStatSchoolHitPercentNature, 17);
 		})(),
 		// Default consumes settings.
 		consumables: Presets.DefaultConsumables,
 		// Default talents.
-		talents: Presets.TalentsLevel60.data,
+		talents: Presets.StandardTalents.data,
 		// Default spec-specific settings.
 		specOptions: Presets.DefaultOptions,
 		other: Presets.OtherDefaults,
@@ -93,7 +72,7 @@ export default defineSpec<Spec.SpecElementalShaman>({
 	// IconInputs to include in the 'Player' section on the settings tab.
 	playerIconInputs: [],
 	// Buff and Debuff inputs to include/exclude, overriding the EP-based defaults.
-	includeBuffDebuffInputs: [Stat.StatAttackPower, Stat.StatFireDamage],
+	includeBuffDebuffInputs: [Stat.StatFireDamage],
 	excludeBuffDebuffInputs: [],
 	// Inputs to include in the 'Other' section on the settings tab.
 	otherInputs: {
@@ -106,13 +85,15 @@ export default defineSpec<Spec.SpecElementalShaman>({
 	},
 
 	presets: {
-		epWeights: [],
+		epWeights: [Presets.DefaultEpWeights],
 		// Preset talents that the user can quickly select.
-		talents: Presets.TalentPresets,
+		talents: [Presets.StandardTalents],
 		// Preset rotations that the user can quickly select.
 		rotations: [Presets.ROTATION_PRESET_DEFAULT],
 		// Preset gear configurations that the user can quickly select.
-		gear: Presets.GEAR_PRESETS,
+		gear: [Presets.DefaultGear],
+		// Preset builds that the user can quickly select.
+		builds: [Presets.TestingBuild],
 	},
 
 	autoRotation: (_player: Player<Spec.SpecElementalShaman>): APLRotation => {

@@ -1,19 +1,19 @@
 import {
-	APLActionGuardianHotwDpsRotation_Strategy as HotwStrategy,
 	APLActionItemSwap_SwapSet as ItemSwapSet,
 	APLValue,
 	APLValueAutoAttackType,
 	APLValueAutoSwingTime_SwingType as AutoSwingType,
 	APLValueCompare_ComparisonOperator as ComparisonOperator,
-	APLValueEclipsePhase,
 	APLValueIsExecutePhase_ExecutePhaseThreshold as ExecutePhaseThreshold,
 	APLValueMath_MathOperator as MathOperator,
 } from '@generated/proto/apl';
-import { ActionID, Stat } from '@generated/proto/common';
+import { ActionID, AreaType, MobType, RangedWeaponType, Stat } from '@generated/proto/common';
 import { ShamanTotems_TotemType as TotemType } from '@generated/proto/shaman';
-import { WarlockOptions_CurseOptions as CurseOptions } from '@generated/proto/warlock';
+import { WarlockOptions_CurseOptions as CurseOptions, WarlockOptions_Summon as Summon } from '@generated/proto/warlock';
 import i18n from '@i18n/config';
-import { translateStat } from '@i18n/localization';
+import { translateAreaType, translateMobType, translateStat } from '@i18n/localization';
+import { getClassRangedWeaponTypes } from '@sim/player/classes/capabilities';
+import type { Player } from '@sim/player/player';
 import { getEnumValues } from '@sim/utils/collections';
 import { randomUUID } from '@sim/utils/misc';
 
@@ -43,6 +43,7 @@ interface FieldBase {
 	field: string;
 	label?: string;
 	labelTooltip?: string;
+	wide?: boolean;
 	/** What to write into the field when it is unset. */
 	newValue: () => any;
 }
@@ -50,7 +51,7 @@ interface FieldBase {
 /**
  * A field descriptor resolved to the picker shape the view has to build.
  *
- * Twenty-seven descriptor types collapse to thirteen kinds: the nine fixed-enum types are one
+ * The descriptor types collapse to thirteen kinds: the fixed-enum types are one
  * `enum`, the three alias descriptors (`minIcd`, `reactionTime`, `useDotBaseValue`) are a `number`
  * and two `boolean`s, and `variableName`/`groupName` are one `rotationName` over two sources.
  */
@@ -71,31 +72,24 @@ export type AplFieldSpec =
 
 const none = () => i18n.t('common.none');
 
-const ECLIPSE_TYPES: EnumTable = {
-	defaultLabel: i18n.t('rotation_tab.apl.helpers.eclipse_types.lunar'),
-	options: [
-		{ value: APLValueEclipsePhase.LunarPhase, label: i18n.t('rotation_tab.apl.helpers.eclipse_types.lunar') },
-		{ value: APLValueEclipsePhase.SolarPhase, label: i18n.t('rotation_tab.apl.helpers.eclipse_types.solar') },
-		{ value: APLValueEclipsePhase.NeutralPhase, label: i18n.t('rotation_tab.apl.helpers.eclipse_types.neutral') },
-	],
-};
-
-const HOTW_STRATEGIES: EnumTable = {
-	defaultLabel: i18n.t('rotation_tab.apl.helpers.hotw_strategies.caster'),
-	options: [
-		{ value: HotwStrategy.Caster, label: i18n.t('rotation_tab.apl.helpers.hotw_strategies.caster') },
-		{ value: HotwStrategy.Cat, label: i18n.t('rotation_tab.apl.helpers.hotw_strategies.cat') },
-		{ value: HotwStrategy.Hybrid, label: i18n.t('rotation_tab.apl.helpers.hotw_strategies.hybrid') },
-	],
-};
-
 const CURSE_TYPES: EnumTable = {
 	defaultLabel: none(),
 	options: [
-		{ value: CurseOptions.Agony, label: i18n.t('rotation_tab.apl.curse_types.agony') },
-		{ value: CurseOptions.Doom, label: i18n.t('rotation_tab.apl.curse_types.doom') },
 		{ value: CurseOptions.Elements, label: i18n.t('rotation_tab.apl.curse_types.elements') },
 		{ value: CurseOptions.Recklessness, label: i18n.t('rotation_tab.apl.curse_types.recklessness') },
+		{ value: CurseOptions.Weakness, label: i18n.t('rotation_tab.apl.curse_types.weakness') },
+		{ value: CurseOptions.NoCurse, label: i18n.t('rotation_tab.apl.curse_types.no_curse') },
+	],
+};
+
+const SUMMON_TYPES: EnumTable = {
+	defaultLabel: none(),
+	options: [
+		{ value: Summon.Imp, label: i18n.t('rotation_tab.apl.summon_types.imp') },
+		{ value: Summon.Voidwalker, label: i18n.t('rotation_tab.apl.summon_types.voidwalker') },
+		{ value: Summon.Succubus, label: i18n.t('rotation_tab.apl.summon_types.succubus') },
+		{ value: Summon.Felhunter, label: i18n.t('rotation_tab.apl.summon_types.felhunter') },
+		{ value: Summon.NoSummon, label: i18n.t('rotation_tab.apl.summon_types.no_summon') },
 	],
 };
 
@@ -110,6 +104,11 @@ const AUTO_TYPES: EnumTable = {
 	],
 };
 
+const AUTO_TYPES_WAND: EnumTable = {
+	defaultLabel: none(),
+	options: [{ value: APLValueAutoAttackType.WandAuto, label: i18n.t('rotation_tab.apl.values.wand') }],
+};
+
 const AUTO_SWING_TYPES: EnumTable = {
 	defaultLabel: none(),
 	options: [
@@ -118,6 +117,14 @@ const AUTO_SWING_TYPES: EnumTable = {
 		{ value: AutoSwingType.Ranged, label: i18n.t('slots.ranged', { ns: 'character' }) },
 	],
 };
+
+const AUTO_SWING_TYPES_WAND: EnumTable = {
+	defaultLabel: none(),
+	options: [{ value: AutoSwingType.Wand, label: i18n.t('rotation_tab.apl.values.wand') }],
+};
+
+// The classes that shoot a wand, whose auto values offer the wand alone.
+const isWandClass = (player: Player<any>) => getClassRangedWeaponTypes(player.getClass()).includes(RangedWeaponType.RangedWeaponTypeWand);
 
 const STAT_TYPES: EnumTable = {
 	defaultLabel: none(),
@@ -175,6 +182,18 @@ const TOTEM_TYPES: EnumTable = {
 	],
 };
 
+const MOB_TYPES: EnumTable = {
+	defaultLabel: none(),
+	options: (getEnumValues(MobType) as Array<MobType>).map(mobType => ({ value: mobType, label: translateMobType(mobType) })),
+};
+
+const AREA_TYPES: EnumTable = {
+	defaultLabel: none(),
+	options: (getEnumValues(AreaType) as Array<AreaType>)
+		.filter(areaType => areaType !== AreaType.AreaTypeUnknown)
+		.map(areaType => ({ value: areaType, label: translateAreaType(areaType) })),
+};
+
 const newAplValue = () => APLValue.create({ uuid: { value: randomUUID() } });
 
 /**
@@ -184,9 +203,9 @@ const newAplValue = () => APLValue.create({ uuid: { value: randomUUID() } });
  * built against it: **`booleanFieldConfig`'s `label` argument wins over `options.label`**, because
  * it is assigned after the options object is spread. No caller passes both, but that is the rule.
  */
-export const resolveField = (descriptor: APLFieldDescriptor): AplFieldSpec => {
+export const resolveField = (descriptor: APLFieldDescriptor, player: Player<any>): AplFieldSpec => {
 	const options = 'options' in descriptor ? descriptor.options : undefined;
-	const base = { label: options?.label, labelTooltip: options?.labelTooltip };
+	const base = { label: options?.label, labelTooltip: options?.labelTooltip, ...(options?.wide ? { wide: true } : {}) };
 	const asEnum = (field: string, table: EnumTable, newValue: () => number, label?: string, labelTooltip?: string): AplFieldSpec => ({
 		kind: 'enum',
 		field,
@@ -223,16 +242,20 @@ export const resolveField = (descriptor: APLFieldDescriptor): AplFieldSpec => {
 			return { ...base, kind: 'placeholderName', field: descriptor.field, newValue: () => '' };
 		case 'groupReferenceVariables':
 			return { ...base, kind: 'groupVariables', field: descriptor.field, newValue: () => [], groupNameField: descriptor.groupNameField };
-		case 'eclipseType':
-			return asEnum(descriptor.field, ECLIPSE_TYPES, () => APLValueEclipsePhase.LunarPhase);
-		case 'hotwStrategy':
-			return asEnum(descriptor.field, HOTW_STRATEGIES, () => HotwStrategy.Caster, i18n.t('rotation_tab.apl.helpers.field_configs.strategy'));
 		case 'curseType':
-			return asEnum(descriptor.field, CURSE_TYPES, () => CurseOptions.Agony);
+			return asEnum(descriptor.field, CURSE_TYPES, () => CurseOptions.Elements);
+		case 'summonType':
+			// NoSummon is 0, which fieldInputConfig reads as unset and replaces with this default, so the
+			// default has to be NoSummon for it to stay selectable.
+			return asEnum(descriptor.field, SUMMON_TYPES, () => Summon.NoSummon);
 		case 'autoType':
-			return asEnum(descriptor.field, AUTO_TYPES, () => APLValueAutoAttackType.AnyAuto);
+			return isWandClass(player)
+				? asEnum(descriptor.field, AUTO_TYPES_WAND, () => APLValueAutoAttackType.WandAuto)
+				: asEnum(descriptor.field, AUTO_TYPES, () => APLValueAutoAttackType.AnyAuto);
 		case 'autoSwingType':
-			return asEnum(descriptor.field, AUTO_SWING_TYPES, () => AutoSwingType.MainHand);
+			return isWandClass(player)
+				? asEnum(descriptor.field, AUTO_SWING_TYPES_WAND, () => AutoSwingType.Wand)
+				: asEnum(descriptor.field, AUTO_SWING_TYPES, () => AutoSwingType.MainHand);
 		case 'statType':
 			return asEnum(descriptor.field, STAT_TYPES, () => 0, i18n.t('rotation_tab.apl.helpers.field_configs.buff_type'));
 		case 'itemSwapSet':
@@ -245,6 +268,10 @@ export const resolveField = (descriptor: APLFieldDescriptor): AplFieldSpec => {
 			return asEnum(descriptor.field, EXECUTE_PHASE_THRESHOLDS, () => ExecutePhaseThreshold.E20);
 		case 'totemType':
 			return asEnum(descriptor.field, TOTEM_TYPES, () => TotemType.Water);
+		case 'mobType':
+			return asEnum(descriptor.field, MOB_TYPES, () => MobType.MobTypeUnknown);
+		case 'areaType':
+			return asEnum(descriptor.field, AREA_TYPES, () => AreaType.AreaTypeForestGrassland);
 		case 'minIcd':
 			return {
 				kind: 'number',
@@ -285,13 +312,15 @@ export const resolveField = (descriptor: APLFieldDescriptor): AplFieldSpec => {
 };
 
 /**
- * A fresh impl for a newly picked kind, with its action-id fields set: the sim is asked for stats
- * before the pickers render and fill their defaults.
+ * A fresh impl for a newly picked kind, with its action-id and enum fields set to the default their
+ * picker writes on render: the sim is asked for stats before the pickers render, and it rejects an
+ * unset action id or enum.
  */
-export const newKindImpl = (kind: { newValue: () => unknown; fields: Array<APLFieldDescriptor> }) => (): unknown => {
+export const newKindImpl = (kind: { newValue: () => unknown; fields: Array<APLFieldDescriptor> }, player: Player<any>) => (): unknown => {
 	const impl = kind.newValue() as Record<string, unknown>;
 	for (const descriptor of kind.fields) {
-		if (descriptor.type === 'actionId' && !impl[descriptor.field]) impl[descriptor.field] = ActionID.create();
+		const spec = resolveField(descriptor, player);
+		if ((spec.kind === 'actionId' || spec.kind === 'enum') && !impl[spec.field]) impl[spec.field] = spec.newValue();
 	}
 	return impl;
 };

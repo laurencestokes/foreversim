@@ -3,71 +3,41 @@ package druid
 import (
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 var hurricaneRank = spellData.Hurricane.Highest()
 
+// The damage each second is its own row, which the channel casts on every tick.
+var hurricaneTickRank = spellData.HurricaneTriggered.Highest()
+var hurricaneTickDamage = hurricaneTickRank.DamageEffect()
+
 func (druid *Druid) registerHurricaneSpell() {
-	// The tick length is on Hurricane's own periodic dummy; the damage is the spell HurricaneTriggered
-	// casts each tick.
+	tickConfig := spelldata.SpellConfig(&druid.Unit, hurricaneTickRank,
+		spelldata.Magic(core.ProcMaskSpellDamage), spelldata.Proc())
+	tickConfig.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealAoeDamage(sim, hurricaneTickDamage.Average(), spell.OutcomeMagicHit)
+	}
+	tickSpell := druid.RegisterSpell(tickConfig)
+
+	// The channel ticks on an A_PERIODIC_DUMMY, which DotConfig does not read, so the dot is by hand.
 	tickLength := hurricaneRank.Effect(dbcenums.A_PERIODIC_DUMMY, 0).Period()
-	hurricaneTickSpell := spellData.HurricaneTriggered.Highest()
-	hurricaneTick := hurricaneTickSpell.DamageEffect()
 
-	druid.Hurricane = druid.RegisterSpell(Humanoid|Moonkin, core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: hurricaneRank.ID},
-		SpellSchool:    hurricaneRank.SpellSchool(),
-		DefenseType:    hurricaneRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagChanneled | core.SpellFlagAPL,
-		ClassSpellMask: DruidSpellHurricane,
-		MaxRange:       float64(hurricaneRank.MaxRange),
-		Rank:           hurricaneRank.RankNumber(),
-
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(hurricaneRank.Cost()),
+	config := spelldata.SpellConfig(&druid.Unit, hurricaneRank, spelldata.Magic(core.ProcMaskSpellDamage))
+	config.Dot = core.DotConfig{
+		IsAOE:               true,
+		Aura:                spelldata.AuraConfig(hurricaneRank),
+		NumberOfTicks:       int32(hurricaneRank.Duration() / tickLength),
+		TickLength:          tickLength,
+		AffectedByCastSpeed: true,
+		OnTick: func(sim *core.Simulation, target *core.Unit, _ *core.Dot) {
+			tickSpell.Cast(sim, target)
 		},
-		// Forever states no cooldown on Hurricane (the client rows carry none), so the spell is
-		// registered without one rather than with an invented duration.
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: hurricaneRank.GCD(),
-			},
-		},
-		Dot: core.DotConfig{
-			IsAOE: true,
-			Aura: core.Aura{
-				Label: "Hurricane (Aura)",
-			},
-			NumberOfTicks:       int32(hurricaneRank.Duration() / tickLength),
-			TickLength:          tickLength,
-			AffectedByCastSpeed: true,
-			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				druid.Hurricane.RelatedDotSpell.Cast(sim, target)
-			},
-		},
+	}
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		spell.AOEDot().Apply(sim)
+	}
 
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			spell.AOEDot().Apply(sim)
-		},
-	})
-
-	druid.Hurricane.RelatedDotSpell = druid.Unit.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: hurricaneTickSpell.ID},
-		SpellSchool:    hurricaneRank.SpellSchool(),
-		DefenseType:    hurricaneRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		ClassSpellMask: DruidSpellHurricane,
-		// The tick is its own client row that the channel triggers, a proc rather than a cast. It has
-		// no "can't crit" flag and the same attributes as Blizzard's tick, which crits in beta logs.
-		Flags: core.SpellFlagProc,
-
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-		BonusCoefficient: hurricaneTick.Coeff(),
-
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealAoeDamage(sim, hurricaneTick.Average(core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-		},
-	})
+	druid.Hurricane = druid.RegisterSpell(config)
+	druid.Hurricane.RelatedDotSpell = tickSpell.Spell
 }

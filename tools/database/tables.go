@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"maps"
 	"os"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/tools/database/dbc"
 	"github.com/wowsims/forever/tools/tooltip"
@@ -26,12 +28,9 @@ import (
 func ScanRawItemData(rows *sql.Rows) (dbc.Item, error) {
 	var raw dbc.Item
 	var randomSuffixOptions sql.NullString
-	var statPercentageOfSocket string
 	var bonusAmountCalculated string
 	var bonusStatString string
 	var statValue string
-	var socketTypes string
-	var statPercentEditor string
 	var maxCount int
 	err := rows.Scan(
 		&raw.Id,
@@ -43,26 +42,24 @@ func ScanRawItemData(rows *sql.Rows) (dbc.Item, error) {
 		&raw.ItemLevel,
 		&statValue,
 		&bonusStatString,
-		&statPercentEditor,
 		&raw.ArmorValue,
 		&raw.FireResistance,
 		&raw.NatureResistance,
 		&raw.FrostResistance,
 		&raw.ShadowResistance,
 		&raw.ArcaneResistance,
-		&socketTypes,
-		&raw.SocketEnchantmentId,
 		&raw.Flags0,
 		&raw.Flags1,
 		&raw.Flags2,
+		&raw.Flags4,
 		&raw.FDID,
 		&raw.ItemSetName,
 		&raw.ItemSetId,
 		&raw.ClassMask,
 		&raw.RaceMask,
 		&raw.QualityModifier,
+		&raw.DamageType,
 		&randomSuffixOptions,
-		&statPercentageOfSocket,
 		&bonusAmountCalculated,
 		&raw.ItemClass,
 		&raw.ItemSubClass,
@@ -79,11 +76,8 @@ func ScanRawItemData(rows *sql.Rows) (dbc.Item, error) {
 	if parseErr != nil {
 		return raw, fmt.Errorf("failed to parse RandomSuffixOptions: %w", parseErr)
 	}
+	slices.Sort(raw.RandomSuffixOptions)
 
-	raw.StatPercentageOfSocket, err = parseFloatArrayField(statPercentageOfSocket, 10)
-	if err != nil {
-		return raw, fmt.Errorf("failed to parse StatPercentageOfSocket: %w %s", err, statPercentageOfSocket)
-	}
 	raw.StatAlloc, err = parseFloatArrayField(statValue, 10)
 	if err != nil {
 		return raw, fmt.Errorf("failed to parse StatAlloc: %w", err)
@@ -95,14 +89,6 @@ func ScanRawItemData(rows *sql.Rows) (dbc.Item, error) {
 	raw.BonusStat, err = parseIntArrayField(bonusStatString, 10)
 	if err != nil {
 		return raw, fmt.Errorf("failed to parse BonusStat: %w", err)
-	}
-	raw.Sockets, err = parseIntArrayField(socketTypes, 3)
-	if err != nil {
-		return raw, fmt.Errorf("failed to parse Sockets: %w", err)
-	}
-	raw.SocketModifier, err = parseFloatArrayField(statPercentEditor, 10)
-	if err != nil {
-		return raw, fmt.Errorf("failed to parse SocketModifier: %w", err)
 	}
 	// MaxCount identifies that an item is unique
 	// this is not the same as unique-equipped but
@@ -133,31 +119,24 @@ func LoadAndWriteRawItems(dbHelper *DBHelper, filter string, inputsDir string) (
 			s.ItemLevel,
 			s.StatPercentEditor as StatValue,
 			s.StatModifier_bonusStat as bonusStat,
-			'[0,0,0,0,0,0,0,0,0,0]' as StatPercentEditor, -- socket penalty array: dropped by the client
-			0 as ArmorValue, -- Item.Resistances_*: dropped by the client; armor and the
-			0 as FireResistance, -- five resistances arrive as stat-array entries instead
+			0 as ArmorValue, -- Item.Resistances_* is absent from the game files: GetArmorValue computes
+			0 as FireResistance, -- armor from the item level tables, and resistances arrive as stat-array entries
 			0 as NatureResistance,
 			0 as FrostResistance,
 			0 as ShadowResistance,
 			0 as ArcaneResistance,
-			s.SocketType as SocketTypes,
-			s.Socket_match_enchantment_ID as SocketEnchantmentId,
 			s.Flags_0 as Flags_0,
 			s.Flags_1 as Flags_1,
 			s.Flags_2 as Flags_2,
+			s.Flags_4 as Flags_4,
 			i.IconFileDataId as FDID,
 			COALESCE(itemset.Name_lang, '') as ItemSetName,
 			COALESCE(itemset.ID, 0) as ItemSetID,
 			s.AllowableClass as ClassMask,
 			s.AllowableRace_0 as RaceMask,
 			s.QualityModifier,
-			-- ItemRandomSuffixGroupID was dropped by the client, so this used to select
-			-- group_concat(-ench) from item_enchantment_template WHERE entry = 0. No row in
-			-- that table has entry 0 -- the lowest is 61 -- so the subquery matched nothing
-			-- and every item came back with a NULL here. ParseRandomSuffixOptions already
-			-- takes a NullString, so this is the same value without the dead 464KB table.
-			NULL AS RandomSuffixOptions,
-			 s.StatPercentageOfSocket,
+			s.DamageType,
+			(SELECT group_concat(DISTINCT n.ChildItemBonusListID) ` + randomSuffixNodes + ` AND x.ItemID = i.ID) AS RandomSuffixOptions,
 			 '[0,0,0,0,0,0,0,0,0,0]', -- StatModifier_bonusAmount: dropped; derived from StatAlloc
 			 i.ClassID,
 			 i.SubClassID,
@@ -196,6 +175,9 @@ func LoadAndWriteRawItems(dbHelper *DBHelper, filter string, inputsDir string) (
 		fmt.Println("Error loading items:", err.Error())
 		return nil, err
 	}
+	if err := applyCreatorClassMasks(dbHelper, items, func(item *dbc.Item) (int, *int) { return item.Id, &item.ClassMask }); err != nil {
+		return nil, err
+	}
 	json, _ := json.Marshal(items)
 	if err := dbc.WriteGzipFile(fmt.Sprintf("%s/dbc/items.json", inputsDir), json); err != nil {
 		panic(fmt.Sprintf("Error loading DBC data %v", err))
@@ -204,47 +186,48 @@ func LoadAndWriteRawItems(dbHelper *DBHelper, filter string, inputsDir string) (
 	return items, nil
 }
 
-//ItemStatEffects
-// Used for straight up item stat effects from SpellItemEnchantment (socket bonuses for now, single stat)
-//
-
-func ScanItemStatEffects(rows *sql.Rows) (dbc.ItemStatEffect, error) {
-	var raw dbc.ItemStatEffect
-	var ePointsMin, epointsMax, eArgs string
-	err := rows.Scan(&raw.ID, &raw.EffectIsAura, &ePointsMin, &epointsMax, &eArgs)
+// The class mask of each soulbound item the game files leave open to every class while only class
+// spells create it, such as the warlock's Firestone and the mage's mana gems: the creating spells'
+// SkillLineAbility class bits, ORed. A soulbound item never leaves the character who made it. A
+// tradable one (Healthstone, Conjured Water, Blinding Powder) stays open to every class.
+func LoadCreatorClassMasks(dbHelper *DBHelper) (map[int]int, error) {
+	type creator struct{ itemID, classMask int }
+	creators, err := LoadRows(dbHelper.db, fmt.Sprintf(`
+		SELECT DISTINCT e.EffectItemType, sla.ClassMask
+		FROM SpellEffect e
+		JOIN SkillLineAbility sla ON sla.Spell = e.SpellID AND sla.ClassMask != 0
+		JOIN ItemSparse s ON s.ID = e.EffectItemType
+		WHERE e.Effect = %d AND s.Bonding = %d AND s.AllowableClass IN (-1, 0)`,
+		dbcenums.E_CREATE_ITEM, dbc.BIND_ON_ACQUIRE),
+		func(rows *sql.Rows) (creator, error) {
+			var c creator
+			return c, rows.Scan(&c.itemID, &c.classMask)
+		})
 	if err != nil {
-		panic("Error scanning item stat effects")
+		return nil, fmt.Errorf("error loading creator class masks: %w", err)
 	}
-	raw.EffectPointsMin, err = parseIntArrayField(ePointsMin, 3)
-	if err != nil {
-		return raw, fmt.Errorf("failed to parse EffectPointsMin: %w", err)
+	masks := make(map[int]int, len(creators))
+	for _, c := range creators {
+		masks[c.itemID] |= c.classMask
 	}
-	raw.EffectPointsMax, err = parseIntArrayField(epointsMax, 3)
-	if err != nil {
-		return raw, fmt.Errorf("failed to parse EffectPointsMax: %w", err)
-	}
-	raw.EffectArg, err = parseIntArrayField(eArgs, 3)
-	if err != nil {
-		return raw, fmt.Errorf("failed to parse EffectArg: %w", err)
-	}
-	return raw, err
+	return masks, nil
 }
 
-func LoadAndWriteItemStatEffects(dbHelper *DBHelper, inputsDir string) ([]dbc.ItemStatEffect, error) {
-	query := `SELECT ID,
-		CASE WHEN Effect_0 = 3 THEN 1 ELSE 0 END as EffectIsAura,
-		EffectPointsMin, EffectPointsMin AS EffectPointsMax, EffectArg FROM SpellItemEnchantment WHERE Effect_0 = 5 OR Effect_0 = 3`
-	items, err := LoadRows(dbHelper.db, query, ScanItemStatEffects)
+// Each row's class mask becomes the one LoadCreatorClassMasks derives for its item, where it derives one.
+func applyCreatorClassMasks[T any](dbHelper *DBHelper, rows []T, classMaskOf func(*T) (int, *int)) error {
+	masks, err := LoadCreatorClassMasks(dbHelper)
 	if err != nil {
-		return nil, fmt.Errorf("error in query load items")
+		return err
 	}
-	json, _ := json.Marshal(items)
-	if err := dbc.WriteGzipFile(fmt.Sprintf("%s/dbc/item_stat_effects.json", inputsDir), json); err != nil {
-		panic(fmt.Sprintf("Error loading DBC data %v", err))
+	for i := range rows {
+		if id, classMask := classMaskOf(&rows[i]); masks[id] != 0 {
+			*classMask = masks[id]
+		}
 	}
-	return items, nil
+	return nil
 }
 
+// ItemDamage tables
 func ScanItemDamageTable(rows *sql.Rows) (dbc.ItemDamageTable, error) {
 	var raw dbc.ItemDamageTable
 	var qualityString string
@@ -397,87 +380,14 @@ func ScanArmorLocation(rows *sql.Rows) (dbc.ArmorLocation, error) {
 	return raw, err
 }
 
-// ItemDamage tables
-func ScanGemTable(rows *sql.Rows) (dbc.Gem, error) {
-	var raw dbc.Gem
-	var statListString string
-	var statBonusString string
-	var effectString string
-	err := rows.Scan(
-		&raw.ItemId,
-		&raw.Name,
-		&raw.FDID,
-		&raw.GemType,
-		&statListString,
-		&statBonusString,
-		&raw.MinItemLevel,
-		&raw.Quality,
-		&effectString,
-		&raw.IsJc,
-		&raw.Flags0,
-		&raw.Bonding,
-	)
-	if err != nil {
-		return raw, fmt.Errorf("scanning gem data: %w", err)
-	}
-
-	raw.EffectPoints, err = parseIntArrayField(statListString, 3)
-	if err != nil {
-		return raw, fmt.Errorf("parsing effect points for gem %d (%s): %w", raw.ItemId, statListString, err)
-	}
-
-	raw.EffectArgs, err = parseIntArrayField(statBonusString, 3)
-	if err != nil {
-		return raw, fmt.Errorf("parsing effect args for gem %d (%s): %w", raw.ItemId, statBonusString, err)
-	}
-
-	raw.Effects, err = parseIntArrayField(effectString, 3)
-	if err != nil {
-		return raw, fmt.Errorf("parsing effects for gem %d (%s): %w", raw.ItemId, effectString, err)
-	}
-
-	return raw, nil
-}
-
-func LoadAndWriteRawGems(dbHelper *DBHelper, inputsDir string) ([]dbc.Gem, error) {
-	query := `SELECT
-		s.ID,
-		s.Display_lang as Name,
-		i.IconFileDataID as FDID,
-		gp.'Type' as GemType,
-		sie.EffectPointsMin as StatList, -- EffectPointsMax: dropped by the client
-		sie.EffectArg as StatBonus,
-		0 MinItemLevel, -- GemProperties.Min_item_level: dropped by the client
-		s.OverallQualityId Quality,
-		sie.Effect,
-		CASE
-			WHEN s.RequiredSkill = 755 THEN 1
-			ELSE 0
-		END AS IsJc,
-		s.Flags_0,
-		s.Bonding
-		FROM ItemSparse s
-		JOIN Item i ON s.ID = i.ID
-		JOIN GemProperties gp ON s.Gem_properties = gp.ID
-		JOIN SpellItemEnchantment sie ON gp.Enchant_ID = sie.ID
-		WHERE i.ClassID = 3`
-	items, err := LoadRows(dbHelper.db, query, ScanGemTable)
-	if err != nil {
-		return nil, fmt.Errorf("error loading items for GemTables: %w", err)
-	}
-	json, _ := json.Marshal(items)
-	if err := dbc.WriteGzipFile(fmt.Sprintf("%s/dbc/gems.json", inputsDir), json); err != nil {
-		panic(fmt.Sprintf("Error loading DBC data %v", err))
-	}
-	return items, nil
-}
-
 func ScanEnchantsTable(rows *sql.Rows) (dbc.Enchant, error) {
 	var raw dbc.Enchant
 	var effectsString string
 	var effectPointsString string
 	var effectArgsString string
 	var spellItemEnchantmentFlags dbc.SpellItemEnchantmentFlags
+	var spellItemLevel int
+	var itemClassMasks string
 	err := rows.Scan(
 		&raw.EffectId,
 		&raw.Name,
@@ -491,15 +401,32 @@ func ScanEnchantsTable(rows *sql.Rows) (dbc.Enchant, error) {
 		&raw.InventoryType,
 		&raw.SubClassMask,
 		&raw.ClassMask,
+		&itemClassMasks,
 		&raw.FDID,
 		&raw.Quality,
 		&raw.RequiredProfession,
 		&raw.EffectName,
 		&spellItemEnchantmentFlags,
 		&raw.IsLive,
+		&spellItemLevel,
 	)
 	if err != nil {
 		return raw, fmt.Errorf("scanning enchant data for effect ID %d: %w", raw.EffectId, err)
+	}
+	raw.Lvl = enchantLvl(spellItemLevel)
+
+	// A class may use the enchant when it may use any item that applies it; AllowableClass -1 is every class.
+	if itemClassMasks != "" {
+		for _, field := range strings.Split(itemClassMasks, ",") {
+			mask, err := strconv.Atoi(field)
+			if err != nil {
+				return raw, fmt.Errorf("parsing item class masks for enchant %d (%s): %w", raw.EffectId, itemClassMasks, err)
+			}
+			if mask <= 0 {
+				mask = -1
+			}
+			raw.ClassMask |= mask
+		}
 	}
 
 	raw.Effects, err = parseIntArrayField(effectsString, 3)
@@ -527,6 +454,27 @@ func ScanEnchantsTable(rows *sql.Rows) (dbc.Enchant, error) {
 	return raw, nil
 }
 
+// The highest item level of an item outside the Season of Discovery range that applies or teaches the
+// enchant's spell; 0 where every such item is level 1, as the Forever enchant scrolls are.
+func enchantLvl(spellItemLevel int) int {
+	if spellItemLevel > 1 {
+		return spellItemLevel
+	}
+	return 0
+}
+
+// Season of Discovery items occupy this id range in the game files; an enchant only they carry is left
+// out, and none of them gives an enchant its level.
+const (
+	sodItemIDMin = 202251
+	sodItemIDMax = 244460
+)
+
+// The SQL condition that the item id in column is in the Season of Discovery range.
+func sodItemID(column string) string {
+	return column + ` BETWEEN ` + strconv.Itoa(sodItemIDMin) + ` AND ` + strconv.Itoa(sodItemIDMax)
+}
+
 func LoadAndWriteRawEnchants(dbHelper *DBHelper, inputsDir string) ([]dbc.Enchant, error) {
 	query := `
 		SELECT DISTINCT
@@ -549,9 +497,14 @@ func LoadAndWriteRawEnchants(dbHelper *DBHelper, inputsDir string) ([]dbc.Enchan
 				WHEN sie.Effect_2 IN (1, 3) THEN sie.EffectArg_2
 				ELSE se.SpellID
 			END AS spellId,
-			-- The lowest item the client ships (it has an ItemSparse row), else the lowest item. This is the
-			-- query's only aggregate, so the bare columns (icon and quality among them) come from its row.
-			COALESCE(MIN(CASE WHEN isp.ID IS NULL THEN ixie.ItemID + 1000000000 ELSE ixie.ItemID END) % 1000000000, 0) as ItemId,
+			-- The lowest item the game files ship (it has an ItemSparse row), else the lowest item, an item in
+			-- the Season of Discovery range last. This is the query's only aggregate, so the bare columns (icon
+			-- and quality among them) come from its row.
+			COALESCE(MIN(
+				CASE WHEN ` + sodItemID("ixie.ItemID") + ` THEN 2000000000 ELSE 0 END
+				+ CASE WHEN isp.ID IS NULL THEN 1000000000 ELSE 0 END
+				+ ixie.ItemID
+			) % 1000000000, 0) as ItemId,
 			sie.RequiredSkillID as professionId,
 			sie.Effect as Effect,
 			sie.EffectPointsMin as EffectPoints,
@@ -563,19 +516,33 @@ func LoadAndWriteRawEnchants(dbHelper *DBHelper, inputsDir string) ([]dbc.Enchan
 			COALESCE(sei.EquippedItemInvTypes, 0) as InvTypes,
 			COALESCE(sei.EquippedItemSubclass, 0),
 			COALESCE(sla.ClassMask, 0),
+			-- The AllowableClass of every item that applies an enchant no skill line teaches.
+			CASE WHEN sla.ID IS NULL THEN COALESCE((
+				SELECT group_concat(DISTINCT lisp.AllowableClass) FROM ItemEffect lie
+					JOIN ItemXItemEffect lixie ON lixie.ItemEffectID = lie.ID
+					JOIN ItemSparse lisp ON lisp.ID = lixie.ItemID
+				WHERE lie.SpellID = se.SpellID AND NOT ` + sodItemID("lixie.ItemID") + `
+			), '') ELSE '' END AS ItemClassMasks,
 			COALESCE(it.IconFileDataID, 0),
 			COALESCE(isp.OverallQualityID, 1),
 			COALESCE(sla.SkillLine, 0) as RequiredProfession,
 			COALESCE(sie.Name_lang, ""),
 			COALESCE(sie.Flags, 0) AS SpellItemEnchantmentFlags,
-			-- A grant is live when a profession teaches it or an item the client ships uses it.
+			-- A grant is live when a profession teaches it or an item the game files ship uses it, a
+			-- placeholder ([PH]) item aside.
 			EXISTS (SELECT 1 FROM SkillLineAbility WHERE Spell = se.SpellID)
 				OR EXISTS (
 					SELECT 1 FROM ItemEffect lie
 						JOIN ItemXItemEffect lixie ON lixie.ItemEffectID = lie.ID
 						JOIN ItemSparse lisp ON lisp.ID = lixie.ItemID
-					WHERE lie.SpellID = se.SpellID
-				) AS IsLive
+					WHERE lie.SpellID = se.SpellID AND ` + notPlaceholderItemName("lisp.Display_lang") + `
+				) AS IsLive,
+			COALESCE((
+				SELECT MAX(lisp.ItemLevel) FROM ItemEffect lie
+					JOIN ItemXItemEffect lixie ON lixie.ItemEffectID = lie.ID
+					JOIN ItemSparse lisp ON lisp.ID = lixie.ItemID
+				WHERE lie.SpellID = se.SpellID AND NOT ` + sodItemID("lixie.ItemID") + `
+			), 0) AS SpellItemLevel
 		FROM SpellEffect se
 			JOIN Spell s ON se.SpellID = s.ID
 			JOIN SpellName sn ON se.SpellID = sn.ID
@@ -748,7 +715,7 @@ func LoadAndWriteRawSpellEffects(dbHelper *DBHelper, inputsDir string) (map[int]
 		se.EffectBonusCoefficient,
 		se.EffectChainAmplitude,
 		se.EffectChainTargets,
-		0, -- EffectDieSides: dropped by the client; Variance carries the spread now
+		0, -- EffectDieSides: dropped from the game files; Variance carries the spread
 		se.EffectItemType,
 		se.EffectMechanic,
 		se.EffectPointsPerResource,
@@ -765,7 +732,7 @@ func LoadAndWriteRawSpellEffects(dbHelper *DBHelper, inputsDir string) (map[int]
 		se.EffectSpellClassMask,
 		se.ImplicitTarget,
 		se.SpellID,
-		0, -- SpellScaling.Class: dropped by the client
+		0, -- SpellScaling.Class: dropped from the game files
 		COALESCE(sr1.RadiusMin, 0),
 		COALESCE(sr1.RadiusMax, 0),
 		COALESCE(sr2.RadiusMin, 0),
@@ -797,121 +764,66 @@ func LoadAndWriteRawSpellEffects(dbHelper *DBHelper, inputsDir string) (map[int]
 	return RawSpellEffectBySpellIdAndIndex, nil
 }
 
-// RawRandomSuffix represents the combined result of the ItemRandomSuffix row
-// with its joined SpellItemEnchantment columns.
+// The bonus tree nodes that hand an item one of its random suffixes: a bonus list of the default item
+// context with stat rows and a suffix name. The few other nodes (trees 6050, 6130, 6138 and 6143) name
+// a child tree, another item context or a list without stat rows. Selects from ItemXBonusTree x and
+// ItemBonusTreeNode n.
+var randomSuffixNodes = fmt.Sprintf(`
+	FROM ItemXBonusTree x
+	JOIN ItemBonusTreeNode n ON n.ParentItemBonusTreeID = x.ItemBonusTreeID
+	WHERE n.ItemContext = 0 AND n.ChildItemBonusListID > 0
+		AND EXISTS (SELECT 1 FROM ItemBonus sb WHERE sb.ParentItemBonusListID = n.ChildItemBonusListID AND sb.Type = %d)
+		AND EXISTS (SELECT 1 FROM ItemBonus nb WHERE nb.ParentItemBonusListID = n.ChildItemBonusListID AND nb.Type = %d)`,
+	dbc.ITEM_BONUS_STAT, dbc.ITEM_BONUS_SUFFIX)
 
-// ScanRawRandomSuffix scans one row from the query result into a RawRandomSuffix struct.
-func ScanRawRandomSuffix(rows *sql.Rows) (dbc.RandomSuffix, error) {
-	var raw dbc.RandomSuffix
-	var (
-		id     int
-		name   string
-		alloc0 int
-		alloc1 int
-		alloc2 int
-		alloc3 int
-		alloc4 int
-		eArg0  int
-		eArg1  int
-		eArg2  int
-		eArg3  int
-		eArg4  int
-		eff0   int
-		eff1   int
-		eff2   int
-		eff3   int
-		eff4   int
-	)
-
-	// The order here must match the SELECT list order.
-	err := rows.Scan(
-		&id,
-		&name,
-		&alloc0,
-		&alloc1,
-		&alloc2,
-		&alloc3,
-		&alloc4,
-		&eArg0,
-		&eArg1,
-		&eArg2,
-		&eArg3,
-		&eArg4,
-		&eff0,
-		&eff1,
-		&eff2,
-		&eff3,
-		&eff4,
-	)
-	if err != nil {
-		return raw, err
-	}
-
-	raw.ID = id
-	raw.Name = name
-	raw.AllocationPct = []int{alloc0, alloc1, alloc2, alloc3, alloc4}
-	raw.EffectArgs = []int{eArg0, eArg1, eArg2, eArg3, eArg4}
-	raw.Effects = []int{eff0, eff1, eff2, eff3, eff4}
-
-	return raw, nil
+type randomSuffixRow struct {
+	listID, bonusType, value0, value1 int
+	name                              string
+	spellID                           int
 }
 
-var RawRandomSuffixes []dbc.RandomSuffix
-var RawRandomSuffixesById map[int]dbc.RandomSuffix
-
 func LoadAndWriteRawRandomSuffixes(dbHelper *DBHelper, inputsDir string) ([]dbc.RandomSuffix, error) {
-	// ItemRandomSuffix is not shipped by every client. The Forever beta drops it
-	// outright -- the file is in the listfile but absent from the build's root --
-	// so there are no random suffixes to load. Write the empty file the rest of
-	// the pipeline expects rather than failing the whole run.
-	if !dbHelper.tableExists("ItemRandomSuffix") {
-		if err := dbc.WriteGzipFile(fmt.Sprintf("%s/dbc/random_suffix.json", inputsDir), []byte("[]")); err != nil {
-			panic(fmt.Sprintf("Error writing random suffixes %v", err))
-		}
-		return nil, nil
-	}
-
-	query := `
-	SELECT
-		COALESCE(-irs.ID, 0) AS ID,
-		COALESCE(irs.Name_lang, '') AS Name_lang,
-		COALESCE(irs.AllocationPct_0, 0) AS AllocationPct_0,
-		COALESCE(irs.AllocationPct_1, 0) AS AllocationPct_1,
-		COALESCE(irs.AllocationPct_2, 0) AS AllocationPct_2,
-		COALESCE(irs.AllocationPct_3, 0) AS AllocationPct_3,
-		COALESCE(irs.AllocationPct_4, 0) AS AllocationPct_4,
-		COALESCE(sie0.EffectArg_0, 0) AS EffectArg_0,
-		COALESCE(sie1.EffectArg_0, 0) AS EffectArg_1,
-		COALESCE(sie2.EffectArg_0, 0) AS EffectArg_2,
-		COALESCE(sie3.EffectArg_0, 0) AS EffectArg_3,
-		COALESCE(sie4.EffectArg_0, 0) AS EffectArg_4,
-		COALESCE(sie0.Effect_0, 0) AS Effect_0,
-		COALESCE(sie1.Effect_0, 0) AS Effect_1,
-		COALESCE(sie2.Effect_0, 0) AS Effect_2,
-		COALESCE(sie3.Effect_0, 0) AS Effect_3,
-		COALESCE(sie4.Effect_0, 0) AS Effect_4
-	FROM ItemRandomSuffix irs
-	LEFT JOIN SpellItemEnchantment sie0 ON irs.Enchantment_0 = sie0.ID
-	LEFT JOIN SpellItemEnchantment sie1 ON irs.Enchantment_1 = sie1.ID
-	LEFT JOIN SpellItemEnchantment sie2 ON irs.Enchantment_2 = sie2.ID
-	LEFT JOIN SpellItemEnchantment sie3 ON irs.Enchantment_3 = sie3.ID
-	LEFT JOIN SpellItemEnchantment sie4 ON irs.Enchantment_4 = sie4.ID
-`
-	// Use your generic LoadRows function to scan each row into a RawRandomSuffix.
-	items, err := LoadRows(dbHelper.db, query, ScanRawRandomSuffix)
-	if err != nil {
-		return nil, fmt.Errorf("error loading RawRandomSuffixes: %w", err)
-	}
-
-	RawRandomSuffixes = items
-	RawRandomSuffixesById = CacheBy(items, func(suffix dbc.RandomSuffix) int {
-		return suffix.ID
+	query := fmt.Sprintf(`
+	SELECT b.ParentItemBonusListID, b.Type, b.Value_0, b.Value_1, COALESCE(d.Description_lang, ''), COALESCE(e.SpellID, 0)
+	FROM ItemBonus b
+	LEFT JOIN ItemNameDescription d ON b.Type = %[1]d AND d.ID = b.Value_0
+	LEFT JOIN ItemEffect e ON b.Type = %[2]d AND e.ID = b.Value_0
+	WHERE b.Type IN (%[1]d, %[2]d, %[3]d, %[5]d)
+		AND b.ParentItemBonusListID IN (SELECT n.ChildItemBonusListID %[4]s)
+	ORDER BY b.ParentItemBonusListID, b.OrderIndex
+`, dbc.ITEM_BONUS_SUFFIX, dbc.ITEM_BONUS_ITEM_EFFECT, dbc.ITEM_BONUS_STAT, randomSuffixNodes, dbc.ITEM_BONUS_REDUCED_CASTER_DPS)
+	rows, err := LoadRows(dbHelper.db, query, func(rows *sql.Rows) (randomSuffixRow, error) {
+		var row randomSuffixRow
+		err := rows.Scan(&row.listID, &row.bonusType, &row.value0, &row.value1, &row.name, &row.spellID)
+		return row, err
 	})
-	json, _ := json.Marshal(items)
+	if err != nil {
+		return nil, fmt.Errorf("error loading random suffixes: %w", err)
+	}
+
+	var suffixes []dbc.RandomSuffix
+	for _, row := range rows {
+		if len(suffixes) == 0 || suffixes[len(suffixes)-1].ID != row.listID {
+			suffixes = append(suffixes, dbc.RandomSuffix{ID: row.listID})
+		}
+		suffix := &suffixes[len(suffixes)-1]
+		switch row.bonusType {
+		case dbc.ITEM_BONUS_STAT:
+			suffix.Stats = append(suffix.Stats, dbc.RandomSuffixStat{ItemMod: row.value0, Allocation: row.value1})
+		case dbc.ITEM_BONUS_SUFFIX:
+			suffix.Name = row.name
+		case dbc.ITEM_BONUS_ITEM_EFFECT:
+			suffix.EquipSpells = append(suffix.EquipSpells, row.spellID)
+		case dbc.ITEM_BONUS_REDUCED_CASTER_DPS:
+			suffix.ReducedCasterDps = true
+		}
+	}
+
+	json, _ := json.Marshal(suffixes)
 	if err := dbc.WriteGzipFile(fmt.Sprintf("%s/dbc/random_suffix.json", inputsDir), json); err != nil {
 		panic(fmt.Sprintf("Error loading DBC data %v", err))
 	}
-	return items, nil
+	return suffixes, nil
 }
 
 func ScanConsumable(rows *sql.Rows) (dbc.Consumable, error) {
@@ -929,10 +841,22 @@ func ScanConsumable(rows *sql.Rows) (dbc.Consumable, error) {
 		&consumable.SpellCategoryID,
 		&consumable.SpellCategoryFlags,
 		&itemEffectsStr,
-		&consumable.ElixirType,
-		&consumable.Duration,
-		&consumable.CooldownDuration,
-		&consumable.CategoryCooldownDuration,
+		&consumable.ClassMask,
+		&consumable.RaceMask,
+		&consumable.RequiredSkill,
+		&consumable.RequiredSkillRank,
+		&consumable.RequiredHoliday,
+		&consumable.TemporaryEnchant.ID,
+		&consumable.TemporaryEnchant.Effects[0],
+		&consumable.TemporaryEnchant.Effects[1],
+		&consumable.TemporaryEnchant.Effects[2],
+		&consumable.TemporaryEnchant.Points[0],
+		&consumable.TemporaryEnchant.Points[1],
+		&consumable.TemporaryEnchant.Points[2],
+		&consumable.TemporaryEnchant.Args[0],
+		&consumable.TemporaryEnchant.Args[1],
+		&consumable.TemporaryEnchant.Args[2],
+		&consumable.TemporaryEnchant.RequiredAreasID,
 	)
 	if err != nil {
 		return consumable, fmt.Errorf("scanning consumable data: %w", err)
@@ -959,15 +883,47 @@ func ScanConsumable(rows *sql.Rows) (dbc.Consumable, error) {
 	return consumable, nil
 }
 
+// The SQL condition that the item name in column is not a placeholder: [PH] anywhere in it.
+func notPlaceholderItemName(column string) string {
+	return column + ` NOT LIKE '%[PH]%'`
+}
+
+// The items the consumable catalogue is built from, over Item as i and ItemSparse as s. Every
+// Consumable-class item but the permanent enhancements of subclass 6, which the enchant table
+// carries; the Trade Goods explosives; and any item whose on-use shares the explosives' category or
+// casts a temporary enchant (Effect 54, or the imbue Effect 360, as IsTemporaryEnchantEffect reads
+// it), whatever class the game files put it under: Crystal Charge 11566 is a Quest item and Lesser
+// Mana Oil 20747 an Enchanting trade good. The item has to state an on-use spell, and one that also
+// teaches a spell is an Engrave rune rather than a consumable. Test, QA, UNUSED, placeholder ([PH])
+// and deprecated ([DEP]) names are left out: UNUSED Flask of Merciless Pursuit 215126.
+func ConsumableItemFilter() string {
+	onUse := func(condition string) string {
+		return fmt.Sprintf(`EXISTS (SELECT 1 FROM ItemXItemEffect cx JOIN ItemEffect ce ON ce.ID = cx.ItemEffectID
+			WHERE cx.ItemID = i.ID AND ce.TriggerType = %d AND ce.SpellID > 0 AND %s)`, dbc.ITEM_SPELLTRIGGER_ON_USE, condition)
+	}
+	return fmt.Sprintf(`s.Display_lang != '' AND s.Display_lang NOT LIKE '%%Test%%' AND s.Display_lang NOT LIKE 'QA%%'
+		AND s.Display_lang NOT LIKE 'UNUSED%%' AND %s AND s.Display_lang NOT LIKE '%%[DEP]%%'
+		AND %s
+		AND NOT EXISTS (SELECT 1 FROM ItemXItemEffect lx JOIN ItemEffect le ON le.ID = lx.ItemEffectID
+			WHERE lx.ItemID = i.ID AND le.TriggerType = %d)
+		AND ((i.ClassID = 0 AND i.SubclassID != 6) OR (i.ClassID = 7 AND i.SubclassID = 2)
+			OR %s
+			OR %s)`,
+		notPlaceholderItemName("s.Display_lang"),
+		onUse("1"),
+		dbc.ITEM_SPELLTRIGGER_LEARN_SPELL_ID,
+		onUse(fmt.Sprintf("ce.SpellCategoryID = %d", dbc.EXPLOSIVES_SPELL_CATEGORY)),
+		onUse(fmt.Sprintf("EXISTS (SELECT 1 FROM SpellEffect cse WHERE cse.SpellID = ce.SpellID AND cse.Effect IN (%d, %d))",
+			dbcenums.E_ENCHANT_ITEM_TEMPORARY, dbcenums.E_360)))
+}
+
 func LoadAndWriteConsumables(dbHelper *DBHelper, inputsDir string) ([]dbc.Consumable, error) {
-	allowListStrs := make([]string, 0, len(ConsumableAllowList))
-	for _, id := range ConsumableAllowList {
+	cataloguedByID := catalogueConsumableIDs()
+	allowListStrs := make([]string, 0, len(cataloguedByID))
+	for _, id := range cataloguedByID {
 		allowListStrs = append(allowListStrs, strconv.FormatInt(int64(id), 10))
 	}
-	for id := range ClassicConsumableTypes {
-		allowListStrs = append(allowListStrs, strconv.FormatInt(int64(id), 10))
-	}
-	additionalConsumesQuery := "OR i.ID = " + strings.Join(allowListStrs, " OR i.ID = ")
+	allowList := strings.Join(allowListStrs, ", ")
 
 	query := `
 		SELECT
@@ -986,27 +942,33 @@ func LoadAndWriteConsumables(dbHelper *DBHelper, inputsDir string) ([]dbc.Consum
 					JOIN ItemXItemEffect ixie2 ON ixie2.ItemEffectID = ie2.ID
 					WHERE ixie2.ItemID = i.ID
 				) AS ItemEffects,
-				CASE
-					WHEN sp.Description_lang LIKE '%Counts as both a Battle%' THEN 0
-					WHEN sp.Description_lang LIKE '%Guardian Elixir%' THEN 1
-					WHEN sp.Description_lang LIKE '%Battle Elixir%' THEN 2
-					ELSE 0
-				END AS ElixirType,
-				COALESCE(sd.Duration, 0) as Duration,
-				COALESCE(ie.CoolDownMSec, 0) as CooldownDuration,
-				COALESCE(ie.CategoryCoolDownMSec, 0) as CategoryCooldownDuration
+				s.AllowableClass,
+				(s.AllowableRace_1 << 32) | (s.AllowableRace_0 & 0xFFFFFFFF) AS RaceMask,
+				s.RequiredSkill,
+				s.RequiredSkillRank,
+				s.RequiredHoliday,
+				COALESCE(tsie.ID, 0),
+				COALESCE(tsie.Effect_0, 0), COALESCE(tsie.Effect_1, 0), COALESCE(tsie.Effect_2, 0),
+				COALESCE(tsie.EffectPointsMin_0, 0), COALESCE(tsie.EffectPointsMin_1, 0), COALESCE(tsie.EffectPointsMin_2, 0),
+				COALESCE(tsie.EffectArg_0, 0), COALESCE(tsie.EffectArg_1, 0), COALESCE(tsie.EffectArg_2, 0),
+				COALESCE((
+					SELECT MAX(scr.RequiredAreasID) FROM SpellCastingRequirements scr
+					WHERE scr.SpellID > 0 AND scr.SpellID IN (tsie.EffectArg_0, tsie.EffectArg_1, tsie.EffectArg_2)
+				), 0)
 			FROM Item i
 			JOIN ItemSparse s ON i.ID = s.ID
 			LEFT JOIN ItemXItemEffect ixie ON ixie.ItemID = i.ID
 			LEFT JOIN ItemEffect ie ON ie.ID = ixie.ItemEffectID
 			LEFT JOIN SpellCategory sc ON ie.SpellCategoryID = sc.ID
-			LEFT JOIN Spell sp ON ie.SpellID = sp.ID
-			LEFT JOIN SpellMisc sm ON ie.SpellId = sm.SpellID
-			LEFT JOIN SpellDuration sd ON sm.DurationIndex = sd.ID
-			WHERE ((i.ClassID = 0 AND i.SubclassID IS NOT 0 AND i.SubclassID IS NOT 8 AND i.SubclassID IS NOT 6) OR (i.ClassID = 7 AND i.SubclassID = 2)) AND ItemEffects is not null AND s.RequiredLevel >= 50 ` + additionalConsumesQuery + `
-			AND s.Display_lang != ''
-			AND s.Display_lang NOT LIKE '%Test%'
-			AND s.Display_lang NOT LIKE 'QA%'
+			LEFT JOIN SpellItemEnchantment tsie ON tsie.ID = (
+				SELECT tse.EffectMiscValue_0
+				FROM ItemXItemEffect tx
+				JOIN ItemEffect te ON te.ID = tx.ItemEffectID
+				JOIN SpellEffect tse ON tse.SpellID = te.SpellID
+				WHERE tx.ItemID = i.ID AND te.TriggerType = ` + strconv.Itoa(dbc.ITEM_SPELLTRIGGER_ON_USE) + `
+					AND tse.Effect IN (` + strconv.Itoa(int(dbcenums.E_ENCHANT_ITEM_TEMPORARY)) + `, ` + strconv.Itoa(int(dbcenums.E_360)) + `)
+				LIMIT 1)
+			WHERE (` + ConsumableItemFilter() + `) OR i.ID IN (` + allowList + `)
 			GROUP BY i.ID
 	`
 
@@ -1014,8 +976,11 @@ func LoadAndWriteConsumables(dbHelper *DBHelper, inputsDir string) ([]dbc.Consum
 	if err != nil {
 		return nil, fmt.Errorf("error loading consumables: %w", err)
 	}
-	for i := range consumables {
-		consumables[i].TypeOverride = ClassicConsumableTypes[int32(consumables[i].Id)]
+	if err := applyCreatorClassMasks(dbHelper, consumables, func(c *dbc.Consumable) (int, *int) { return c.Id, &c.ClassMask }); err != nil {
+		return nil, err
+	}
+	if consumables, err = mergeIdenticalConsumables(dbHelper, consumables, cataloguedByID); err != nil {
+		return nil, err
 	}
 
 	fmt.Println("Loaded Consumables:", len(consumables))
@@ -1024,6 +989,57 @@ func LoadAndWriteConsumables(dbHelper *DBHelper, inputsDir string) ([]dbc.Consum
 		panic(fmt.Sprintf("Error loading DBC data %v", err))
 	}
 	return consumables, nil
+}
+
+// Items that share a display name, who may use them (class, race, skill and world event) and their item
+// effect rows are one consumable, whatever their level, binding, price or flags: Minor Healing Potion
+// 287966 is 118. An id the catalogue or ConsumableOverrides names stays and its unnamed twins go; among
+// unnamed twins the lowest id stays. An item naming an item effect row the game files lack has no twin.
+func mergeIdenticalConsumables(dbHelper *DBHelper, consumables []dbc.Consumable, catalogued []int32) ([]dbc.Consumable, error) {
+	effects, err := LoadRows(dbHelper.db, itemEffectsQuery, ScanItemEffect)
+	if err != nil {
+		return nil, fmt.Errorf("error loading the consumables' item effects: %w", err)
+	}
+	effectsByID := CacheBy(effects, func(e dbc.ItemEffect) int { return e.ID })
+
+	named := map[int]bool{}
+	for _, id := range catalogued {
+		named[int(id)] = true
+	}
+	for _, c := range ConsumableOverrides {
+		named[int(c.Id)] = true
+	}
+
+	key := func(c dbc.Consumable) (string, bool) {
+		rows := make([]string, 0, len(c.ItemEffects))
+		for _, id := range c.ItemEffects {
+			e, ok := effectsByID[id]
+			if !ok {
+				return "", false
+			}
+			rows = append(rows, fmt.Sprint(e.TriggerType, e.SpellID, e.Charges, e.CoolDownMSec, e.CategoryCoolDownMSec,
+				e.SpellCategoryID, e.ChrSpecializationID))
+		}
+		slices.Sort(rows)
+		return fmt.Sprintf("%s|%d|%d|%d|%d|%d|%s", c.Name, c.ClassMask, c.RaceMask, c.RequiredSkill, c.RequiredSkillRank,
+			c.RequiredHoliday, strings.Join(rows, ";")), true
+	}
+	keys := make(map[int]string, len(consumables))
+	keeper := map[string]int{}
+	for _, c := range consumables {
+		k, ok := key(c)
+		if !ok {
+			continue
+		}
+		keys[c.Id] = k
+		if id, seen := keeper[k]; !seen || (named[c.Id] && !named[id]) || (named[c.Id] == named[id] && c.Id < id) {
+			keeper[k] = c.Id
+		}
+	}
+	return slices.DeleteFunc(consumables, func(c dbc.Consumable) bool {
+		k, ok := keys[c.Id]
+		return ok && !named[c.Id] && keeper[k] != c.Id
+	}), nil
 }
 
 func ScanItemEffect(rows *sql.Rows) (dbc.ItemEffect, error) {
@@ -1048,8 +1064,7 @@ func ScanItemEffect(rows *sql.Rows) (dbc.ItemEffect, error) {
 	return effect, nil
 }
 
-func LoadAndWriteItemEffects(dbHelper *DBHelper, inputsDir string) ([]dbc.ItemEffect, error) {
-	query := `
+const itemEffectsQuery = `
 	SELECT
 		ie.ID,
 		ie.LegacySlotIndex,
@@ -1065,7 +1080,8 @@ func LoadAndWriteItemEffects(dbHelper *DBHelper, inputsDir string) ([]dbc.ItemEf
 	LEFT JOIN ItemXItemEffect ixie ON ixie.ItemEffectID = ie.ID
 	`
 
-	effects, err := LoadRows(dbHelper.db, query, ScanItemEffect)
+func LoadAndWriteItemEffects(dbHelper *DBHelper, inputsDir string) ([]dbc.ItemEffect, error) {
+	effects, err := LoadRows(dbHelper.db, itemEffectsQuery, ScanItemEffect)
 	if err != nil {
 		return nil, fmt.Errorf("error loading item effects: %w", err)
 	}
@@ -1076,6 +1092,44 @@ func LoadAndWriteItemEffects(dbHelper *DBHelper, inputsDir string) ([]dbc.ItemEf
 		panic(fmt.Sprintf("Error loading DBC data %v", err))
 	}
 	return effects, nil
+}
+
+func ScanItemSetSpell(rows *sql.Rows) (dbc.ItemSetSpell, error) {
+	var spell dbc.ItemSetSpell
+
+	err := rows.Scan(
+		&spell.ItemSetID,
+		&spell.Threshold,
+		&spell.SpellID,
+	)
+	if err != nil {
+		return spell, fmt.Errorf("scanning item set spell data: %w", err)
+	}
+
+	return spell, nil
+}
+
+const itemSetSpellsQuery = `
+	SELECT
+		iss.ItemSetID,
+		iss.Threshold,
+		iss.SpellID
+	FROM ItemSetSpell iss
+	ORDER BY iss.ID
+	`
+
+func LoadAndWriteItemSetSpells(dbHelper *DBHelper, inputsDir string) ([]dbc.ItemSetSpell, error) {
+	spells, err := LoadRows(dbHelper.db, itemSetSpellsQuery, ScanItemSetSpell)
+	if err != nil {
+		return nil, fmt.Errorf("error loading item set spells: %w", err)
+	}
+
+	fmt.Println("Loaded ItemSetSpells:", len(spells))
+	json, _ := json.Marshal(spells)
+	if err := dbc.WriteGzipFile(fmt.Sprintf("%s/dbc/item_set_spells.json", inputsDir), json); err != nil {
+		panic(fmt.Sprintf("Error loading DBC data %v", err))
+	}
+	return spells, nil
 }
 
 type RawTalent struct {
@@ -1165,7 +1219,7 @@ ORDER BY tb.Name_lang;
 
 // Trait-driven talent loading.
 //
-// The Forever client authors its talent trees in the Trait* tables instead of
+// The Forever game files keep the talent trees in the Trait* tables instead of
 // the legacy Talent/TalentTab pair. A tree is per class and holds all three
 // specs side by side on a pixel lattice, so the generator has to recover the
 // class, the tab and the grid coordinates that the picker and the protos still
@@ -1283,7 +1337,7 @@ func filterTraitCandidates(candidates []traitPlacedNode, key func(traitPlacedNod
 // selectTraitTrees picks one tree per class. The class comes from the class
 // mask on the SkillLineAbility rows of the tree's spells (the mask is 0 for
 // spells shared across classes, so the non-zero majority wins). Several trees
-// can carry the same class - the client keeps stale drafts around - so the tree
+// can carry the same class - the game files keep stale drafts around - so the tree
 // with the most nodes is taken as the live one.
 func selectTraitTrees(dbHelper *DBHelper) (map[int]int, error) {
 	votes, err := LoadRows(dbHelper.db, `
@@ -1335,11 +1389,52 @@ ORDER BY tn.TraitTreeID, sla.ClassMask
 	return live, nil
 }
 
-// repairTraitCoord reports a node parked 10x off canvas, which the beta data does on retired
-// copies: 1091/104982 PosX 102800, 1091/105003 PosY 39300, 1114/105865 PosY 21300. It only fires
-// when the value is off the tree's lattice AND a tenth of it lands back on it, so it cannot flag a
-// node that was placed deliberately. The caller drops such nodes.
-func repairTraitCoord(value int, others []int) (int, bool) {
+// parkedTraitNodes names the nodes the game files park off their tree's canvas. A retired talent
+// stays in its tree with one coordinate ten times a lattice one - Lightning Reflexes 1091/104982 at
+// PosX 102800, Improved Serpent Sting 1091/105003 at PosY 39300, Holy Specialization 1114/105865 at
+// PosY 21300 - while the talent that replaced it, if any, sits on the lattice. A node is parked when a
+// coordinate is off the lattice and a tenth of it lands back on it, so a node placed by hand is never
+// one.
+func parkedTraitNodes(db *sql.DB) (map[int]bool, error) {
+	nodes, err := LoadRows(db, `SELECT TraitTreeID, ID, PosX, PosY FROM TraitNode`,
+		func(rows *sql.Rows) (traitNodeRow, error) {
+			var n traitNodeRow
+			err := rows.Scan(&n.TreeID, &n.NodeID, &n.PosX, &n.PosY)
+			return n, err
+		})
+	if err != nil {
+		return nil, fmt.Errorf("error loading trait node positions: %w", err)
+	}
+
+	xs, ys := map[int][]int{}, map[int][]int{}
+	for _, n := range nodes {
+		xs[n.TreeID] = append(xs[n.TreeID], n.PosX)
+		ys[n.TreeID] = append(ys[n.TreeID], n.PosY)
+	}
+
+	parked := map[int]bool{}
+	for _, n := range nodes {
+		if parkedTraitCoord(n.PosX, xs[n.TreeID]) || parkedTraitCoord(n.PosY, ys[n.TreeID]) {
+			parked[n.NodeID] = true
+		}
+	}
+	return parked, nil
+}
+
+// A condition on TraitNode tn that leaves the parked nodes out.
+func unparkedTraitNodes(db *sql.DB) (string, error) {
+	parked, err := parkedTraitNodes(db)
+	if err != nil || len(parked) == 0 {
+		return "1 = 1", err
+	}
+	ids := []string{}
+	for _, id := range slices.Sorted(maps.Keys(parked)) {
+		ids = append(ids, strconv.Itoa(id))
+	}
+	return "tn.ID NOT IN (" + strings.Join(ids, ", ") + ")", nil
+}
+
+func parkedTraitCoord(value int, others []int) bool {
 	nearLattice := func(v int) bool {
 		for _, o := range others {
 			if o != v && o-v <= traitGridPitch && v-o <= traitGridPitch {
@@ -1348,16 +1443,10 @@ func repairTraitCoord(value int, others []int) (int, bool) {
 		}
 		return false
 	}
-	if nearLattice(value) {
-		return value, false
-	}
-	if value%10 == 0 && nearLattice(value/10) {
-		return value / 10, true
-	}
-	return value, false
+	return !nearLattice(value) && value%10 == 0 && nearLattice(value/10)
 }
 
-// traitGridIndex maps a repaired pixel coordinate onto the lattice index.
+// traitGridIndex maps a pixel coordinate onto the lattice index.
 func traitGridIndex(value, origin int) int {
 	return (value - origin + traitGridPitch/2) / traitGridPitch
 }
@@ -1373,6 +1462,10 @@ func abs(value int) int {
 // them as RawTalent rows, so the proto/json generators keep working unchanged.
 func LoadTraitTalents(dbHelper *DBHelper) ([]RawTalent, error) {
 	live, err := selectTraitTrees(dbHelper)
+	if err != nil {
+		return nil, err
+	}
+	parked, err := parkedTraitNodes(dbHelper.db)
 	if err != nil {
 		return nil, err
 	}
@@ -1430,7 +1523,7 @@ ORDER BY x.TraitNodeID, sl.DisplayName_lang
 		nodeSkills[s.NodeID] = append(nodeSkills[s.NodeID], s.Name)
 	}
 
-	// TraitEdge.Type is the client's gating kind: 2 makes the left node sufficient for the right,
+	// TraitEdge.Type is the game files' gating kind: 2 makes the left node sufficient for the right,
 	// 3 makes it required, and 0 only draws a line. Reading every row as a prerequisite turned
 	// those drawn-only links into hard gates -- six node pairs carry one in each direction, and two
 	// nodes cannot each gate the other.
@@ -1465,12 +1558,16 @@ ORDER BY x.TraitNodeID, sl.DisplayName_lang
 	}
 
 	// One node can point at several entries (a choice node). Keep the lowest
-	// Index, which is the entry the client shows first.
+	// Index, which is the entry shown first in game.
 	choiceDiscards := 0
 	byNode := map[int]traitNodeRow{}
 	nodeOrder := map[int][]int{}
 	for _, n := range nodes {
 		if _, ok := treeClass[n.TreeID]; !ok {
+			continue
+		}
+		if parked[n.NodeID] {
+			fmt.Fprintf(os.Stderr, "[traits] tree %d node %d (%s at %d/%d): skipped, parked off the canvas\n", n.TreeID, n.NodeID, n.Name, n.PosX, n.PosY)
 			continue
 		}
 		if prev, ok := byNode[n.NodeID]; ok {
@@ -1540,8 +1637,6 @@ ORDER BY x.TraitNodeID, sl.DisplayName_lang
 	for _, treeID := range treeIDs {
 		classMask := treeClass[treeID]
 		treeNodes := []traitNodeRow{}
-		xs := []int{}
-		ys := []int{}
 		for _, nodeID := range nodeOrder[treeID] {
 			treeNodes = append(treeNodes, byNode[nodeID])
 		}
@@ -1549,28 +1644,6 @@ ORDER BY x.TraitNodeID, sl.DisplayName_lang
 			fmt.Fprintf(os.Stderr, "[traits] tree %d: no nodes\n", treeID)
 			continue
 		}
-		for i := range treeNodes {
-			xs = append(xs, treeNodes[i].PosX)
-			ys = append(ys, treeNodes[i].PosY)
-		}
-		// A node parked 10x off the canvas is a retired copy the client never deleted, not a typo
-		// on a live talent: all three in the beta data are. 1091/104982 Lightning Reflexes and
-		// 1114/105865 Holy Specialization have live twins on the same spell. 1091/105003 Improved
-		// Serpent Sting (spell 19464) has none, but its effect lives on in Improved Stings
-		// (142622, spell 1310661), and it is missing from the point-spent groups 12720/12721 that
-		// every other tier-4 Marksmanship node belongs to (TraitNodeGroupXTraitNode, 1.60.1.69913),
-		// so points in it could not count toward the tiers below. Dropped, not repaired.
-		live := treeNodes[:0]
-		for i := range treeNodes {
-			_, offX := repairTraitCoord(treeNodes[i].PosX, xs)
-			_, offY := repairTraitCoord(treeNodes[i].PosY, ys)
-			if offX || offY {
-				fmt.Fprintf(os.Stderr, "[traits] tree %d node %d: skipped, parked off canvas at %d/%d\n", treeID, treeNodes[i].NodeID, treeNodes[i].PosX, treeNodes[i].PosY)
-				continue
-			}
-			live = append(live, treeNodes[i])
-		}
-		treeNodes = live
 
 		// Split the tree into the spec blocks that sit next to each other.
 		distinctX := []int{}
@@ -1626,9 +1699,8 @@ ORDER BY x.TraitNodeID, sl.DisplayName_lang
 			candidates = append(candidates, candidate)
 		}
 
-		// A tree can hold a talent twice, the retired copy parked far off the
-		// canvas, and two nodes can land on the same cell when one of them is
-		// authored off the lattice. The first breaks protoc, which rejects the
+		// A tree can hold a talent twice, and two nodes can land on the same
+		// cell when one of them is authored off the lattice. The first breaks protoc, which rejects the
 		// repeated field name, the second breaks the picker, which rejects
 		// duplicate locations, so the node sitting closest to its cell wins and
 		// the other one is dropped.
@@ -1889,7 +1961,7 @@ func LoadAndWriteSpells(dbHelper *DBHelper, inputsDir string) ([]dbc.Spell, erro
 	COALESCE(sm.MinDuration, 0),
 	COALESCE(ss.MaxScalingLevel, 0),
 	COALESCE(ss.MinScalingLevel, 0),
-	0, -- SpellScaling.ScalesFromItemLevel: dropped by the client
+	0, -- SpellScaling.ScalesFromItemLevel: dropped from the game files
 	COALESCE(sl.SpellLevel, 0),
 	COALESCE(sl.BaseLevel, 0),
 	COALESCE(sl.MaxLevel, 0),
@@ -1914,7 +1986,7 @@ func LoadAndWriteSpells(dbHelper *DBHelper, inputsDir string) ([]dbc.Spell, erro
 	COALESCE(sei.EquippedItemClass, 0),
 	COALESCE(sei.EquippedItemInvTypes, 0),
 	COALESCE(sei.EquippedItemSubclass, 0),
-	0, -- SpellScaling.CastTimeMin: dropped by the client
+	0, -- SpellScaling.CastTimeMin: dropped from the game files
 	COALESCE(sco.SpellClassMask, ""),
 	COALESCE(sco.SpellClassSet, 0),
 	COALESCE(si.AuraInterruptFlags, ""),
@@ -2181,7 +2253,7 @@ func LoadCraftedItems(dbHelper *DBHelper) (
 	return sourcesByItem
 }
 
-func ScanRepItems(rows *sql.Rows) (itemID int, ds *proto.RepSource, err error) {
+func ScanRepItems(rows *sql.Rows) (itemID int, factionName string, ds *proto.RepSource, err error) {
 	var (
 		minReputation      int
 		rep                proto.RepSource
@@ -2191,52 +2263,63 @@ func ScanRepItems(rows *sql.Rows) (itemID int, ds *proto.RepSource, err error) {
 	err = rows.Scan(
 		&itemID,
 		&rep.RepFactionId,
+		&factionName,
 		&reputationRaceMask,
 		&minReputation,
 	)
+	if err != nil {
+		return 0, "", nil, fmt.Errorf("scanning rep row: %w", err)
+	}
 
-	if dbc.AlliedRaces.Matches(reputationRaceMask) {
+	// A side's faction names that side's races in its first race mask (the other side starts Hated in the
+	// second); a first mask naming races of both sides is every race's faction.
+	alliance := dbc.AlliedRaces.Matches(reputationRaceMask)
+	horde := dbc.HordeRaces.Matches(reputationRaceMask)
+	if alliance && !horde {
 		rep.FactionId = proto.Faction_Alliance
-	} else if dbc.HordeRaces.Matches(reputationRaceMask) {
+	} else if horde && !alliance {
 		rep.FactionId = proto.Faction_Horde
 	}
 
 	rep.RepLevel = dbc.GetRepLevel(minReputation)
-	if err != nil {
-		return 0, nil, fmt.Errorf("scanning rep row: %w", err)
-	}
-	return itemID, &rep, nil
+	return itemID, factionName, &rep, nil
 }
 
+// The items whose ItemSparse row asks for a standing with a faction, and the names of those factions.
 func LoadRepItems(dbHelper *DBHelper) (
 	sourcesByItem map[int][]*proto.RepSource,
+	factionNames map[int32]string,
+	err error,
 ) {
 	const query = `
-		SELECT isp.ID, fa.ID, COALESCE(fa.ReputationRaceMasks0_0, 0) AS ReputationRaceMask, isp.MinReputation FROM ItemSparse isp
-		LEFT JOIN Faction fa on fa.ID = isp.MinFactionID
-		WHERE fa.ParentFactionID=980
+		SELECT isp.ID, fa.ID, fa.Name_lang,
+			(COALESCE(fa.ReputationRaceMasks0_1, 0) << 32) | (COALESCE(fa.ReputationRaceMasks0_0, 0) & 0xFFFFFFFF) AS ReputationRaceMask,
+			isp.MinReputation FROM ItemSparse isp
+		JOIN Faction fa on fa.ID = isp.MinFactionID
+		WHERE isp.MinFactionID > 0
     `
 
 	rows, err := dbHelper.db.Query(query)
 	if err != nil {
-		return nil
+		return nil, nil, fmt.Errorf("querying rep items: %w", err)
 	}
 	defer rows.Close()
 
 	sourcesByItem = make(map[int][]*proto.RepSource)
+	factionNames = make(map[int32]string)
 
 	for rows.Next() {
-		itemID, ds, scanErr := ScanRepItems(rows)
+		itemID, factionName, ds, scanErr := ScanRepItems(rows)
 		if scanErr != nil {
-			return nil
+			return nil, nil, scanErr
 		}
 		sourcesByItem[itemID] = append(sourcesByItem[itemID], ds)
+		factionNames[ds.RepFactionId] = factionName
 	}
 	if err = rows.Err(); err != nil {
-		return nil
+		return nil, nil, fmt.Errorf("reading rep items: %w", err)
 	}
-	fmt.Println("Loaded rep items", len(sourcesByItem))
-	return sourcesByItem
+	return sourcesByItem, factionNames, nil
 }
 
 func ScanItemUpgradePath(rows *sql.Rows) (UpgradeID int, upgradePathID int, ilvl int, err error) {

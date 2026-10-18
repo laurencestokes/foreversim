@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/tools/database/dbc"
@@ -23,10 +24,11 @@ func parsedItem(t *testing.T, instance *dbc.DBC, itemID int, spellID int32) (*pr
 }
 
 // An on-use whose spell puts an A_SCHOOL_ABSORB on the wearer registers through the absorb shape:
-// Mark of Resolution 17759's 21956, 780 physical for 10 s. Onyxia Blood Talisman 18406's 1287808
-// states 10000000000 beside the A_DUMMY its tooltip reads as Dragon Breath spells, which the client
-// does not list, and Adaptive Combat Assistant 272437's 1291097 names the Nature damage 1291099 its
-// shield deals when broken early; both are refused and listed.
+// Mark of Resolution 17759's 21956, a physical absorb. Onyxia Blood Talisman 18406's 1287808 states
+// an absorb beside the A_DUMMY its tooltip reads as Dragon Breath spells, which the game files do not
+// list, and is refused for the reason UnsupportedAbsorbBySpellID gives and listed. Adaptive Combat
+// Assistant 272437's 1291097 names the Nature damage 1291099 its shield deals when broken early, which
+// the absorb shape deals with it.
 func TestOnUseAbsorbRoutesFromTheSpellItCasts(t *testing.T) {
 	withDBCInputs(t)
 	instance := dbc.GetDBC()
@@ -38,10 +40,8 @@ func TestOnUseAbsorbRoutesFromTheSpellItCasts(t *testing.T) {
 		reasons []string
 	}{
 		{17759, 21956, EffectParseResultSuccess, nil},
-		{18406, 1287808, EffectParseResultRefused, []string{
-			"the absorb of 10000000000 beside an A_DUMMY absorbs only the spells a script names, which the client does not list"}},
-		{272437, 1291097, EffectParseResultRefused, []string{
-			"the damage of 1291099 (Sigmoid Revenge) the absorb's row names is not simulated"}},
+		{18406, 1287808, EffectParseResultRefused, []string{UnsupportedAbsorbBySpellID[1287808]}},
+		{272437, 1291097, EffectParseResultSuccess, nil},
 	} {
 		parsed, effect := parsedItem(t, instance, tc.itemID, tc.spellID)
 		groups := map[string]Group{}
@@ -69,24 +69,48 @@ func TestOnUseAbsorbRoutesFromTheSpellItCasts(t *testing.T) {
 	}
 }
 
+// Only an absorb listed for damage on breaking early deals the damage its tooltip names: 1291097's
+// 1291099 registers with it, and the same row under an unlisted ID is refused for that damage.
+func TestAbsorbDealsOnlyListedBreakDamage(t *testing.T) {
+	withDBCInputs(t)
+	sigmoid := spelldata.MustFind(1291097)
+	if id, ok := shared.AbsorbBreakDamage(sigmoid); !ok || id != 1291099 {
+		t.Fatalf("1291097 lists %d as its break damage (listed %v), want 1291099", id, ok)
+	}
+	if desc := dbc.GetDBC().Spells[1291097].Description; !strings.Contains(desc, "expires before") || !strings.Contains(desc, "$1291099") {
+		t.Errorf("1291097's tooltip %q states no damage from 1291099 when the shield expires early", desc)
+	}
+	if got := absorbUnsupported(sigmoid); got != nil {
+		t.Errorf("1291097 refused for %q, want registered with 1291099's damage", got)
+	}
+
+	unlisted := *sigmoid
+	unlisted.ID = 1
+	want := []string{"the damage of 1291099 (Sigmoid Revenge) the absorb's row names is not simulated"}
+	if got := absorbUnsupported(&unlisted); !slices.Equal(got, want) {
+		t.Errorf("an unlisted absorb naming 1291099 refused for %q, want %q", got, want)
+	}
+}
+
 // An item proc whose spell, or one its trigger casts, puts an absorb on the wearer routes to the absorb
-// shape. Uther's Strength 11302's equip aura 8397 casts 10368 and rolls the 4 in its ProcChance
-// column over the 2% its tooltip states on effect 1; Jang'thraze the Protector 9380's chance on hit
+// shape. Uther's Strength 11302's equip aura 8397 casts 10368 and rolls the chance in its ProcChance
+// column over the one its tooltip states on an effect; Jang'thraze the Protector 9380's chance on hit
 // states no rate.
 func TestItemProcAbsorbRoutes(t *testing.T) {
 	withDBCInputs(t)
 	instance := dbc.GetDBC()
 
 	for _, tc := range []struct {
-		itemID  int
-		buffID  int32
-		trigger int
-		want    EffectParseResult
-		reasons []string
-		rate    string
+		itemID   int
+		buffID   int32
+		trigger  int
+		want     EffectParseResult
+		reasons  []string
+		rate     string
+		rateRule string
 	}{
-		{11302, 10368, 8397, EffectParseResultSuccess, nil, "trigger 8397 (4%, the column over effect 1's 2%,"},
-		{9380, 11657, 11657, EffectParseResultRefused, []string{spelldata.ReasonStatesNoRate}, "trigger 11657 (0%,"},
+		{11302, 10368, 8397, EffectParseResultSuccess, nil, "trigger 8397 (", "the column over effect"},
+		{9380, 11657, 11657, EffectParseResultRefused, []string{spelldata.ReasonStatesNoRate}, "trigger 11657 (0%,", ""},
 	} {
 		parsed, effect := parsedItem(t, instance, tc.itemID, tc.buffID)
 		groups := map[string]Group{}
@@ -105,8 +129,8 @@ func TestItemProcAbsorbRoutes(t *testing.T) {
 		if !slices.Equal(r.Unsupported, tc.reasons) {
 			t.Errorf("item %d refused for %q, want %q", tc.itemID, r.Unsupported, tc.reasons)
 		}
-		if !strings.HasPrefix(r.Summary, tc.rate) {
-			t.Errorf("item %d summary %q, want it to start %q", tc.itemID, r.Summary, tc.rate)
+		if !strings.HasPrefix(r.Summary, tc.rate) || !strings.Contains(r.Summary, tc.rateRule) {
+			t.Errorf("item %d summary %q, want it to start %q and name %q", tc.itemID, r.Summary, tc.rate, tc.rateRule)
 		}
 	}
 }

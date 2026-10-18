@@ -1,5 +1,6 @@
 import i18n from '@i18n/config';
 import type { ActionMetrics } from '@sim/proto/sim_result';
+import { percentOf } from '@sim/utils/math';
 
 import { MetricsCombinedTooltip, type MetricsCombinedTooltipGroup } from '../MetricsCombinedTooltip';
 
@@ -8,7 +9,7 @@ export const amountHeader = (): Array<string | undefined> => [undefined, i18n.t(
 
 /**
  * Crushing blows land only on the player, so the damage-taken table is the one breakdown that shows
- * them. Every other TBC-only outcome — the `resisted*` family, blocked crits — applies to both
+ * them. Every other such outcome — the `resisted*` family, blocked crits — applies to both
  * directions and needs no flag.
  */
 export interface AttackBreakdownOptions {
@@ -37,6 +38,23 @@ const damageBreakdownGroup = (metric: ActionMetrics, { crush }: AttackBreakdownO
 	};
 };
 
+/** The values a class or spec records on the action, one row per key, or no group when it records none. */
+export const customMetricsGroups = (metric: ActionMetrics): Array<MetricsCombinedTooltipGroup> => {
+	const customMetrics = metric.customMetrics;
+	if (!customMetrics.length) return [];
+	return [
+		{
+			name: i18n.t('results_tab.details.custom_metrics.group'),
+			spellSchool: metric.spellSchool,
+			totalPercentage: 100,
+			data: customMetrics.map(({ key, ...entry }) => ({
+				name: i18n.t(`results_tab.details.custom_metrics.${key}`, { defaultValue: key }),
+				...entry,
+			})),
+		},
+	];
+};
+
 const castsGroup = (metric: ActionMetrics, { crush }: AttackBreakdownOptions = {}): MetricsCombinedTooltipGroup => {
 	const landed = metric.landedHits || metric.casts;
 	const blocked = metric.blocks + metric.blockedCrits;
@@ -63,8 +81,8 @@ const castsGroup = (metric: ActionMetrics, { crush }: AttackBreakdownOptions = {
 };
 
 const hitGroups = (metric: ActionMetrics, { crush }: AttackBreakdownOptions = {}): Array<MetricsCombinedTooltipGroup> => {
-	const ofHits = (value: number) => (value / metric.landedHits) * 100;
-	const ofTicks = (value: number) => (value / metric.landedTicks) * 100;
+	const ofHits = (value: number) => percentOf(value, metric.landedHits);
+	const ofTicks = (value: number) => percentOf(value, metric.landedTicks);
 
 	return [
 		{
@@ -141,7 +159,7 @@ export const threatTooltip = (metric: ActionMetrics, value: number, showThreatMe
 	showThreatMetrics && value ? <MetricsCombinedTooltip headerValues={amountHeader()} groups={[threatGroup(metric, value)]} /> : null;
 
 export const damageBreakdownTooltip = (metric: ActionMetrics, options?: AttackBreakdownOptions) => (
-	<MetricsCombinedTooltip headerValues={amountHeader()} groups={[damageBreakdownGroup(metric, options)]} />
+	<MetricsCombinedTooltip headerValues={amountHeader()} groups={[damageBreakdownGroup(metric, options), ...customMetricsGroups(metric)]} />
 );
 
 export const castsTooltip = (metric: ActionMetrics, options?: AttackBreakdownOptions) =>

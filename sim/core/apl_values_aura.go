@@ -19,6 +19,7 @@ type APLValueAuraIsActive struct {
 	aura                AuraReference
 	reactionTime        time.Duration
 	includeReactionTime bool
+	ownSpells           []*Spell // The player's APL spells that apply the aura: the same id, or the aura as their RelatedSelfBuff.
 }
 
 func (rot *APLRotation) newValueAuraIsActive(config *proto.APLValueAuraIsActive, _ *proto.UUID) APLValue {
@@ -27,12 +28,20 @@ func (rot *APLRotation) newValueAuraIsActive(config *proto.APLValueAuraIsActive,
 	}
 	aura := rot.GetAPLAura(rot.GetSourceUnit(config.SourceUnit), config.AuraId)
 	if aura.Get() == nil {
-		return rot.newValueConst(&proto.APLValueConst{Val: "false"}, nil)
+		return nil
+	}
+	actionID := ProtoToActionID(config.AuraId)
+	var ownSpells []*Spell
+	for _, spell := range rot.unit.Spellbook {
+		if spell.Flags.Matches(SpellFlagAPL) && (spell.ActionID.SameAction(actionID) || (spell.RelatedSelfBuff != nil && spell.RelatedSelfBuff.ActionID.SameAction(actionID))) {
+			ownSpells = append(ownSpells, spell)
+		}
 	}
 	return &APLValueAuraIsActive{
 		aura:                aura,
 		reactionTime:        rot.unit.ReactionTime,
 		includeReactionTime: config.IncludeReactionTime,
+		ownSpells:           ownSpells,
 	}
 }
 func (value *APLValueAuraIsActive) Type() proto.APLValueType {
@@ -40,10 +49,36 @@ func (value *APLValueAuraIsActive) Type() proto.APLValueType {
 }
 func (value *APLValueAuraIsActive) GetBool(sim *Simulation) bool {
 	aura := value.aura.Get()
-	if value.includeReactionTime {
-		return aura.IsActive() && aura.TimeActive(sim) >= value.reactionTime
+	if aura == nil {
+		return false
 	}
-	return aura.IsActive()
+	if !value.includeReactionTime {
+		return aura.activeOrPending()
+	}
+	// The player knows at once that an aura their own cast put up is there, and reacts only to it running out;
+	// any other aura, such as a proc, takes the reaction time to notice as it lands.
+	if aura.pendingOwnActivations > 0 {
+		return true
+	}
+	if value.castByPlayer(aura) {
+		return aura.IsActive() || (aura.expired && aura.TimeInactive(sim) < value.reactionTime)
+	}
+	return aura.IsActive() && aura.TimeActive(sim) >= value.reactionTime
+}
+
+// Whether one of the player's spells was cast, or a guaranteed declared proc off a unit's own APL spell put the
+// aura up, refreshed it or changed its stacks, as the aura landed or while it was up. A proc sharing a spell's id,
+// such as the Revenge window, starts before that spell is cast, so it stays a proc.
+func (value *APLValueAuraIsActive) castByPlayer(aura *Aura) bool {
+	if aura.lastOwnProcAt >= aura.startTime {
+		return true
+	}
+	for _, spell := range value.ownSpells {
+		if spell.lastAppliedAt >= aura.startTime {
+			return true
+		}
+	}
+	return false
 }
 func (value *APLValueAuraIsActive) String() string {
 	return fmt.Sprintf("Aura Active(%s)", value.aura.String())
@@ -62,7 +97,7 @@ func (rot *APLRotation) newValueAuraIsInactive(config *proto.APLValueAuraIsInact
 	}
 	aura := rot.GetAPLAura(rot.GetSourceUnit(config.SourceUnit), config.AuraId)
 	if aura.Get() == nil {
-		return rot.newValueConst(&proto.APLValueConst{Val: "true"}, nil)
+		return nil
 	}
 
 	return &APLValueAuraIsInactive{
@@ -76,10 +111,13 @@ func (value *APLValueAuraIsInactive) Type() proto.APLValueType {
 }
 func (value *APLValueAuraIsInactive) GetBool(sim *Simulation) bool {
 	aura := value.aura.Get()
-	if value.includeReactionTime {
-		return !aura.IsActive() && aura.TimeInactive(sim) >= value.reactionTime
+	if aura == nil {
+		return true
 	}
-	return !aura.IsActive()
+	if value.includeReactionTime {
+		return !aura.IsActive() && aura.pendingOwnActivations == 0 && aura.TimeInactive(sim) >= value.reactionTime
+	}
+	return !aura.activeOrPending()
 }
 func (value *APLValueAuraIsInactive) String() string {
 	return fmt.Sprintf("Aura Inactive(%s)", value.aura.String())
@@ -96,7 +134,7 @@ func (rot *APLRotation) newValueAuraRemainingTime(config *proto.APLValueAuraRema
 	}
 	aura := rot.GetAPLAura(rot.GetSourceUnit(config.SourceUnit), config.AuraId)
 	if aura.Get() == nil {
-		return rot.newValueConst(&proto.APLValueConst{Val: "0ms"}, nil)
+		return nil
 	}
 	return &APLValueAuraRemainingTime{
 		aura: aura,
@@ -119,6 +157,10 @@ type APLValueAuraNumStacks struct {
 	reactionTime        time.Duration
 	includeReactionTime bool
 
+	stackHistories []auraStackHistory // Indexed by UnitIndex, one per unit the aura reference can resolve to.
+}
+
+type auraStackHistory struct {
 	stackUpdateTime time.Duration
 	stacks          int32
 	previousStacks  int32
@@ -131,10 +173,7 @@ func (rot *APLRotation) newValueAuraNumStacks(config *proto.APLValueAuraNumStack
 	aura := rot.GetAPLAura(rot.GetSourceUnit(config.SourceUnit), config.AuraId)
 	resolvedAura := aura.Get()
 	if resolvedAura == nil {
-		// An aura this character can't have (an untaken talent's) has no stacks. Returning nil
-		// dropped the whole comparison, so "Maelstrom Weapon >= 5 stacks" without the talent
-		// became "always" and enhancement hard-cast Lightning Bolt on every GCD.
-		return rot.newValueConst(&proto.APLValueConst{Val: "0"}, uuid)
+		return nil
 	}
 	if resolvedAura.MaxStacks == 0 {
 		rot.ValidationMessageByUUID(uuid, proto.LogLevel_Warning, "%s is not a stackable aura", ProtoToActionID(config.AuraId))
@@ -145,19 +184,28 @@ func (rot *APLRotation) newValueAuraNumStacks(config *proto.APLValueAuraNumStack
 		aura:                aura,
 		reactionTime:        rot.unit.ReactionTime,
 		includeReactionTime: config.IncludeReactionTime,
+		stackHistories:      make([]auraStackHistory, len(rot.unit.Env.AllUnits)),
 	}
 
-	resolvedAura.ApplyOnStacksChange(func(aura *Aura, sim *Simulation, oldStacks int32, newStacks int32) {
-		if sim.CurrentTime-value.stackUpdateTime >= value.reactionTime {
-			value.previousStacks = oldStacks
-		}
-		value.stackUpdateTime = sim.CurrentTime
-		value.stacks = newStacks
-	}).ApplyOnReset(func(aura *Aura, sim *Simulation) {
-		value.stackUpdateTime = NeverExpires
-		value.previousStacks = aura.GetStacks()
-		value.stacks = aura.GetStacks()
-	})
+	auras := aura.allTargetAuras
+	if aura.fixedAura != nil {
+		auras = AuraArray{aura.fixedAura}
+	}
+	for _, unitAura := range auras {
+		unitAura.ApplyOnStacksChange(func(aura *Aura, sim *Simulation, oldStacks int32, newStacks int32) {
+			history := &value.stackHistories[aura.Unit.UnitIndex]
+			if sim.CurrentTime-history.stackUpdateTime >= value.reactionTime {
+				history.previousStacks = oldStacks
+			}
+			history.stackUpdateTime = sim.CurrentTime
+			history.stacks = newStacks
+		}).ApplyOnReset(func(aura *Aura, sim *Simulation) {
+			history := &value.stackHistories[aura.Unit.UnitIndex]
+			history.stackUpdateTime = NeverExpires
+			history.previousStacks = aura.GetStacks()
+			history.stacks = aura.GetStacks()
+		})
+	}
 
 	return value
 }
@@ -165,10 +213,15 @@ func (value *APLValueAuraNumStacks) Type() proto.APLValueType {
 	return proto.APLValueType_ValueTypeInt
 }
 func (value *APLValueAuraNumStacks) GetInt(sim *Simulation) int32 {
-	if value.includeReactionTime {
-		return TernaryInt32(sim.CurrentTime-value.stackUpdateTime >= value.reactionTime, value.stacks, value.previousStacks)
+	aura := value.aura.Get()
+	if aura == nil {
+		return 0
 	}
-	return value.stacks
+	history := &value.stackHistories[aura.Unit.UnitIndex]
+	if value.includeReactionTime {
+		return TernaryInt32(sim.CurrentTime-history.stackUpdateTime >= value.reactionTime, history.stacks, history.previousStacks)
+	}
+	return history.stacks
 }
 func (value *APLValueAuraNumStacks) String() string {
 	return fmt.Sprintf("Aura Num Stacks(%s)", value.aura.String())

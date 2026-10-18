@@ -2,12 +2,11 @@ package paladin
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/buffs"
 	"github.com/wowsims/forever/sim/core/dbcenums"
-	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -49,20 +48,17 @@ func (paladin *Paladin) applyDeflection() {
 		return
 	}
 
-	paladin.PseudoStats.BaseParryChance += spellData.Deflection.FractionAt(paladin.Talents.Deflection)
+	spelldata.ParseStatic(&paladin.Character, spellData.Deflection.Rank(paladin.Talents.Deflection))
 }
 
 // Benediction - Reduces the Mana cost of all instant cast spells and abilities by 2/4/6/8/10%.
+// TODO: Verify in game that Benediction does not reduce Divine Favor's cost.
 func (paladin *Paladin) applyBenediction() {
 	if paladin.Talents.Benediction == 0 {
 		return
 	}
 
-	paladin.AddStaticMod(core.SpellModConfig{
-		ClassMask:  SpellMaskBenediction,
-		Kind:       core.SpellMod_PowerCost_Pct_Add,
-		FloatValue: spellData.Benediction.FractionAt(paladin.Talents.Benediction),
-	})
+	spelldata.ParseStatic(&paladin.Character, spellData.Benediction.Rank(paladin.Talents.Benediction))
 }
 
 // Improved Judgement - Decreases the cooldown of your Judgement ability by 1/2 sec.
@@ -71,11 +67,7 @@ func (paladin *Paladin) applyImprovedJudgement() {
 		return
 	}
 
-	paladin.AddStaticMod(core.SpellModConfig{
-		ClassMask: SpellMaskJudgement,
-		Kind:      core.SpellMod_Cooldown_Flat,
-		TimeValue: time.Duration(spellData.ImprovedJudgement.ValueAt(paladin.Talents.ImprovedJudgement)) * time.Millisecond,
-	})
+	spelldata.ParseStatic(&paladin.Character, spellData.ImprovedJudgement.Rank(paladin.Talents.ImprovedJudgement))
 }
 
 // Holy Conduit - Reduces the mana cost of your Consecration, Holy Wrath, Exorcism, and Hammer of
@@ -85,11 +77,7 @@ func (paladin *Paladin) applyHolyConduit() {
 		return
 	}
 
-	paladin.AddStaticMod(core.SpellModConfig{
-		ClassMask:  SpellMaskConsecration | SpellMaskHolyWrath | SpellMaskExorcism | SpellMaskHammerOfWrath,
-		Kind:       core.SpellMod_PowerCost_Pct_Add,
-		FloatValue: spellData.HolyConduit.FractionAt(paladin.Talents.HolyConduit),
-	})
+	spelldata.ParseStatic(&paladin.Character, spellData.HolyConduit.Rank(paladin.Talents.HolyConduit))
 }
 
 // Conviction - Improves your chance to get a critical strike with melee attacks by 1/2/3/4/5%.
@@ -98,15 +86,18 @@ func (paladin *Paladin) applyConviction() {
 		return
 	}
 
-	paladin.AddStat(stats.PhysicalCritPercent, spellData.Conviction.ValueAt(paladin.Talents.Conviction))
+	spelldata.ParseStatic(&paladin.Character, spellData.Conviction.Rank(paladin.Talents.Conviction))
 }
 
 // Vindication - Gives your damaging melee attacks a chance to reduce the target's Attack Power by
-// 67/134/201, and increase your Attack Power by 1/2/3% for 30 sec.
+// 68/136/204, and increase your Attack Power by 1/2/3% for 30 sec.
 //
-// The Classic, TBC and Forever clients all state the chance as 100%, and the Forever beta client
-// (1.60.1.69893) is what this sim follows: every damaging melee attack that lands procs it.
-const vindicationProcChance = 1.0
+// The game files state no rate: the ProcChance column reads 100. In game it is 5 procs a minute on
+// the weapon's speed, measured on swings at 1.6 and 3.6 speed under Seal of Righteousness and Seal of
+// the Crusader. The row's proc mask also hears melee specials, which roll the same chance and were not
+// measured. The target's debuff is a magic spell of its own that can miss; the paladin's buff comes
+// with every proc.
+const vindicationPPM = 5
 
 func (paladin *Paladin) applyVindication() {
 	if paladin.Talents.Vindication == 0 {
@@ -115,70 +106,77 @@ func (paladin *Paladin) applyVindication() {
 
 	rank := spellData.VindicationTriggered.Highest()
 	points := spellData.Vindication.EffectAt(1).ValueAt(paladin.Talents.Vindication)
-	// The tooltip's ${$m1/-3*$440667m1}: the trigger's -201 scaled by the points over three.
-	targetAttackPower := rank.Effect(dbcenums.A_MOD_ATTACK_POWER, 0).Average(core.CharacterLevel) * points / 3
 
+	// The raid's Vindication row, priced at the paladin's ranks, so it bids against the raid's
+	// attack power reductions rather than stacking with them.
 	targetAuras := paladin.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
-		return target.GetOrRegisterAura(core.Aura{
-			Label:    "Vindication" + paladin.Label,
-			ActionID: core.ActionID{SpellID: rank.ID},
-			Duration: rank.Duration(),
-		}).AttachStatBuff(stats.AttackPower, targetAttackPower)
+		return buffs.NewSpellDataVindicationAura(target, true, paladin.Talents.Vindication)
 	})
 
-	attackPowerDep := paladin.NewDynamicMultiplyStat(stats.AttackPower, 1+points/100)
+	attackPowerDep := paladin.NewDynamicMultiplyStat(stats.AttackPower, core.MultiplierFromPercent(points))
 	selfAura := paladin.RegisterAura(core.Aura{
 		Label:    "Vindication" + paladin.Label,
 		ActionID: core.ActionID{SpellID: rank.ID}.WithTag(1),
 		Duration: rank.Duration(),
 	}).AttachStatDependency(attackPowerDep)
 
-	paladin.MakeProcTriggerAura(core.ProcTrigger{
-		Name:       "Vindication - Trigger" + paladin.Label,
-		Callback:   core.CallbackOnSpellHitDealt,
-		ProcMask:   core.ProcMaskMelee,
-		Outcome:    core.OutcomeLanded,
-		ProcChance: vindicationProcChance,
-		Handler: func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
-			targetAuras.Get(result.Target).Activate(sim)
-			selfAura.Activate(sim)
-		},
-	})
+	// Magic in SpellCategories: the debuff rolls spell hit.
+	debuffConfig := spelldata.SpellConfig(&paladin.Unit, rank, spelldata.Magic(core.ProcMaskEmpty), spelldata.Proc())
+	debuffConfig.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcOutcome(sim, target, spell.OutcomeMagicHit)
+		if result.Landed() {
+			targetAuras.Get(target).Activate(sim)
+		}
+		spell.DealOutcome(sim, result)
+	}
+	debuffConfig.RelatedAuraArrays = targetAuras.ToMap()
+	debuff := paladin.RegisterSpell(debuffConfig)
+
+	trigger := spelldata.ProcTrigger(&paladin.Character, spellData.Vindication.Rank(paladin.Talents.Vindication), func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
+		debuff.Cast(sim, result.Target)
+		selfAura.Activate(sim)
+	}, spelldata.WeaponSpeedPPM(vindicationPPM))
+	trigger.Name = "Vindication - Trigger" + paladin.Label
+	paladin.MakeProcTriggerAura(trigger)
 }
 
 // Sanctified Judgement - Gives your Judgement ability a 33/66/100% chance to return 20/40/60% of
-// the Mana cost of the judged seal. The chance is the first effect, the refund the second.
+// the Mana cost of the judged seal.
 //
-// The game returns 10/9 of the stated share of what the seal cost: 22/44/67%. Beta logs (reports
-// 2699/2701/2712, 1311077) show it on 13 paladins at all three ranks and five seal costs: Seal
-// of Command 65 -> 14-15 / 29 / 43, Seal of the Crusader 40 -> 9 at rank 1, Seal of Fury 60 -> 40
-// and 90 -> 60, Seal of Command rank 2 110 -> 73 at rank 3. The chance reads true (Ligma 73 of
-// 223 Judgements at rank 1, 3-point paladins every one). Two paladins land on exactly 40% (Inco,
-// rank 2) and 60% (Tristram, rank 3): 10/9 of a seal 10% cheaper, five points of Benediction, so
-// the share applies to the cost paid.
-const sanctifiedJudgementLogScale = 10.0 / 9
-
+// Judgement fires no on-cast callbacks, so the trigger hears the judgement the seal unleashes: one
+// per Judgement, and it refunds whether or not that judgement lands.
+//
+// The refund is a share of the seal's base cost, and the seal's percent cost cut goes on top of it
+// instead of coming off: Benediction 5/5 makes a 90 mana seal cost 81 and refund 60% of 99, measured
+// in game at Benediction 0, 1, 3 and 5 with Sanctified Judgement 3/3. With Twist of Light as a second
+// cut the two are multiplied before the flip, which no log has checked.
 func (paladin *Paladin) applySanctifiedJudgement() {
 	if paladin.Talents.SanctifiedJudgement == 0 {
 		return
 	}
 
 	manaMetrics := paladin.NewManaMetrics(core.ActionID{SpellID: spellData.SanctifiedJudgement.Highest().ID})
-	refund := spellData.SanctifiedJudgement.EffectAt(2).FractionAt(paladin.Talents.SanctifiedJudgement) * sanctifiedJudgementLogScale
+	manaMetrics.NoThreat = spellData.SanctifiedJudgementTriggered.Highest().GeneratesNoThreat()
+	refund := spellData.SanctifiedJudgement.EffectAt(2).FractionAt(paladin.Talents.SanctifiedJudgement)
 
 	paladin.MakeProcTriggerAura(core.ProcTrigger{
 		Name:               "Sanctified Judgement" + paladin.Label,
-		Callback:           core.CallbackOnCastComplete,
-		ClassSpellMask:     SpellMaskJudgement,
+		Callback:           core.CallbackOnSpellHitDealt,
+		ClassSpellMask:     SpellMaskAllJudgements,
 		ProcChance:         spellData.SanctifiedJudgement.EffectAt(1).FractionAt(paladin.Talents.SanctifiedJudgement),
 		TriggerImmediately: true,
 		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
 			if seal := paladin.activeSeal(); seal != nil {
-				paladin.AddMana(sim, seal.spell.CurCast.Cost*refund, manaMetrics)
+				cost := seal.spell.Cost
+				paladin.AddMana(sim, float64(cost.BaseCost)*(2-cost.PercentModifier)*refund, manaMetrics)
 			}
 		},
 	})
 }
+
+// The spell that deals Eye for an Eye's damage. The talent's dummy names no trigger, so no ladder
+// reaches it.
+var eyeForAnEyeDamage = spelldata.MustFind(25997)
 
 // Eye for an Eye - All critical strikes against you cause 5/10% of the damage taken to the attacker
 // as well. The damage caused by Eye for an Eye will not exceed 50% of the Paladin's total health.
@@ -187,34 +185,22 @@ func (paladin *Paladin) applyEyeForAnEye() {
 		return
 	}
 
-	rank := spellData.EyeForAnEye.Highest()
 	share := spellData.EyeForAnEye.FractionAt(paladin.Talents.EyeForAnEye)
 
 	var reflected float64
-	reflect := paladin.RegisterSpell(core.SpellConfig{
-		ActionID:    core.ActionID{SpellID: rank.ID},
-		SpellSchool: core.SpellSchoolHoly,
-		ProcMask:    core.ProcMaskEmpty,
-		Flags:       core.SpellFlagBinary | core.SpellFlagPassiveSpell | core.SpellFlagIgnoreModifiers,
+	config := spelldata.SpellConfig(&paladin.Unit, eyeForAnEyeDamage, spelldata.Magic(core.ProcMaskEmpty), spelldata.Proc(),
+		spelldata.Flags(core.SpellFlagBinary|core.SpellFlagIgnoreModifiers))
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealDamage(sim, target, reflected, spell.OutcomeAlwaysHit)
+	}
+	reflect := paladin.RegisterSpell(config)
 
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, reflected, spell.OutcomeAlwaysHit)
-		},
+	trigger := spelldata.ProcTrigger(&paladin.Character, spellData.EyeForAnEye.Rank(paladin.Talents.EyeForAnEye), func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+		reflected = min(result.Damage*share, paladin.MaxHealth()/2)
+		reflect.Cast(sim, spell.Unit)
 	})
-
-	paladin.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Eye for an Eye" + paladin.Label,
-		Callback:           core.CallbackOnSpellHitTaken,
-		Outcome:            core.OutcomeCrit,
-		RequireDamageDealt: true,
-		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			reflected = min(result.Damage*share, paladin.MaxHealth()/2)
-			reflect.Cast(sim, spell.Unit)
-		},
-	})
+	trigger.Name = "Eye for an Eye" + paladin.Label
+	paladin.MakeProcTriggerAura(trigger)
 }
 
 // Pursuit of Justice - Increases movement speed and mounted movement speed by 8/15%. This does not
@@ -233,19 +219,13 @@ func (paladin *Paladin) applyPursuitOfJustice() {
 }
 
 // Sacred Arbiter - Increases the damage of your Holy Strike ability by 20% and causes it to refresh
-// all Judgement effects on the target. The paladin's own melee strikes already refresh its own
-// judgements; Holy Strike with the talent refreshes every judgement on the target, whoever put it
-// there, the way Crusader Strike did in TBC.
+// all Judgement effects on the target.
 func (paladin *Paladin) applySacredArbiter() {
 	if !paladin.Talents.SacredArbiter {
 		return
 	}
 
-	paladin.AddStaticMod(core.SpellModConfig{
-		ClassMask:  SpellMaskHolyStrike,
-		Kind:       core.SpellMod_DamageDone_Flat,
-		FloatValue: spellData.SacredArbiter.FractionAt(1),
-	})
+	spelldata.ParseStatic(&paladin.Character, spellData.SacredArbiter.Rank(1))
 
 	paladin.MakeProcTriggerAura(core.ProcTrigger{
 		Name:               "Sacred Arbiter" + paladin.Label,
@@ -264,23 +244,18 @@ func (paladin *Paladin) applySacredArbiter() {
 }
 
 // Two-Handed Weapon Specialization - Increases the damage you deal with two-handed melee weapons
-// by 2/4/6%. The client puts it on the Physical school alone.
+// by 2/4/6%.
 func (paladin *Paladin) applyTwoHandedWeaponSpecialization() {
 	if paladin.Talents.TwoHandedWeaponSpecialization == 0 {
 		return
 	}
 
-	paladin.applyWeaponSpecialization(
-		spellData.TwoHandedWeaponSpecialization.FractionAt(paladin.Talents.TwoHandedWeaponSpecialization),
-		proto.HandType_HandTypeTwoHand,
-	)
+	spelldata.ParseStatic(&paladin.Character,
+		spellData.TwoHandedWeaponSpecialization.Rank(paladin.Talents.TwoHandedWeaponSpecialization))
 }
 
 // Vengeance - Increases your Physical and Holy damage dealt by 1/2/3% for 30 sec after landing a
 // non-periodic critical strike. Stacks up to 3 times.
-//
-// 20049's proc flags (69972) carry no periodic flag, and the hit callback never sees a tick. The
-// stack cap is 20050's CumulativeAura.
 func (paladin *Paladin) applyVengeance() {
 	if paladin.Talents.Vengeance == 0 {
 		return
@@ -289,10 +264,8 @@ func (paladin *Paladin) applyVengeance() {
 	rank := spellData.VengeanceTriggered.Highest()
 	perStack := spellData.Vengeance.FractionAt(paladin.Talents.Vengeance)
 
-	// 20050 is damage done (A79), which never raises a heal.
 	damageMod := paladin.AddDynamicMod(core.SpellModConfig{
 		School:     core.SpellSchoolHoly | core.SpellSchoolPhysical,
-		ProcMask:   ^core.ProcMaskSpellHealing,
 		Kind:       core.SpellMod_DamageDone_Pct,
 		FloatValue: perStack,
 	})
@@ -313,53 +286,44 @@ func (paladin *Paladin) applyVengeance() {
 		},
 	})
 
-	paladin.MakeProcTriggerAura(core.ProcTrigger{
-		Name:             "Vengeance - Trigger" + paladin.Label,
-		Callback:         core.CallbackOnSpellHitDealt,
-		Outcome:          core.OutcomeCrit,
-		CanProcFromProcs: true, // 20049 carries the bit: seal crits count.
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			vengeance.Activate(sim)
-			vengeance.AddStack(sim)
-		},
+	trigger := spelldata.ProcTrigger(&paladin.Character, spellData.Vengeance.Rank(paladin.Talents.Vengeance), func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+		vengeance.Activate(sim)
+		vengeance.AddStack(sim)
 	})
+	trigger.Name = "Vengeance - Trigger" + paladin.Label
+	// The row's harmful-spell bit hears every spell, item spells too, which the sim registers under
+	// ProcMaskEmpty, so the listener hears any hit.
+	trigger.ProcMask = core.ProcMaskUnknown
+	paladin.MakeProcTriggerAura(trigger)
 }
 
-// Champion of the Light - Increases your spell damage by up to 20/40/60% of your Intellect. Client
-// 70170 cut it from 100% and dropped the healing effect, as the WoW: Forever Podcast (episode 2)
-// announced: "60% instead of 100, and it doesn't increase healing power anymore".
+// Champion of the Light - Increases your spell damage by up to 10/20/30% of your Intellect.
 func (paladin *Paladin) applyChampionOfTheLight() {
 	if paladin.Talents.ChampionOfTheLight == 0 {
 		return
 	}
 
-	share := spellData.ChampionOfTheLight.Effect(dbcenums.A_MOD_SPELL_DAMAGE_OF_STAT_PERCENT, 126).FractionAt(paladin.Talents.ChampionOfTheLight)
-	paladin.AddStatDependency(stats.Intellect, stats.SpellDamage, share)
+	spelldata.ParseStatic(&paladin.Character, spellData.ChampionOfTheLight.Rank(paladin.Talents.ChampionOfTheLight))
 }
 
-// Instrument of Law - Reduces the cast time of your Hammer of Wrath by 0.5/1.0 sec, and reduces all
-// threat you generate by 10/20% while Righteous Fury is not active.
+// Instrument of Law - Reduces the cast time of your Hammer of Wrath by 0.5/1.0 sec, and raises all
+// threat you generate by 10/20% while Righteous Fury is not active, as the talent curve states (the
+// tooltip says reduces).
 func (paladin *Paladin) applyInstrumentOfLaw() {
 	if paladin.Talents.InstrumentOfLaw == 0 {
 		return
 	}
 
-	rank := spellData.InstrumentOfLaw.Highest()
+	rank := spellData.InstrumentOfLaw.Rank(paladin.Talents.InstrumentOfLaw)
+	spelldata.ParseStatic(&paladin.Character, rank, spelldata.Effects(1))
 
-	paladin.AddStaticMod(core.SpellModConfig{
-		ClassMask: SpellMaskHammerOfWrath,
-		Kind:      core.SpellMod_CastTime_Flat,
-		TimeValue: time.Duration(spellData.InstrumentOfLaw.EffectAt(1).ValueAt(paladin.Talents.InstrumentOfLaw)) * time.Millisecond,
-	})
-
-	// The client states the threat reduction as a positive number Righteous Fury zeroes.
-	threat := core.MakePermanent(paladin.RegisterAura(core.Aura{
+	// The threat effect is off while Righteous Fury is up.
+	threat := paladin.RegisterAura(core.Aura{
 		Label:    "Instrument of Law" + paladin.Label,
 		ActionID: core.ActionID{SpellID: rank.ID},
-	}).AttachMultiplicativePseudoStatBuff(
-		&paladin.PseudoStats.ThreatMultiplier,
-		1-spellData.InstrumentOfLaw.Effect(dbcenums.A_MOD_THREAT, 127).FractionAt(paladin.Talents.InstrumentOfLaw),
-	))
+	})
+	spelldata.ParseEffects(&paladin.Character, threat, rank, spelldata.Effects(2))
+	core.MakePermanent(threat)
 
 	paladin.OnSpellRegistered(func(spell *core.Spell) {
 		if spell.Matches(SpellMaskRighteousFury) {
@@ -372,27 +336,18 @@ func (paladin *Paladin) applyInstrumentOfLaw() {
 	})
 }
 
-// Twist of Light - Reduces the mana cost of your Seal spells by 20%. When you replace your Seal of
-// Command, Seal of Righteousness, Seal of Fury, or Seal of Justice with a different Seal, gain an
-// Echo. Your next melee attack applies the replaced Seal's effects, consuming the Echo.
-//
-// Each seal leaves its own Echo (Echo of Command, of Fury, of Righteousness, of Justice): one
-// charge, no duration, consumed by the next auto attack that lands.
+// Twist of Light - Reduces the Mana cost of your Seal spells by 20%, and when you replace your Seal
+// of Command, Seal of Righteousness, Seal of Fury, or Seal of Justice with a different Seal, you
+// gain an Echo of that Seal. Your next melee attack applies the replaced Seal's effects, consuming
+// the Echo.
 func (paladin *Paladin) applyTwistOfLight() {
 	if !paladin.Talents.TwistOfLight {
 		return
 	}
 
-	// The discount is an A_ADD_PCT_MODIFIER on the cost, so it joins the additive bucket the way
-	// Swift Judgement's does.
-	paladin.AddStaticMod(core.SpellModConfig{
-		ClassMask:  SpellMaskAllSeals,
-		Kind:       core.SpellMod_PowerCost_Pct_Add,
-		FloatValue: spellData.TwistOfLight.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).FractionAt(1),
-	})
+	spelldata.ParseStatic(&paladin.Character, spellData.TwistOfLight.Rank(1))
 
 	paladin.echoes = map[int32]*sealEcho{}
-	var echoes []*sealEcho
 	for _, id := range []int32{echoOfCommandID, echoOfFuryID, echoOfRighteousnessID, echoOfJusticeID} {
 		echo := &sealEcho{}
 		echo.aura = paladin.RegisterAura(core.Aura{
@@ -400,32 +355,25 @@ func (paladin *Paladin) applyTwistOfLight() {
 			ActionID: core.ActionID{SpellID: id},
 			Duration: core.NeverExpires,
 		})
-		paladin.echoes[id] = echo
-		echoes = append(echoes, echo)
-	}
-
-	// One permanent trigger consumes every Echo that is up, in a fixed order. The Echo auras carry
-	// no callbacks of their own: an aura that deactivates itself from inside the hit callbacks
-	// reshuffles core's callback list mid-loop, which skipped or repeated other handlers depending
-	// on the order earlier iterations had left the list in.
-	core.MakePermanent(paladin.RegisterAura(core.Aura{
-		Label: "Twist of Light" + paladin.Label,
-	}).AttachProcTrigger(core.ProcTrigger{
-		Callback:           core.CallbackOnSpellHitDealt,
-		ProcMask:           core.ProcMaskMeleeWhiteHit,
-		Outcome:            core.OutcomeLanded,
-		TriggerImmediately: true,
-		Handler: func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
-			for _, echo := range echoes {
-				if !echo.aura.IsActive() {
-					continue
-				}
-				if echo.seal != nil && echo.seal.echo != nil {
-					echo.seal.echo(sim, result.Target)
+		echo.aura.NewExclusiveEffect(EchoCategory, true, core.ExclusiveEffect{})
+		echo.aura.AttachProcTrigger(core.ProcTrigger{
+			Callback:           core.CallbackOnSpellHitDealt,
+			ProcMask:           core.ProcMaskMeleeWhiteHit,
+			Outcome:            core.OutcomeLanded,
+			TriggerImmediately: true,
+			// The hit that lands consumes the Echo at once, so the next hit cannot; the replayed
+			// seal effect resolves a batch window later, as a live seal's does.
+			Handler: func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
+				if seal := echo.seal; seal != nil && seal.echo != nil {
+					target := result.Target
+					afterBatch(sim, core.ActionPriorityDOT, func(sim *core.Simulation) {
+						seal.echo(sim, target)
+					})
 				}
 				echo.seal = nil
 				echo.aura.Deactivate(sim)
-			}
-		},
-	}))
+			},
+		})
+		paladin.echoes[id] = echo
+	}
 }

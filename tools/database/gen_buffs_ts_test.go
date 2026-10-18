@@ -20,7 +20,7 @@ func TestRenderBuffsDebuffsTSShapes(t *testing.T) {
 			},
 			Scope: buffmanifest.ScopeRaid, Proto: buffmanifest.ProtoBool, Go: "PrayerOfShadowProtection",
 			Owner:   proto.Class_ClassPriest,
-			SpellID: 27683, DBName: "Prayer of Shadow Protection",
+			SpellID: 27683, CastSpellID: 27683, DBName: "Prayer of Shadow Protection",
 		},
 		{
 			BuffSpec: buffmanifest.BuffSpec{
@@ -28,7 +28,7 @@ func TestRenderBuffsDebuffsTSShapes(t *testing.T) {
 			},
 			Scope: buffmanifest.ScopeDebuff, Proto: buffmanifest.ProtoTristate, Go: "HuntersMark",
 			Owner:   proto.Class_ClassHunter,
-			SpellID: 14325, DBName: "Hunter's Mark",
+			SpellID: 14325, CastSpellID: 14325, DBName: "Hunter's Mark",
 			TalentRanks: 1, TalentSpellID: 19425,
 		},
 		{
@@ -37,7 +37,7 @@ func TestRenderBuffsDebuffsTSShapes(t *testing.T) {
 			},
 			Scope: buffmanifest.ScopeParty, Proto: buffmanifest.ProtoInt32, Kind: buffmanifest.KindExternalCD,
 			Go: "ManaTideTotems", Owner: proto.Class_ClassShaman,
-			SpellID: 17359, DBName: "Mana Tide Totem",
+			SpellID: 17359, CastSpellID: 17359, DBName: "Mana Tide Totem",
 		},
 	}
 

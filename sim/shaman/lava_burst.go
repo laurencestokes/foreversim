@@ -2,58 +2,47 @@ package shaman
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-var lavaBurstRank = spellData.LavaBurst.Highest()
+var lavaBurstRanks = castableRanks(spellData.LavaBurst)
 
-// Lava Burst is new in Forever. Its second effect is the bonus it gains against a target already
-// burning with Flame Shock.
-func (shaman *Shaman) registerLavaBurstSpell() {
-	if !shaman.Talents.LavaBurst {
-		return
+func (shaman *Shaman) registerLavaBurstSpells() {
+	lavaBurstRanks.Each(func(_ int32, rank *spelldata.Spell) { shaman.registerLavaBurstSpell(rank) })
+}
+
+// Lightning Overload names Lightning Bolt and Chain Lightning only, so Lava Burst has no overload.
+func (shaman *Shaman) registerLavaBurstSpell(rank *spelldata.Spell) {
+	config := spelldata.SpellConfig(&shaman.Unit, rank,
+		spelldata.Magic(core.ProcMaskSpellDamage),
+		spelldata.Flags(SpellFlagShamanSpell|SpellFlagFocusable))
+
+	// "If your Flame Shock is on the target, Lava Burst deals $s2% increased damage."
+	damage := rank.DamageEffect()
+	flameShockBonus := 1 + rank.EffectN(2).Average()/100
+
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		multiplier := 1.0
+		if shaman.flameShockActive(target) {
+			multiplier = flameShockBonus
+		}
+
+		spell.DamageMultiplier *= multiplier
+		result := spell.CalcDamage(sim, target, damage.Average(), spell.OutcomeMagicHitAndCrit)
+		spell.DamageMultiplier /= multiplier
+
+		spell.DealDamageAfterTravel(sim, result)
 	}
 
-	flameShockBonus := 1 + lavaBurstRank.EffectN(2).Percent()
+	shaman.LavaBurst = append(shaman.LavaBurst, shaman.RegisterSpell(config))
+}
 
-	shaman.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: lavaBurstRank.ID},
-		SpellSchool:    lavaBurstRank.SpellSchool(),
-		DefenseType:    lavaBurstRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL | SpellFlagShamanSpell | SpellFlagFocusable,
-		ClassSpellMask: SpellMaskLavaBurst,
-		MaxRange:       float64(lavaBurstRank.MaxRange),
-		MissileSpeed:   float64(lavaBurstRank.Speed),
-
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(lavaBurstRank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD:      lavaBurstRank.GCD(),
-				CastTime: lavaBurstRank.CastTime(),
-			},
-			ModifyCast: shaman.holdSwingDuringCast,
-			CD: core.Cooldown{
-				Timer:    shaman.NewTimer(),
-				Duration: max(lavaBurstRank.Cooldown(), lavaBurstRank.CategoryCooldown()),
-			},
-		},
-
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-		BonusCoefficient: lavaBurstRank.DamageEffect().Coeff(),
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			if shaman.FlameShock.RelatedDotSpell.Dot(target).IsActive() {
-				spell.DamageMultiplier *= flameShockBonus
-				defer func() { spell.DamageMultiplier /= flameShockBonus }()
-			}
-
-			result := spell.CalcDamage(sim, target, lavaBurstRank.DamageEffect().Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
-				spell.DealDamage(sim, result)
-			})
-		},
-	})
+// Whether a rank of the shaman's Flame Shock is on the target. The ranks share one dot per target.
+func (shaman *Shaman) flameShockActive(target *core.Unit) bool {
+	for _, flameShock := range shaman.FlameShock {
+		if flameShock.Dot(target).IsActive() {
+			return true
+		}
+	}
+	return false
 }

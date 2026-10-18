@@ -15,7 +15,6 @@ const (
 	SpellMaskFlashOfLight
 	SpellMaskLayOnHands
 	SpellMaskRighteousFury
-	SpellMaskHammerOfTheRighteous
 
 	// Talent abilities
 	SpellMaskDivineFavor
@@ -85,38 +84,8 @@ const (
 		SpellMaskJudgementOfTheCrusader |
 		SpellMaskJudgementOfFury
 
-	SpellMaskAllAuras = SpellMaskDevotionAura |
-		SpellMaskRetributionAura |
-		SpellMaskConcentrationAura |
-		SpellMaskFireResistanceAura |
-		SpellMaskFrostResistanceAura |
-		SpellMaskShadowResistanceAura
-
-	// The heals Healing Light, Illumination and Divine Favor name.
+	// The heals Illumination names.
 	SpellMaskHealingSpells = SpellMaskHolyLight |
 		SpellMaskFlashOfLight |
 		SpellMaskHolyShockHeal
-
-	// Benediction's class mask (20101) over the spells the sim registers: not Hammer of the Righteous,
-	// Lay on Hands, Divine Favor, Swift Judgement or any aura but Retribution Aura.
-	SpellMaskBenediction = SpellMaskAllSeals |
-		SpellMaskRetributionAura |
-		SpellMaskJudgement |
-		SpellMaskHolyStrike |
-		SpellMaskConsecration |
-		SpellMaskExorcism |
-		SpellMaskRighteousFury |
-		SpellMaskHolyShock |
-		SpellMaskHolyShockHeal |
-		SpellMaskHolyShield |
-		SpellMaskTemplarsBulwark
-
-	// Divine Precision's class mask (1310904), as far as the sim casts it.
-	SpellMaskDivinePrecision = SpellMaskConsecration |
-		SpellMaskExorcism |
-		SpellMaskHolyShock |
-		SpellMaskHolyStrike |
-		SpellMaskHolyWrath |
-		SpellMaskLightsVigil |
-		SpellMaskLightsVigilStrike
 )

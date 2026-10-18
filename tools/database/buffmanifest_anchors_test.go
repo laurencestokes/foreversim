@@ -1,9 +1,10 @@
 package database
 
-// The manifest pins the spell each buff reads, so generation needs no client database. What pinned
+// The manifest pins the spell each buff reads, so generation needs no game files database. What pinned
 // it is the rank resolution below, which reads SkillLineAbility, SkillLine and the rune enchantments -
-// tables the store does not capture - so this is where a new client is checked against the pins, and
-// against the names and owners the generator reads off them. Skips without tools/database/wowsims.db.
+// tables the store does not capture - so this is where a new game build is checked against the
+// pins, and against the names and owners the generator reads off them. Skips without
+// tools/database/wowsims.db.
 
 import (
 	"database/sql"
@@ -24,7 +25,7 @@ func openBuffTestDB(t *testing.T) *DBHelper {
 
 	DatabasePath = "wowsims.db"
 	if _, err := os.Stat(DatabasePath); err != nil {
-		t.Skipf("no client database at %s - run `make db` from a local WoW install to enable this gate", DatabasePath)
+		t.Skipf("no game files database at %s - run `make db` from a local WoW install to enable this gate", DatabasePath)
 	}
 
 	helper, err := NewDBHelper()
@@ -35,7 +36,13 @@ func openBuffTestDB(t *testing.T) *DBHelper {
 	return helper
 }
 
-func TestManifestAnchorsMatchTheClient(t *testing.T) {
+// The rows of a class family whose spell no skill line grants, which are pinned by hand, each with
+// what grants it instead.
+var unanchoredBuffs = map[string]string{
+	"dark_inspiration": "the shadow talent 1326159 triggers it, and the trait tree's node grants the talent",
+}
+
+func TestManifestAnchorsMatchTheGameFiles(t *testing.T) {
 	db := openBuffTestDB(t).db
 
 	runes, err := loadRuneGrantedSpells(db)
@@ -43,13 +50,17 @@ func TestManifestAnchorsMatchTheClient(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
+	fields := map[string]bool{}
 	for _, row := range resolveCommittedBuffs(t) {
+		fields[row.Field] = true
 		// A row without a castable family - an item's aura, an elixir's debuff - is pinned by hand.
 		if row.Name == "" {
 			continue
 		}
-		// A deliberate lower-rank pin (see LowerRank) is not the top rank by design.
-		if row.LowerRank {
+		if _, unanchored := unanchoredBuffs[row.Field]; unanchored {
+			if runes[row.SpellID] {
+				t.Errorf("%s: spell %d is granted by a rune, which is a class rune and not a raid buff", row.Field, row.SpellID)
+			}
 			continue
 		}
 
@@ -74,13 +85,18 @@ func TestManifestAnchorsMatchTheClient(t *testing.T) {
 		}
 
 		if row.SpellID != aura {
-			t.Errorf("%s: the manifest pins spell %d, the client resolves %d", row.Field, row.SpellID, aura)
+			t.Errorf("%s: the manifest pins spell %d, the game files resolve %d", row.Field, row.SpellID, aura)
 		}
 		if row.CastID != 0 && row.CastID != cast.SpellID {
-			t.Errorf("%s: the manifest pins cast %d, the client resolves %d", row.Field, row.CastID, cast.SpellID)
+			t.Errorf("%s: the manifest pins cast %d, the game files resolve %d", row.Field, row.CastID, cast.SpellID)
 		}
 		if runes[aura] {
 			t.Errorf("%s: spell %d is granted by a rune, which is a class rune and not a raid buff", row.Field, aura)
+		}
+	}
+	for field := range unanchoredBuffs {
+		if !fields[field] {
+			t.Errorf("unanchoredBuffs names %q, which is no manifest field", field)
 		}
 	}
 }
@@ -212,7 +228,7 @@ func topRank(cands []buffCandidate, classMask int32) buffCandidate {
 	return owned[0]
 }
 
-// The aura of a totem or of a dummy passive, which the client only ties to the cast by name. The
+// The aura of a totem or of a dummy passive, which the game files only tie to the cast by name. The
 // rank subtext of the cast picks the matching rank; where neither carries one - Leader of the Pack
 // is 17007 and 24932, both rankless - the spell that applies a party or raid aura is the one other
 // players see, unless it only procs the buff, the way Windfury Totem's 10612 procs 10610.
@@ -293,7 +309,7 @@ func isSharedTarget(target dbc.ImplicitTarget) bool {
 	return false
 }
 
-// SkillLineAbility.ClassMask is a bitmask over the client's class ids, which is not the order
+// SkillLineAbility.ClassMask is a bitmask over the game files' class ids, which is not the order
 // proto.Class uses.
 func ownerClassMask(class proto.Class) int32 {
 	for _, c := range dbc.Classes {

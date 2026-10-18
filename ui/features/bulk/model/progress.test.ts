@@ -27,11 +27,6 @@ describe('candidateGearProgress', () => {
 });
 
 describe('simProgress', () => {
-	it('names the reforge stage off the proto rather than off the round', () => {
-		const progress = simProgress(metrics({ bulkStage: BulkSimStage.BulkSimStageReforge, totalIterations: 10, completedIterations: 5 }), config(), 0, 1000);
-		expect(progress?.stage).toBe('reforging');
-	});
-
 	it('reports the aggregate iteration counts when the caller supplies them', () => {
 		const progress = simProgress(
 			metrics({ totalIterations: 10, completedIterations: 5 }),

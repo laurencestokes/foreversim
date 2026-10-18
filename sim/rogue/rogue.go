@@ -9,9 +9,16 @@ import (
 )
 
 const (
-	SpellFlagBuilder  = core.SpellFlagAgentReserved2
-	SpellFlagFinisher = core.SpellFlagAgentReserved3
-	SpellFlagSealFate = core.SpellFlagAgentReserved4
+	SpellFlagBuilder     = core.SpellFlagAgentReserved2
+	SpellFlagFinisher    = core.SpellFlagAgentReserved3
+	SpellFlagColdBlooded = core.SpellFlagAgentReserved4
+)
+
+// Damage Done By Caster setup
+const (
+	DDBC_Hemorrhage = iota
+
+	DDBC_Total
 )
 
 var TalentTreeSizes = [3]int{17, 17, 19}
@@ -27,10 +34,7 @@ type Rogue struct {
 	Options              *proto.RogueOptions
 	AssassinationOptions *proto.Rogue_Options
 
-	SliceAndDiceBonusFlat    float64 // The flat bonus Attack Speed bonus before Mastery is applied
 	AdditiveEnergyRegenBonus float64
-
-	sliceAndDiceDurations [6]time.Duration
 
 	Backstab       *core.Spell
 	BladeFlurry    *core.Spell
@@ -57,34 +61,22 @@ type Rogue struct {
 	ExposeArmor  *core.Spell
 	Rupture      *core.Spell
 	SliceAndDice *core.Spell
-	Venom        *core.Spell
-
-	deadlyPoisonTick  *core.Spell
-	deadlyPoisonPPHM  *core.DynamicProcManager
-	woundPoisonPPHM   *core.DynamicProcManager
-	instantPoisonPPHM *core.DynamicProcManager
-
-	// Improved Poisons and Venom both add to the poison application chance, so the procs read a
-	// running total rather than each talent rebuilding the proc manager.
-	additivePoisonBonusChance float64
 
 	AdrenalineRushAura   *core.Aura
 	BladeFlurryAura      *core.Aura
-	CutthroatAura        *core.Aura
 	ExposeArmorAuras     core.AuraArray
-	HemorrhageAuras      core.AuraArray
 	SliceAndDiceAura     *core.Aura
 	MasterOfSubtletyAura *core.Aura
 	ShadowstepAura       *core.Aura
 	StealthAura          *core.Aura
-	ThousandCutsAura     *core.Aura
-	VenomAura            *core.Aura
+	CutthroatAura        *core.Aura
 
 	WoundPoisonDebuffAuras core.AuraArray
 
-	ruthlessnessMetrics      *core.ResourceMetrics
-	ruthlessnessChance       float64
-	relentlessStrikesMetrics *core.ResourceMetrics
+	ruthlessnessMetrics               *core.ResourceMetrics
+	ruthlessnessChance                float64
+	relentlessStrikesMetrics          *core.ResourceMetrics
+	puncturingWoundsComboPointMetrics *core.ResourceMetrics
 
 	HasPvpEnergy              bool
 	DeathmantleBonus          float64
@@ -134,20 +126,21 @@ func (rogue *Rogue) Initialize() {
 	rogue.registerBackstabSpell()
 	rogue.registerEviscerate()
 	rogue.registerExposeArmorSpell()
-	rogue.registerKidneyShot()
 	rogue.registerGarrote()
-	rogue.registerDeadlyPoisonSpell()
-	rogue.registerInstantPoisonSpell()
-	rogue.registerWoundPoisonSpell()
 	rogue.registerRupture()
 	rogue.registerSinisterStrikeSpell()
 	rogue.registerSliceAndDice()
 	rogue.registerVanishSpell()
 	rogue.registerStealthAura()
+	rogue.registerKickSpell()
+	rogue.registerFeintSpell()
 
-	rogue.ruthlessnessMetrics = rogue.NewComboPointMetrics(core.ActionID{SpellID: 14161})
+	ruthRank := spellData.Ruthlessness.Rank(rogue.Talents.Ruthlessness)
+	if ruthRank != nil {
+		rogue.ruthlessnessMetrics = rogue.NewComboPointMetrics(core.ActionID{SpellID: ruthRank.ID})
+	}
 	// Forever states a flat SpellAuraOptions.ProcChance of 100 on the talent spell and puts the
-	// real per-rank chance on the effect, so the row's ProcChance would read 100% at every rank.
+	// real per-rank chance on the effect, so ProcChanceAt would read 100% at every rank.
 	rogue.ruthlessnessChance = spellData.Ruthlessness.FractionAt(rogue.Talents.Ruthlessness)
 	rogue.relentlessStrikesMetrics = rogue.NewEnergyMetrics(core.ActionID{SpellID: 14179})
 }
@@ -180,25 +173,12 @@ func NewRogue(character *core.Character, options *proto.Player, talents string) 
 
 	core.FillTalentsProto(rogue.Talents.ProtoReflect(), talents, TalentTreeSizes)
 
-	// Slice and Dice and Venom share this ladder, and talents are applied before Initialize, so
-	// it is filled here rather than in the spell that owns it.
-	rogue.sliceAndDiceDurations = [6]time.Duration{
-		0,
-		time.Second * 9,
-		time.Second * 12,
-		time.Second * 15,
-		time.Second * 18,
-		time.Second * 21,
-	}
-
 	// Passive rogue threat reduction: https://wotlk.wowhead.com/spell=21184/rogue-passive-dnd
-	rogue.PseudoStats.ThreatMultiplier *= 0.71
+	rogue.PseudoStats.ThreatMultiplier *= 1 + spellData.RoguePassive.Highest().EffectN(1).Percent()
 	rogue.PseudoStats.CanParry = true
 
-	maxEnergy := 100.0
+	maxEnergy := 100.0 + spellData.Vigor.ValueAt(rogue.Talents.Vigor)
 
-	// Forever expands Vigor from 1 rank to 2; the client states 5 then 10 extra energy.
-	maxEnergy += spellData.Vigor.ValueAt(rogue.Talents.Vigor)
 	if rogue.HasPvpEnergy {
 		maxEnergy += 10
 	}
@@ -215,14 +195,9 @@ func NewRogue(character *core.Character, options *proto.Player, talents string) 
 		AutoSwingMelee: true,
 	})
 
-	rogue.applyPoisons()
-
 	rogue.AddStatDependency(stats.Strength, stats.AttackPower, 1)
 	rogue.AddStatDependency(stats.Agility, stats.AttackPower, 1)
 	rogue.AddStatDependency(stats.Agility, stats.PhysicalCritPercent, core.CritPerAgiMaxLevel[character.Class])
-	// Classic's rogue dodges at twice its crit rate per agility (14.5 agility a dodge at 60). The old
-	// 1/20 was TBC's, and as an integer division it gave no dodge at all.
-	rogue.AddStatDependency(stats.Agility, stats.DodgeRating, 2*core.CritPerAgiMaxLevel[character.Class]*core.DodgeRatingPerDodgePercent)
 
 	return rogue
 }
@@ -257,6 +232,10 @@ func (rogue *Rogue) HasThrown() bool {
 // Check if the rogue is considered in "stealth" for the purpose of casting abilities
 func (rogue *Rogue) IsStealthed() bool {
 	return rogue.StealthAura.IsActive()
+}
+
+func (rogue *Rogue) FinisherExtraCastCondition(sim *core.Simulation, target *core.Unit) bool {
+	return rogue.ComboPoints() > 0
 }
 
 func RegisterRogue() {
@@ -308,20 +287,14 @@ const (
 	RogueSpellInstantPoison
 	RogueSpellWoundPoison
 	RogueSpellDeadlyPoison
-	RogueSpellVenom
-	RogueSpellRiposte
-	RogueSpellKidneyShot
 
 	RogueSpellLast
 	RogueSpellsAll    = RogueSpellLast<<1 - 1
 	RogueSpellActives = RogueSpellGhostlyStrike<<1 - 1
 
 	RogueSpellPoisons        = RogueSpellWoundPoison | RogueSpellDeadlyPoison | RogueSpellInstantPoison
-	RogueSpellLethality      = RogueSpellSinisterStrike | RogueSpellGouge | RogueSpellBackstab | RogueSpellGhostlyStrike | RogueSpellMutilate | RogueSpellMutilateHit | RogueSpellHemorrhage
+	RogueSpellLethality      = RogueSpellSinisterStrike | RogueSpellGouge | RogueSpellBackstab | RogueSpellGhostlyStrike | RogueSpellMutilateHit | RogueSpellHemorrhage
 	RogueSpellDirectFinisher = RogueSpellEviscerate
-	RogueSpellFinisher       = RogueSpellDirectFinisher | RogueSpellSliceAndDice | RogueSpellRupture | RogueSpellExposeArmor | RogueSpellVenom | RogueSpellKidneyShot
-	// Quietus names only these three in its tooltip (1310728); its effects are dummies with no mask.
-	RogueSpellQuietus = RogueSpellSinisterStrike | RogueSpellGhostlyStrike | RogueSpellHemorrhage
-	// Cold Blood's class mask (14177): Mutilate's two hits, not the parent cast.
-	RogueSpellColdBlooded = RogueSpellSinisterStrike | RogueSpellBackstab | RogueSpellAmbush | RogueSpellEviscerate | RogueSpellMutilateHit
+	RogueSpellFinisher       = RogueSpellDirectFinisher | RogueSpellSliceAndDice | RogueSpellRupture | RogueSpellExposeArmor
+	RogueSpellQuietus        = RogueSpellSinisterStrike | RogueSpellHemorrhage | RogueSpellGhostlyStrike
 )

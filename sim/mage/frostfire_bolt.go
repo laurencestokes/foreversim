@@ -1,76 +1,48 @@
 package mage
 
 import (
-	"fmt"
-
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Frostfire Bolt is Forever's trained spell at 40/50/60 (401502, 1237312, 1237313). Client 70009: a 3 sec
-// frostfire bolt, .814 spell power, plus a 9 sec dot with no coefficient and a 40% slow the sim has no
-// use for. School 20 is fire and frost at once, so fire and frost talents both reach it; the client's
-// class masks agree (Fire Power, Piercing Ice, Critical Mass, Ice Shards, Improved Fireball, Presence of
-// Mind, and the chill bit Frostbolt and Cone of Cold carry).
+// Only the highest rank is registered: the mage casts the rank configured here, not every rank
+// spellData.FrostfireBolt lists.
 func (mage *Mage) registerFrostfireBoltSpell() {
-	spellData.FrostfireBolt.Each(func(_ int32, rank *spelldata.Spell) { mage.registerFrostfireBoltRank(rank) })
+	mage.registerFrostfireBoltRank(spellData.FrostfireBolt.Len(), spellData.FrostfireBolt.Highest())
 }
 
-func (mage *Mage) registerFrostfireBoltRank(rank *spelldata.Spell) {
+// The DoT (effect 3) is its own spell, like Fireball's.
+// The slow (effect 1) does nothing to a boss.
+func (mage *Mage) registerFrostfireBoltRank(_ int32, rank *spelldata.Spell) {
+	damage := rank.DamageEffect()
+
+	dotConfig := spelldata.SpellConfig(&mage.Unit, rank,
+		spelldata.Magic(core.ProcMaskSpellDamage), spelldata.Proc(), spelldata.Tag(1))
+	dotConfig.ClassSpellMask = MageSpellFrostfireBoltDot
 	tick := rank.PeriodicEffect()
-	tickLength := tick.Period()
+	dotConfig.Dot = spelldata.DotConfig(rank, tick)
+	dotConfig.Dot.OnTick = spelldata.PeriodicDamageTick(tick, rank.TickOutcome)
+	dotConfig.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.Dot(target).Apply(sim)
+	}
+	dotSpell := mage.RegisterSpell(dotConfig)
 
-	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    rank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: MageSpellFrostfireBolt,
-		MaxRange:       float64(rank.MaxRange),
-		Rank:           rank.RankNumber(),
-		MissileSpeed:   float64(rank.Speed),
+	// Binary: a spell with a non-damage effect (the slow) is resisted whole or not at all, which the
+	// row does not state.
+	config := spelldata.SpellConfig(&mage.Unit, rank,
+		spelldata.Magic(core.ProcMaskSpellDamage), spelldata.Flags(core.SpellFlagBinary))
+	config.ClassSpellMask = MageSpellFrostfireBolt
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(rank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD:      rank.GCD(),
-				CastTime: rank.CastTime(),
-			},
-		},
-
-		Dot: core.DotConfig{
-			Aura: core.Aura{
-				Label: fmt.Sprintf("FrostfireBoltDoT-%d", rank.RankNumber()),
-			},
-			NumberOfTicks:    int32(rank.Duration() / tickLength),
-			TickLength:       tickLength,
-			BonusCoefficient: tick.Coeff(),
-			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, tick.Average(core.CharacterLevel))
-			},
-			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, periodicTickOutcome(rank, dot))
-			},
-		},
-
-		DamageMultiplier: 1,
-		BonusCoefficient: rank.DamageEffect().Coeff(),
-		ThreatMultiplier: 1,
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, rank.DamageEffect().Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-			if mage.procFingersOfFrost != nil {
-				mage.procFingersOfFrost(sim, spell, result)
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcDamage(sim, target, damage.Average(), spell.OutcomeMagicHitAndCrit)
+		spell.DealCastResult(sim, result)
+		spell.WaitTravelTime(sim, func(sim *core.Simulation) {
+			spell.DealDamage(sim, result)
+			if result.Landed() {
+				dotSpell.Cast(sim, target)
 			}
-			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
-				spell.DealDamage(sim, result)
-				if result.Landed() {
-					spell.Dot(target).Apply(sim)
-				}
-			})
-		},
-	})
+		})
+	}
+
+	mage.RegisterSpell(config).RelatedDotSpell = dotSpell
 }

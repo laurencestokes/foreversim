@@ -3,6 +3,7 @@ import i18n from '@i18n/config';
 import type { SimSettingCategories } from '@sim/constants/sim_settings';
 import type { IndividualSimHost } from '@sim/sim_host';
 import { LINK_DEFAULT_CATEGORIES } from '@sim/state/sim_links';
+import { withoutStatFilters } from '@sim/state/stat_filter_sharing';
 import { jsonStringifyWithFlattenedPaths } from '@sim/utils/json';
 
 import { selectedCategories } from './categories';
@@ -13,7 +14,7 @@ export const createSettingsJson = (host: IndividualSimHost<any>, exportCategorie
 		exportCategories = LINK_DEFAULT_CATEGORIES;
 	}
 
-	return jsonStringifyWithFlattenedPaths(IndividualSimSettings.toJson(host.toProto(exportCategories)), 2, (value, path) => {
+	return jsonStringifyWithFlattenedPaths(IndividualSimSettings.toJson(withoutStatFilters(host.toProto(exportCategories))), 2, (value, path) => {
 		if (['stats', 'pseudoStats', 'itemSwap'].includes(path[path.length - 1])) {
 			return true;
 		}

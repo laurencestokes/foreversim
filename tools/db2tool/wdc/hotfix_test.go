@@ -8,7 +8,7 @@ import (
 )
 
 // The two table hashes ApplyHotfixes special-cases are known constants, so they
-// pin the SStrHash port without needing any client data. A DBCache record is
+// pin the SStrHash port without needing any game files data. A DBCache record is
 // matched to a table by comparing this hash against the WDC5 header's
 // TableHash, so a wrong hash silently drops every hotfix for a table.
 func TestSStrHashKnownTableHashes(t *testing.T) {
@@ -168,6 +168,29 @@ func TestCombineDedupsOnFullRecordIdentity(t *testing.T) {
 	base.Combine(otherBuild)
 	if len(base.records) != 2 {
 		t.Fatalf("record from another build was merged in: %d records", len(base.records))
+	}
+}
+
+func TestHighestPushCountsOnlyServerPushes(t *testing.T) {
+	h, err := parseHotfix(xfthFile(9, 1,
+		xfthEntry(-1, 0x1, 1, 1, []byte{1}),
+		xfthEntry(112405, 0x1, 2, 1, []byte{1}),
+		xfthEntry(112426, 0x1, 3, 1, []byte{1}),
+		xfthEntry(0x01000005, 0x1, 4, 1, []byte{1}),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := h.HighestPush(); got != 112426 {
+		t.Errorf("HighestPush = %d, want 112426", got)
+	}
+
+	onDemand, err := parseHotfix(xfthFile(9, 1, xfthEntry(-1, 0x1, 1, 1, []byte{1}), xfthEntry(0x01000005, 0x1, 2, 1, []byte{1})))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := onDemand.HighestPush(); got != 0 {
+		t.Errorf("HighestPush of on-demand rows alone = %d, want 0", got)
 	}
 }
 

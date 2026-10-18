@@ -1,58 +1,59 @@
 import {
-	APLActionGuardianHotwDpsRotation_Strategy as HotwStrategy,
-	APLActionItemSwap_SwapSet as ItemSwapSet,
 	APLValueAutoAttackType,
 	APLValueAutoSwingTime_SwingType as AutoSwingType,
-	APLValueCompare_ComparisonOperator as ComparisonOperator,
-	APLValueEclipsePhase,
 	APLValueIsExecutePhase_ExecutePhaseThreshold as ExecutePhaseThreshold,
-	APLValueMath_MathOperator as MathOperator,
 } from '@generated/proto/apl';
-import { ActionID, Stat } from '@generated/proto/common';
-import { ShamanTotems_TotemType as TotemType } from '@generated/proto/shaman';
-import { WarlockOptions_CurseOptions as CurseOptions } from '@generated/proto/warlock';
+import { ActionID, AreaType, Class, Stat } from '@generated/proto/common';
+import type { Player } from '@sim/player/player';
 import { getEnumValues } from '@sim/utils/collections';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { APLFieldDescriptor } from './field_descriptors';
 import {
 	actionFieldConfig,
 	actionIdFieldConfig,
 	actionListFieldConfig,
+	areaTypeFieldConfig,
 	autoSwingTypeFieldConfig,
 	autoTypeFieldConfig,
 	booleanFieldConfig,
 	comparisonOperatorFieldConfig,
 	curseTypeFieldConfig,
-	eclipseTypeFieldConfig,
 	executePhaseThresholdFieldConfig,
 	groupNameFieldConfig,
 	groupReferenceVariablesFieldConfig,
-	hotwStrategyFieldConfig,
 	itemSwapSetFieldConfig,
 	makeUseDotBaseValueCheckbox,
 	mathOperatorFieldConfig,
 	minIcdInput,
+	mobTypeFieldConfig,
 	numberFieldConfig,
 	placeholderNameFieldConfig,
 	reactionTimeCheckbox,
 	statTypeFieldConfig,
 	stringFieldConfig,
+	summonTypeFieldConfig,
 	totemTypeFieldConfig,
 	unitFieldConfig,
 	valueFieldConfig,
 	valueListFieldConfig,
 	variableNameFieldConfig,
 } from './field_descriptors';
-import { newKindImpl, resolveField } from './field_specs';
+import { newKindImpl as newKindImplFor, resolveField as resolveFieldFor } from './field_specs';
 
 vi.mock('@i18n/config', () => ({ default: { t: (key: string) => key } }));
 
+const playerOf = (clss: Class) => ({ getClass: () => clss }) as unknown as Player<any>;
+const warrior = playerOf(Class.ClassWarrior);
+
+const resolveField = (descriptor: APLFieldDescriptor) => resolveFieldFor(descriptor, warrior);
+const newKindImpl = (kind: Parameters<typeof newKindImplFor>[0]) => newKindImplFor(kind, warrior);
+
 describe('resolveField kinds', () => {
-	it('resolves the nine fixed-enum descriptor types to kind enum', () => {
+	it('resolves the fixed-enum descriptor types to kind enum', () => {
 		const descriptors = [
-			eclipseTypeFieldConfig('f'),
-			hotwStrategyFieldConfig('f'),
 			curseTypeFieldConfig('f'),
+			summonTypeFieldConfig('f'),
 			autoTypeFieldConfig('f'),
 			autoSwingTypeFieldConfig('f'),
 			statTypeFieldConfig('f'),
@@ -61,6 +62,8 @@ describe('resolveField kinds', () => {
 			mathOperatorFieldConfig('f'),
 			executePhaseThresholdFieldConfig('f'),
 			totemTypeFieldConfig('f'),
+			mobTypeFieldConfig('f'),
+			areaTypeFieldConfig('f'),
 		];
 		for (const descriptor of descriptors) {
 			expect(resolveField(descriptor).kind).toBe('enum');
@@ -127,23 +130,6 @@ describe('resolveField newValue defaults', () => {
 		expect(typeof action.uuid.value).toBe('string');
 		expect(value.uuid.value).not.toBe(action.uuid.value);
 	});
-
-	it('defaults eclipseType to LunarPhase', () => {
-		expect(resolveField(eclipseTypeFieldConfig('f')).newValue()).toBe(APLValueEclipsePhase.LunarPhase);
-	});
-
-	it('defaults the remaining enum kinds to their documented member', () => {
-		expect(resolveField(hotwStrategyFieldConfig('f')).newValue()).toBe(HotwStrategy.Caster);
-		expect(resolveField(curseTypeFieldConfig('f')).newValue()).toBe(CurseOptions.Agony);
-		expect(resolveField(autoTypeFieldConfig('f')).newValue()).toBe(APLValueAutoAttackType.AnyAuto);
-		expect(resolveField(autoSwingTypeFieldConfig('f')).newValue()).toBe(AutoSwingType.MainHand);
-		expect(resolveField(statTypeFieldConfig('f')).newValue()).toBe(0);
-		expect(resolveField(itemSwapSetFieldConfig('f')).newValue()).toBe(ItemSwapSet.Swap1);
-		expect(resolveField(comparisonOperatorFieldConfig('f')).newValue()).toBe(ComparisonOperator.OpEq);
-		expect(resolveField(mathOperatorFieldConfig('f')).newValue()).toBe(MathOperator.OpAdd);
-		expect(resolveField(executePhaseThresholdFieldConfig('f')).newValue()).toBe(ExecutePhaseThreshold.E20);
-		expect(resolveField(totemTypeFieldConfig('f')).newValue()).toBe(TotemType.Water);
-	});
 });
 
 describe('resolveField label precedence', () => {
@@ -185,6 +171,35 @@ describe('resolveField statType table', () => {
 	});
 });
 
+describe('resolveField auto tables by class', () => {
+	const enumSpec = (descriptor: APLFieldDescriptor, player: Player<any>) => {
+		const spec = resolveFieldFor(descriptor, player);
+		if (spec.kind !== 'enum') throw new Error('expected enum kind');
+		return spec;
+	};
+
+	it.each([Class.ClassMage, Class.ClassPriest, Class.ClassWarlock])('offers class %s only the wand', clss => {
+		const autoTypes = enumSpec(autoTypeFieldConfig('f'), playerOf(clss));
+		const swingTypes = enumSpec(autoSwingTypeFieldConfig('f'), playerOf(clss));
+		expect(autoTypes.table.options.map(option => option.value)).toEqual([APLValueAutoAttackType.WandAuto]);
+		expect(swingTypes.table.options.map(option => option.value)).toEqual([AutoSwingType.Wand]);
+		expect(autoTypes.newValue()).toBe(APLValueAutoAttackType.WandAuto);
+		expect(swingTypes.newValue()).toBe(AutoSwingType.Wand);
+	});
+
+	it.each([Class.ClassWarrior, Class.ClassRogue, Class.ClassHunter, Class.ClassPaladin, Class.ClassShaman, Class.ClassDruid])(
+		'offers class %s no wand',
+		clss => {
+			const autoTypes = enumSpec(autoTypeFieldConfig('f'), playerOf(clss));
+			const swingTypes = enumSpec(autoSwingTypeFieldConfig('f'), playerOf(clss));
+			expect(autoTypes.table.options.map(option => option.value)).not.toContain(APLValueAutoAttackType.WandAuto);
+			expect(swingTypes.table.options.map(option => option.value)).not.toContain(AutoSwingType.Wand);
+			expect(autoTypes.newValue()).toBe(APLValueAutoAttackType.AnyAuto);
+			expect(swingTypes.newValue()).toBe(AutoSwingType.MainHand);
+		},
+	);
+});
+
 describe('newKindImpl', () => {
 	it('sets action-id fields and leaves the rest to the pickers', () => {
 		const impl = newKindImpl({
@@ -198,5 +213,13 @@ describe('newKindImpl', () => {
 		const spellId = ActionID.create({ rawId: { oneofKind: 'spellId', spellId: 1 } });
 		const impl = newKindImpl({ newValue: () => ({ spellId }), fields: [actionIdFieldConfig('spellId', 'castable_spells')] })();
 		expect(impl).toEqual({ spellId });
+	});
+
+	it('sets unset enum fields to the default their picker writes', () => {
+		const impl = newKindImpl({
+			newValue: () => ({ areaType: AreaType.AreaTypeUnknown, threshold: ExecutePhaseThreshold.Unknown }),
+			fields: [areaTypeFieldConfig('areaType'), executePhaseThresholdFieldConfig('threshold')],
+		})();
+		expect(impl).toEqual({ areaType: AreaType.AreaTypeForestGrassland, threshold: ExecutePhaseThreshold.E20 });
 	});
 });

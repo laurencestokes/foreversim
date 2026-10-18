@@ -63,6 +63,7 @@ type generatedSpellData struct {
 	FocusedRage                     spelldata.Ladder
 	FuriousPrecision                spelldata.Ladder
 	GoreDrinker                     spelldata.Ladder
+	GoreDrinkerTriggered            spelldata.Ladder
 	Hamstring                       spelldata.Ladder
 	HeroicStrike                    spelldata.Ladder
 	Impale                          spelldata.Ladder
@@ -161,7 +162,7 @@ var spellData = generatedSpellData{
 	BloodrageTriggered:              spelldata.Ranked(29131),
 	Bloodthirst:                     spelldata.Ranked(23881, 23892, 23893, 23894),
 	Bloodthrill:                     spelldata.Talent(1289682, 5),
-	BloodthrillTriggered:            spelldata.Ranked(1282733, 1289681),
+	BloodthrillTriggered:            spelldata.Ranked(1282733),
 	BoomingVoice:                    spelldata.Talent(12321, 5),
 	ChallengingShout:                spelldata.Ranked(1161),
 	Charge:                          spelldata.Ranked(100, 6178, 11578),
@@ -193,6 +194,7 @@ var spellData = generatedSpellData{
 	FocusedRage:                     spelldata.Talent(29787, 3),
 	FuriousPrecision:                spelldata.Talent(1323963, 3),
 	GoreDrinker:                     spelldata.Talent(1323967, 2),
+	GoreDrinkerTriggered:            spelldata.Ranked(1323969),
 	Hamstring:                       spelldata.Ranked(1715, 7372, 7373),
 	HeroicStrike:                    spelldata.Ranked(78, 284, 285, 1608, 11564, 11565, 11566, 11567, 25286),
 	Impale:                          spelldata.Talent(16493, 2),

@@ -1,375 +1,184 @@
-import { Class, ConsumesSpec, ItemSlot, Profession, Spec, Stat } from '@generated/proto/common';
+import type { IconEnumValueConfig } from '@features/inputs/configs';
+import * as InputHelpers from '@features/inputs/input_helpers';
+import type { StatFilterScope } from '@features/stat-filters/model/stat_filters';
+import { ConsumableType, ConsumesSpec } from '@generated/proto/common';
 import { Consumable } from '@generated/proto/db';
 import i18n from '@i18n/config';
+import type { StoreField } from '@sim/hooks/useStoreField';
 import { Player } from '@sim/player/player';
 import { ActionId } from '@sim/proto/action_id';
-import type { ConsumableOption } from '@sim/settings/conjured';
-import { batch } from '@sim/state/batch';
-import { makeBooleanConsumeInput } from '@ui-kit/icon_inputs';
-import { IconEnumValueConfig } from '@ui-kit/IconEnumPicker/types';
-import * as InputHelpers from '@ui-kit/input_helpers';
+import type { Database } from '@sim/proto/database';
+import { UnitStat, unitStatsOf } from '@sim/proto/stats';
+import { consumableAllowed, consumableOrderOf, consumablePseudoStatsOf, consumableStatsOf, consumableUniverse, orderedByEp } from '@sim/settings/consumables';
+import { memoLast } from '@sim/utils/misc';
 
-import { ActionInputConfig, ItemStatOption } from './stat_options';
-export interface ConsumableInputConfig<T> extends ActionInputConfig<T> {
-	value: T;
+export type ConsumableIdField =
+	| 'resourcePotId'
+	| 'defensivePotId'
+	| 'offensivePotId'
+	| 'conjuredId'
+	| 'flaskId'
+	| 'foodId'
+	| 'explosiveId'
+	| 'mhImbueId'
+	| 'ohImbueId'
+	| 'mhWeaponImbueId'
+	| 'ohWeaponImbueId'
+	| 'swapMhImbueId'
+	| 'swapOhImbueId'
+	| 'swapMhWeaponImbueId'
+	| 'swapOhWeaponImbueId';
+
+export interface ConsumableRelevance {
+	// The stat rule, which the consumables stat filter moves.
+	relevant: (consumable: Consumable, player: Player<any>) => boolean;
 }
 
-export interface ConsumableStatOption<T> extends ItemStatOption<T> {
-	config: ConsumableInputConfig<T>;
-}
-
-// `ui/sim/settings/conjured.ts` carries the conjured-item table as domain-layer data
-// ({ value, stats, showWhen }, no ActionId) because `ui/sim` cannot import `@features`.
-// This lifts it into the picker-facing shape the icon-enum factory expects.
-export const conjuredStatOptionsFrom = (options: ReadonlyArray<ConsumableOption>): Array<ConsumableStatOption<number>> =>
-	options.map(option => ({
-		config: { actionId: ActionId.fromItemId(option.value), value: option.value, showWhen: option.showWhen },
-		stats: option.stats,
-	}));
-
-export interface ConsumeInputFactoryArgs<T extends number> {
-	consumesFieldName: keyof ConsumesSpec;
-	// Additional callback if logic besides syncing consumes is required
-	onSet?: (player: Player<any>, newValue: T) => void;
+export interface ConsumableInputOptions {
+	consumesFieldName: ConsumableIdField;
+	// A condition on top of relevance, for the one picker a consumable's kind shares with another.
+	includeIf?: (consumable: Consumable, player: Player<any>) => boolean;
 	showWhen?: (player: Player<any>) => boolean;
+	tooltip?: string;
 }
 
-function makeConsumeInputFactory<T extends number, SpecType extends Spec>(
-	args: ConsumeInputFactoryArgs<T>,
-): (options: ConsumableStatOption<T>[], tooltip?: string) => InputHelpers.TypedIconEnumPickerConfig<Player<SpecType>, T> {
-	return (options: ConsumableStatOption<T>[], tooltip?: string) => {
-		const valueOptions = options.map(
-			option =>
-				({
-					actionId: option.config.actionId,
-					value: option.config.value,
-					showWhen: (player: Player<SpecType>) =>
-						(!option.config.showWhen || option.config.showWhen(player)) && (option.config.faction || player.getFaction()) == player.getFaction(),
-				}) satisfies IconEnumValueConfig<Player<SpecType>, T>,
-		);
-		return {
-			type: 'iconEnum',
-			tooltip: tooltip,
-			numColumns: options.length > 5 ? 2 : 1,
-			values: [{ value: 0, iconUrl: '', tooltip: i18n.t('common.none') } as unknown as IconEnumValueConfig<Player<SpecType>, T>].concat(valueOptions),
-			equals: (a: T, b: T) => a == b,
-			zeroValue: 0 as T,
-			// `raid:partyBuffs` because the main-hand imbue's showWhen reads Windfury Totem off the
-			// party. Without it, turning Windfury on leaves a sharpening stone visible and set and the
-			// sim applies both, until some unrelated consumable or gear write re-evaluates the row.
-			storeField: ['consumables', 'gear', 'profession1', 'profession2', 'race', 'raid:partyBuffs'],
-			showWhen: (player: Player<any>) => (!args.showWhen || args.showWhen(player)) && valueOptions.some(option => option.showWhen?.(player)),
-			getValue: (player: Player<any>) => player.getConsumes()[args.consumesFieldName] as T,
-			setValue: (player: Player<any>, newValue: number) => {
-				const newConsumes = player.getConsumes();
-				if (newConsumes[args.consumesFieldName] === newValue) {
-					return;
-				}
+// The class, race and profession decide whether a consumable is offered at all, picked or not. The
+// minimum level and the stat rule only trim what is offered: a consumable already picked stays
+// offered below the level and with its stats hidden.
+const offeredTo =
+	(consumable: Consumable, relevance: ConsumableRelevance, picked: (player: Player<any>) => boolean, includeIf?: ConsumableInputOptions['includeIf']) =>
+	(player: Player<any>) =>
+		consumableAllowed(consumable, player) &&
+		((consumable.lvl >= player.sim.getMinConsumableLvl(consumable.type) && relevance.relevant(consumable, player)) || picked(player)) &&
+		(!includeIf || includeIf(consumable, player));
 
-				(newConsumes[args.consumesFieldName] as number) = newValue;
-				batch(() => {
-					player.setConsumes(newConsumes);
-					if (args.onSet) {
-						args.onSet(player, newValue as T);
-					}
-				});
-			},
-		};
+// Defaults are the stats and percents the spec weighs consumables by; the universe adds every one a
+// consumable grants. A default no consumable grants (a resource stat the restore rule reads) stays
+// in the universe, so the defaults show in full. What the consumables grant is worked out once per
+// database, as it walks every consumable, and the scope once per player and database, so the
+// pickers and the filters popover share it.
+const grantedByDatabase = new WeakMap<Database, UnitStat[]>();
+const scopeByPlayer = new WeakMap<Player<any>, { db: Database; scope: StatFilterScope }>();
+
+export const consumableFilterScope = (player: Player<any>, db: Database): StatFilterScope => {
+	const cached = scopeByPlayer.get(player);
+	if (cached?.db === db) return cached.scope;
+	let granted = grantedByDatabase.get(db);
+	if (!granted) {
+		granted = consumableUniverse(db.getConsumables(), db);
+		grantedByDatabase.set(db, granted);
+	}
+	const specConfig = player.getSpecConfig();
+	const defaults = unitStatsOf({ stats: consumableStatsOf(specConfig), pseudoStats: consumablePseudoStatsOf(specConfig) });
+	const pool = new Set([...defaults, ...granted].map(stat => stat.getKey()));
+	const scope = { defaults, universe: UnitStat.getAll().filter(stat => pool.has(stat.getKey())) };
+	scopeByPlayer.set(player, { db, scope });
+	return scope;
+};
+
+const STORE_FIELDS: Array<StoreField> = ['consumables', 'gear', 'profession1', 'profession2', 'prof1Rank', 'prof2Rank', 'race', 'sim:filters'];
+
+// Every field a consumable picker reads: `itemSwap` because the swap imbues' includeIf reads the swap
+// weapons and their showWhen whether item swap is on. The toggles read only STORE_FIELDS.
+export const CONSUMABLE_PICKER_FIELDS: ReadonlyArray<StoreField> = [...STORE_FIELDS, 'itemSwap'];
+
+export const makeConsumableInput = (consumables: ReadonlyArray<Consumable>, relevance: ConsumableRelevance, options: ConsumableInputOptions) =>
+	consumablePicker(
+		consumables,
+		relevance,
+		options,
+		consumes => consumes[options.consumesFieldName],
+		(consumes, newValue) => ({ ...consumes, [options.consumesFieldName]: newValue }),
+	);
+
+// The spec's list a grouped consumable is picked into: an elixir's elixir ids, anything else's extra ids.
+const idListOf = (consumable: Consumable): 'elixirIds' | 'extraIds' => (consumable.type === ConsumableType.ConsumableTypeElixir ? 'elixirIds' : 'extraIds');
+
+// One exclusive group's pick: at most one of the group's consumables in the spec's elixir and extra ids.
+export const makeConsumableGroupInput = (consumables: ReadonlyArray<Consumable>, relevance: ConsumableRelevance, tooltip: string) => {
+	const ids = new Set(consumables.map(consumable => consumable.id));
+	const lists = new Map(consumables.map(consumable => [consumable.id, idListOf(consumable)]));
+	return consumablePicker(
+		consumables,
+		relevance,
+		{ tooltip },
+		consumes => consumes.elixirIds.find(id => ids.has(id)) ?? consumes.extraIds.find(id => ids.has(id)) ?? 0,
+		(consumes, newValue) => {
+			const picked = {
+				...consumes,
+				elixirIds: consumes.elixirIds.filter(id => !ids.has(id)),
+				extraIds: consumes.extraIds.filter(id => !ids.has(id)),
+			};
+			if (newValue) picked[lists.get(newValue)!].push(newValue);
+			return picked;
+		},
+	);
+};
+
+function consumablePicker(
+	consumables: ReadonlyArray<Consumable>,
+	relevance: ConsumableRelevance,
+	options: Omit<ConsumableInputOptions, 'consumesFieldName'>,
+	pickOf: (consumes: ConsumesSpec) => number,
+	withPick: (consumes: ConsumesSpec, newValue: number) => ConsumesSpec,
+): InputHelpers.TypedIconEnumPickerConfig<Player<any>, number> {
+	const byId = new Map(consumables.map(consumable => [consumable.id, consumable]));
+	const values: Array<IconEnumValueConfig<Player<any>, number>> = consumables.map(consumable => ({
+		value: consumable.id,
+		actionId: ActionId.fromItemId(consumable.id),
+		tooltip: consumable.name,
+		showWhen: offeredTo(consumable, relevance, player => pickOf(player.getConsumes()) === consumable.id, options.includeIf),
+	}));
+	const none: IconEnumValueConfig<Player<any>, number> = { value: 0, iconUrl: '', tooltip: i18n.t('common.none') };
+	const ordered = memoLast<Array<IconEnumValueConfig<Player<any>, number>>>();
+	return {
+		type: 'iconEnum',
+		tooltip: options.tooltip,
+		numColumns: (p: Player<any>) => {
+			const offered = values.filter(value => value.showWhen!(p)).length;
+			return offered > 10 ? 3 : offered > 5 ? 2 : 1;
+		},
+		values: (player: Player<any>) => {
+			const order = consumableOrderOf(player);
+			return ordered([order.weights, order.mobType, order.zoneId], () => [none, ...orderedByEp(values, value => byId.get(value.value)!, order)]);
+		},
+		equals: (a: number, b: number) => a === b,
+		zeroValue: 0,
+		storeField: CONSUMABLE_PICKER_FIELDS,
+		showWhen: options.showWhen,
+		keptBy: (player: Player<any>, value: number) => {
+			const picked = byId.get(value);
+			return !!picked && !relevance.relevant(picked, player);
+		},
+		getValue: (player: Player<any>) => pickOf(player.getConsumes()),
+		setValue: (player: Player<any>, newValue: number) => {
+			const consumes = player.getConsumes();
+			if (pickOf(consumes) === newValue) return;
+			player.setConsumes(withPick(consumes, newValue));
+		},
 	};
 }
 
-///////////////////////////////////////////////////////////////////////////
-//                                 CONJURED
-///////////////////////////////////////////////////////////////////////////
+// The consumable rides along so a row of these can be ordered by the EP it adds.
+export type ConsumeToggle = InputHelpers.TypedIconPickerConfig<Player<any>, boolean> & { consumable: Consumable };
 
-export const makeConjuredInput = makeConsumeInputFactory({ consumesFieldName: 'conjuredId' });
-
-///////////////////////////////////////////////////////////////////////////
-//                               ENGINEERING
-///////////////////////////////////////////////////////////////////////////
-
-export const EzThroDynamiteTwo = {
-	actionId: ActionId.fromItemId(18588),
-	value: 18588,
-};
-
-export const CrystalCharge = {
-	actionId: ActionId.fromItemId(11566),
-	value: 15239,
-};
-
-export const ThoriumGrenade = {
-	actionId: ActionId.fromItemId(15993),
-	value: 19769,
-	showWhen: (player: Player<any>) => player.hasProfession(Profession.Engineering),
-};
-
-export const DenseDynamite = {
-	actionId: ActionId.fromItemId(18641),
-	value: 23063,
-	showWhen: (player: Player<any>) => player.hasProfession(Profession.Engineering),
-};
-
-// A mage's vendor scroll; it shares the explosives' 1 min cooldown, so it takes their slot.
-export const ScrollOfCryoblast = {
-	actionId: ActionId.fromItemId(217495),
-	value: 440212,
-	showWhen: (player: Player<any>) => player.getClass() == Class.ClassMage,
-};
-
-// Forever's SAF-T / EZ-Thro bombs: required level 1 and no Engineering (ItemSparse 70009).
-// Keyed on the use spell, like the sim; best average damage first.
-export const SaftBombs = [
-	[260817, 1269334], // EZ-Thro Dark Bomb
-	[260814, 1269282], // SAF-T Clever Dynamite
-	[260816, 1269330], // EZ-Thro Thorium Grenade
-	[260803, 1269270], // EZ-Thro Grenade
-	[260805, 1269272], // SAF-T Bomb
-	[260809, 1269278], // Tru-Trigger Frag Bomb
-	[260798, 1269264], // SAF-T Jumbo Dynamite
-	[260797, 1269216], // SAF-T Bronze Bomb
-	[260795, 1269192], // EZ-Thro Copper Bomb XL
-	[260792, 1269155], // SAF-T Dynamite
-	[260793, 1269161], // SAF-T Copper Bomb
-].map(([itemId, value]) => ({ actionId: ActionId.fromItemId(itemId), value }));
-
-export const EXPLOSIVE_CONFIG = [
-	{ config: ScrollOfCryoblast, stats: [] },
-	{ config: ThoriumGrenade, stats: [] },
-	{ config: DenseDynamite, stats: [] },
-	{ config: CrystalCharge, stats: [] },
-	{ config: EzThroDynamiteTwo, stats: [] },
-	...SaftBombs.map(config => ({ config, stats: [] })),
-] as ConsumableStatOption<number>[];
-export const makeExplosivesInput = makeConsumeInputFactory({ consumesFieldName: 'explosiveId' });
-
-export const GoblinSapper = makeBooleanConsumeInput({
-	actionId: ActionId.fromItemId(10646),
-	fieldName: 'goblinSapper',
-	showWhen: (player: Player<any>) => player.hasProfession(Profession.Engineering),
-});
-
-///////////////////////////////////////////////////////////////////////////
-//                               WEAPON IMBUES
-///////////////////////////////////////////////////////////////////////////
-
-// Oils
-export const ManaOil = {
-	actionId: ActionId.fromItemId(20748),
-	value: 25123,
-};
-export const WizardOil = {
-	actionId: ActionId.fromItemId(20750),
-	value: 25121,
-};
-export const BrilWizardOil = {
-	actionId: ActionId.fromItemId(20749),
-	value: 25122,
-};
-export const BlessedWizardOil = {
-	actionId: ActionId.fromItemId(23123),
-	value: 28898,
-};
-// Stones
-export const DenseSharpeningStoneMH = {
-	actionId: ActionId.fromItemId(12404),
-	value: 16138,
-	showWhen: (player: Player<any>) => player.getGear().hasSharpMHWeapon(),
-};
-export const DenseWeightstoneMH = {
-	actionId: ActionId.fromItemId(12643),
-	value: 16622,
-	showWhen: (player: Player<any>) => player.getGear().hasBluntMHWeapon(),
-};
-export const ElementalSharpeningStoneMH = {
-	actionId: ActionId.fromItemId(18262),
-	value: 22756,
-	showWhen: (player: Player<any>) => player.getGear().hasMHWeapon(),
-};
-export const ConsecratedSharpeningStoneMH = {
-	actionId: ActionId.fromItemId(23122),
-	value: 28891,
-	showWhen: (player: Player<any>) => player.getGear().hasMHWeapon(),
-};
-
-export const DenseSharpeningStoneOH = {
-	actionId: ActionId.fromItemId(12404),
-	value: 16138,
-	showWhen: (player: Player<any>) => player.getGear().hasSharpOHWeapon(),
-};
-export const DenseWeightstoneOH = {
-	actionId: ActionId.fromItemId(12643),
-	value: 16622,
-	showWhen: (player: Player<any>) => player.getGear().hasBluntOHWeapon(),
-};
-export const ElementalSharpeningStoneOH = {
-	actionId: ActionId.fromItemId(18262),
-	value: 22756,
-	showWhen: (player: Player<any>) => player.getGear().hasOHWeapon(),
-};
-export const ConsecratedSharpeningStoneOH = {
-	actionId: ActionId.fromItemId(23122),
-	value: 28891,
-	showWhen: (player: Player<any>) => player.getGear().hasOHWeapon(),
-};
-
-// Shaman Imbues
-export const ShamanImbueWindfury = {
-	actionId: ActionId.fromSpellId(25505),
-	value: 25505,
-	showWhen: (player: Player<any>) => player.getClass() == Class.ClassShaman,
-};
-export const ShamanImbueFlametongue = {
-	actionId: ActionId.fromSpellId(25489),
-	value: 25489,
-	showWhen: (player: Player<any>) => player.getClass() == Class.ClassShaman,
-};
-
-export const ShamanImbueFrostbrand = {
-	actionId: ActionId.fromSpellId(25500),
-	value: 25500,
-	showWhen: (player: Player<any>) => player.getClass() == Class.ClassShaman,
-};
-
-export const ShamanImbueRockbiter = {
-	actionId: ActionId.fromSpellId(25485),
-	value: 25485,
-	showWhen: (player: Player<any>) => player.getClass() == Class.ClassShaman,
-};
-
-export const IMBUE_CONFIG_MH = [
-	{ config: ManaOil, stats: [Stat.StatHealingPower] },
-	{ config: WizardOil, stats: [Stat.StatSpellDamage] },
-	{ config: BrilWizardOil, stats: [Stat.StatSpellDamage, Stat.StatHealingPower] },
-	{ config: BlessedWizardOil, stats: [Stat.StatSpellDamage] },
-	{ config: DenseSharpeningStoneMH, stats: [Stat.StatAttackPower] },
-	{ config: DenseWeightstoneMH, stats: [Stat.StatAttackPower] },
-	{ config: ElementalSharpeningStoneMH, stats: [Stat.StatAttackPower] },
-	{ config: ConsecratedSharpeningStoneMH, stats: [Stat.StatAttackPower] },
-	{ config: ShamanImbueRockbiter, stats: [] },
-	{ config: ShamanImbueFrostbrand, stats: [] },
-	{ config: ShamanImbueFlametongue, stats: [] },
-	{ config: ShamanImbueWindfury, stats: [] },
-] as ConsumableStatOption<number>[];
-
-export const IMBUE_CONFIG_OH = [
-	{ config: ManaOil, stats: [Stat.StatHealingPower] },
-	{ config: WizardOil, stats: [Stat.StatSpellDamage] },
-	{ config: BrilWizardOil, stats: [Stat.StatSpellDamage, Stat.StatHealingPower] },
-	{ config: BlessedWizardOil, stats: [Stat.StatSpellDamage] },
-	{ config: DenseSharpeningStoneOH, stats: [Stat.StatAttackPower] },
-	{ config: DenseWeightstoneOH, stats: [Stat.StatAttackPower] },
-	{ config: ElementalSharpeningStoneOH, stats: [Stat.StatAttackPower] },
-	{ config: ConsecratedSharpeningStoneOH, stats: [Stat.StatAttackPower] },
-	{ config: ShamanImbueRockbiter, stats: [] },
-	{ config: ShamanImbueFrostbrand, stats: [] },
-	{ config: ShamanImbueFlametongue, stats: [] },
-	{ config: ShamanImbueWindfury, stats: [] },
-] as ConsumableStatOption<number>[];
-
-// Specs that doesn't use Windfury and should always show imbues.
-const specsWithoutWindfury = [Spec.SpecFeralBearDruid, Spec.SpecFeralCatDruid];
-
-export const makeMHImbueInput = makeConsumeInputFactory({
-	consumesFieldName: 'mhImbueId',
-	showWhen: (player: Player<any>) => specsWithoutWindfury.includes(player.getSpec()) || !player.getParty() || !player.getParty()!.getBuffs().windfuryTotem,
-});
-export const makeOHImbueInput = makeConsumeInputFactory({
-	consumesFieldName: 'ohImbueId',
-	showWhen: (player: Player<any>) => player.getGear().getEquippedItem(ItemSlot.ItemSlotOffHand)?.item.weaponSpeed !== undefined,
-});
-
-///////////////////////////////////////////////////////////////////////////
-//                                 SCROLLS
-///////////////////////////////////////////////////////////////////////////
-
-export const ScrollAgi = makeBooleanConsumeInput({
-	actionId: ActionId.fromItemId(10309),
-	fieldName: 'scrollAgi',
-	showWhen: (player: Player<any>) => player.getEpWeights().getStat(Stat.StatAgility) > 0,
-});
-
-export const ScrollStr = makeBooleanConsumeInput({
-	actionId: ActionId.fromItemId(10310),
-	fieldName: 'scrollStr',
-	showWhen: (player: Player<any>) => player.getEpWeights().getStat(Stat.StatStrength) > 0,
-});
-
-export const ScrollInt = makeBooleanConsumeInput({
-	actionId: ActionId.fromItemId(10308),
-	fieldName: 'scrollInt',
-	showWhen: (player: Player<any>) => player.getEpWeights().getStat(Stat.StatIntellect) > 0,
-});
-
-export const ScrollSpi = makeBooleanConsumeInput({
-	actionId: ActionId.fromItemId(10306),
-	fieldName: 'scrollSpi',
-	showWhen: (player: Player<any>) => player.getEpWeights().getStat(Stat.StatSpirit) > 0,
-});
-
-export const ScrollArm = makeBooleanConsumeInput({
-	actionId: ActionId.fromItemId(10305),
-	fieldName: 'scrollArm',
-	showWhen: (player: Player<any>) => player.getEpWeights().getStat(Stat.StatArmor) > 0,
-});
-
-///////////////////////////////////////////////////////////////////////////
-//                            MISCELLANEOUS
-///////////////////////////////////////////////////////////////////////////
-
-export const DragonbreathChili = makeBooleanConsumeInput({
-	actionId: ActionId.fromItemId(12217),
-	fieldName: 'dragonbreathChili',
-	showWhen: (player: Player<any>) => player.getEpWeights().getStat(Stat.StatAttackPower) > 0,
-});
-
-export const BoglingRoot = makeBooleanConsumeInput({
-	actionId: ActionId.fromItemId(5206),
-	fieldName: 'boglingRoot',
-	showWhen: (player: Player<any>) => player.getEpWeights().getStat(Stat.StatAttackPower) > 0,
-});
-
-///////////////////////////////////////////////////////////////////////////
-
-export interface ConsumableInputOptions {
-	consumesFieldName: keyof ConsumesSpec;
-	setValue?: (player: Player<any>, newValue: number) => void;
-	showWhen?: (player: Player<any>) => boolean;
-}
-
-export function makeConsumableInput(
-	items: Consumable[],
-	options: ConsumableInputOptions,
-	tooltip?: string,
-): InputHelpers.TypedIconEnumPickerConfig<Player<any>, number> {
-	const valueOptions = items.map(item => ({
-		value: item.id,
-		iconUrl: item.icon,
-		actionId: ActionId.fromItemId(item.id),
-		tooltip: item.name,
-	}));
+// A consumable picked any number at a time into the spec's extra ids.
+export function makeIdListInput(consumable: Consumable, relevance: ConsumableRelevance): ConsumeToggle {
+	const picked = (player: Player<any>) => player.getConsumes().extraIds.includes(consumable.id);
 	return {
-		type: 'iconEnum',
-		tooltip: tooltip,
-		numColumns: items.length > 10 ? 3 : items.length > 5 ? 2 : 1,
-		values: [{ value: 0, iconUrl: '', tooltip: i18n.t('common.none') }].concat(valueOptions),
-		equals: (a: number, b: number) => a === b,
-		zeroValue: 0,
-		storeField: 'consumables',
-		getValue: (player: Player<any>) => player.getConsumes()[options.consumesFieldName] as number,
-		showWhen: (player: Player<any>) => !!valueOptions.length && (!options.showWhen || options.showWhen(player)),
-		setValue: (player: Player<any>, newValue: number) => {
-			if (options.setValue) {
-				options.setValue(player, newValue);
-			}
-
-			const newConsumes = {
-				...player.getConsumes(),
-				[options.consumesFieldName]: newValue,
-			};
-
-			// No flask-or-elixirs rule: that is TBC's. Classic (and Forever) flasks stack with elixirs.
-			player.setConsumes(newConsumes);
+		consumable,
+		type: 'icon',
+		actionId: ActionId.fromItemId(consumable.id),
+		states: 2,
+		storeField: STORE_FIELDS,
+		showWhen: offeredTo(consumable, relevance, picked),
+		keptBy: (player: Player<any>, value: boolean) => value && !relevance.relevant(consumable, player),
+		getValue: picked,
+		setValue: (player: Player<any>, newValue: boolean) => {
+			const consumes = player.getConsumes();
+			const extraIds = consumes.extraIds.filter(id => id !== consumable.id);
+			if (newValue) extraIds.push(consumable.id);
+			player.setConsumes({ ...consumes, extraIds });
 		},
 	};
 }

@@ -21,8 +21,8 @@ test_fmt() {
     exit $exitcode
 }
 
-# The generated spell data against what the generator writes today. Skipped without the client
-# database, which is gitignored, and only run for a commit that touches the generator or its output.
+# The generated spell data against what the generator writes today. Skipped without the game
+# files database, which is gitignored, and only run for a commit that touches the generator or its output.
 test_spelldata() {
     test -f tools/database/wowsims.db || return 0
     hash go 2>&- || return 0

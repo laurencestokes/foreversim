@@ -209,9 +209,17 @@ func (rot *APLRotation) GetAPLSpell(spellId *proto.ActionID) *Spell {
 	actionID := ProtoToActionID(spellId)
 	var spell *Spell
 
-	if actionID.IsOtherAction(proto.OtherAction_OtherActionPotion) {
+	var consumables *proto.ConsumesSpec
+	if agent := rot.unit.Env.Raid.GetPlayerFromUnit(rot.unit); agent != nil {
+		consumables = agent.GetCharacter().Consumables
+	}
+	if potionID, isPlaceholder := placeholderPotionID(consumables, actionID.OtherID); isPlaceholder {
+		if potionID == 0 {
+			rot.ValidationMessage(proto.LogLevel_Warning, "%s picks no potion for %s", rot.unit.Label, actionID)
+			return nil
+		}
 		for _, s := range rot.unit.Spellbook {
-			if s.Flags.Matches(SpellFlagCombatPotion) {
+			if s.ActionID.SameAction(ActionID{ItemID: potionID}) && s.Flags.Matches(SpellFlagPotion) {
 				spell = s
 				break
 			}

@@ -1,7 +1,8 @@
 import { Player } from '@generated/proto/api';
 import { IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
-import { Class, Faction, Race, Spec, TristateEffect, UnitReference, UnitReference_Type } from '@generated/proto/common';
+import { Class, ConsumesSpec, Faction, Race, Spec, TristateEffect, UnitReference, UnitReference_Type } from '@generated/proto/common';
 import { ResourceType } from '@generated/proto/spell';
+import { UIItem as Item } from '@generated/proto/ui';
 
 import { PlayerClasses } from '../player/classes';
 import { PlayerClass } from '../player/player_class';
@@ -9,10 +10,12 @@ import { PlayerSpec } from '../player/player_spec';
 import { PlayerSpecs } from '../player/specs';
 import { getEnumValues } from '../utils/collections';
 import { sum } from '../utils/math';
+import { isBluntWeaponType, isSharpWeaponType } from './items';
+import { DENSE_SHARPENING_STONE_ID, DENSE_WEIGHTSTONE_ID } from './sim_tables_auto_gen';
 
 export const NUM_SPECS = getEnumValues(Spec).length;
 
-// Converts '1231321-12313123-0' to [13, 16, 0]. TBC talent strings are one run of per-row digits
+// Converts '1231321-12313123-0' to [13, 16, 0]. Talent strings are one run of per-row digits
 // per tree, so the interesting number is the per-tree total and not the digits themselves.
 export function getTalentTreePoints(talentsString: string): Array<number> {
 	const trees = talentsString.split('-');
@@ -83,9 +86,6 @@ export function getPlayerSpecFromPlayer<SpecType extends Spec>(player: Player): 
 	throw new Error('Unable to parse spec from player proto: ' + JSON.stringify(Player.toJson(player), null, 2));
 }
 
-export const DENSE_SHARPENING_STONE_ID = 16138;
-export const DENSE_WEIGHTSTONE_ID = 16622;
-
 // Swaps the Dense sharpening stone and weightstone to match the weapon; any other imbue passes through.
 export function adjustWeaponImbueId(imbueId: number, hasSharp: boolean, hasBlunt: boolean): number {
 	if (imbueId !== DENSE_SHARPENING_STONE_ID && imbueId !== DENSE_WEIGHTSTONE_ID) return imbueId;
@@ -93,6 +93,28 @@ export function adjustWeaponImbueId(imbueId: number, hasSharp: boolean, hasBlunt
 	if (hasBlunt) return DENSE_WEIGHTSTONE_ID;
 	return 0;
 }
+
+const adjustHandImbue = (imbueId: number, weapon?: Item | null) =>
+	adjustWeaponImbueId(imbueId, !!weapon && isSharpWeaponType(weapon.weaponType), !!weapon && isBluntWeaponType(weapon.weaponType));
+
+// Matches each hand's imbue field to the weapon in that hand; the same spec comes back when nothing changes.
+const adjustImbuePair = (
+	consumes: ConsumesSpec,
+	[mhField, ohField]: ['mhImbueId', 'ohImbueId'] | ['swapMhImbueId', 'swapOhImbueId'],
+	mainHand?: Item | null,
+	offHand?: Item | null,
+): ConsumesSpec => {
+	const mhImbueId = adjustHandImbue(consumes[mhField], mainHand);
+	const ohImbueId = adjustHandImbue(consumes[ohField], offHand);
+	if (mhImbueId === consumes[mhField] && ohImbueId === consumes[ohField]) return consumes;
+	return ConsumesSpec.clone({ ...consumes, [mhField]: mhImbueId, [ohField]: ohImbueId });
+};
+
+export const adjustImbues = (consumes: ConsumesSpec, mainHand?: Item | null, offHand?: Item | null): ConsumesSpec =>
+	adjustImbuePair(consumes, ['mhImbueId', 'ohImbueId'], mainHand, offHand);
+
+export const adjustSwapImbues = (consumes: ConsumesSpec, mainHand?: Item | null, offHand?: Item | null): ConsumesSpec =>
+	adjustImbuePair(consumes, ['swapMhImbueId', 'swapOhImbueId'], mainHand, offHand);
 
 export function newUnitReference(raidIndex: number): UnitReference {
 	return UnitReference.create({

@@ -1,49 +1,91 @@
 import * as PresetUtils from '@app/preset_utils';
-import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
-import { ConsumesSpec, Profession, Race } from '@generated/proto/common';
+import * as Consumables from '@features/settings/model/consumables_auto_gen';
+import { ConsumesSpec, Profession, Stat } from '@generated/proto/common';
 import { HealerPriest_Options as HealerPriestOptions, PriestOptions_Armor } from '@generated/proto/priest';
 import { SavedTalents } from '@generated/proto/ui';
+import { Stats } from '@sim/proto/stats';
 
-// Defaults follow master's ui/healing_priest.
+import PreraidGearJson from './gear_sets/preraid.gear.json';
+
 export const DefaultOptions = HealerPriestOptions.create({
+	prayerOfMendingJumps: 5,
+	prayerOfMendingDelay: 2.5,
+	holyNovaHealTargets: 5,
 	classOptions: {
 		armor: PriestOptions_Armor.InnerFire,
 	},
 });
 
-// Master sets no consumables for this spec (the old TBC flask, food and potion don't exist in the Forever client).
-export const DefaultConsumables = ConsumesSpec.create({});
-
-export const DefaultRaidBuffs = RaidBuffs.create({
-	arcaneBrilliance: true,
-	giftOfTheWild: true,
-	prayerOfFortitude: true,
-	prayerOfSpirit: true,
+export const DefaultConsumables = ConsumesSpec.create({
+	foodId: Consumables.SunnyTea.id,
+	mhImbueId: Consumables.BrilliantManaOil.id,
+	resourcePotId: Consumables.MajorManaPotion.id,
+	conjuredId: Consumables.DemonicRune.id,
+	elixirIds: [
+		Consumables.ElixirOfTheGrizzly.id,
+		Consumables.ElixirOfCunning.id,
+		Consumables.ElixirOfTheOwl.id,
+		Consumables.ElixirOfSages.id,
+		Consumables.GreaterMagebloodElixir.id,
+		Consumables.GreaterClericsElixir.id,
+	],
 });
-
-export const DefaultPartyBuffs = PartyBuffs.create({
-	moonkinAura: true,
-	strengthOfEarthTotem: true,
-});
-
-export const DefaultIndividualBuffs = IndividualBuffs.create({
-	greaterBlessingOfKings: true,
-	greaterBlessingOfWisdom: true,
-});
-
-export const DefaultDebuffs = Debuffs.create({});
 
 export const OtherDefaults = {
 	distanceFromTarget: 20,
 	profession1: Profession.Tailoring,
 	profession2: Profession.Enchanting,
-	race: Race.RaceDwarf,
 };
 
-// Talent presets, from master's ui/priest spec.
-export const TalentsHolyHealer = PresetUtils.makePresetTalents('Holy 19/32/0', SavedTalents.create({ talentsString: '005203031302-2350510323000053' }));
-export const TalentsDisciplineHealer = PresetUtils.makePresetTalents(
-	'Discipline 35/16/0',
-	SavedTalents.create({ talentsString: '005203031325101531-03505003' }),
+export const DiscTalents = PresetUtils.makePresetTalents('Disc', SavedTalents.create({ talentsString: '005025021330011531-335001030301' }));
+export const HolyTalents = PresetUtils.makePresetTalents('Holy', SavedTalents.create({ talentsString: '00520101133-33505003030121531' }));
+
+export const PreRaidGear = PresetUtils.makePresetGear('Pre-raid', PreraidGearJson, { devOnly: true });
+
+export const DiscSingleTargetEpWeights = PresetUtils.makePresetEpWeights(
+	'Disc Single-Target',
+	Stats.fromMap({
+		[Stat.StatHealingPower]: 1.0,
+		[Stat.StatCritRating]: 0.7,
+		[Stat.StatHasteRating]: 0.15,
+		[Stat.StatIntellect]: 0.2,
+		[Stat.StatSpirit]: 0.15,
+		[Stat.StatMP5]: 0.4,
+	}),
 );
-export const TalentPresets = [TalentsHolyHealer, TalentsDisciplineHealer];
+
+export const DiscRaidHealingEpWeights = PresetUtils.makePresetEpWeights(
+	'Disc Raid Healing',
+	Stats.fromMap({
+		[Stat.StatHealingPower]: 1.0,
+		[Stat.StatCritRating]: 0.48,
+		[Stat.StatHasteRating]: 0.1,
+		[Stat.StatIntellect]: 0.2,
+		[Stat.StatSpirit]: 0.1,
+		[Stat.StatMP5]: 0.19,
+	}),
+);
+
+export const HolySingleTargetEpWeights = PresetUtils.makePresetEpWeights(
+	'Holy Single-Target',
+	Stats.fromMap({
+		[Stat.StatHealingPower]: 1.0,
+		[Stat.StatCritRating]: 0.3,
+		[Stat.StatHasteRating]: 0.5,
+		[Stat.StatIntellect]: 0.35,
+		[Stat.StatSpirit]: 0.3,
+		[Stat.StatMP5]: 0.6,
+	}),
+);
+
+export const HolyRaidHealingEpWeights = PresetUtils.makePresetEpWeights(
+	'Holy Raid Healing',
+	Stats.fromMap({
+		[Stat.StatHealingPower]: 1.0,
+		[Stat.StatCritRating]: 0.23,
+		[Stat.StatHasteRating]: 0.48,
+		[Stat.StatIntellect]: 0.3,
+		[Stat.StatSpirit]: 0.25,
+		[Stat.StatMP5]: 0.6,
+	}),
+);

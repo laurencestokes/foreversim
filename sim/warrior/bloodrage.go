@@ -3,46 +3,36 @@ package warrior
 import (
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-func (warrior *Warrior) registerBloodrage() {
-	bloodrageRank := spellData.Bloodrage.Highest()
-	bloodrageOverTime := spellData.BloodrageTriggered.Highest()
+var bloodrageRank = spellData.Bloodrage.Highest()
+var bloodrageOverTime = bloodrageRank.EffectN(2).Trigger()
+var bloodrageOverTimeTick = bloodrageOverTime.PeriodicEffect()
 
-	actionID := core.ActionID{SpellID: bloodrageRank.ID}
-	rageMetrics := warrior.NewRageMetrics(actionID)
+func (warrior *Warrior) registerBloodrage() {
+	rageMetrics := warrior.NewRageMetrics(core.ActionID{SpellID: bloodrageRank.ID})
 	healthCost := warrior.GetBaseStats()[stats.Health] * float64(bloodrageRank.Power(dbcenums.POWER_HEALTH).CostPct) / 100
 	improvedBloodrage := spellData.ImprovedBloodrage.MultiplierAt(warrior.Talents.ImprovedBloodrage)
-	instantRage := spellData.Bloodrage.EffectAt(1).TenthsAt(1) * improvedBloodrage
-	ragePerTick := bloodrageOverTime.PeriodicEffect().Tenths() * improvedBloodrage
+	instantRage := bloodrageRank.EnergizeEffect().Tenths() * improvedBloodrage
+	ragePerTick := bloodrageOverTimeTick.Tenths() * improvedBloodrage
 
-	spell := warrior.RegisterSpell(core.SpellConfig{
-		ActionID: actionID,
+	config := spelldata.SpellConfig(&warrior.Unit, bloodrageRank)
 
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				NonEmpty: true,
-			},
-			CD: core.Cooldown{
-				Timer:    warrior.NewTimer(),
-				Duration: cooldownOf(bloodrageRank),
-			},
-		},
+	config.Hot = spelldata.DotConfig(bloodrageOverTime, bloodrageOverTimeTick)
+	config.Hot.SelfOnly = true
+	config.Hot.OnTick = func(sim *core.Simulation, _ *core.Unit, _ *core.Dot) {
+		warrior.AddRage(sim, ragePerTick, rageMetrics)
+	}
 
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
-			warrior.AddRage(sim, instantRage, rageMetrics)
-			warrior.RemoveHealth(sim, healthCost)
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		warrior.AddRage(sim, instantRage, rageMetrics)
+		warrior.RemoveHealth(sim, healthCost)
+		spell.SelfHot().Apply(sim)
+	}
 
-			core.StartPeriodicAction(sim, core.PeriodicActionOptions{
-				NumTicks: int(bloodrageOverTime.Duration() / bloodrageOverTime.PeriodicEffect().Period()),
-				Period:   bloodrageOverTime.PeriodicEffect().Period(),
-				OnAction: func(sim *core.Simulation) {
-					warrior.AddRage(sim, ragePerTick, rageMetrics)
-				},
-			})
-		},
-	})
+	spell := warrior.RegisterSpell(config)
 
 	warrior.AddMajorCooldown(core.MajorCooldown{
 		Spell: spell,

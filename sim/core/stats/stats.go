@@ -31,17 +31,14 @@ const (
 	HolyDamage
 	NatureDamage
 	ShadowDamage
-	SpellHitRating
-	SpellCritRating
-	SpellHasteRating
 	SpellPiercing
 	Spirit
 	AttackPower
 	RangedAttackPower
 	FeralAttackPower
-	MeleeHitRating
-	MeleeCritRating
-	MeleeHasteRating
+	HitRating
+	CritRating
+	HasteRating
 	ArmorPenetration
 	ExpertiseRating
 	DefenseRating
@@ -60,6 +57,7 @@ const (
 	NatureResistance
 	ShadowResistance
 	PhysicalDamage
+	ArmorNoMods
 	// end of Stat enum in proto/common.proto
 
 	// The remaining stats below are stored as PseudoStats rather than as
@@ -141,20 +139,14 @@ func (s Stat) StatName() string {
 		return "Intellect"
 	case Spirit:
 		return "Spirit"
-	case SpellHitRating:
-		return "SpellHitRating"
-	case SpellCritRating:
-		return "SpellCritRating"
-	case SpellHasteRating:
-		return "SpellHasteRating"
 	case SpellPiercing:
 		return "SpellPiercing"
-	case MeleeHitRating:
-		return "MeleeHitRating"
-	case MeleeCritRating:
-		return "MeleeCritRating"
-	case MeleeHasteRating:
-		return "MeleeHasteRating"
+	case HitRating:
+		return "HitRating"
+	case CritRating:
+		return "CritRating"
+	case HasteRating:
+		return "HasteRating"
 	case ExpertiseRating:
 		return "ExpertiseRating"
 	case ArmorPenetration:
@@ -189,6 +181,8 @@ func (s Stat) StatName() string {
 		return "Armor"
 	case BonusArmor:
 		return "BonusArmor"
+	case ArmorNoMods:
+		return "ArmorNoMods"
 	case Health:
 		return "Health"
 	case Mana:
@@ -290,19 +284,24 @@ type PercentPseudoStat struct {
 	MeleeShare *PercentPseudoStat
 }
 
+// The hit and crit percents, named so each ranged one can point at its melee share.
 var (
-	meleeHitPercent  = PercentPseudoStat{PhysicalHitPercent, proto.PseudoStat_PseudoStatMeleeHitPercent, nil}
-	meleeCritPercent = PercentPseudoStat{PhysicalCritPercent, proto.PseudoStat_PseudoStatMeleeCritPercent, nil}
+	meleeHitPseudoStat   = PercentPseudoStat{PhysicalHitPercent, proto.PseudoStat_PseudoStatMeleeHitPercent, nil}
+	rangedHitPseudoStat  = PercentPseudoStat{RangedHitPercent, proto.PseudoStat_PseudoStatRangedHitPercent, &meleeHitPseudoStat}
+	spellHitPseudoStat   = PercentPseudoStat{SpellHitPercent, proto.PseudoStat_PseudoStatSpellHitPercent, nil}
+	meleeCritPseudoStat  = PercentPseudoStat{PhysicalCritPercent, proto.PseudoStat_PseudoStatMeleeCritPercent, nil}
+	rangedCritPseudoStat = PercentPseudoStat{RangedCritPercent, proto.PseudoStat_PseudoStatRangedCritPercent, &meleeCritPseudoStat}
+	spellCritPseudoStat  = PercentPseudoStat{SpellCritPercent, proto.PseudoStat_PseudoStatSpellCritPercent, nil}
 )
 
 var PercentPseudoStats = []PercentPseudoStat{
-	meleeHitPercent,
-	{SpellHitPercent, proto.PseudoStat_PseudoStatSpellHitPercent, nil},
-	meleeCritPercent,
-	{SpellCritPercent, proto.PseudoStat_PseudoStatSpellCritPercent, nil},
+	meleeHitPseudoStat,
+	spellHitPseudoStat,
+	meleeCritPseudoStat,
+	spellCritPseudoStat,
 	{BlockPercent, proto.PseudoStat_PseudoStatBlockPercent, nil},
-	{RangedHitPercent, proto.PseudoStat_PseudoStatRangedHitPercent, &meleeHitPercent},
-	{RangedCritPercent, proto.PseudoStat_PseudoStatRangedCritPercent, &meleeCritPercent},
+	rangedHitPseudoStat,
+	rangedCritPseudoStat,
 	{DodgePercent, proto.PseudoStat_PseudoStatDodgePercent, nil},
 	{ParryPercent, proto.PseudoStat_PseudoStatParryPercent, nil},
 	{ExpertisePercent, proto.PseudoStat_PseudoStatExpertisePercent, nil},
@@ -346,7 +345,6 @@ func (stats Stats) Invert() Stats {
 }
 
 // Rounds all stat values down to the nearest integer, returning the new Stats.
-// Used for random suffix stats currently.
 func (stats Stats) Floor() Stats {
 	for k, v := range stats {
 		stats[k] = math.Floor(v)
@@ -383,6 +381,13 @@ func (stats Stats) FloorGameStats() Stats {
 		stats[k] = math.Floor(stats[k])
 	}
 	return stats
+}
+
+// FloorGameStatsInPlace is FloorGameStats without copying the array.
+func (stats *Stats) FloorGameStatsInPlace() {
+	for _, k := range flooredGameStats {
+		stats[k] = math.Floor(stats[k])
+	}
 }
 
 func (stats Stats) Multiply(multiplier float64) Stats {
@@ -525,12 +530,11 @@ type PseudoStats struct {
 	RangedSpeedMultiplier float64
 	RangedHasteMultiplier float64
 	AttackSpeedMultiplier float64 // Used for real haste effects that modify resoruce regen and are used for RPPM effects
+	WeaponSpeedMultiplier float64 // Seal of the Crusader's faster, lighter swings, which a rate on the weapon's speed divides by
 
 	FiveSecondRuleRefreshTime time.Duration // last time a spell was cast
 	SpiritRegenRateCasting    float64       // percentage of spirit regen allowed during casting
 
-	// Both of these are currently only used for innervate.
-	ForceFullSpiritRegen  bool    // If set, automatically uses full spirit regen regardless of FSR refresh time.
 	SpiritRegenMultiplier float64 // Multiplier on spirit portion of mana regen.
 
 	// If true, allows block/parry.
@@ -545,10 +549,16 @@ type PseudoStats struct {
 	IncreasedMissChance float64 // Insect Swarm and Scorpid Sting
 	DodgeReduction      float64 // Used by Warrior talent 'Weapon Mastery' and SWP boss auras.
 
-	ThreatMultiplier float64 // Modulates the threat generated. Affected by things like salv.
+	WeaponSkills       [proto.WeaponSkill_WeaponSkillWands + 1]float64 // Bonus skill over the level-based maximum per weapon skill, which a skill below it makes negative.
+	FeralCombatSkill   float64
+	FeralCombatEnabled bool // While set, FeralCombatSkill replaces the skill of the equipped weapon.
+
+	ThreatMultiplier       float64            // Modulates the threat generated. Affected by things like salv.
+	SchoolThreatMultiplier [SchoolLen]float64 // The threat of one spell school, on top of ThreatMultiplier.
 
 	DamageDealtMultiplier          float64            // All damage
 	SchoolDamageDealtMultiplier    [SchoolLen]float64 // For specific spell schools (arcane, fire, shadow, etc).
+	SchoolSpellPiercing            [SchoolLen]float64 // Target resistance ignored by spells of one school, on top of SpellPiercing.
 	DotDamageMultiplierAdditive    float64            // All periodic damage
 	HealingDealtMultiplier         float64            // All non-shield healing
 	PeriodicHealingDealtMultiplier float64            // All periodic healing (on top of HealingDealtMultiplier)
@@ -558,7 +568,8 @@ type PseudoStats struct {
 	BonusAttackPower       float64 // Also Hunter's Mark
 
 	// Important when unit is attacker or target
-	BlockValueMultiplier float64
+	BlockValueMultiplier  float64
+	BlockValuePerStrength float64
 
 	// Only used for NPCs, governs variance in enemy auto-attack damage
 	DamageSpread float64
@@ -567,7 +578,7 @@ type PseudoStats struct {
 	// Crowd control effects. See sim/core/incapacitate.go.
 	///////////////////////////////////////////////////
 
-	Incapacitated bool // Under crowd control (e.g. Archimonde's Fear); cannot cast or queue any spell. Procs still fire.
+	Incapacitated bool // Under crowd control (e.g. a boss's Fear); cannot cast or queue any spell. Procs still fire.
 	Stunned       bool // Prevents blocks, dodges, and parries. Read while this unit is the target.
 	FearImmune    bool // Fear effects cannot be applied to this unit. (ie. Berserker Rage)
 	StunImmune    bool // Stun effects cannot be applied to this unit.
@@ -599,14 +610,16 @@ type PseudoStats struct {
 	BonusSpellCritPercentTaken float64 // Imp Shadow Bolt / Imp Scorch / Winter's Chill debuff
 	BonusPhysicalDamageTaken   float64 // Hemo, Gift of Arthas, etc
 	BonusSpellDamageTaken      float64 // Amp Magic
+	BonusRangedDamageTaken     float64 // Physical ranged attacks only: Windwall
 
 	DamageTakenMultiplier       float64            // All damage
 	SchoolDamageTakenMultiplier [SchoolLen]float64 // For specific spell schools (arcane, fire, shadow, etc.)
-	SchoolBonusSpellDamage      [SchoolLen]float64 // Bonus SpellDamage against Target, ex: Judgement Of The Crusader + HolySpellDamage
-	SchoolBonusHitChance        [SchoolLen]float64 // Spell school-specific hit bonuses such as Arcane Focus or Elemental Precision - only applied to spells with a non-zero class spell mask
+	SchoolBonusSpellDamage      [SchoolLen]float64 // Flat school damage the target takes extra, ex: Judgement of the Crusader; added at the spell's coefficient after the caster's done multipliers, before the outcome
+	SchoolBonusHitChance        [SchoolLen]float64 // The bonus stats' school hit, on every spell of the school with a ClassSpellMask or class flags; a talent's school hit is a class-flags mod with ShowAsSchoolHit
 
 	DiseaseDamageTakenMultiplier          float64
 	PeriodicPhysicalDamageTakenMultiplier float64
+	MeleeDamageTakenMultiplier            float64 // Melee attacks of any school
 
 	ArmorMultiplier float64 // Major/minor/special multiplicative armor modifiers
 
@@ -633,9 +646,11 @@ func NewPseudoStats() PseudoStats {
 		RangedSpeedMultiplier: 1,
 		RangedHasteMultiplier: 1,
 		AttackSpeedMultiplier: 1,
+		WeaponSpeedMultiplier: 1,
 		SpiritRegenMultiplier: 1,
 
-		ThreatMultiplier: 1,
+		ThreatMultiplier:       1,
+		SchoolThreatMultiplier: NewSchoolFloatArray(),
 
 		DamageDealtMultiplier:          1,
 		SchoolDamageDealtMultiplier:    NewSchoolFloatArray(),
@@ -656,6 +671,7 @@ func NewPseudoStats() PseudoStats {
 
 		DiseaseDamageTakenMultiplier:          1,
 		PeriodicPhysicalDamageTakenMultiplier: 1,
+		MeleeDamageTakenMultiplier:            1,
 
 		ArmorMultiplier: 1,
 

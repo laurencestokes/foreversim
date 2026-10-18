@@ -9,7 +9,7 @@ const fakeSharedCategory int32 = 65
 
 var fakeCategorySpellActionIDs = [2]ActionID{{SpellID: 11951}, {SpellID: 11952}}
 
-// Two spells in the same client spell category, which the game puts on one cooldown.
+// Two spells in the same game files spell category, which the game puts on one cooldown.
 func (fw *FakeRageWarrior) registerFakeCategorySpells() {
 	for _, actionID := range fakeCategorySpellActionIDs {
 		fw.RegisterSpell(SpellConfig{

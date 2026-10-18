@@ -1,20 +1,18 @@
 import * as PresetUtils from '@app/preset_utils';
-import { RaidBuffs } from '@generated/proto/buffs';
-import { HandType, ItemSlot, Profession, Race, Spec } from '@generated/proto/common';
+import * as Consumables from '@features/settings/model/consumables_auto_gen';
+import { makeSpecChangeWarningToast } from '@features/settings/utils/spec_change_warning_toast';
+import { ConsumesSpec, HandType, ItemSlot, Profession, PseudoStat, Race, Spec, Stat } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
-import { DpsWarrior_Options as WarriorOptions, WarriorStance } from '@generated/proto/warrior';
+import { DpsWarrior_Options as WarriorOptions, DpsWarrior_Rotation, DpsWarriorSpec, WarriorStance, WarriorSunder } from '@generated/proto/warrior';
 import { Player } from '@sim/player/player';
+import type { PresetSettings } from '@sim/presets/types';
+import { Stats } from '@sim/proto/stats';
 
 import * as WarriorPresets from '../shared/presets';
-import ForeverBattleApl from './apls/dps_battle.apl.json';
-import ForeverDanceApl from './apls/dps_dance.apl.json';
-import ForeverNoReckApl from './apls/dps_no_reck.apl.json';
-import ForeverReckApl from './apls/dps_reck.apl.json';
-import ArmsLaunchGear from './gear_sets/arms_launch.gear.json';
-import LaunchGear from './gear_sets/launch.gear.json';
-import P0BisGear from './gear_sets/p0.bis.gear.json';
-import Phase1Gear from './gear_sets/phase_1.gear.json';
-import Phase2Gear from './gear_sets/phase_2.gear.json';
+import DefaultArmsApl from './apls/arms.apl.json';
+import DefaultFuryApl from './apls/fury.apl.json';
+import PreBiSArmsGearJson from './gear_sets/prebis_arms.gear.json';
+import PreBiSFuryGearJson from './gear_sets/prebis_fury.gear.json';
 
 // Preset options for this spec.
 // Eventually we will import these values for the raid sim too, so its good to
@@ -30,47 +28,183 @@ export const isFurySpec = (player: Player<Spec.SpecDpsWarrior>) =>
 	player.getEquippedItem(ItemSlot.ItemSlotMainHand)?.item.handType === HandType.HandTypeMainHand ||
 	player.getEquippedItem(ItemSlot.ItemSlotMainHand)?.item.handType === HandType.HandTypeOneHand;
 
-// Master's rotation presets, in master's order; No Reck is master's default.
-export const ROTATION_PRESET_NO_RECK = PresetUtils.makePresetAPLRotation('DPS (No Reck)', ForeverNoReckApl);
-export const ROTATION_PRESET_RECK = PresetUtils.makePresetAPLRotation('DPS (With Reck)', ForeverReckApl);
-// Ours: With Reck plus Overpower. Dance swaps to Battle Stance for a dodge's Overpower and back;
-// Battle stays there to keep Rend up for Bloodthrill's Overpower windows.
-export const ROTATION_PRESET_DANCE = PresetUtils.makePresetAPLRotation('DPS (Stance Dance)', ForeverDanceApl);
-export const ROTATION_PRESET_BATTLE = PresetUtils.makePresetAPLRotation('DPS (Battle Stance)', ForeverBattleApl);
+const FURY_PRESET_OPTIONS = {
+	group: 'Fury',
+	onLoad: (player: Player<Spec.SpecDpsWarrior>) => {
+		makeSpecChangeWarningToast(
+			[
+				{
+					condition: isArmsSpec,
+					message: 'Check your gear: You have a two-handed weapon equipped, but the selected option is for dual wield.',
+				},
+				{
+					condition: (player: Player<Spec.SpecDpsWarrior>) => !player.getTalents().dualWieldSpecialization,
+					message: "Check your talents: You have selected a dual-wield spec but don't have [Dual Wield Specialization] talented.",
+				},
+			],
+			player,
+		);
+	},
+};
 
-// The three builds our Forever sim ships.
-export const DpsTalents = PresetUtils.makePresetTalents('DPS', SavedTalents.create({ talentsString: '30305013-05553005150010501' }));
-export const FuryTalents = PresetUtils.makePresetTalents('Fury 17/34/0', SavedTalents.create({ talentsString: '30305213-55051105050010501' }));
-export const ArmsTalents = PresetUtils.makePresetTalents('Arms 39/12/0', SavedTalents.create({ talentsString: '32305213132515201-5502' }));
+const ARMS_PRESET_OPTIONS = {
+	group: 'Arms',
+	onLoad: (player: Player<Spec.SpecDpsWarrior>) => {
+		makeSpecChangeWarningToast(
+			[
+				{
+					condition: isFurySpec,
+					message: 'Check your gear: You have a one-handed weapon equipped, but the selected option is for two-handed weapons.',
+				},
+			],
+			player,
+		);
+	},
+};
+
+// Dungeon and world drops, the warrior's dungeon tier sets and crafted items whose reagents include no
+// raid materials; no reputation or PvP rewards. The shoulders and bracers are world-drop greens with the
+// "of the Tiger" suffix, and the neck is a Darkmoon Faire ticket reward. The cloak, the first ring and the
+// Adaptive Combat Assistant are sold by the Undermine Trader in Stranglethorn Vale; the Dawn Armor pattern and
+// the second ring have no known source.
+export const PreBiSFuryGear = PresetUtils.makePresetGear('Pre-BiS', PreBiSFuryGearJson, { ...FURY_PRESET_OPTIONS, devOnly: true });
+
+// The best build found on the Pre-BiS Fury gear over a three minute fight.
+export const FuryTalents = PresetUtils.makePresetTalents('Fury', SavedTalents.create({ talentsString: '30305013002-25053005052010501' }));
+
+// Measured on the Pre-BiS Fury gear with the Fury talents.
+export const PreBiSFuryEpWeights = PresetUtils.makePresetEpWeights(
+	'Pre-BiS - Fury',
+	Stats.fromMap(
+		{
+			[Stat.StatStrength]: 2.2,
+			[Stat.StatAgility]: 2.25,
+			[Stat.StatAttackPower]: 1,
+			[Stat.StatArmorPenetration]: 0.41,
+			[Stat.StatHitRating]: 2.29,
+			[Stat.StatHasteRating]: 2.29,
+			[Stat.StatCritRating]: 2.92,
+			[Stat.StatExpertiseRating]: 1.9,
+		},
+		{
+			[PseudoStat.PseudoStatMainHandDps]: 9.89,
+			[PseudoStat.PseudoStatOffHandDps]: 3.15,
+		},
+	),
+);
+
+// The same sources as the Pre-BiS Fury gear; the cloak and the bow are world-drop greens with the "of the
+// Tiger" suffix too.
+export const PreBiSArmsGear = PresetUtils.makePresetGear('Pre-BiS', PreBiSArmsGearJson, { ...ARMS_PRESET_OPTIONS, devOnly: true });
+
+// The Battle Stance build: Rend keeps Bloodthrill's Overpower procs coming, and Spearing Strike fills the
+// global cooldowns Mortal Strike and Slam leave.
+export const ArmsTalents = PresetUtils.makePresetTalents('Arms', SavedTalents.create({ talentsString: '30325213132515201-0505-2' }));
+
+// Measured on the Pre-BiS Arms gear with the Arms talents. Hit is its value below the 8% cap.
+export const PreBiSArmsEpWeights = PresetUtils.makePresetEpWeights(
+	'Pre-BiS - Arms',
+	Stats.fromMap(
+		{
+			[Stat.StatStrength]: 2.2,
+			[Stat.StatAgility]: 1.82,
+			[Stat.StatAttackPower]: 1,
+			[Stat.StatArmorPenetration]: 0.45,
+			[Stat.StatHitRating]: 4.59,
+			[Stat.StatHasteRating]: 2,
+			[Stat.StatCritRating]: 2.36,
+			[Stat.StatExpertiseRating]: 2.23,
+		},
+		{
+			[PseudoStat.PseudoStatMainHandDps]: 17.69,
+			[PseudoStat.PseudoStatOffHandDps]: 0,
+		},
+	),
+);
+
+export const FURY_DEFAULT_ROTATION = PresetUtils.makePresetAPLRotation('Fury', DefaultFuryApl);
+export const ARMS_DEFAULT_ROTATION = PresetUtils.makePresetAPLRotation('Arms', DefaultArmsApl);
+
+export const SIMPLE_ROTATION = DpsWarrior_Rotation.create({
+	spec: DpsWarriorSpec.DpsWarriorSpecFury,
+	sunderArmor: WarriorSunder.WarriorSunderHelp,
+	useOverpower: true,
+	useRend: true,
+	useRecklessness: false,
+	useStanceDance: false,
+	useHamstring: true,
+});
+export const SIMPLE_DEFAULT_ROTATION = PresetUtils.makePresetSimpleRotation('Simple', Spec.SpecDpsWarrior, SIMPLE_ROTATION);
+export const SIMPLE_ARMS_DEFAULT_ROTATION = PresetUtils.makePresetSimpleRotation('Simple', Spec.SpecDpsWarrior, {
+	...SIMPLE_ROTATION,
+	spec: DpsWarriorSpec.DpsWarriorSpecArms,
+});
 
 export const DefaultOptions = WarriorOptions.create({
 	classOptions: {
 		queueDelay: 250,
-		startingRage: 0,
+		startingRage: 50,
 		useBattleShout: true,
 		defaultStance: WarriorStance.WarriorStanceBerserker,
+		hasBsT2: true,
+		stanceSnapshot: true,
 	},
 });
 
-export const DefaultConsumables = WarriorPresets.DefaultConsumables;
+export const DefaultConsumables = ConsumesSpec.create({
+	...WarriorPresets.DefaultConsumables,
+	resourcePotId: Consumables.MightyRagePotion.id,
+	mhImbueId: Consumables.DenseWeightstone.id,
+	ohImbueId: Consumables.DenseSharpeningStone.id,
+	elixirIds: [Consumables.ElixirOfFerocity.id, Consumables.ElixirOfTheMongoose.id, Consumables.WinterfallFirewater.id],
+});
 
-export const DefaultRaidBuffs = RaidBuffs.create({
-	giftOfTheWild: true,
+// The Pre-BiS Arms two-hander is an axe, so the main hand takes the sharpening stone and there is no off hand.
+export const ArmsConsumables = ConsumesSpec.create({
+	...DefaultConsumables,
+	mhImbueId: Consumables.DenseSharpeningStone.id,
+	ohImbueId: 0,
 });
 
 export const OtherDefaults = {
-	reactionTime: 200, // master's default
-	race: Race.RaceHuman,
-	profession1: Profession.Alchemy,
-	profession2: Profession.Engineering,
+	race: Race.RaceOrc,
+	profession1: Profession.Engineering,
+	profession2: Profession.Blacksmithing,
+	distanceFromTarget: 25,
+	reactionTime: 100,
 };
 
-// Our Forever sim's gear presets (master ui/<spec>/gear_sets).
-export const GEAR_LAUNCH = PresetUtils.makePresetGear('Launch', LaunchGear);
-export const GEAR_ARMS_LAUNCH = PresetUtils.makePresetGear('Launch (Arms)', ArmsLaunchGear);
-export const GEAR_P0_BIS = PresetUtils.makePresetGear('Pre-BiS', P0BisGear);
-export const GEAR_PHASE_1 = PresetUtils.makePresetGear('P1 BiS', Phase1Gear);
-export const GEAR_PHASE_2 = PresetUtils.makePresetGear('P2 BiS', Phase2Gear);
-export const DEFAULT_GEAR = GEAR_P0_BIS;
-// Master's order.
-export const GEAR_PRESETS = [GEAR_PHASE_2, GEAR_LAUNCH, GEAR_ARMS_LAUNCH, GEAR_PHASE_1, GEAR_P0_BIS];
+export const DefaultSettings: PresetSettings = {
+	name: 'Defaults',
+	race: OtherDefaults.race,
+	specOptions: DefaultOptions,
+	consumables: DefaultConsumables,
+	buffs: WarriorPresets.DefaultIndividualBuffs,
+	partyBuffs: WarriorPresets.DefaultPartyBuffs,
+	raidBuffs: WarriorPresets.DefaultRaidBuffs,
+	debuffs: WarriorPresets.DefaultDebuffs,
+	playerOptions: {
+		profession1: OtherDefaults.profession1,
+		profession2: OtherDefaults.profession2,
+		distanceFromTarget: OtherDefaults.distanceFromTarget,
+		reactionTimeMs: OtherDefaults.reactionTime,
+	},
+};
+
+export const PreBiSFuryBuild = PresetUtils.makePresetBuild('Pre-BiS', {
+	group: 'Fury',
+	gear: PreBiSFuryGear,
+	talents: FuryTalents,
+	rotation: SIMPLE_DEFAULT_ROTATION,
+	epWeights: PreBiSFuryEpWeights,
+	settings: { name: 'Pre-BiS - Fury', consumables: DefaultConsumables },
+});
+
+export const PreBiSArmsBuild = PresetUtils.makePresetBuild('Pre-BiS', {
+	group: 'Arms',
+	gear: PreBiSArmsGear,
+	talents: ArmsTalents,
+	rotation: SIMPLE_ARMS_DEFAULT_ROTATION,
+	epWeights: PreBiSArmsEpWeights,
+	settings: { name: 'Pre-BiS - Arms', consumables: ArmsConsumables },
+});

@@ -17,7 +17,7 @@ func DurationFromSeconds(numSeconds float64) time.Duration {
 	return time.Duration(float64(time.Second) * numSeconds)
 }
 
-// A float is truncated to whole milliseconds, which is how the client's millisecond columns read.
+// A float is truncated to whole milliseconds, which is how the game files' millisecond columns read.
 func DurationFromMillis[T int32 | float64](ms T) time.Duration {
 	return time.Duration(ms) * time.Millisecond
 }
@@ -38,13 +38,6 @@ func StringFromActionIDs(actionIDs []ActionID) string {
 	return strings.Join(names, ", ")
 }
 func (unit *Unit) ExecuteResourceGain(sim *Simulation, resource proto.ResourceType, amount float64, metrics *ResourceMetrics) {
-	// A resource the unit has no bar for is not gained: a rogue drinks Mighty Rage Potion for its
-	// Strength and gets no rage from it. Adding to the missing bar dereferenced nil.
-	if resource == proto.ResourceType_ResourceTypeRage && !unit.HasRageBar() ||
-		resource == proto.ResourceType_ResourceTypeEnergy && !unit.HasEnergyBar() ||
-		resource == proto.ResourceType_ResourceTypeMana && !unit.HasManaBar() {
-		return
-	}
 	switch {
 	case resource == proto.ResourceType_ResourceTypeMana && amount > 0:
 		unit.AddMana(sim, amount, metrics)
@@ -141,17 +134,15 @@ func TernaryDuration(condition bool, val1 time.Duration, val2 time.Duration) tim
 	}
 }
 
-func UnitLevelFloat64(unitLevel int32, maxLevelMinus2Val float64, maxLevelPlus0Val float64, maxLevelPlus1Val float64, maxLevelPlus2Val float64, maxLevelPlus3Val float64) float64 {
-	if unitLevel == CharacterLevel-2 {
-		return maxLevelMinus2Val
-	} else if unitLevel == CharacterLevel {
-		return maxLevelPlus0Val
-	} else if unitLevel == CharacterLevel+1 {
-		return maxLevelPlus1Val
-	} else if unitLevel == CharacterLevel+2 {
-		return maxLevelPlus2Val
+func UnitLevelFloat64(levelDiff int32, plus0Val float64, plus1Val float64, plus2Val float64, plus3Val float64) float64 {
+	if levelDiff <= 0 {
+		return plus0Val
+	} else if levelDiff == 1 {
+		return plus1Val
+	} else if levelDiff == 2 {
+		return plus2Val
 	} else {
-		return maxLevelPlus3Val
+		return plus3Val
 	}
 }
 
@@ -252,12 +243,6 @@ func (char *Character) CalcAndRollDamageRange(sim *Simulation, min float64, max 
 	return sim.Roll(min, max)
 }
 
-func ApplyVarianceMinMax(avgEffect float64, variance float64) (float64, float64) {
-	min := avgEffect * (1 - variance/2.0)
-	max := avgEffect * (1 + variance/2.0)
-	return min, max
-}
-
 type aggregator struct {
 	n     int
 	sum   float64
@@ -285,9 +270,75 @@ func (x *aggregator) meanAndStdDev() (float64, float64) {
 	return mean, stdDev
 }
 
+// The zero value is empty. Mean and m2 (the sum of squared deviations) are kept Welford-style, so the
+// stdev stays stable for large counts of near-equal values and is exactly 0 for constant ones.
+type valueRange struct {
+	n        int
+	mean, m2 float64
+	min, max float64
+}
+
+func (r *valueRange) add(v float64) {
+	if r.n == 0 {
+		r.min, r.max = v, v
+	} else {
+		r.min = math.Min(r.min, v)
+		r.max = math.Max(r.max, v)
+	}
+	r.n++
+	d := v - r.mean
+	r.mean += d / float64(r.n)
+	r.m2 += d * (v - r.mean)
+}
+
+func (r *valueRange) merge(o *valueRange) {
+	if o.n == 0 {
+		return
+	}
+	if r.n == 0 {
+		*r = *o
+		return
+	}
+	n := float64(r.n + o.n)
+	delta := o.mean - r.mean
+	r.m2 += o.m2 + delta*delta*float64(r.n)*float64(o.n)/n
+	r.mean += delta * float64(o.n) / n
+	r.n += o.n
+	r.min = math.Min(r.min, o.min)
+	r.max = math.Max(r.max, o.max)
+}
+
+func (r *valueRange) toProto() *proto.DistributionMetrics {
+	stdev := 0.0
+	if r.n > 0 {
+		stdev = math.Sqrt(math.Max(0, r.m2/float64(r.n)))
+	}
+	return &proto.DistributionMetrics{
+		Avg:            r.mean,
+		Stdev:          stdev,
+		Min:            r.min,
+		Max:            r.max,
+		AggregatorData: &proto.AggregatorData{N: int32(r.n)},
+	}
+}
+
 func GetCurrentProtoVersion() int32 {
 	versionMessage := &proto.ProtoVersion{}
 	options := versionMessage.ProtoReflect().Descriptor().Options()
 	optionValue := googleproto.GetExtension(options, proto.E_CurrentVersionNumber)
 	return optionValue.(int32)
+}
+
+// A percentage as a multiplier: 20 is 1.2 and -6 is 0.94.
+func MultiplierFromPercent(percent float64) float64 {
+	return 1 + percent/100
+}
+
+// A percentage as a multiplier whose negative divides by the factor its positive multiplies by: 20 is
+// 1.2 and -20 is 1/1.2.
+func SymmetricMultiplierFromPercent(percent float64) float64 {
+	if percent < 0 {
+		return 1 / MultiplierFromPercent(-percent)
+	}
+	return MultiplierFromPercent(percent)
 }

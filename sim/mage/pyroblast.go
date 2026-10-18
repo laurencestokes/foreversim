@@ -2,64 +2,49 @@ package mage
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+// Only the highest rank is registered: the mage casts the rank configured here, not every rank
+// spellData.Pyroblast lists.
 func (mage *Mage) registerPyroblastSpell() {
-	if !mage.Talents.Pyroblast {
-		return
+	mage.registerPyroblastRank(spellData.Pyroblast.Len(), spellData.Pyroblast.Highest())
+}
+
+// Pyroblast
+// https://www.wowhead.com/forever/spell=18809
+//
+// The periodic damage is a separate spell (MageSpellPyroblastDot) so that class-mask mods can
+// tell it from the hit.
+func (mage *Mage) registerPyroblastRank(_ int32, rank *spelldata.Spell) {
+	damage := rank.DamageEffect()
+
+	dotConfig := spelldata.SpellConfig(&mage.Unit, rank,
+		spelldata.Magic(core.ProcMaskSpellDamage), spelldata.Proc(), spelldata.Tag(1))
+	dotConfig.ClassSpellMask = MageSpellPyroblastDot
+
+	tick := rank.PeriodicEffect()
+	dotConfig.Dot = spelldata.DotConfig(rank, tick)
+
+	dotConfig.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.Dot(target).Apply(sim)
 	}
 
-	pyroblastRank := spellData.Pyroblast.Highest()
-	pyroblastTick := pyroblastRank.PeriodicEffect()
-	tickLength := pyroblastTick.Period()
+	pyroblastDot := mage.RegisterSpell(dotConfig)
 
-	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: pyroblastRank.ID},
-		SpellSchool:    pyroblastRank.SpellSchool(),
-		DefenseType:    pyroblastRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: MageSpellPyroblast,
-		MaxRange:       float64(pyroblastRank.MaxRange),
-		MissileSpeed:   float64(pyroblastRank.Speed),
+	config := spelldata.SpellConfig(&mage.Unit, rank, spelldata.Magic(core.ProcMaskSpellDamage))
+	config.ClassSpellMask = MageSpellPyroblast
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(pyroblastRank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD:      pyroblastRank.GCD(),
-				CastTime: pyroblastRank.CastTime(),
-			},
-		},
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcDamage(sim, target, damage.Average(), spell.OutcomeMagicHitAndCrit)
+		spell.DealCastResult(sim, result)
+		spell.WaitTravelTime(sim, func(s *core.Simulation) {
+			spell.DealDamage(sim, result)
+			if result.Landed() {
+				pyroblastDot.Cast(sim, target)
+			}
+		})
+	}
 
-		Dot: core.DotConfig{
-			Aura: core.Aura{
-				Label: "PyroblastDoT",
-			},
-			NumberOfTicks:    int32(pyroblastRank.Duration() / tickLength),
-			TickLength:       tickLength,
-			BonusCoefficient: pyroblastTick.Coeff(),
-			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Snapshot(target, pyroblastTick.Average(core.CharacterLevel))
-			},
-			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, periodicTickOutcome(pyroblastRank, dot))
-			},
-		},
-
-		DamageMultiplier: 1,
-		BonusCoefficient: pyroblastRank.DamageEffect().Coeff(),
-		ThreatMultiplier: 1,
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcDamage(sim, target, pyroblastRank.DamageEffect().Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-			spell.WaitTravelTime(sim, func(sim *core.Simulation) {
-				spell.DealDamage(sim, result)
-				if result.Landed() {
-					spell.Dot(target).Apply(sim)
-				}
-			})
-		},
-	})
+	mage.RegisterSpell(config).RelatedDotSpell = pyroblastDot
 }

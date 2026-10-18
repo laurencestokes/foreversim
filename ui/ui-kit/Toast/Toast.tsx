@@ -1,4 +1,5 @@
 import { Toast as BaseToast } from '@base-ui/react/toast';
+import i18n from '@i18n/config';
 import { Button } from '@ui-kit/Button';
 import { Icon } from '@ui-kit/Icon';
 import type { IconName } from '@ui-kit/Icon/types';
@@ -7,8 +8,8 @@ import clsx from 'clsx';
 import type { ToastData, ToastVariant } from './types';
 
 const VARIANT_ICON = {
-	info: 'info-circle',
-	success: 'check-circle',
+	info: 'circle-info',
+	success: 'circle-check',
 	error: 'circle-exclamation',
 	warning: 'triangle-exclamation',
 } as const satisfies Record<ToastVariant, IconName>;
@@ -36,11 +37,10 @@ export const Toast = ({ toast, inline = false }: ToastProps) => {
 				{/* `aria-hidden={false}`: Base UI hides the close button from assistive tech until the viewport is hovered or focused, because its own layout keeps toasts in a collapsed pile. This one is a flat column, so the button is on screen from the start. */}
 				{canClose && (
 					<BaseToast.Close
-						render={<Button iconOnly className="ui-toast-close" />}
+						render={<Button iconOnly aria-label={i18n.t('common.close')} className="ui-toast-close" />}
 						data-testid="sim-toast-close"
-						aria-label="Close"
 						aria-hidden={false}>
-						<Icon name="times" size="lg" />
+						<Icon name="xmark" size="lg" />
 					</BaseToast.Close>
 				)}
 			</div>

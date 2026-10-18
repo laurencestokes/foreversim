@@ -1,9 +1,10 @@
+import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
-import { APLRotation } from '@generated/proto/apl';
-import { PseudoStat, Spec, Stat } from '@generated/proto/common';
+import { APLRotation, APLRotation_Type } from '@generated/proto/apl';
+import { ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
-import { masterEpWeights } from '@sim/proto/master_ep_weights';
+import { WeaponSkillGroup } from '@sim/player/weapon_skill_groups';
 import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
@@ -16,25 +17,26 @@ export default defineSpec<Spec.SpecRetributionPaladin>({
 	cssScheme: PlayerClasses.getCssScheme(PlayerClasses.Paladin),
 	// List any known bugs / issues here and they'll be shown on the site.
 	knownIssues: [],
-	consumableStats: [Stat.StatMana, Stat.StatMP5],
+	consumableStats: [Stat.StatMana, Stat.StatHolyDamage],
 
 	// All stats for which EP should be calculated.
 	epStats: [
 		Stat.StatStrength,
+		Stat.StatAgility,
 		Stat.StatIntellect,
 		Stat.StatSpellDamage,
-		Stat.StatAgility,
+		Stat.StatSpellPiercing,
 		Stat.StatAttackPower,
 		Stat.StatArmorPenetration,
-		Stat.StatMeleeHitRating,
-		Stat.StatMeleeHasteRating,
-		Stat.StatMeleeCritRating,
+		Stat.StatHitRating,
+		Stat.StatHasteRating,
+		Stat.StatCritRating,
 		Stat.StatExpertiseRating,
-		Stat.StatMana,
+		Stat.StatMP5,
 	],
-	epPseudoStats: [PseudoStat.PseudoStatMainHandDps, PseudoStat.PseudoStatOffHandDps],
+	epPseudoStats: [PseudoStat.PseudoStatMainHandDps, PseudoStat.PseudoStatSchoolHitPercentHoly],
 	// Reference stat against which to calculate EP. I think all classes use either spell power or attack power.
-	epReferenceStat: Stat.StatStrength,
+	epReferenceStat: Stat.StatAttackPower,
 	// Which stats to display in the Character Stats section, at the bottom of the left-hand sidebar.
 	displayStats: UnitStat.createDisplayStatArray(
 		[
@@ -43,57 +45,42 @@ export default defineSpec<Spec.SpecRetributionPaladin>({
 			Stat.StatIntellect,
 			Stat.StatAttackPower,
 			Stat.StatSpellDamage,
+			Stat.StatMP5,
 			Stat.StatMana,
 			Stat.StatHealth,
 			Stat.StatStamina,
 			Stat.StatHolyDamage,
-			Stat.StatArcaneResistance,
-			Stat.StatFireResistance,
-			Stat.StatFrostResistance,
-			Stat.StatNatureResistance,
-			Stat.StatShadowResistance,
+			Stat.StatSpellPiercing,
 		],
 		[
 			PseudoStat.PseudoStatMeleeHitPercent,
 			PseudoStat.PseudoStatMeleeCritPercent,
 			PseudoStat.PseudoStatMeleeHastePercent,
+			PseudoStat.PseudoStatMeleeSpeedMultiplier,
 			PseudoStat.PseudoStatSpellHastePercent,
 			PseudoStat.PseudoStatSpellCritPercent,
 			PseudoStat.PseudoStatSpellHitPercent,
+			PseudoStat.PseudoStatSchoolHitPercentHoly,
 			PseudoStat.PseudoStatExpertisePercent,
 		],
 	),
+	displayWeaponSkillGroups: [WeaponSkillGroup.Melee],
 
 	defaults: {
 		// Default equipped gear.
-		gear: Presets.DEFAULT_GEAR.gear,
+		gear: Presets.TwistOfLightGearPreset.gear,
 		// Default EP weights for sorting gear in the gear picker.
-		// Master's weights (percent stats per 1%), in our ratings.
-		epWeights: masterEpWeights({
-			Strength: 2.53,
-			Agility: 1.13,
-			Intellect: 0.15,
-			SpellPower: 0.32,
-			SpellHit: 0.41,
-			SpellCrit: 0.01,
-			MP5: 0.05,
-			AttackPower: 1,
-			MeleeHit: 1.96,
-			MeleeCrit: 1.16,
-			FireResistance: 0.5,
-			MainHandDps: 7.33,
-			MeleeSpeedMultiplier: 7.33,
-		}),
+		epWeights: Presets.TwistOfLightEpWeights.epWeights,
 		statCaps: (() => {
-			const hitCap = new Stats().withPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, 9);
+			const hitCap = new Stats().withPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, 8);
 			const expCap = new Stats().withPseudoStat(PseudoStat.PseudoStatExpertisePercent, 6.5);
 
 			return hitCap.add(expCap);
 		})(),
 		// Default consumes settings.
-		consumables: Presets.DefaultConsumables,
+		consumables: Presets.TwistOfLightConsumables,
 		// Default talents.
-		talents: Presets.DefaultTalents.data,
+		talents: Presets.TwistOfLightTalents.data,
 		// Default spec-specific settings.
 		specOptions: Presets.DefaultOptions,
 		other: Presets.OtherDefaults,
@@ -102,34 +89,62 @@ export default defineSpec<Spec.SpecRetributionPaladin>({
 		partyBuffs: Presets.DefaultPartyBuffs,
 		individualBuffs: Presets.DefaultIndividualBuffs,
 		debuffs: Presets.DefaultDebuffs,
+
+		rotationType: APLRotation_Type.TypeAuto,
+		aplRotation: Presets.TwistOfLightAplPreset.rotation.rotation!,
 	},
 
 	// IconInputs to include in the 'Player' section on the settings tab.
 	playerIconInputs: [],
 	// Buff and Debuff inputs to include/exclude, overriding the EP-based defaults.
-	includeBuffDebuffInputs: [Stat.StatMP5],
-	excludeBuffDebuffInputs: [],
+	includeBuffDebuffInputs: [Stat.StatDefenseRating, Stat.StatMP5, Stat.StatHolyDamage],
+	excludeBuffDebuffInputs: [
+		BuffDebuffInputs.AtieshDruid,
+		BuffDebuffInputs.AtieshMage,
+		BuffDebuffInputs.AtieshPriest,
+		BuffDebuffInputs.AtieshWarlock,
+		BuffDebuffInputs.ConcentrationAura,
+		BuffDebuffInputs.CurseOfWeakness,
+		BuffDebuffInputs.DemoralizingRoar,
+		BuffDebuffInputs.DemoralizingScreech,
+		BuffDebuffInputs.DemoralizingShout,
+		BuffDebuffInputs.HexOfWeakness,
+		BuffDebuffInputs.InsectSwarm,
+		BuffDebuffInputs.ScorpidSting,
+		BuffDebuffInputs.StoneskinTotem,
+		BuffDebuffInputs.Thorns,
+		BuffDebuffInputs.ThunderClap,
+		BuffDebuffInputs.Thunderfury,
+		BuffDebuffInputs.Vindication,
+	],
 	// Inputs to include in the 'Other' section on the settings tab.
 	otherInputs: {
-		inputs: [OtherInputs.TotemTwisting, OtherInputs.InputDelay, OtherInputs.TankAssignment, OtherInputs.InFrontOfTarget],
+		inputs: [OtherInputs.InputDelay, OtherInputs.TankAssignment, OtherInputs.InFrontOfTarget],
 	},
+	itemSwapSlots: [ItemSlot.ItemSlotMainHand, ItemSlot.ItemSlotOffHand],
 	encounterPicker: {
 		// Whether to include 'Execute Duration (%)' in the 'Encounter' section of the settings tab.
 		showExecuteProportion: false,
 	},
 
 	presets: {
-		epWeights: [],
-		rotations: [Presets.APL_PRESET],
+		epWeights: [Presets.TwistOfLightEpWeights, Presets.HolyShockEpWeights],
+		rotations: [Presets.TwistOfLightAplPreset, Presets.HolyShockAplPreset],
 		// Preset talents that the user can quickly select.
-		talents: Presets.TalentPresets,
+		talents: [Presets.TwistOfLightTalents, Presets.HolyShockTalents],
 		// Preset gear configurations that the user can quickly select.
-		gear: Presets.GEAR_PRESETS,
+		gear: [Presets.TwistOfLightGearPreset, Presets.HolyShockGearPreset],
+		settings: [Presets.TwistOfLightSettings, Presets.HolyShockSettings],
+		builds: [Presets.TwistOfLightBuild, Presets.HolyShockBuild],
 	},
 
-	autoRotation: (_: Player<Spec.SpecRetributionPaladin>): APLRotation => {
-		return Presets.APL_PRESET.rotation.rotation!;
+	autoRotation: (player: Player<Spec.SpecRetributionPaladin>): APLRotation => {
+		return player.getTalents().holyShock ? Presets.HolyShockAplPreset.rotation.rotation! : Presets.TwistOfLightAplPreset.rotation.rotation!;
 	},
 
-	reforge: {},
+	reforge: {
+		getEPDefaults: (player: Player<Spec.SpecRetributionPaladin>): Stats => {
+			return player.getTalents().holyShock ? Presets.HolyShockEpWeights.epWeights : Presets.TwistOfLightEpWeights.epWeights;
+		},
+	},
 });

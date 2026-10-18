@@ -1,15 +1,15 @@
 package mage
 
 import (
-	"time"
+	"math"
 
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 func (mage *Mage) registerFireTalents() {
 	// Tier 1
-	mage.registerWakeOfFire()
+	mage.registerImprovedFireBlast()
 	mage.registerIncineration()
 	mage.registerImprovedFireball()
 
@@ -21,50 +21,39 @@ func (mage *Mage) registerFireTalents() {
 	// Tier 3
 	mage.registerBurningSoul()
 	mage.registerImprovedFlamestrike()
-	// Pyroblast: pyroblast.go
+	mage.registerPyroblastTalent()
 
 	// Tier 4
-	// Improved Scorch: scorch.go
+	// Improved Scorch implemented in scorch.go
 	mage.registerImprovedFireWard()
-	mage.registerHotStreak()
+	mage.registerHeatingUp()
 	mage.registerMasterOfElements()
 
 	// Tier 5
 	mage.registerCriticalMass()
-	// Blast Wave: blast_wave.go
+	mage.registerBlastWaveTalent()
 
 	// Tier 6
 	mage.registerFirePower()
 
 	// Tier 7
-	// Combustion: combustion.go
+	mage.registerCombustionTalent()
 }
 
-// The Fire Blast cooldown half only. The other half, 1312934 (+50% Fire Blast crit for 30 sec), is
-// granted by killing a non-trivial target, which the sim's targets never do.
-func (mage *Mage) registerWakeOfFire() {
-	if mage.Talents.WakeOfFire == 0 {
+func (mage *Mage) registerImprovedFireBlast() {
+	if mage.Talents.ImprovedFireBlast == 0 {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask: MageSpellFireBlast,
-		TimeValue: time.Millisecond * time.Duration(spellData.WakeOfFire.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COOLDOWN)).ValueAt(mage.Talents.WakeOfFire)),
-		Kind:      core.SpellMod_Cooldown_Flat,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.ImprovedFireBlast.Rank(mage.Talents.ImprovedFireBlast))
 }
 
-// Arcane Blast and Ice Lance as well as TBC's Fire Blast and Scorch.
 func (mage *Mage) registerIncineration() {
 	if mage.Talents.Incineration == 0 {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellArcaneBlast | MageSpellFireBlast | MageSpellIceLance | MageSpellScorch,
-		FloatValue: spellData.Incineration.ValueAt(mage.Talents.Incineration),
-		Kind:       core.SpellMod_BonusCrit_Percent,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.Incineration.Rank(mage.Talents.Incineration))
 }
 
 func (mage *Mage) registerImprovedFireball() {
@@ -72,114 +61,84 @@ func (mage *Mage) registerImprovedFireball() {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask: MageSpellFireball | MageSpellFrostfireBolt, // client mask 11069: Fireball and Frostfire Bolt
-		TimeValue: time.Millisecond * time.Duration(spellData.ImprovedFireball.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_CASTING_TIME)).ValueAt(mage.Talents.ImprovedFireball)),
-		Kind:      core.SpellMod_CastTime_Flat,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.ImprovedFireball.Rank(mage.Talents.ImprovedFireball))
 }
 
-// Ignite pays out a share of the fire critical strike that lit it over its ticks. A crit landing while
-// the dot still runs rolls what it still owes into the new one, so a crit is never paid twice or
-// dropped. The share is taken from a hit that has already been through every multiplier, so the ticks
-// skip them rather than pay them again, and they never crit.
+// A Fire spell's crit burns the target for a share of its damage (11119, 8% per point) over 4 sec.
+// The DoT (412538) stacks to 1, so it rolls: a new crit adds its share to what the current DoT has
+// not ticked yet and restarts it over the full duration.
 func (mage *Mage) registerIgnite() {
 	if mage.Talents.Ignite == 0 {
 		return
 	}
 
-	igniteRank := spellData.IgniteTriggered.Highest()
-	share := spellData.Ignite.FractionAt(mage.Talents.Ignite)
-	tickLength := time.Second * 2
-	numTicks := int32(igniteRank.Duration() / tickLength)
+	igniteFraction := spellData.Ignite.FractionAt(mage.Talents.Ignite)
+	igniteDot := spellData.IgniteTriggered.Highest()
 
-	mage.Ignite = mage.RegisterSpell(core.SpellConfig{
-		ActionID:         core.ActionID{SpellID: igniteRank.ID},
-		SpellSchool:      core.SpellSchoolFire,
-		DefenseType:      core.DefenseTypeMagic,
-		ProcMask:         core.ProcMaskSpellDamage,
-		ClassSpellMask:   MageSpellIgnite,
-		Flags:            core.SpellFlagIgnoreModifiers | core.SpellFlagNoSpellMods | core.SpellFlagNoOnCastComplete | core.SpellFlagIgnoreResists | core.SpellFlagProc,
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
+	// The damage is already the crit's, after every modifier and resist, so the ticks take none again.
+	config := spelldata.SpellConfig(&mage.Unit, igniteDot, spelldata.Magic(core.ProcMaskSpellDamage), spelldata.Proc(),
+		spelldata.Flags(core.SpellFlagIgnoreModifiers|core.SpellFlagNoSpellMods|core.SpellFlagIgnoreResists|core.SpellFlagProc))
+	config.ClassSpellMask = MageSpellIgnite
 
-		Dot: core.DotConfig{
-			Aura: core.Aura{
-				Label: "Ignite",
-			},
-			NumberOfTicks: numTicks,
-			TickLength:    tickLength,
-			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
-				dot.Spell.CalcAndDealPeriodicDamage(sim, target, dot.SnapshotBaseDamage, dot.OutcomeTick)
-			},
-		},
+	config.Dot = spelldata.DotConfig(igniteDot, igniteDot.EffectN(1))
+	// The stacks show the damage per tick, which an APL can read; the row's 1 is the rolling cap.
+	config.Dot.Aura.MaxStacks = math.MaxInt32
+	config.Dot.OnTick = func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
+		dot.Spell.CalcAndDealPeriodicDamage(sim, target, dot.SnapshotBaseDamage, dot.OutcomeTick)
+	}
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.Dot(target).Apply(sim)
-		},
-	})
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.Dot(target).Apply(sim)
+	}
 
-	mage.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Ignite Talent",
-		CanProcFromProcs:   spellData.Ignite.Highest().CanProcFromProcs(), // Forever's 11119 lacks the bit (Era's ranks carry it).
-		Callback:           core.CallbackOnSpellHitDealt,
-		ProcMask:           core.ProcMaskSpellDamage,
-		Outcome:            core.OutcomeCrit,
-		TriggerImmediately: true,
-		// Enemies only: a Goblin Sapper Charge's hit on the Mage is a fire spell crit too, and the
-		// Mage carries no Ignite dot.
-		ExtraCondition: func(_ *core.Simulation, spell *core.Spell, result *core.SpellResult) bool {
-			return spell.SpellSchool.Matches(core.SpellSchoolFire) && spell != mage.Ignite && result.Target.Type == core.EnemyUnit
-		},
-		Handler: func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
-			dot := mage.Ignite.Dot(result.Target)
-			owed := 0.0
-			if dot.IsActive() {
-				owed = dot.SnapshotBaseDamage * float64(dot.RemainingTicks())
-			}
+	mage.Ignite = mage.RegisterSpell(config)
 
-			mage.Ignite.Cast(sim, result.Target)
-			dot.SnapshotBaseDamage = (owed + result.Damage*share) / float64(numTicks)
-		},
-	})
+	trigger := spelldata.ProcTrigger(&mage.Character, spellData.Ignite.Rank(mage.Talents.Ignite),
+		func(sim *core.Simulation, _ *core.Spell, result *core.SpellResult) {
+			target := result.Target
+			dot := mage.Ignite.Dot(target)
+			totalDamage := dot.OutstandingDmg() + result.Damage*igniteFraction
+
+			mage.Ignite.Cast(sim, target)
+			dot.SnapshotBaseDamage = totalDamage / float64(dot.BaseTickCount)
+			dot.Aura.SetStacks(sim, int32(dot.SnapshotBaseDamage))
+		})
+	trigger.Name = "Ignite - Trigger"
+	trigger.TriggerImmediately = true
+	// "Your critical strikes from Fire damage spells": the school, so Frostfire Bolt counts.
+	trigger.ExtraCondition = func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
+		return spell.SpellSchool.Matches(core.SpellSchoolFire)
+	}
+
+	mage.MakeProcTriggerAura(trigger)
 }
 
-// registerFlameThrowing implements Flame Throwing, new in Forever: 11100 adds 3/6 yards to the range
-// of the spells its class mask reaches, every targeted Fire spell of the mage's (not Blast Wave).
 func (mage *Mage) registerFlameThrowing() {
 	if mage.Talents.FlameThrowing == 0 {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask: MageSpellFireBlast | MageSpellFireball | MageSpellFlamestrike | MageSpellFrostfireBolt |
-			MageSpellPyroblast | MageSpellScorch,
-		FloatValue: spellData.FlameThrowing.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_RANGE)).ValueAt(mage.Talents.FlameThrowing),
-		Kind:       core.SpellMod_Range_Flat,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.FlameThrowing.Rank(mage.Talents.FlameThrowing))
 }
 
-// registerImpact implements Impact, new in Forever.
+// "Gives your Fire spells a 10% chance to stun the target for 2 sec."
 //
-// Not modelled: 11103 gives Fire spells a chance to stun (12355); bosses are immune.
+// Not modelled: the proc (12355) is an A_MOD_STUN, which a boss the sim fights is immune to, the same
+// reason Frostbite's freeze is not modelled.
 func (mage *Mage) registerImpact() {
 	if mage.Talents.Impact == 0 {
 		return
 	}
 }
 
-// The threat half only; the pushback protection has nothing to act on in the sim.
 func (mage *Mage) registerBurningSoul() {
 	if mage.Talents.BurningSoul == 0 {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll,
-		School:     core.SpellSchoolFire,
-		FloatValue: spellData.BurningSoul.Effect(dbcenums.A_MOD_THREAT, 4).FractionAt(mage.Talents.BurningSoul),
-		Kind:       core.SpellMod_ThreatMultiplier_Pct,
-	})
+	// Effect 1 is pushback, which the sim does not model. Effect 2 is the threat, on misc 4, the Fire
+	// school.
+	spelldata.ParseStatic(&mage.Character, spellData.BurningSoul.Rank(mage.Talents.BurningSoul), spelldata.Effects(2))
 }
 
 func (mage *Mage) registerImprovedFlamestrike() {
@@ -187,87 +146,88 @@ func (mage *Mage) registerImprovedFlamestrike() {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellFlamestrike,
-		FloatValue: spellData.ImprovedFlamestrike.ValueAt(mage.Talents.ImprovedFlamestrike),
-		Kind:       core.SpellMod_BonusCrit_Percent,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.ImprovedFlamestrike.Rank(mage.Talents.ImprovedFlamestrike))
 }
 
-// registerImprovedFireWard implements Improved Fire Ward, new in Forever.
-//
-// Not modelled: 11094 gives Fire Ward a 10/20% chance to reflect Fire spells; the sim casts no wards.
+func (mage *Mage) registerPyroblastTalent() {
+	if !mage.Talents.Pyroblast {
+		return
+	}
+
+	mage.registerPyroblastSpell()
+}
+
+func (mage *Mage) registerBlastWaveTalent() {
+	if !mage.Talents.BlastWave {
+		return
+	}
+
+	mage.registerBlastWaveSpell()
+}
+
+func (mage *Mage) registerCombustionTalent() {
+	if !mage.Talents.Combustion {
+		return
+	}
+
+	mage.registerCombustionSpell()
+}
+
+// Improved Fire Ward, a chance for Fire Ward to reflect Fire spells (effect 1, a flat modifier on
+// Fire Ward's effect 2). The reflect needs an enemy casting Fire at the mage, so it is not modelled.
 func (mage *Mage) registerImprovedFireWard() {
 	if mage.Talents.ImprovedFireWard == 0 {
 		return
 	}
 }
 
-// Heating Up (Hot Streak before build 70170, same rows): Fireball, Fire Blast and Scorch crits each
-// take 25% off Pyroblast's cast time, stacking 3 times, so the stacks are worth holding rather than
-// spending. The buff is 400625: its duration (20 sec since build 70009), stack cap and per-stack cast
-// time cut are read from the row. Frostfire Bolt, which the tooltip also names, builds stacks too.
-// Since the beta build of 2026-10-16 (Blizzard's beta notes, forums t/2360696 post 6) every Fire Blast
-// cast adds a stack on top of its crit's (a Fire Blast crit gives 2), and a Pyroblast that Presence of
-// Mind made instant keeps the stacks.
-func (mage *Mage) registerHotStreak() {
+func (mage *Mage) registerHeatingUp() {
 	if !mage.Talents.HeatingUp {
 		return
 	}
 
-	buff := spellData.HeatingUpTriggered.Highest()
-	perStack := buff.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_CASTING_TIME)).Percent()
+	heatingUpBuff := spellData.HeatingUpTriggered.Highest()
 
-	castTimeMod := mage.AddDynamicMod(core.SpellModConfig{
-		ClassMask: MageSpellPyroblast,
-		Kind:      core.SpellMod_CastTime_Pct,
-	})
+	config := spelldata.AuraConfig(heatingUpBuff)
 
-	mage.HotStreakAura = mage.RegisterAura(core.Aura{
-		Label:     "Hot Streak",
-		ActionID:  core.ActionID{SpellID: buff.ID},
-		Duration:  buff.Duration(),
-		MaxStacks: int32(buff.MaxStack),
-		OnGain: func(_ *core.Aura, _ *core.Simulation) {
-			castTimeMod.Activate()
-		},
-		OnExpire: func(_ *core.Aura, _ *core.Simulation) {
-			castTimeMod.Deactivate()
-		},
-		OnStacksChange: func(_ *core.Aura, _ *core.Simulation, _ int32, newStacks int32) {
-			castTimeMod.UpdateFloatValue(perStack * float64(newStacks))
-		},
-		OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
-			// 400625 carries one charge: the next Pyroblast spends every stack, unless Presence of Mind
-			// made it instant (3 stacks alone leave it a 1.5 sec cast).
-			if spell.Matches(MageSpellPyroblast) && spell.CurCast.CastTime > 0 {
-				aura.Deactivate(sim)
-			}
-		},
-	})
+	// A Pyroblast consumes every stack, checked in game, unless Presence of Mind made it instant.
+	// Presence of Mind may drop before or after this runs on the same cast, so the time it has been
+	// down tells both apart.
+	config.OnCastComplete = func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
+		if spell.Matches(MageSpellPyroblast) && mage.PresenceOfMindAura.TimeInactive(sim) != 0 {
+			aura.Deactivate(sim)
+		}
+	}
 
-	mage.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Hot Streak Trigger",
-		Callback:           core.CallbackOnSpellHitDealt,
-		ClassSpellMask:     MageSpellFireball | MageSpellFrostfireBolt | MageSpellFireBlast | MageSpellScorch,
-		Outcome:            core.OutcomeCrit,
-		TriggerImmediately: true,
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			mage.HotStreakAura.Activate(sim)
-			mage.HotStreakAura.AddStack(sim)
-		},
-	})
+	heatingUpAura := mage.RegisterAura(config)
 
-	mage.MakeProcTriggerAura(core.ProcTrigger{
-		Name:           "Hot Streak Fire Blast Trigger",
-		Callback:           core.CallbackOnCastComplete,
-		ClassSpellMask:     MageSpellFireBlast,
-		TriggerImmediately: true,
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			mage.HotStreakAura.Activate(sim)
-			mage.HotStreakAura.AddStack(sim)
-		},
-	})
+	spelldata.ParseEffects(&mage.Character, heatingUpAura, heatingUpBuff, spelldata.Effects(1))
+
+	addStack := func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+		heatingUpAura.Activate(sim)
+		heatingUpAura.AddStack(sim)
+	}
+
+	trigger := spelldata.ProcTrigger(&mage.Character, spellData.HeatingUp.Rank(1), addStack)
+	trigger.Name = "Heating Up - Trigger"
+	trigger.ExtraCondition = func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
+		return spellData.Fireball.Contains(spell) || spellData.FrostfireBolt.Contains(spell) ||
+			spellData.FireBlast.Contains(spell) || spellData.Scorch.Contains(spell)
+	}
+
+	mage.MakeProcTriggerAura(trigger)
+
+	// "Fire Blast grants an additional stack every time it deals damage", crit or not, so a crit
+	// grants two.
+	fireBlastTrigger := trigger
+	fireBlastTrigger.Name = "Heating Up - Fire Blast Trigger"
+	fireBlastTrigger.Outcome = core.OutcomeLanded
+	fireBlastTrigger.RequireDamageDealt = true
+	fireBlastTrigger.ExtraCondition = func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
+		return spellData.FireBlast.Contains(spell)
+	}
+
+	mage.MakeProcTriggerAura(fireBlastTrigger)
 }
 
 func (mage *Mage) registerMasterOfElements() {
@@ -275,24 +235,24 @@ func (mage *Mage) registerMasterOfElements() {
 		return
 	}
 
-	refundCoeff := spellData.MasterOfElements.FractionAt(mage.Talents.MasterOfElements)
-	manaMetrics := mage.NewManaMetrics(core.ActionID{SpellID: spellData.MasterOfElements.Highest().ID})
+	refundFraction := spellData.MasterOfElements.FractionAt(mage.Talents.MasterOfElements)
+	manaMetrics := mage.NewManaMetrics(core.ActionID{SpellID: 29077})
 
-	// 29074's 9 ms ProcCategoryRecovery: an area spell that crits several targets refunds once.
-	mage.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Master of Elements",
-		Callback:           core.CallbackOnSpellHitDealt,
-		ClassSpellMask:     MageSpellsAll,
-		Outcome:            core.OutcomeCrit,
-		ICD:                spellData.MasterOfElements.Highest().ICD(),
-		TriggerImmediately: true,
-		ExtraCondition: func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
-			return spell.SpellSchool.Matches(core.SpellSchoolFire|core.SpellSchoolFrost) && spell.Cost != nil && spell.Cost.BaseCost > 0
-		},
-		Handler: func(sim *core.Simulation, spell *core.Spell, _ *core.SpellResult) {
-			mage.AddMana(sim, float64(spell.Cost.BaseCost)*refundCoeff, manaMetrics)
-		},
-	})
+	trigger := spelldata.ProcTrigger(&mage.Character,
+		spellData.MasterOfElements.Rank(mage.Talents.MasterOfElements),
+		func(sim *core.Simulation, spell *core.Spell, _ *core.SpellResult) {
+			mage.AddMana(sim, float64(spell.Cost.BaseCost)*refundFraction, manaMetrics)
+		})
+	trigger.Name = "Master of Elements - Trigger"
+
+	trigger.ExtraCondition = func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
+		if !spell.SpellSchool.Matches(core.SpellSchoolFire | core.SpellSchoolFrost) {
+			return false
+		}
+		return spell.Cost != nil && spell.Cost.BaseCost > 0
+	}
+
+	mage.MakeProcTriggerAura(trigger)
 }
 
 func (mage *Mage) registerCriticalMass() {
@@ -300,24 +260,54 @@ func (mage *Mage) registerCriticalMass() {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll,
-		School:     core.SpellSchoolFire,
-		FloatValue: spellData.CriticalMass.ValueAt(mage.Talents.CriticalMass),
-		Kind:       core.SpellMod_BonusCrit_Percent,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.CriticalMass.Rank(mage.Talents.CriticalMass))
 }
 
-// Ignite is left out by its NoSpellMods flag.
+// The most Fire effects Fire Power counts, from its tooltip's "up to a maximum increase of ${$s1*4}%".
+const firePowerMaxEffects = 4
+
+// "Increases the damage done by your Fire spells by 1/2/3% per your Fire effects on the target, up to
+// a maximum increase of 12%. Effects which mix multiple schools of magic do not qualify."
+//
+// Both effects are dummies, so the count is by hand: Ignite, Improved Scorch and the Fireball and
+// Pyroblast DoTs, each counted once. Impact's stun is not modelled, so it never counts, and the
+// Frostfire Bolt DoT mixes schools; Frostfire Bolt still takes the bonus as a Fire spell. Ignite
+// ignores every modifier, so it takes none.
 func (mage *Mage) registerFirePower() {
 	if mage.Talents.FirePower == 0 {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll,
-		School:     core.SpellSchoolFire,
-		FloatValue: spellData.FirePower.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(mage.Talents.FirePower),
-		Kind:       core.SpellMod_DamageDone_Flat,
+	perEffect := spellData.FirePower.Rank(mage.Talents.FirePower).EffectN(1).Percent()
+
+	var fireEffects []*core.Spell
+	mage.Env.RegisterPreFinalizeEffect(func() {
+		for _, spell := range mage.Spellbook {
+			if spell.Matches(MageSpellIgnite | MageSpellFireballDot | MageSpellPyroblastDot) {
+				fireEffects = append(fireEffects, spell)
+			}
+		}
+	})
+
+	mage.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
+		return core.MakePermanent(target.RegisterAura(core.Aura{
+			Label: "Fire Power - " + mage.Label,
+		})).AttachDDBC(DDBC_FirePower, DDBC_Total, &mage.AttackTables, func(_ *core.Simulation, spell *core.Spell, _ *core.AttackTable) float64 {
+			if !spell.ProcMask.Matches(core.ProcMaskSpellDamage) || !spell.SpellSchool.Matches(core.SpellSchoolFire) {
+				return 1
+			}
+
+			count := 0
+			if mage.ImprovedScorchAuras.Get(target).IsActive() {
+				count++
+			}
+			for _, effect := range fireEffects {
+				if effect.Dot(target).IsActive() {
+					count++
+				}
+			}
+
+			return 1 + perEffect*float64(min(count, firePowerMaxEffects))
+		})
 	})
 }

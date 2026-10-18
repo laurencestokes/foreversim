@@ -1,6 +1,8 @@
 package core
 
 import (
+	"math"
+
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -11,7 +13,6 @@ func (result *SpellResult) applyResistances(sim *Simulation, spell *Spell, isPer
 	result.Outcome |= outcome
 
 	result.ArmorAndResistanceMultiplier = resistanceMultiplier
-	result.PostArmorAndResistanceMultiplier = result.Damage
 }
 
 // Modifies damage based on Armor or Magic resistances, depending on the damage type.
@@ -30,100 +31,105 @@ func (spell *Spell) ResistanceMultiplier(sim *Simulation, isPeriodic bool, attac
 		return attackTable.GetArmorDamageModifier(spell), OutcomeEmpty
 	}
 
-	// Magical resistance.
-	if spell.Flags.Matches(SpellFlagBinary) {
+	// Magical resistance. A binary spell's hit roll already took its full resist, and the damage of
+	// one that lands rolls a partial resist like any other.
+	if spell.Flags.Matches(SpellFlagNoPartialResist) {
 		return 1, OutcomeEmpty
 	}
 
-	resistanceRoll := sim.RandomFloat("Partial Resist")
-
-	threshold00, threshold25, threshold50 := attackTable.GetPartialResistThresholds(spell)
-	//if sim.Log != nil {
-	//	sim.Log("Resist thresholds: %0.04f, %0.04f, %0.04f", threshold00, threshold25, threshold50)
-	//}
-
-	if resistanceRoll > threshold00 {
-		// No partial resist.
+	averageResist := attackTable.Defender.averageResist(spell, attackTable.Attacker, isPeriodic)
+	if averageResist == 0 {
 		return 1, OutcomeEmpty
-	} else if resistanceRoll > threshold25 {
-		return 0.75, OutcomePartial1_4
-	} else if resistanceRoll > threshold50 {
-		return 0.5, OutcomePartial2_4
-	} else {
-		return 0.25, OutcomePartial3_4
 	}
-}
 
-func (at *AttackTable) GetPartialResistThresholds(spell *Spell) (float64, float64, float64) {
-	return at.Defender.partialResistRollThresholds(spell, at.Attacker)
+	tenths := rollResistTenths(sim, math.Abs(averageResist))
+	if tenths == 0 {
+		return 1, OutcomeEmpty
+	}
+	if averageResist < 0 {
+		return 1 + 0.1*float64(tenths), OutcomeEmpty
+	}
+	return 1 - 0.1*float64(tenths), partialResistOutcome(tenths)
 }
 
 func (at *AttackTable) GetBinaryHitChance(spell *Spell) float64 {
 	return at.Defender.binaryHitChance(spell, at.Attacker)
 }
 
-// All of the following calculations are based on this guide:
-// https://royalgiraffe.github.io/resist-guide
-
-func (unit *Unit) resistCoeff(spell *Spell, attacker *Unit, binary bool) float64 {
+// The average share of a spell's damage the target resists, R / (R + 9L) for the caster's level L,
+// with the caster's Spell Piercing taken off R. Piercing beyond the resistance makes the share negative,
+// and the roll pays it out as bonus damage. The target's own resistance stops at 0, so a debuff that
+// lowers it below 0 adds nothing. A target above the caster's level resists no more for its level.
+func (unit *Unit) averageResist(spell *Spell, attacker *Unit, isPeriodic bool) float64 {
 	if spell.SchoolIndex <= stats.SchoolIndexPhysical {
 		return 0
 	}
 
-	resistance := max(0, unit.GetStat(spell.SpellSchool.ResistanceStat())-attacker.stats[stats.SpellPiercing])
-	if resistance <= 0 {
-		// Level-based resistance does not apply to binary spells.
-		if binary {
-			return 0
-		}
-		// Scaled like the branch below (coef runs 0 to 1, mitigation 0 to 0.75), so a level 63
-		// boss averages 6% as the guide says, not 4.5%.
-		return min(1, unit.levelBasedResist(attacker)/0.75)
+	resistance := 0.0
+	if stat, ok := spell.SpellSchool.ResistanceStat(); ok {
+		piercing := attacker.stats[stats.SpellPiercing] + attacker.PseudoStats.SchoolSpellPiercing[spell.SchoolIndex]
+		resistance = max(0, unit.GetStat(stat)) - piercing
+	}
+	// TODO: 9L is a fit to the Spell Piercing logs at levels 20 to 30 (#76). Some ExpectedStat creature
+	// curves fit them as well and part from 9L above 30 (K at 60: 478 to 823 against 540); a log at
+	// level 40 to 60 decides.
+	resistanceConstant := 9 * float64(attacker.Level)
+	averageResist := resistance / (math.Abs(resistance) + resistanceConstant)
+
+	// A DoT's tick, a hybrid's included, rolls its partial resist against a tenth of the resistance.
+	if isPeriodic && !spell.Flags.Matches(SpellFlagChanneled|SpellFlagFullResistanceTicks) {
+		averageResist /= 10
 	}
 
-	resistanceCap := float64(attacker.Level * 5)
-	resistanceCoef := resistance / resistanceCap
-
-	if !binary && unit.Type == EnemyUnit && unit.Level > attacker.Level {
-		avgMitigationAdded := unit.levelBasedResist(attacker)
-		// coef is scaled 0 to 1, not 0 to 0.75
-		resistanceCoef += avgMitigationAdded * 1 / 0.75
-	}
-
-	return min(1, resistanceCoef)
+	return averageResist
 }
 
-func (unit *Unit) levelBasedResist(attacker *Unit) float64 {
-	if unit.Type == EnemyUnit && unit.Level > attacker.Level {
-		// 2% average mitigation per level difference
-		return 0.02 * float64(unit.Level-attacker.Level)
-	}
-	return 0
-}
-
+// A binary spell is resisted in full with the target's average resist as the chance.
 func (unit *Unit) binaryHitChance(spell *Spell, attacker *Unit) float64 {
-	resistCoeff := unit.resistCoeff(spell, attacker, true)
-	return 1 - 0.75*resistCoeff
+	return 1 - max(0, unit.averageResist(spell, attacker, false))
 }
 
-// Roll threshold for each type of partial resist.
-func (unit *Unit) partialResistRollThresholds(spell *Spell, attacker *Unit) (float64, float64, float64) {
-	resistCoeff := unit.resistCoeff(spell, attacker, false)
-
-	// Based on the piecewise linear regression estimates at https://royalgiraffe.github.io/partial-resist-table.
-	if val := resistCoeff * 3; val <= 1 {
-		return 0.76 * val, 0.21 * val, 0.03 * val
-	} else if val <= 2 {
-		val -= 1
-		return 0.76 + 0.24*val, 0.21 + 0.57*val, 0.03 + 0.19*val
-	} else {
-		val -= 2
-		return 1, 0.78 + 0.18*val, 0.22 + 0.58*val
+// The partial resist roll, in tenths of the damage, around the average share a. Up to a = 10% it gives
+// 0, 1 or 2 tenths at 1 - 7.5a, 5a and 2.5a; from 90% the same mirrored from 10 tenths; in between each
+// 10% step x within 20% of a at 0.5 - 2.5|x - a|.
+func rollResistTenths(sim *Simulation, a float64) int {
+	roll := sim.RandomFloat("Partial Resist")
+	if a <= 0.1 {
+		switch {
+		case roll < 1-7.5*a:
+			return 0
+		case roll < 1-2.5*a:
+			return 1
+		default:
+			return 2
+		}
 	}
+	if a >= 0.9 {
+		switch {
+		case roll < 1-7.5*(1-a):
+			return 10
+		case roll < 1-2.5*(1-a):
+			return 9
+		default:
+			return 8
+		}
+	}
+
+	cumulative, last := 0.0, 0
+	for tenths := 0; tenths <= 10; tenths++ {
+		chance := 0.5 - 2.5*math.Abs(float64(tenths)/10-a)
+		if chance <= 0 {
+			continue
+		}
+		cumulative += chance
+		last = tenths
+		if roll < cumulative {
+			return tenths
+		}
+	}
+	return last
 }
 
-// https://web.archive.org/web/20130208043756/http://elitistjerks.com/f15/t29453-combat_ratings_level_85_cataclysm/
-// https://web.archive.org/web/20110309163709/http://elitistjerks.com/f78/t105429-cataclysm_mechanics_testing/
 func (at *AttackTable) GetArmorDamageModifier(spell *Spell) float64 {
 	if at.IgnoreArmor {
 		return 1.0
@@ -131,8 +137,6 @@ func (at *AttackTable) GetArmorDamageModifier(spell *Spell) float64 {
 
 	ignoreArmorFactor := Clamp(at.ArmorIgnoreFactor, 0.0, 1.0)
 
-	// Level 60 armor: 400 + 85 x attacker level (5500 for a level 60 attacker). The
-	// 467.5 x level - 22167.5 this engine had is TBC's formula for attackers of level 60+.
 	armorConstant := 400 + 85*float64(at.Attacker.Level)
 	defenderArmor := at.Defender.Armor() - (at.Defender.Armor() * ignoreArmorFactor)
 	// TODO: Forever possibly has different rules as there is Armor Piercing Flat and % values

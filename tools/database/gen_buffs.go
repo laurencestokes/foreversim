@@ -1,6 +1,6 @@
 package database
 
-// Resolves tools/database/buffmanifest against the spell store's captured client
+// Resolves tools/database/buffmanifest against the spell store's captured game files
 // rows and renders sim/core/buffs/buffs_auto_gen.go and
 // sim/core/buffs/debuffs_auto_gen.go from the result, in the same pass that
 // renders the store.
@@ -21,7 +21,9 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -45,7 +47,7 @@ type ResolvedBuff struct {
 	// Kind is the manifest's, or a damage shield where the spell states one.
 	Kind buffmanifest.BuffKind
 
-	// Name is the client's name for the spell the player learns, and AuraName the aura's where the
+	// Name is the game files' name for the spell the player learns, and AuraName the aura's where the
 	// manifest names a cast beside it. Both are "" for a spell no class family files, which is also
 	// when Owner is the manifest's rather than the family's.
 	Name     string
@@ -55,10 +57,11 @@ type ResolvedBuff struct {
 	SpellID     int32 // the spell the aura's numbers are read from
 	CastSpellID int32 // the cast, where the manifest pins one; SpellID otherwise
 	DurationMs  int32 // -1 or 0 never expires
-	CooldownMs  int32 // 0 when the client states none; read from the cast
+	CooldownMs  int32 // 0 when the game files state none; read from the cast
+	Totem       bool  // the cast summons into a totem slot, so the owner's true pets stand under it too
 
 	// Spell is the row the store carries for SpellID, built from the same
-	// captured client rows the store is rendered from.
+	// captured game files rows the store is rendered from.
 	Spell *spelldata.Spell
 
 	// SkipAuraTypes are the auras the row states at 0 beside the buff, which the parse leaves out.
@@ -83,6 +86,11 @@ type ResolvedBuff struct {
 	// EffectN counts.
 	TalentSpellID  int32
 	TalentPosition int32
+	// TalentDivisor prices a row whose talent states its effect only in its tooltip, as
+	// ${$m1/-N*$<SpellID>m1}: rank m1 of N is worth m1/N of every amount the spell attaches. A row
+	// whose own tooltip shows the talent's $<Talent>s1 takes the node's ranks as N. 0 for a talent
+	// priced by a spell modifier.
+	TalentDivisor int32
 
 	ScopeFromClient buffmanifest.BuffScope
 
@@ -102,7 +110,7 @@ func (r *ResolvedBuff) unsupported(format string, args ...any) {
 	r.Reason = fmt.Sprintf(format, args...)
 }
 
-// Every manifest row, read out of the client rows the store is built from.
+// Every manifest row, read out of the game files rows the store is built from.
 func resolveBuffManifest(in *storeInputs) ([]ResolvedBuff, error) {
 	t := in.tables()
 	var rows []ResolvedBuff
@@ -158,8 +166,8 @@ func resolveBuff(t *spellTables, nodes []traitNode, spec buffmanifest.Row) (Reso
 // The spell's name, its row and duration, and the cooldown of a buff other
 // players cast on their own: the shared timer the sim hands the next source is
 // the cast's cooldown, and a totem's aura states neither how long the totem
-// stands nor when the next one may be dropped. Mana Tide is that row - 17360
-// carries the mana, the cast 17359 the 13 seconds and the 5 minutes.
+// stands nor when the next one may be dropped. Mana Tide is that row - 1325257
+// carries the mana, the cast 1325256 the 13 seconds and the 5 minutes.
 func loadBuffSpell(t *spellTables, row *ResolvedBuff) error {
 	if row.SpellID = row.BuffSpec.SpellID; row.SpellID == 0 {
 		return fmt.Errorf("names no spell")
@@ -170,7 +178,7 @@ func loadBuffSpell(t *spellTables, row *ResolvedBuff) error {
 	}
 	for _, id := range []int32{row.SpellID, row.CastSpellID} {
 		if _, named := t.Names[id]; !named {
-			return fmt.Errorf("spell %d is no spell in this client", id)
+			return fmt.Errorf("spell %d is no spell in the game files", id)
 		}
 	}
 
@@ -178,6 +186,7 @@ func loadBuffSpell(t *spellTables, row *ResolvedBuff) error {
 	row.Spell = storeRowSpell(spell)
 	row.DBName = spell.Name
 	row.DurationMs = spell.DurationMs
+	row.Totem = summonsTotem(t.row(row.CastSpellID))
 
 	if row.Kind != buffmanifest.KindExternalCD {
 		return nil
@@ -195,6 +204,16 @@ func loadBuffSpell(t *spellTables, row *ResolvedBuff) error {
 		row.unsupported("spell %d states no duration, which the external cooldown's aura needs", row.SpellID)
 	}
 	return nil
+}
+
+// The SummonProperties rows of the four totem slots (fire, earth, water and air), which a totem's
+// summon names in its second misc value. The game files database carries no SummonProperties table.
+var totemSlotSummonProperties = []int32{63, 81, 82, 83}
+
+func summonsTotem(cast storeSpell) bool {
+	return slices.ContainsFunc(cast.Effects, func(e storeEffect) bool {
+		return e.Type == dbcenums.E_SUMMON && slices.Contains(totemSlotSummonProperties, e.Misc2)
+	})
 }
 
 // The store's row as sim/core/spelldata states it, copied field by field from the generator's
@@ -226,7 +245,7 @@ func copyStoreFields(to reflect.Value, from reflect.Value) {
 	}
 }
 
-// The names the client gives the row's spells, and the class whose family files them. A spell no
+// The names the game files give the row's spells, and the class whose family files them. A spell no
 // class family files takes the manifest's owner, and one that a family files cannot.
 func nameBuff(t *spellTables, row *ResolvedBuff) error {
 	row.Owner = row.BuffSpec.Owner
@@ -260,7 +279,7 @@ func parseBuff(row *ResolvedBuff) {
 	// own value through a driver.
 	if row.Scope == buffmanifest.ScopeDebuff {
 		row.FullComboPoints = slices.ContainsFunc(row.Spell.Effects, func(e spelldata.Effect) bool {
-			return e.PointsPerResource != 0 && e.Average(core.CharacterLevel) == 0
+			return e.PointsPerResource != 0 && e.Average() == 0
 		})
 	}
 
@@ -324,7 +343,10 @@ func (row *ResolvedBuff) hasDamageShield() bool {
 // The improving talent the manifest pins, which the store keeps as a ladder of
 // its ranks. The one spell modifier of it whose class mask reaches the buff's
 // spell is the improvement; one that modifies misc 1 scales the duration,
-// anything else the value.
+// anything else the value. Where none reaches it, a tooltip term naming the
+// buff's spell prices the value by rank (see tooltipTalentDivisor), or the
+// buff's own tooltip shows the talent's amount as $<talent>s1, which the buff's
+// row states at full rank, and each rank is its share of the node's ranks.
 func resolveTalent(t *spellTables, nodes []traitNode, row *ResolvedBuff) error {
 	id := row.Talent
 	if id == 0 {
@@ -346,7 +368,18 @@ func resolveTalent(t *spellTables, nodes []traitNode, row *ResolvedBuff) error {
 		position = i
 	}
 	if position < 0 {
-		return fmt.Errorf("talent %d has no spell modifier that reaches spell %d", id, row.SpellID)
+		divisor := tooltipTalentDivisor(t.Descriptions[id], row.SpellID)
+		if divisor == 0 && strings.Contains(t.Descriptions[row.SpellID], fmt.Sprintf("$%ds1", id)) {
+			divisor = nodes[node].MaxRanks
+		}
+		if divisor == 0 {
+			return fmt.Errorf("talent %d has no spell modifier that reaches spell %d", id, row.SpellID)
+		}
+		row.TalentSpellID = id
+		row.TalentPosition = 1
+		row.TalentDivisor = divisor
+		row.TalentRanks = nodes[node].MaxRanks
+		return nil
 	}
 
 	row.TalentSpellID = id
@@ -358,6 +391,22 @@ func resolveTalent(t *spellTables, nodes []traitNode, row *ResolvedBuff) error {
 	}
 	row.TalentRanks = nodes[node].MaxRanks
 	return nil
+}
+
+// A talent tooltip term that scales another spell by the talent's rank: ${$m1/-3*$440667m1} is
+// rank/3 of spell 440667's effect 1, and the fraction applies to every amount the spell attaches.
+// The sign only flips the tooltip's wording; the amount keeps the spell's own sign.
+var tooltipRankFraction = regexp.MustCompile(`\$\{\$m1/-?(\d+)\*\$(\d+)m1\}`)
+
+func tooltipTalentDivisor(description string, spellID int32) int32 {
+	for _, m := range tooltipRankFraction.FindAllStringSubmatch(description, -1) {
+		divisor, _ := strconv.Atoi(m[1])
+		id, _ := strconv.Atoi(m[2])
+		if int32(id) == spellID && divisor > 0 {
+			return int32(divisor)
+		}
+	}
+	return 0
 }
 
 // A passive talent that raises an effect's value on the buff's spell prices an
@@ -392,7 +441,7 @@ func raisesValue(misc int32) bool {
 	return false
 }
 
-// Who the client says the aura reaches. The manifest wins - the sim's scopes are
+// Who the game files say the aura reaches. The manifest wins - the sim's scopes are
 // a UI grouping as much as a game fact - but a disagreement is worth printing.
 func validateScope(row *ResolvedBuff) {
 	scope, known := clientScope(*row)
@@ -405,8 +454,8 @@ func validateScope(row *ResolvedBuff) {
 	}
 }
 
-// The group the client states a buff reaches: an area aura names it in the
-// effect itself, and an aura the client applies over an area or on one ally
+// The group the game files state a buff reaches: an area aura names it in the
+// effect itself, and an aura the game files apply over an area or on one ally
 // names it in the effect's target.
 func clientScope(row ResolvedBuff) (buffmanifest.BuffScope, bool) {
 	if row.Spell == nil {
@@ -516,6 +565,7 @@ func lowerFirst(s string) string {
 // already spelled as Go source.
 type buffRow struct {
 	Go          string
+	Builder     string
 	Field       string
 	Label       string
 	SpellID     int32
@@ -651,7 +701,7 @@ func buffScopeField(scope buffmanifest.BuffScope) string {
 
 func renderRow(row ResolvedBuff) buffRow {
 	out := buffRow{
-		Go: row.Go, Field: row.Field, Label: buffLabel(row),
+		Go: row.Go, Builder: buffBuilder(row.Go), Field: row.Field, Label: buffLabel(row),
 		SpellID: row.SpellID, Reason: row.Reason, LeftOut: row.LeftOut,
 		Supported: row.Supported, HasSpell: row.SpellID != 0,
 	}
@@ -682,12 +732,21 @@ func renderRow(row ResolvedBuff) buffRow {
 	out.HasValue = len(row.Applied) > 0 || row.Kind == buffmanifest.KindDamageShield
 	out.HasCooldown = row.CooldownMs > 0
 	out.Constructor = buffConstructor(row, out)
-	out.ApplyIf, out.ApplyBody, out.HasApply = buffApply(row)
+	out.ApplyIf, out.ApplyBody, out.HasApply = buffApply(row, out.SpellVar)
 	return out
 }
 
+// The constructor's name: the stem with the NewSpellData prefix, and Aura after it unless the stem
+// already ends in Aura.
+func buffBuilder(stem string) string {
+	if strings.HasSuffix(stem, "Aura") {
+		return "NewSpellData" + stem
+	}
+	return "NewSpellData" + stem + "Aura"
+}
+
 // The label the generated Meta and the settings input both show, which is the
-// client's name for the spell unless the manifest overrides it.
+// game files' name for the spell unless the manifest overrides it.
 func buffLabel(row ResolvedBuff) string {
 	if row.Label != "" {
 		return row.Label
@@ -719,6 +778,9 @@ func buffMetaFields(row ResolvedBuff, rendered buffRow) string {
 	if row.TalentRanks > 0 {
 		fmt.Fprintf(&b, "Talent: spelldata.Talent(%d, %d),\n", row.TalentSpellID, row.TalentRanks)
 		fmt.Fprintf(&b, "TalentEffect: %d,\n", row.TalentPosition)
+		if row.TalentDivisor > 0 {
+			fmt.Fprintf(&b, "TalentDivisor: %d,\n", row.TalentDivisor)
+		}
 		if row.TalentScalesDuration {
 			b.WriteString("TalentScalesDuration: true,\n")
 		}
@@ -751,12 +813,15 @@ func buffConstructor(row ResolvedBuff, rendered buffRow) string {
 }
 
 // The apply block: the condition the proto field is read by, and the call that
-// puts the buff on the unit. A kind whose behaviour is a cooldown, a proc or an
+// puts the buff on the unit. An int32 field a talent prices is the talent's
+// rank, up to the node's ranks. A kind whose behaviour is a cooldown, a proc or an
 // uptime calls a driver of a fixed name that sim/core/buffs/drivers.go declares,
 // and so does a row the manifest marks as driven. A driver is handed the whole
 // scope message rather than its own field, because a driven buff often reads a
-// second one: Grace of Air is 9 seconds long while the party is twisting totems.
-func buffApply(row ResolvedBuff) (string, string, bool) {
+// second one: Flametongue Totem does nothing under Windfury Totem. Any other totem
+// stands through standTotem, which puts it on the character's true pets too
+// unless the row's spell says only a player can carry it.
+func buffApply(row ResolvedBuff, spellVar string) (string, string, bool) {
 	unit, field := "char", buffScopeField(row.Scope)
 	if row.Scope == buffmanifest.ScopeDebuff {
 		unit = "target"
@@ -772,6 +837,9 @@ func buffApply(row ResolvedBuff) (string, string, bool) {
 		points = fmt.Sprintf("core.GetTristateValueInt32(%s, 0, %d)", access, row.TalentRanks)
 	case buffmanifest.ProtoInt32, buffmanifest.ProtoDouble:
 		cond, points = access+" > 0", "0"
+		if row.Proto == buffmanifest.ProtoInt32 && row.TalentRanks > 0 {
+			points = fmt.Sprintf("min(%s, %d)", access, row.TalentRanks)
+		}
 	default:
 		return "", "", false
 	}
@@ -784,12 +852,14 @@ func buffApply(row ResolvedBuff) (string, string, bool) {
 			scope = "debuffs, raid"
 		}
 		body = fmt.Sprintf("drive%s(%s, %s)", row.Go, unit, scope)
+	case row.Totem && row.Scope != buffmanifest.ScopeDebuff:
+		body = fmt.Sprintf("standTotem(char, %s, %s, %s)", spellVar, buffBuilder(row.Go), points)
 	default:
 		target := "&char.Unit"
 		if row.Scope == buffmanifest.ScopeDebuff {
 			target = "target"
 		}
-		body = fmt.Sprintf("core.MakePermanent(%sAura(%s, false, %s))", row.Go, target, points)
+		body = fmt.Sprintf("core.MakePermanent(%s(%s, false, %s))", buffBuilder(row.Go), target, points)
 	}
 	return cond, body, true
 }

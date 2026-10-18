@@ -65,13 +65,17 @@ type Character struct {
 	bonusOHDps     float64
 	bonusRangedDps float64
 
-	professions [2]proto.Profession
+	professions    [2]proto.Profession
+	professionRank [2]int32 // 0 is the maximum.
 
 	// Used for effects like "Increased Armor Value from Items"
 	*EquipScalingManager
 
 	// Provides major cooldown management behavior.
 	majorCooldownManager
+
+	// Listed in any of the raid's tank slots.
+	isTank bool
 
 	// Up reference to this Character's Party.
 	Party *Party
@@ -118,6 +122,10 @@ func NewCharacter(party *Party, partyIndex int, player *proto.Player) Character 
 			player.Profession1,
 			player.Profession2,
 		},
+		professionRank: [2]int32{
+			player.Prof1Rank,
+			player.Prof2Rank,
+		},
 
 		Party:      party,
 		PartyIndex: partyIndex,
@@ -133,11 +141,19 @@ func NewCharacter(party *Party, partyIndex int, player *proto.Player) Character 
 	if player.Consumables != nil {
 		character.Consumables = player.Consumables
 	}
+	consumables := character.Consumables
+	applyTemporaryEnchants(consumables.MhImbueId, consumables.OhImbueId, consumables.MhWeaponImbueId, consumables.OhWeaponImbueId, &character.Equipment)
 
 	character.baseStats = BaseStats[BaseStatsKey{Race: character.Race, Class: character.Class}]
 
 	character.AddStats(character.baseStats)
+	character.AddStat(stats.Health, 20-10*20)
 	character.addUniversalStatDependencies()
+	character.AddStatDependency(stats.Agility, stats.DodgePercent, dodgePerAgility(character.Class))
+	character.PseudoStats.BaseDodgeChance += ClassBaseDodge[character.Class]
+	if _, ok := ClassWeaponTypeCapabilities[character.Class][proto.WeaponType_WeaponTypeShield]; ok {
+		character.PseudoStats.BlockValuePerStrength = 0.05
+	}
 
 	if player.BonusStats != nil {
 		if player.BonusStats.Stats != nil {
@@ -149,12 +165,9 @@ func NewCharacter(party *Party, partyIndex int, player *proto.Player) Character 
 			character.bonusOHDps = ps[proto.PseudoStat_PseudoStatOffHandDps]
 			character.bonusRangedDps = ps[proto.PseudoStat_PseudoStatRangedDps]
 			character.PseudoStats.BaseReducedCritTakenPercent = ps[proto.PseudoStat_PseudoStatReducedCritTakenPercent] / 100
-			character.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexArcane] = ps[proto.PseudoStat_PseudoStatSchoolHitPercentArcane]
-			character.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexFire] = ps[proto.PseudoStat_PseudoStatSchoolHitPercentFire]
-			character.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexFrost] = ps[proto.PseudoStat_PseudoStatSchoolHitPercentFrost]
-			character.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexHoly] = ps[proto.PseudoStat_PseudoStatSchoolHitPercentHoly]
-			character.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexNature] = ps[proto.PseudoStat_PseudoStatSchoolHitPercentNature]
-			character.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexShadow] = ps[proto.PseudoStat_PseudoStatSchoolHitPercentShadow]
+			for school := stats.SchoolIndexArcane; school < stats.SchoolLen; school++ {
+				character.PseudoStats.SchoolBonusHitChance[school] = ps[SchoolHitPseudoStats[school]]
+			}
 			character.PseudoStats.BonusMHDps += character.bonusMHDps
 			character.PseudoStats.BonusOHDps += character.bonusOHDps
 			character.PseudoStats.BonusRangedDps += character.bonusRangedDps
@@ -167,6 +180,7 @@ func NewCharacter(party *Party, partyIndex int, player *proto.Player) Character 
 		}
 	}
 	character.PseudoStats.InFrontOfTarget = player.InFrontOfTarget
+	character.applyWeaponSkills(player.WeaponSkills)
 
 	if player.EnableItemSwap && player.ItemSwap != nil {
 		character.enableItemSwap(player.ItemSwap)
@@ -263,8 +277,6 @@ func (character *Character) applyEquipment() {
 
 func (character *Character) addUniversalStatDependencies() {
 	character.Unit.addUniversalStatDependencies()
-	// The first 20 stamina give 1 health each, the rest 10 (as EnableManaBar does for intellect).
-	character.AddStat(stats.Health, 20-10*20)
 	character.AddStatDependency(stats.Stamina, stats.Health, 10)
 	character.AddStatDependency(stats.Agility, stats.Armor, 2)
 }
@@ -285,26 +297,30 @@ func (character *Character) applyAllEffects(agent Agent, raidBuffs *proto.RaidBu
 		return measuredStatsProto
 	}
 
-	applyRaceEffects(agent)
-	character.applyProfessionEffects()
+	character.WithSource(SourceRacial, func() { applyRaceEffects(agent) })
+	character.WithSource(SourceProfession, character.applyProfessionEffects)
 	character.applyBuildPhaseAuras(CharacterBuildPhaseBase)
 	playerStats.BaseStats = measureStats()
 
 	character.applyEquipment()
-	character.applyItemEffects(agent)
-	character.applyItemSetBonusEffects(agent)
+	character.WithSource(SourceItem, func() {
+		character.applyItemEffects(agent)
+		character.applyItemSetBonusEffects(agent)
+	})
 	character.applyBuildPhaseAuras(CharacterBuildPhaseGear)
 	playerStats.GearStats = measureStats()
 
-	agent.ApplyTalents()
+	character.WithSource(SourceTalent, agent.ApplyTalents)
 	character.applyBuildPhaseAuras(CharacterBuildPhaseTalents)
 	playerStats.TalentsStats = measureStats()
 
-	applyBuffEffects(agent, raidBuffs, partyBuffs, individualBuffs)
+	character.WithSource(SourceExternalBuff, func() {
+		registeredBuffs().ApplyBuffs(character, raidBuffs, partyBuffs, individualBuffs)
+	})
 	character.applyBuildPhaseAuras(CharacterBuildPhaseBuffs)
 	playerStats.BuffsStats = measureStats()
 
-	applyConsumeEffects(agent, partyBuffs)
+	character.WithSource(SourceConsumable, func() { applyConsumeEffects(agent) })
 	character.applyBuildPhaseAuras(CharacterBuildPhaseConsumes)
 	playerStats.ConsumesStats = measureStats()
 	character.clearBuildPhaseAuras(CharacterBuildPhaseAll)
@@ -337,10 +353,10 @@ func (character *Character) applyItemEffects(agent Agent) {
 	registeredItemEffects := make(map[int32]bool)
 	registeredItemEnchantEffects := make(map[int32]bool)
 
-	character.Equipment.applyItemEffects(agent, registeredItemEffects, registeredItemEnchantEffects, true)
+	character.Equipment.applyItemEffects(agent, registeredItemEffects, registeredItemEnchantEffects)
 
 	if character.ItemSwap.IsEnabled() {
-		character.ItemSwap.unEquippedItems.applyItemEffects(agent, registeredItemEffects, registeredItemEnchantEffects, false)
+		character.ItemSwap.unEquippedItems.applyItemEffects(agent, registeredItemEffects, registeredItemEnchantEffects)
 	}
 
 	character.registerEquipSpeedAuras()
@@ -367,6 +383,9 @@ func (character *Character) AddPartyBuffs(partyBuffs *proto.PartyBuffs) {
 func (character *Character) initialize(agent Agent) {
 	character.majorCooldownManager.initialize(character)
 	character.ItemSwap.initialize(character)
+	character.RegisterWeaponChangeCallback(func(_ *Simulation) {
+		character.refilterEquipMods()
+	})
 
 	character.rotationAction = &PendingAction{
 		Priority: ActionPriorityGCD,
@@ -433,13 +452,7 @@ func (character *Character) Finalize() {
 			},
 
 			Handler: func(sim *Simulation, spell *Spell, result *SpellResult) {
-				// The handler runs a spell batch window after the hit; a cast that
-				// completed in between is over and must not be pushed back (and
-				// completed) again.
-				if character.Hardcast.Expires <= sim.CurrentTime {
-					return
-				}
-				if !sim.Proc(character.PseudoStats.PushbackChance-character.Hardcast.Spell.PushbackResist, "Pushback") {
+				if !sim.Proc(character.PseudoStats.PushbackChance, "Pushback") {
 					return
 				}
 
@@ -469,6 +482,8 @@ func (character *Character) Finalize() {
 	}
 
 	character.Unit.finalize()
+	character.basePhysicalCritPercent = character.baseStats[stats.PhysicalCritPercent]
+	character.critPerAgility = character.GetStatDependencyCoeff(stats.Agility, stats.PhysicalCritPercent)
 
 	character.majorCooldownManager.finalize()
 }
@@ -484,6 +499,7 @@ func (character *Character) FillPlayerStats(playerStats *proto.PlayerStats) {
 		PseudoStats: character.GetPseudoStatsProto(),
 		ApiVersion:  GetCurrentProtoVersion(),
 	}
+	playerStats.WeaponSkills = character.weaponSkillsProto()
 
 	character.clearBuildPhaseAuras(CharacterBuildPhaseAll)
 	playerStats.Sets = character.GetActiveSetBonusNames()
@@ -518,6 +534,19 @@ func (character *Character) HasProfession(prof proto.Profession) bool {
 	return prof == character.professions[0] || prof == character.professions[1]
 }
 
+// Whether the character has prof at rank or higher. ProfessionUnknown is always met.
+func (character *Character) MeetsProfession(prof proto.Profession, rank int32) bool {
+	if prof == proto.Profession_ProfessionUnknown {
+		return true
+	}
+	for i, p := range character.professions {
+		if p == prof && (character.professionRank[i] == 0 || character.professionRank[i] >= rank) {
+			return true
+		}
+	}
+	return false
+}
+
 func (character *Character) HasTrinketEquipped(itemID int32) bool {
 	return character.Trinket1().ID == itemID ||
 		character.Trinket2().ID == itemID
@@ -525,15 +554,6 @@ func (character *Character) HasTrinketEquipped(itemID int32) bool {
 
 func (character *Character) HasRingEquipped(itemID int32) bool {
 	return character.Finger1().ID == itemID || character.Finger2().ID == itemID
-}
-
-func (character *Character) HasMetaGemEquipped(gemID int32) bool {
-	for _, gem := range character.Head().Gems {
-		if gem.ID == gemID && !gem.Disabled {
-			return true
-		}
-	}
-	return false
 }
 
 // Returns the MH weapon if one is equipped, and null otherwise.
@@ -591,6 +611,12 @@ func (character *Character) GetDynamicProcMaskForWeaponEnchant(effectID int32) *
 	})
 }
 
+func (character *Character) GetDynamicProcMaskForWeaponTempEnchant(effectID int32) *ProcMask {
+	return character.getDynamicProcMaskPointer(func() ProcMask {
+		return character.getCurrentProcMaskForWeaponTempEnchant(effectID)
+	})
+}
+
 func (character *Character) getDynamicProcMaskPointer(procMaskFn func() ProcMask) *ProcMask {
 	procMask := procMaskFn()
 
@@ -609,7 +635,7 @@ func (character *Character) getCurrentProcMaskForWeaponEnchant(effectID int32) P
 
 func (character *Character) getCurrentProcMaskForWeaponTempEnchant(effectID int32) ProcMask {
 	return character.getCurrentProcMaskFor(func(weapon *Item) bool {
-		return weapon.TempEnchant == effectID
+		return weapon.HasTempEnchant(effectID)
 	})
 }
 
@@ -697,66 +723,6 @@ func (character *Character) doneIteration(sim *Simulation) {
 	character.Unit.doneIteration(sim)
 }
 
-// Which of block and parry the character sheet shows: a character that cannot block or parry shows
-// no Block% or Parry%, and no change in its stats moves either.
-type SheetAvoidance struct{ CanBlock, CanParry bool }
-
-func (sheet SheetAvoidance) Gate(pseudoStats []float64) {
-	if !sheet.CanBlock {
-		pseudoStats[proto.PseudoStat_PseudoStatBlockPercent] = 0
-	}
-	if !sheet.CanParry {
-		pseudoStats[proto.PseudoStat_PseudoStatParryPercent] = 0
-	}
-}
-
-func (character *Character) sheetAvoidance() SheetAvoidance {
-	return SheetAvoidance{CanBlock: character.PseudoStats.CanBlock, CanParry: character.PseudoStats.CanParry}
-}
-
-func (character *Character) GetPseudoStatsProto() []float64 {
-	pseudoStats := []float64{
-		proto.PseudoStat_PseudoStatMainHandDps: character.AutoAttacks.MH().DPS(),
-		proto.PseudoStat_PseudoStatOffHandDps:  character.AutoAttacks.OH().DPS(),
-		proto.PseudoStat_PseudoStatRangedDps:   character.AutoAttacks.Ranged().DPS(),
-
-		// Base values are modified by Enemy attackTables, but we display for LVL 70 enemy as paperdoll default
-		proto.PseudoStat_PseudoStatDodgePercent:            (character.PseudoStats.BaseDodgeChance + character.GetDodgeFromRating()) * 100,
-		proto.PseudoStat_PseudoStatParryPercent:            (character.PseudoStats.BaseParryChance + character.GetParryFromRating()) * 100,
-		proto.PseudoStat_PseudoStatBlockPercent:            (character.PseudoStats.BaseBlockChance + character.GetBlockFromRating()) * 100,
-		proto.PseudoStat_PseudoStatBlockValueMultiplier:    character.PseudoStats.BlockValueMultiplier,
-		proto.PseudoStat_PseudoStatReducedCritTakenPercent: character.PseudoStats.ReducedCritTakenPercent * 100,
-
-		// Used by UI to incorporate multiplicative Haste buffs into final character stats display.
-		proto.PseudoStat_PseudoStatRangedSpeedMultiplier: character.PseudoStats.RangedSpeedMultiplier * character.PseudoStats.AttackSpeedMultiplier,
-		proto.PseudoStat_PseudoStatMeleeSpeedMultiplier:  character.PseudoStats.MeleeSpeedMultiplier * character.PseudoStats.AttackSpeedMultiplier,
-		proto.PseudoStat_PseudoStatCastSpeedMultiplier:   character.PseudoStats.CastSpeedMultiplier,
-		proto.PseudoStat_PseudoStatMeleeHastePercent:     (character.TotalMeleeHasteMultiplier() - 1) * 100,
-		proto.PseudoStat_PseudoStatRangedHastePercent:    (character.TotalRangedHasteMultiplier() - 1) * 100,
-		proto.PseudoStat_PseudoStatSpellHastePercent:     (character.TotalSpellHasteMultiplier() - 1) * 100,
-
-		// School-specific fully buffed Hit/Crit are represented as proper Stats in the back-end so
-		// that stat dependencies will work correctly, but are stored as PseudoStats in proto
-		// messages. This is done so that the stats arrays embedded in database files and saved
-		// Encounter settings can omit these extraneous fields.
-		proto.PseudoStat_PseudoStatMeleeHitPercent:        character.GetStat(stats.PhysicalHitPercent),
-		proto.PseudoStat_PseudoStatSpellHitPercent:        character.GetStat(stats.SpellHitPercent),
-		proto.PseudoStat_PseudoStatSchoolHitPercentArcane: character.GetStat(stats.SpellHitPercent) + character.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexArcane],
-		proto.PseudoStat_PseudoStatSchoolHitPercentFire:   character.GetStat(stats.SpellHitPercent) + character.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexFire],
-		proto.PseudoStat_PseudoStatSchoolHitPercentFrost:  character.GetStat(stats.SpellHitPercent) + character.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexFrost],
-		proto.PseudoStat_PseudoStatSchoolHitPercentHoly:   character.GetStat(stats.SpellHitPercent) + character.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexHoly],
-		proto.PseudoStat_PseudoStatSchoolHitPercentNature: character.GetStat(stats.SpellHitPercent) + character.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexNature],
-		proto.PseudoStat_PseudoStatSchoolHitPercentShadow: character.GetStat(stats.SpellHitPercent) + character.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexShadow],
-		proto.PseudoStat_PseudoStatRangedHitPercent:       character.GetStat(stats.RangedHitPercent) + character.GetStat(stats.PhysicalHitPercent),
-		proto.PseudoStat_PseudoStatMeleeCritPercent:       character.GetStat(stats.PhysicalCritPercent),
-		proto.PseudoStat_PseudoStatSpellCritPercent:       character.GetStat(stats.SpellCritPercent),
-		proto.PseudoStat_PseudoStatRangedCritPercent:      character.GetStat(stats.RangedCritPercent) + character.GetStat(stats.PhysicalCritPercent),
-		proto.PseudoStat_PseudoStatExpertisePercent:       character.GetStat(stats.ExpertisePercent),
-	}
-	character.sheetAvoidance().Gate(pseudoStats)
-	return pseudoStats
-}
-
 func (character *Character) GetMetricsProto() *proto.UnitMetrics {
 	metrics := character.Metrics.ToProto()
 	metrics.Name = character.Name
@@ -782,9 +748,6 @@ func (character *Character) GetOffensiveTrinketCD() *Timer {
 }
 func (character *Character) GetConjuredCD() *Timer {
 	return character.GetOrInitSpellCategoryTimer(30)
-}
-func (character *Character) GetPotionCD() *Timer {
-	return character.GetOrInitSpellCategoryTimer(4)
 }
 
 func (character *Character) AddStatProcBuff(effectID int32, procAura *StatBuffAura, isEnchant bool, eligibleSlots []proto.ItemSlot) {

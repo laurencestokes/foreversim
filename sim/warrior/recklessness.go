@@ -2,56 +2,29 @@ package warrior
 
 import (
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
-	"github.com/wowsims/forever/sim/core/stats"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+var recklessnessRank = spellData.Recklessness.Highest()
+
 func (warrior *Warrior) registerRecklessness() {
-	recklessnessRank := spellData.Recklessness.Highest()
+	aura := warrior.RegisterAura(spelldata.AuraConfig(recklessnessRank))
+	spelldata.ParseEffects(&warrior.Character, aura, recklessnessRank)
 
-	actionID := core.ActionID{SpellID: recklessnessRank.ID}
-	recklessnessCritValue := recklessnessRank.Effect(dbcenums.A_MOD_CRIT_PCT, 0).Average(core.CharacterLevel)
-	aura := warrior.RegisterAura(core.Aura{
-		Label:    "Recklessness",
-		ActionID: actionID,
-		Duration: recklessnessRank.Duration(),
-	}).AttachStatsBuff(
-		stats.Stats{
-			stats.PhysicalCritPercent: recklessnessCritValue,
-			stats.SpellCritPercent:    recklessnessCritValue,
-		},
-	).AttachMultiplicativePseudoStatBuff(
-		&warrior.PseudoStats.DamageTakenMultiplier,
-		1+recklessnessRank.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_TAKEN, 127).Percent(),
-	).
-		AttachFearImmunity()
+	// Grants immunity to Fear effects, which the row states as A_MECHANIC_IMMUNITY and the parse
+	// skips.
+	aura.AttachFearImmunity()
 
-	spell := warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       actionID,
-		DefenseType:    core.DefenseTypeMelee,
-		Flags:          core.SpellFlagAPL | core.SpellFlagCastWhileIncapacitated,
-		ClassSpellMask: SpellMaskRecklessness,
+	config := spelldata.SpellConfig(&warrior.Unit, recklessnessRank,
+		spelldata.Flags(core.SpellFlagAPL|core.SpellFlagCastWhileIncapacitated))
 
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: recklessnessRank.GCD(),
-			},
-			CD: core.Cooldown{
-				Timer:    warrior.NewTimer(),
-				Duration: cooldownOf(recklessnessRank),
-			},
-		},
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		aura.Activate(sim)
+	}
 
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return warrior.StanceMatches(BerserkerStance)
-		},
+	config.RelatedSelfBuff = aura
 
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			aura.Activate(sim)
-		},
-
-		RelatedSelfBuff: aura,
-	})
+	spell := warrior.RegisterSpell(config)
 
 	warrior.AddMajorCooldown(core.MajorCooldown{
 		Spell: spell,

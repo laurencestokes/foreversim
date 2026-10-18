@@ -32,9 +32,9 @@ export type ToplineMetricsOptions = {
 
 const NO_MANA_CLASSES = [Rogue, Warrior, Hunter];
 
-// The two specs whose topline drops Time-to-OOM and HPS. TBC's list is narrower than the set of
-// tank specs: a protection warrior and a feral bear both tank, but only the bear's sheet was ever
-// built without the mana rows.
+// The two specs whose topline drops Time-to-OOM and HPS. The list is narrower than the set of
+// tank specs: a protection warrior and a feral bear both tank, but only the bear's sheet drops
+// the mana rows.
 const TANK_SPECS = [Spec.SpecFeralBearDruid, Spec.SpecProtectionPaladin];
 
 const column = (
@@ -77,7 +77,7 @@ export const toplineResultMetrics = (simResult: SimResult, filter?: SimResultFil
 
 		resultColumns.push(column('tmi', tmiMetrics.avg, { stdev: tmiMetrics.stdev, unit: 'percentage' }));
 
-		// A protection paladin's chance of death is the one number the TBC sheet suppresses.
+		// A protection paladin's chance of death is the one number the sheet suppresses.
 		if (spec !== Spec.SpecProtectionPaladin) {
 			resultColumns.push(column('cod', chanceOfDeath.avg, { stdev: chanceOfDeath.stdev, unit: 'percentage' }));
 		}
@@ -119,7 +119,9 @@ export const toplineResultMetrics = (simResult: SimResult, filter?: SimResultFil
 
 	if (!displayMetrics) return resultColumns;
 
+	// Threat per second is the one threat metric every spec shows; the rest follow the setting.
 	return resultColumns.filter(({ metric }) => {
+		if (metric === 'tps') return true;
 		const category = resultMetricCategories[metric];
 		return category !== 'damage' && category !== 'threat' && category !== 'healing' ? true : displayMetrics[category];
 	});

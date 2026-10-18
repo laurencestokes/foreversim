@@ -5,7 +5,7 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
-	"github.com/wowsims/forever/sim/core/stats"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 func (mage *Mage) registerArcaneTalents() {
@@ -13,6 +13,7 @@ func (mage *Mage) registerArcaneTalents() {
 	mage.registerWandSpecialization()
 	mage.registerArcaneFocus()
 	mage.registerImprovedChanneling()
+	mage.registerMissileBarrage()
 
 	// Tier 2
 	mage.registerArcaneSubtlety()
@@ -23,284 +24,280 @@ func (mage *Mage) registerArcaneTalents() {
 	// Tier 3
 	mage.registerArcaneGeometry()
 	mage.registerArcaneImpact()
-	// Arcane Blast: arcane_blast.go and arcane_charge.go
+	mage.registerArcaneBlastTalent()
 
 	// Tier 4
 	mage.registerArcaneShielding()
 	mage.registerImprovedCounterspell()
 	mage.registerArcaneMeditation()
-	mage.registerMissileBarrage()
+	mage.registerArcaneWrathTalent()
 
 	// Tier 5
-	// Presence of Mind: presence_of_mind.go
+	mage.registerPresenceOfMindTalent()
 	mage.registerArcaneMind()
 
 	// Tier 6
 	mage.registerArcaneInstability()
 
 	// Tier 7
-	// Arcane Power: arcane_power.go
+	mage.registerArcanePowerTalent()
 }
 
-// registerWandSpecialization implements Wand Specialization, new in Forever.
-//
-// Not modelled: 6057 raises wand damage 13/25%, and the sim has no wand attack (see the priest's).
+// Wand damage, +13% / +25%: the wand's shots are the mage's only ranged autos. The row's school mask
+// (126) leaves out physical wands.
 func (mage *Mage) registerWandSpecialization() {
 	if mage.Talents.WandSpecialization == 0 {
 		return
 	}
+
+	const schools = 126
+	mage.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_DamageDone_Pct,
+		ProcMask:   core.ProcMaskRangedAuto,
+		School:     core.SpellSchool(schools),
+		FloatValue: spellData.WandSpecialization.Effect(dbcenums.A_MOD_DAMAGE_PERCENT_DONE, schools).FractionAt(mage.Talents.WandSpecialization),
+	})
 }
 
+// "Improves your chance to hit with Arcane spells by 5%."
 func (mage *Mage) registerArcaneFocus() {
 	if mage.Talents.ArcaneFocus == 0 {
 		return
 	}
 
-	mage.PseudoStats.SchoolBonusHitChance[stats.SchoolIndexArcane] += spellData.ArcaneFocus.ValueAt(mage.Talents.ArcaneFocus)
+	spelldata.ParseStatic(&mage.Character, spellData.ArcaneFocus.Rank(mage.Talents.ArcaneFocus), spelldata.ShowAsSchoolHit(core.SpellSchoolArcane))
 }
 
-// registerImprovedChanneling implements Improved Channeling, new in Forever.
-//
-// Client 11237 (row values): 20% to keep channeling Arcane Missiles through damage taken, 14% for Arcane
-// Blast. The sim's mage takes no damage, so it changes no number.
+// Improved Channeling, a chance to avoid interruption from damage while channeling Arcane Missiles
+// or casting Arcane Blast. The sim models no pushback, so there is nothing to apply.
 func (mage *Mage) registerImprovedChanneling() {
 	if mage.Talents.ImprovedChanneling == 0 {
 		return
 	}
 }
 
+// "Reduces your target's resistance to all your spells by 15 and reduces the threat caused by your
+// Arcane spells by 30%."
 func (mage *Mage) registerArcaneSubtlety() {
 	if mage.Talents.ArcaneSubtlety == 0 {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll,
-		School:     core.SpellSchoolArcane,
-		FloatValue: spellData.ArcaneSubtlety.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_THREAT)).FractionAt(mage.Talents.ArcaneSubtlety),
-		Kind:       core.SpellMod_ThreatMultiplier_Pct,
-	})
-
-	// The client states the penetration as a negative target resistance.
-	mage.AddStat(stats.SpellPiercing, -spellData.ArcaneSubtlety.Effect(dbcenums.A_MOD_TARGET_RESISTANCE, 126).ValueAt(mage.Talents.ArcaneSubtlety))
+	spelldata.ParseStatic(&mage.Character, spellData.ArcaneSubtlety.Rank(mage.Talents.ArcaneSubtlety))
 }
 
-// Only the resistance half; the mana returned on a resisted spell is not modelled.
+// "Increases all your resistances by 10 and causes all spells you fully resist to restore 2% of your
+// total mana." The mana half needs spells cast at the mage, which the sim does not model; only the
+// resistances are applied.
 func (mage *Mage) registerMagicAbsorption() {
 	if mage.Talents.MagicAbsorption == 0 {
 		return
 	}
 
-	resist := spellData.MagicAbsorption.Effect(dbcenums.A_MOD_RESISTANCE, 124).ValueAt(mage.Talents.MagicAbsorption)
-	mage.AddStats(stats.Stats{
-		stats.ArcaneResistance: resist,
-		stats.FireResistance:   resist,
-		stats.FrostResistance:  resist,
-		stats.NatureResistance: resist,
-		stats.ShadowResistance: resist,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.MagicAbsorption.Rank(mage.Talents.MagicAbsorption), spelldata.Effects(2))
 }
 
+// "Gives you a 10% chance of entering a Clearcasting state after any damage spell hits a target. The
+// Clearcasting state reduces the mana cost of your next damage spell by 100%." It procs on the hit
+// and is spent by the next cast.
 func (mage *Mage) registerArcaneConcentration() {
 	if mage.Talents.ArcaneConcentration == 0 {
 		return
 	}
 
-	clearcastingRank := spellData.ArcaneConcentrationTriggered.Highest()
+	clearcastingRank := spellData.Clearcasting.Highest()
+	costEffect := clearcastingRank.EffectN(1)
 
-	mage.ClearcastingAura = mage.RegisterAura(core.Aura{
-		Label:    "Clearcasting",
-		ActionID: core.ActionID{SpellID: clearcastingRank.ID},
-		Duration: clearcastingRank.Duration(),
-		OnGain: func(aura *core.Aura, _ *core.Simulation) {
-			aura.Unit.PseudoStats.SpellCostPercentModifier -= 100
-		},
-		OnExpire: func(aura *core.Aura, _ *core.Simulation) {
-			aura.Unit.PseudoStats.SpellCostPercentModifier += 100
-		},
-		OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
-			// OnCastComplete runs after the hit that may have just procced this, so a fresh aura
-			// belongs to the next cast.
-			if aura.RemainingDuration(sim) == aura.Duration {
-				return
-			}
-			if !spell.Matches(MageSpellsAll) || spell.Cost == nil || spell.Cost.BaseCost == 0 {
-				return
-			}
-			aura.Deactivate(sim)
-		},
-	})
+	config := spelldata.AuraConfig(clearcastingRank)
+	config.OnCastComplete = func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
+		if !spell.MatchesFlags(costEffect.ClassFlags) || spell.Cost == nil || spell.Cost.BaseCost == 0 {
+			return
+		}
+		aura.Deactivate(sim)
+	}
+	mage.ClearCasting = mage.RegisterAura(config)
+	// The row's -1000% cost is what lets Clearcasting beat Arcane Charges and Arcane Power, which
+	// raise the cost in the same additive bucket.
+	spelldata.ParseEffects(&mage.Character, mage.ClearCasting, clearcastingRank)
 
-	// Forever states a flat SpellAuraOptions.ProcChance of 100 on the talent spell and puts the
-	// real per-rank chance on the effect, so ProcChanceAt would read 100% at every rank. 11213's
-	// ProcCategoryRecovery holds it to one proc a second.
-	//
-	// Spells another spell triggers do not proc it: Arcane Missiles' missiles and Blizzard's ticks.
-	// Blizzard rolls once per enemy when cast instead. Beta log 2706 (Jamal, 18 Arcane, level 26):
-	// 70 procs on 246 Arcane Explosions (722 targets hit, 11% a target), 12 on 37 Blizzard casts,
-	// 0 on 642 Blizzard tick hits (62 if they rolled) and 0 on 32 missiles.
-	mage.MakeProcTriggerAura(core.ProcTrigger{
-		Name:           "Arcane Concentration",
-		Callback:       core.CallbackOnSpellHitDealt,
-		ClassSpellMask: MageSpellsAllDamaging &^ MageSpellArcaneMissilesTick,
-		Outcome:            core.OutcomeLanded,
-		ProcChance:         spellData.ArcaneConcentration.EffectAt(1).FractionAt(mage.Talents.ArcaneConcentration),
-		ICD:                spellData.ArcaneConcentration.Highest().ICD(),
-		TriggerImmediately: true,
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-			mage.ClearcastingAura.Activate(sim)
-		},
+	trigger := spelldata.ProcTrigger(&mage.Character, spellData.ArcaneConcentration.Rank(mage.Talents.ArcaneConcentration),
+		func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+			mage.ClearCasting.Activate(sim)
+		})
+	trigger.Name = "Arcane Concentration - Trigger"
+	trigger.ProcMask = core.ProcMaskSpellDamage
+	// An area spell, or one Blizzard tick, rolls once however many targets it lands on. The condition
+	// runs just before the roll, so the first target to reach it takes the roll.
+	var rolledSpell *core.Spell
+	var rolledAt time.Duration
+	mage.RegisterResetEffect(func(_ *core.Simulation) {
+		rolledSpell = nil
 	})
+	// Arcane Missiles never rolls: the channel lands an outcome with no damage, and its missiles do
+	// not roll either.
+	trigger.ExtraCondition = func(sim *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
+		if spellData.ArcaneMissiles.Contains(spell) || spellData.ArcaneMissilesTriggered.Contains(spell) ||
+			(spell == rolledSpell && sim.CurrentTime == rolledAt) {
+			return false
+		}
+		rolledSpell, rolledAt = spell, sim.CurrentTime
+		return true
+	}
+
+	mage.MakeProcTriggerAura(trigger)
 }
 
+// "Increases your Armor by an amount equal to 50% of your Intellect."
 func (mage *Mage) registerArcaneResilience() {
 	if mage.Talents.ArcaneResilience == 0 {
 		return
 	}
 
-	mage.AddStatDependency(stats.Intellect, stats.Armor, spellData.ArcaneResilience.FractionAt(mage.Talents.ArcaneResilience))
+	spelldata.ParseStatic(&mage.Character, spellData.ArcaneResilience.Rank(mage.Talents.ArcaneResilience))
 }
 
-// registerArcaneGeometry implements Arcane Geometry, new in Forever: 11247 adds 3/6 yards to the
-// range of the spells its class mask reaches, of the mage's Arcane Blast and Arcane Missiles.
+// "Increases the range of your Arcane spells by 3/6 yards."
 func (mage *Mage) registerArcaneGeometry() {
 	if mage.Talents.ArcaneGeometry == 0 {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellArcaneBlast | MageSpellArcaneMissilesCast,
-		FloatValue: spellData.ArcaneGeometry.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_RANGE)).ValueAt(mage.Talents.ArcaneGeometry),
-		Kind:       core.SpellMod_Range_Flat,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.ArcaneGeometry.Rank(mage.Talents.ArcaneGeometry))
 }
 
-// Every arcane spell of the mage's, not TBC's Arcane Blast and Arcane Explosion only.
+// "Increases the critical strike chance of your Arcane spells by 6%."
 func (mage *Mage) registerArcaneImpact() {
 	if mage.Talents.ArcaneImpact == 0 {
 		return
 	}
 
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll,
-		School:     core.SpellSchoolArcane,
-		FloatValue: spellData.ArcaneImpact.ValueAt(mage.Talents.ArcaneImpact),
-		Kind:       core.SpellMod_BonusCrit_Percent,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.ArcaneImpact.Rank(mage.Talents.ArcaneImpact))
 }
 
-// registerArcaneShielding implements Arcane Shielding, new in Forever.
-//
-// Not modelled: 11252 cuts Mana Shield's mana per damage 17/33% and raises Mage Armor's
-// resistances 25/50%; the sim casts neither.
+func (mage *Mage) registerArcaneBlastTalent() {
+	if !mage.Talents.ArcaneBlast {
+		return
+	}
+
+	mage.registerArcaneBlastSpell()
+}
+
+func (mage *Mage) registerPresenceOfMindTalent() {
+	if !mage.Talents.PresenceOfMind {
+		return
+	}
+
+	mage.registerPresenceOfMindSpell()
+}
+
+func (mage *Mage) registerArcanePowerTalent() {
+	if !mage.Talents.ArcanePower {
+		return
+	}
+
+	mage.registerArcanePowerSpell()
+}
+
+// Arcane Shielding: Mana Shield drains less mana and Mage Armor grants more resistance. Both are
+// applied where the spells are registered, in defensives.go and armors.go.
 func (mage *Mage) registerArcaneShielding() {
 	if mage.Talents.ArcaneShielding == 0 {
 		return
 	}
 }
 
-// registerImprovedCounterspell implements Improved Counterspell, new in Forever.
-//
-// Not modelled: 11255 adds a 2/4 sec silence to Counterspell; the sim casts no interrupts.
+// "Your Counterspell also Silences the target for 4 sec." Nothing for a damage sim to apply.
 func (mage *Mage) registerImprovedCounterspell() {
 	if mage.Talents.ImprovedCounterspell == 0 {
 		return
 	}
 }
 
+// "Allows 50% of your Mana regeneration to continue while casting."
 func (mage *Mage) registerArcaneMeditation() {
 	if mage.Talents.ArcaneMeditation == 0 {
 		return
 	}
 
-	mage.PseudoStats.SpiritRegenRateCasting += spellData.ArcaneMeditation.FractionAt(mage.Talents.ArcaneMeditation)
+	spelldata.ParseStatic(&mage.Character, spellData.ArcaneMeditation.Rank(mage.Talents.ArcaneMeditation))
 }
 
-// Arcane Blast landing (40%), or Fireball, Frostbolt or Frostfire Bolt (20%), can make the next Arcane
-// Missiles free and fire its missiles every 0.5 sec instead of every second: the same count in half
-// the channel. 400588 procs on a landed harmful spell (ProcFlags 0x10000), so a miss can't, and a bolt
-// procs when it arrives. Its trigger effect holds Arcane Blast's 40; the tooltip's 20 for the bolts
-// is half of it, which the row doesn't state. The buff (400589) holds the duration, cost and tick
-// changes. 44404 stays the aura id because saved rotations key on it.
-func (mage *Mage) registerMissileBarrage() {
-	if !mage.Talents.MissileBarrage {
+func (mage *Mage) registerArcaneWrathTalent() {
+	if !mage.Talents.ArcaneWrath {
 		return
 	}
 
-	buff := spellData.MissileBarrageTriggered.Highest()
-	arcaneBlastChance := spellData.MissileBarrage.Highest().Effect(dbcenums.A_PROC_TRIGGER_SPELL, 0).Average(core.CharacterLevel) / 100
-
-	mage.MissileBarrageAura = mage.RegisterAura(core.Aura{
-		Label:    "Missile Barrage",
-		ActionID: core.ActionID{SpellID: 44404},
-		Duration: buff.Duration(),
-		OnCastComplete: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
-			if spell.Matches(MageSpellArcaneMissilesCast) {
-				aura.Deactivate(sim)
-			}
-		},
-	}).AttachSpellMod(core.SpellModConfig{
-		ClassMask:  MageSpellArcaneMissilesCast,
-		FloatValue: buff.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_COST)).Average(core.CharacterLevel) / 100,
-		Kind:       core.SpellMod_PowerCost_Pct_Add,
-	}).AttachSpellMod(core.SpellModConfig{
-		ClassMask: MageSpellArcaneMissilesCast,
-		TimeValue: time.Duration(buff.Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_ACTIVATION_TIME)).Average(core.CharacterLevel)) * time.Millisecond,
-		Kind:      core.SpellMod_DotTickLength_Flat,
-	})
-
-	mage.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Missile Barrage Trigger",
-		Callback:           core.CallbackOnSpellHitDealt,
-		ClassSpellMask:     MageSpellArcaneBlast | MageSpellFireball | MageSpellFrostbolt | MageSpellFrostfireBolt,
-		Outcome:            core.OutcomeLanded,
-		TriggerImmediately: true,
-		Handler: func(sim *core.Simulation, spell *core.Spell, _ *core.SpellResult) {
-			procChance := arcaneBlastChance
-			if !spell.Matches(MageSpellArcaneBlast) {
-				procChance /= 2
-			}
-			if sim.Proc(procChance, "Missile Barrage") {
-				mage.MissileBarrageAura.Activate(sim)
-			}
-		},
-	})
+	mage.registerArcaneWrathSpell()
 }
 
+// "Gives your Arcane Blast spell a 20/40% chance, and your Arcane Wrath, Fireball, Frostbolt, and
+// Frostfire Bolt spells a 10/20% chance to reduce the channeled duration of your next Arcane Missiles
+// spell by 50%, reduce the Mana cost by 100%, and missiles fire every 0.5 sec." Frost Blast procs
+// it too, which the tooltip does not say; that is confirmed in game. Arcane Missiles does not proc it.
+func (mage *Mage) registerMissileBarrage() {
+	if mage.Talents.MissileBarrage == 0 {
+		return
+	}
+
+	talentRank := spellData.MissileBarrage.Rank(mage.Talents.MissileBarrage)
+	buffRank := spellData.MissileBarrageTriggered.Highest()
+	arcaneBlastChance := talentRank.EffectN(1).Percent()
+
+	config := spelldata.AuraConfig(buffRank)
+	// The channel took the tick length and the cost when it was applied, before this runs.
+	config.OnCastComplete = func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
+		if spell.Matches(MageSpellArcaneMissilesCast) {
+			aura.Deactivate(sim)
+		}
+	}
+	buffAura := mage.RegisterAura(config)
+
+	// Missiles every 0.5 sec (effect 2) and the mana cost (effect 3). The sim counts a DoT's
+	// duration as its ticks times their length, so the halved tick alone halves the channel and
+	// keeps its 5 missiles: the row's -50% duration (effect 1) is already in it and is not applied
+	// again.
+	spelldata.ParseEffects(&mage.Character, buffAura, buffRank, spelldata.Effects(2, 3))
+
+	trigger := spelldata.ProcTrigger(&mage.Character, talentRank,
+		func(sim *core.Simulation, spell *core.Spell, _ *core.SpellResult) {
+			chance := arcaneBlastChance
+			if !spellData.ArcaneBlast.Contains(spell) {
+				chance /= 2
+			}
+			if sim.Proc(chance, "Missile Barrage") {
+				buffAura.Activate(sim)
+			}
+		}, spelldata.Chance(1))
+	trigger.Name = "Missile Barrage - Trigger"
+	// The buff goes up on the hit that procs it, with no spell batch window delay, so a proc while
+	// it is up only refreshes it and the next Arcane Missiles consumes it with nothing landing after.
+	trigger.TriggerImmediately = true
+	// Frost Blast at Frostbolt's half chance, from the 15 October 2026 patch note giving it every
+	// talent that affects Frostbolt.
+	trigger.ExtraCondition = func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
+		return spellData.ArcaneBlast.Contains(spell) || spellData.ArcaneWrath.Contains(spell) || spellData.Fireball.Contains(spell) ||
+			spellData.Frostbolt.Contains(spell) || spellData.FrostBlast.Contains(spell) || spellData.FrostfireBolt.Contains(spell)
+	}
+
+	mage.MakeProcTriggerAura(trigger)
+}
+
+// "Increases your Intellect by 10% and increases the critical strike damage bonus of your Arcane
+// spells by 100%."
 func (mage *Mage) registerArcaneMind() {
 	if mage.Talents.ArcaneMind == 0 {
 		return
 	}
 
-	mage.MultiplyStat(stats.Intellect, spellData.ArcaneMind.Effect(dbcenums.A_MOD_TOTAL_STAT_PERCENTAGE, 0).MultiplierAt(mage.Talents.ArcaneMind))
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll,
-		School:     core.SpellSchoolArcane,
-		FloatValue: spellData.ArcaneMind.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_CRIT_DAMAGE_BONUS)).FractionAt(mage.Talents.ArcaneMind),
-		Kind:       core.SpellMod_CritMultiplier_Flat,
-	})
+	spelldata.ParseStatic(&mage.Character, spellData.ArcaneMind.Rank(mage.Talents.ArcaneMind))
 }
 
+// "Increases the damage done by your spells by 3% and your critical strike chance by 3%."
 func (mage *Mage) registerArcaneInstability() {
 	if mage.Talents.ArcaneInstability == 0 {
 		return
 	}
 
-	damage := spellData.ArcaneInstability.Effect(dbcenums.A_ADD_PCT_MODIFIER, int32(dbcenums.SPELLMOD_DAMAGE)).FractionAt(mage.Talents.ArcaneInstability)
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll &^ MageSpellFrostfireBolt,
-		FloatValue: damage,
-		Kind:       core.SpellMod_DamageDone_Flat,
-	})
-	// The SPELLMOD_DOT mask leaves out Frostfire Bolt: its hit takes the bonus, its DoT does not.
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellFrostfireBolt,
-		FloatValue: damage,
-		Kind:       core.SpellMod_DirectDamageDone_Flat,
-	})
-	mage.AddStaticMod(core.SpellModConfig{
-		ClassMask:  MageSpellsAll,
-		FloatValue: spellData.ArcaneInstability.Effect(dbcenums.A_MOD_CRIT_PCT, 0).ValueAt(mage.Talents.ArcaneInstability),
-		Kind:       core.SpellMod_BonusCrit_Percent,
-	})
+	// Effect 1's SPELLMOD_DAMAGE raises the direct hits and effect 2's SPELLMOD_DOT the ticks.
+	spelldata.ParseStatic(&mage.Character, spellData.ArcaneInstability.Rank(mage.Talents.ArcaneInstability))
 }

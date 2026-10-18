@@ -5,237 +5,113 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/buffs"
-	"github.com/wowsims/forever/sim/core/dbcenums"
-	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
-	"github.com/wowsims/forever/sim/core/stats"
 )
 
-// A totem's buff is a spell of its own; the value it gives lives on that spell, not on the totem.
 var windfuryTotemRank = spellData.WindfuryTotem.Highest()
-
-// Build 70009 renamed the totem's party aura (10612, which triggers 10610) to "Windfury Totem", so the
-// Triggered ladder now carries both; the attack power buff is the one the aura triggers.
-var windfuryTotemBuff = spellData.WindfuryTotemTriggered.ByID(10610)
-var windfuryTotemPartyAura = spellData.WindfuryTotemTriggered.ByID(10612)
 var strengthOfEarthTotemRank = spellData.StrengthOfEarthTotem.Highest()
-var strengthOfEarthTotemBuff = spellData.StrengthOfEarthTotemTriggered.Highest()
-var graceOfAirTotemRank = spellData.GraceOfAirTotem.Highest()
-var graceOfAirTotemBuff = spellData.GraceOfAirTotemTriggered.Highest()
+var graceOfAirTotemRank = spellData.GraceOfAirTotem.ByID(25359)
 var manaSpringTotemRank = spellData.ManaSpringTotem.Highest()
-var manaSpringTotemBuff = spellData.ManaSpringTotemTriggered.Highest()
+var flametongueTotemRank = spellData.FlametongueTotem.Highest()
+var frostResistanceTotemRank = spellData.FrostResistanceTotem.Highest()
 
-func (shaman *Shaman) newTotemSpellConfig(flatCost int32, spellID int32, spellMask int64, gcd time.Duration) core.SpellConfig {
-	return core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: spellID},
-		DefenseType:    core.DefenseTypeMagic,
-		Flags:          core.SpellFlagAPL | SpellFlagInstant,
-		ClassSpellMask: spellMask,
-
-		ManaCost: core.ManaCostOptions{
-			FlatCost: flatCost,
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: gcd,
-			},
-		},
-	}
+// A totem's cast: the row's cost, GCD and cooldown, and nothing it hits.
+func (shaman *Shaman) newTotemSpellConfig(rank *spelldata.Spell) core.SpellConfig {
+	config := spelldata.SpellConfig(&shaman.Unit, rank, spelldata.Flags(core.SpellFlagAPL|SpellFlagShamanSpell|SpellFlagInstant))
+	config.ProcMask = core.ProcMaskEmpty
+	return config
 }
 
-func (shaman *Shaman) registerWindfuryTotemSpell() {
-	duration := windfuryTotemRank.Duration()
-	// Forever drops Improved Weapon Totems, so the buff's own attack power is the whole value.
-	value := windfuryTotemBuff.EffectN(1).Average(core.CharacterLevel)
+// Stands a totem in its element's slot for the totem row's duration, taking down the one there.
+func (shaman *Shaman) dropTotem(sim *core.Simulation, slot int, aura *core.Aura, duration time.Duration) {
+	if current := shaman.TotemAuras[slot]; current != nil && current != aura {
+		current.Deactivate(sim)
+	}
+	shaman.TotemAuras[slot] = aura
+	shaman.TotemExpirations[slot] = sim.CurrentTime + duration
+	aura.Activate(sim)
+}
 
-	wfProcAura := shaman.NewTemporaryStatsAura("Windfury Totem Proc (Self)", core.ActionID{SpellID: windfuryTotemBuff.ID}, stats.Stats{stats.AttackPower: value}, windfuryTotemBuff.Duration())
-	wfProcAura.MaxStacks = int32(windfuryTotemBuff.ProcCharges)
-	// The buff row's proc flags say what spends a charge, as for the party's (buffs.driveWindfuryTotem):
-	// a melee auto that lands, so a missed, dodged or parried swing keeps it.
-	spender := spelldata.ProcTrigger(&shaman.Character, windfuryTotemBuff, func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-		wfProcAura.RemoveStack(sim)
-	}, spelldata.Chance(1))
-	spender.Name = "Windfury Attack (Self)"
-	spender.TriggerImmediately = true
-	wfProcAura.AttachProcTrigger(spender)
+// A totem the sim models as the buff it gives its caster, lasting as long as the totem stands.
+func (shaman *Shaman) registerBuffTotem(rank *spelldata.Spell, slot int, buff *core.Aura) *core.Spell {
+	duration := rank.Duration()
+	buff.Duration = duration
 
-	config := shaman.newTotemSpellConfig(int32(windfuryTotemRank.Cost()), windfuryTotemRank.ID, SpellMaskBasicTotem, windfuryTotemRank.GCD())
-
-	// The party aura's own row (see buffs.driveWindfuryTotem): 20% on any melee auto or special, a
-	// 100 ms internal cooldown, and the extra attack is always a main-hand one.
-	var windfurySpell *core.Spell
-	trigger := spelldata.ProcTrigger(&shaman.Character, windfuryTotemPartyAura, func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-		wfProcAura.Activate(sim)
-		// An auto that procs it has spent the first charge itself; a special leaves both.
-		charges := wfProcAura.MaxStacks
-		if spell.ProcMask.Matches(core.ProcMaskMeleeWhiteHit) {
-			charges--
-		}
-		wfProcAura.SetStacks(sim, charges)
-		shaman.AutoAttacks.MaybeReplaceMHSwing(sim, windfurySpell).Cast(sim, result.Target)
-	})
-	trigger.Name = "Windfury Totem Trigger (Self)"
-	trigger.ActionID = core.ActionID{}
-	trigger.MetricsActionID = core.ActionID{SpellID: windfuryTotemRank.ID}
-	trigger.Duration = core.NeverExpires
-	trigger.TriggerImmediately = true
-	wfProcTrigger := shaman.MakeProcTriggerAura(trigger)
-
-	wfIntermediateAuraForExclusitivity := shaman.RegisterAura(core.Aura{
-		Label:    "Windfury Dummy Aura (self)",
-		Duration: time.Second * 10,
-	})
-
-	wfPartyWeaponBuffTrackingAura := shaman.RegisterAura(core.Aura{
-		Label:    "Windfury Party Weapon Buff Tracking Aura",
-		Duration: time.Second * 10,
-		ActionID: core.ActionID{SpellID: windfuryTotemRank.ID, Tag: 1},
-	})
-
-	wfAura := shaman.RegisterAura(core.Aura{
-		Label:    "Windfury Totem (Self)",
-		ActionID: config.ActionID,
-		Duration: duration,
-	})
-	wfAura.NewExclusiveEffect(buffs.AirTotemCategory, true, core.ExclusiveEffect{Priority: buffs.AirTotemCastWindfury})
-	wfAura.NewExclusiveEffect(buffs.FlametongueTotemCategory, false, core.ExclusiveEffect{Priority: buffs.FlametongueTotemWindfuryTotem})
-	wfAura.ApplyOnInit(func(aura *core.Aura, sim *core.Simulation) {
-		mhConfig := *shaman.AutoAttacks.MHConfig()
-		mhConfig.ActionID = mhConfig.ActionID.WithTag(windfuryTotemBuff.ID)
-		windfurySpell = shaman.GetOrRegisterSpell(mhConfig)
-	}).ApplyOnExpire(func(_ *core.Aura, sim *core.Simulation) {
-		// Since build 70009 the totem's effect is a party aura that no other air totem stacks with, so it
-		// ends with the totem instead of lingering on the weapon for a twist.
-		wfIntermediateAuraForExclusitivity.Deactivate(sim)
-		wfPartyWeaponBuffTrackingAura.Deactivate(sim)
-	}).AttachPeriodicAction(core.PeriodicActionOptions{
-		Period:          time.Second * 5,
-		TickImmediately: true,
-		Priority:        core.ActionPriorityAuto,
-		OnAction: func(sim *core.Simulation) {
-			wfPartyWeaponBuffTrackingAura.Activate(sim)
-			wfIntermediateAuraForExclusitivity.Activate(sim)
-		},
-	})
-
-	wfIntermediateAuraForExclusitivity.NewExclusiveEffect(buffs.WindfuryTotemCategory, false, core.ExclusiveEffect{
-		Priority: value,
-		OnGain: func(_ *core.ExclusiveEffect, sim *core.Simulation) {
-			wfProcTrigger.Activate(sim)
-		},
-		OnExpire: func(_ *core.ExclusiveEffect, sim *core.Simulation) {
-			wfProcTrigger.Deactivate(sim)
-			wfIntermediateAuraForExclusitivity.Deactivate(sim)
-		},
-	})
-
-	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-		if shaman.AirTotemAura != nil {
-			shaman.AirTotemAura.Deactivate(sim)
-		}
-		shaman.TotemExpirations[AirTotem] = sim.CurrentTime + duration
-		shaman.AirTotemAura = wfAura
-		wfAura.Activate(sim)
+	config := shaman.newTotemSpellConfig(rank)
+	config.ClassSpellMask = SpellMaskBasicTotem
+	config.RelatedSelfBuff = buff
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
+		shaman.dropTotem(sim, slot, buff, duration)
 	}
 
-	shaman.RegisterItemSwapCallback([]proto.ItemSlot{proto.ItemSlot_ItemSlotMainHand}, func(sim *core.Simulation, slot proto.ItemSlot) {
-		wfIntermediateAuraForExclusitivity.Deactivate(sim)
+	return shaman.RegisterSpell(config)
+}
+
+// A weapon totem stands as an aura of the totem row's duration that holds the totem's category, which
+// turns its proc on. The proc is core/buffs', shared with the raid buff of the same totem.
+func (shaman *Shaman) registerWeaponTotem(rank *spelldata.Spell, slot int, category string, priority float64, procTrigger *core.Aura) *core.Spell {
+	duration := rank.Duration()
+
+	totemAura := shaman.RegisterAura(core.Aura{
+		Label:    rank.Name + " (Self)",
+		ActionID: core.ActionID{SpellID: rank.ID},
+		Duration: duration,
+	})
+	totemAura.NewExclusiveEffect(category, false, core.ExclusiveEffect{
+		Priority: priority,
+		OnGain: func(_ *core.ExclusiveEffect, sim *core.Simulation) {
+			procTrigger.Activate(sim)
+		},
+		OnExpire: func(_ *core.ExclusiveEffect, sim *core.Simulation) {
+			procTrigger.Deactivate(sim)
+		},
 	})
 
-	shaman.RegisterSpell(config)
+	config := shaman.newTotemSpellConfig(rank)
+	config.ClassSpellMask = SpellMaskBasicTotem
+	config.RelatedSelfBuff = totemAura
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
+		shaman.dropTotem(sim, slot, totemAura, duration)
+	}
+	return shaman.RegisterSpell(config)
+}
+
+// The rows already carry Improved Weapon Totems: Windfury's attack power and Flametongue's damage are
+// its 30% and 12% over their untalented values, so nothing applies the talent.
+func (shaman *Shaman) registerWindfuryTotemSpell() {
+	shaman.WindfuryTotem = shaman.registerWeaponTotem(windfuryTotemRank, AirTotem, buffs.WindfuryTotemCategory,
+		buffs.WindfuryTotemValue(0), buffs.NewWindfuryTotemProcTrigger(&shaman.Character))
+	buffs.HoldOverWindfuryTotemRivals(shaman.WindfuryTotem.RelatedSelfBuff)
+}
+
+// Under a standing Windfury Totem, Flametongue Totem's proc does nothing.
+func (shaman *Shaman) registerFlametongueTotemSpell() {
+	shaman.FlametongueTotem = shaman.registerWeaponTotem(flametongueTotemRank, FireTotem, buffs.FlametongueTotemCategory,
+		buffs.FlametongueTotemPriority(), buffs.NewFlametongueTotemProcTrigger(&shaman.Character))
 }
 
 func (shaman *Shaman) registerStrengthOfEarthTotemSpell() {
-	duration := strengthOfEarthTotemRank.Duration()
-	// Forever drops Enhancing Totems, so the buff's own value is the whole value.
-	value := strengthOfEarthTotemBuff.EffectN(1).Average(core.CharacterLevel)
-	config := shaman.newTotemSpellConfig(int32(strengthOfEarthTotemRank.Cost()), strengthOfEarthTotemRank.ID, SpellMaskBasicTotem, strengthOfEarthTotemRank.GCD())
-	buffAura := shaman.RegisterAura(core.Aura{
-		Label:    "Strength Of Earth Totem (Self)",
-		ActionID: config.ActionID,
-		Duration: duration,
-	})
-	buffAura.NewExclusiveEffect(buffs.StrengthOfEarthTotemCategory+stats.Strength.StatName()+"Add", false, core.ExclusiveEffect{
-		Priority: value,
-		OnGain: func(ee *core.ExclusiveEffect, sim *core.Simulation) {
-			ee.Aura.Unit.AddStatDynamic(sim, stats.Strength, value)
-		},
-		OnExpire: func(ee *core.ExclusiveEffect, sim *core.Simulation) {
-			ee.Aura.Unit.AddStatDynamic(sim, stats.Strength, -value)
-		},
-	})
-	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-		if shaman.EarthTotemAura != nil {
-			shaman.EarthTotemAura.Deactivate(sim)
-		}
-		shaman.TotemExpirations[EarthTotem] = sim.CurrentTime + duration
-		shaman.EarthTotemAura = buffAura
-		buffAura.Activate(sim)
-	}
-	shaman.RegisterSpell(config)
+	// The rows already carry Enhancing Totems: Strength of Earth's and Grace of Air's amounts are its 15%
+	// over their untalented values, so nothing applies the talent.
+	shaman.registerBuffTotem(strengthOfEarthTotemRank, EarthTotem,
+		buffs.NewSpellDataStrengthOfEarthTotemAura(&shaman.Unit, true, 0))
 }
 
 func (shaman *Shaman) registerGraceOfAirTotemSpell() {
-	duration := graceOfAirTotemRank.Duration()
-	value := graceOfAirTotemBuff.EffectN(1).Average(core.CharacterLevel)
-	config := shaman.newTotemSpellConfig(int32(graceOfAirTotemRank.Cost()), graceOfAirTotemRank.ID, SpellMaskBasicTotem, graceOfAirTotemRank.GCD())
-	buffAura := shaman.RegisterAura(core.Aura{
-		Label:    "Grace Of Air Totem (Self)",
-		ActionID: config.ActionID,
-		Duration: duration,
-	})
-	buffAura.NewExclusiveEffect(buffs.AirTotemCategory, true, core.ExclusiveEffect{Priority: buffs.AirTotemCastGraceOfAir})
-	buffAura.NewExclusiveEffect(buffs.GraceOfAirTotemCategory+stats.Agility.StatName()+"Add", false, core.ExclusiveEffect{
-		Priority: value,
-		OnGain: func(ee *core.ExclusiveEffect, sim *core.Simulation) {
-			ee.Aura.Unit.AddStatDynamic(sim, stats.Agility, value)
-		},
-		OnExpire: func(ee *core.ExclusiveEffect, sim *core.Simulation) {
-			ee.Aura.Unit.AddStatDynamic(sim, stats.Agility, -value)
-		},
-	})
-	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-		if shaman.AirTotemAura != nil {
-			shaman.AirTotemAura.Deactivate(sim)
-		}
-		shaman.TotemExpirations[AirTotem] = sim.CurrentTime + duration
-		shaman.AirTotemAura = buffAura
-		buffAura.Activate(sim)
-	}
-	shaman.RegisterSpell(config)
+	shaman.registerBuffTotem(graceOfAirTotemRank, AirTotem,
+		buffs.NewSpellDataGraceOfAirTotemAura(&shaman.Unit, true, 0))
 }
 
+// The aura reads Restorative Totems' first effect, the Mana Spring share, from the talent points.
 func (shaman *Shaman) registerManaSpringTotemSpell() {
-	duration := manaSpringTotemRank.Duration()
-	// The buff ticks its value every 2 sec, and MP5 is the form the sim takes; Restorative Totems
-	// raises it by the ladder the client states.
-	tick := manaSpringTotemBuff.Effect(dbcenums.A_PERIODIC_ENERGIZE, 0)
-	value := tick.Average(core.CharacterLevel) * (5 / tick.Period().Seconds()) *
-		spellData.RestorativeTotems.EffectAt(1).MultiplierAt(shaman.Talents.RestorativeTotems)
-	config := shaman.newTotemSpellConfig(int32(manaSpringTotemRank.Cost()), manaSpringTotemRank.ID, SpellMaskBasicTotem, manaSpringTotemRank.GCD())
-	buffAura := shaman.RegisterAura(core.Aura{
-		Label:    "Mana Spring Totem (Self)",
-		ActionID: config.ActionID,
-		Duration: duration,
-	})
-	buffAura.NewExclusiveEffect(buffs.ManaSpringTotemCategory+stats.MP5.StatName()+"Add", false, core.ExclusiveEffect{
-		Priority: value,
-		OnGain: func(ee *core.ExclusiveEffect, sim *core.Simulation) {
-			ee.Aura.Unit.AddStatDynamic(sim, stats.MP5, value)
-		},
-		OnExpire: func(ee *core.ExclusiveEffect, sim *core.Simulation) {
-			ee.Aura.Unit.AddStatDynamic(sim, stats.MP5, -value)
-		},
-	})
-	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-		if shaman.WaterTotemAura != nil {
-			shaman.WaterTotemAura.Deactivate(sim)
-		}
-		shaman.TotemExpirations[WaterTotem] = sim.CurrentTime + duration
-		shaman.WaterTotemAura = buffAura
-		buffAura.Activate(sim)
-	}
-	shaman.RegisterSpell(config)
+	shaman.registerBuffTotem(manaSpringTotemRank, WaterTotem,
+		buffs.NewSpellDataManaSpringTotemAura(&shaman.Unit, true, shaman.Talents.RestorativeTotems))
+}
+
+// A fire totem, so it stands in the slot Fire Nova radiates from.
+func (shaman *Shaman) registerFrostResistanceTotemSpell() {
+	shaman.registerBuffTotem(frostResistanceTotemRank, FireTotem,
+		buffs.NewSpellDataFrostResistanceTotemAura(&shaman.Unit, true, 0))
 }
 
 // Commented out upstream of this fork by "only 1 totem per type" (53970b1d84), not by

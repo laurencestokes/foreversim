@@ -1,17 +1,13 @@
 // Reforge-solve request/cache-key helpers, extracted from the ReforgeOptimizer
 // component so the domain layer (sim.ts, bulk sim, reforge cache) does not
 // depend on the view layer.
-import { Player as PlayerProtoMessageType, ReforgeOptimizeMode, ReforgeOptimizeRequest } from '@generated/proto/api';
+import { Player as PlayerProtoMessageType, ReforgeOptimizeRequest } from '@generated/proto/api';
 import { Debuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
-import { GemColor, ItemQuality, Profession } from '@generated/proto/common';
-import { UIGem as Gem } from '@generated/proto/ui';
 
 import { ReforgeGearCache } from '../cache/reforge_cache';
 import { SimSettingCategories } from '../constants/sim_settings';
 import type { Player } from '../player/player';
-import { Database } from '../proto/database';
 import type { ReforgeOptimizeConfig } from '../sim';
-import { distinct } from '../utils/collections';
 
 // The player state a reforge solve depends on: the listed setting categories, plus bonus
 // stats and item-swap config, minus fields that are either keyed separately (equipment),
@@ -36,14 +32,13 @@ function cacheRelevantPlayerProto(player: Player<any>): PlayerProtoMessageType {
 }
 
 // The optimizer config a solve depends on: everything except per-run identity
-// (requestId, debug, mode) and the raid, which is keyed separately. Gem options are
-// order-normalized so equal sets hash equally.
+// (requestId, debug), the settings' epStats, which no solve reads, and the raid,
+// which is keyed separately.
 export function cacheRelevantReforgeRequest(reforgeRequest: ReforgeOptimizeRequest): ReforgeOptimizeRequest {
 	const configForHash = ReforgeOptimizeRequest.clone({ ...reforgeRequest, raid: undefined } as ReforgeOptimizeRequest);
 	configForHash.requestId = '';
 	configForHash.debug = false;
-	configForHash.mode = ReforgeOptimizeMode.ReforgeOptimizeModeSingle;
-	configForHash.gemOptions = configForHash.gemOptions.sort((a, b) => a.id - b.id);
+	if (configForHash.settings) configForHash.settings.epStats = [];
 	return configForHash;
 }
 
@@ -71,17 +66,7 @@ export async function getReforgeConfigHash({
 	});
 }
 
-export function getReforgeGemOptions(db: Database): Gem[] {
-	return distinct(
-		[GemColor.GemColorRed, GemColor.GemColorBlue, GemColor.GemColorYellow]
-			.flatMap(socketColor => db.getGems(socketColor))
-			.filter(gem => !gem.name.includes('Perfect') && gem.quality >= ItemQuality.ItemQualityRare)
-			.flat(),
-		(a, b) => a.id == b.id,
-	);
-}
-
-export function makeReforgeConfigRequestFields(config: ReforgeOptimizeConfig, db: Database) {
+export function makeReforgeConfigRequestFields(config: ReforgeOptimizeConfig) {
 	return {
 		preCapEpWeights: config.preCapEPWeights.toProto(),
 		undershootCaps: config.undershootCaps.toProto(),
@@ -92,16 +77,6 @@ export function makeReforgeConfigRequestFields(config: ReforgeOptimizeConfig, db
 			capType: softCap.capType,
 			postCapEPs: softCap.postCapEPs.slice(),
 		})),
-		gemOptions: getReforgeGemOptions(db).map(gem => ({
-			id: gem.id,
-			name: gem.name,
-			icon: gem.icon,
-			color: gem.color,
-			stats: gem.stats.slice(),
-			phase: gem.phase,
-			quality: gem.quality ?? ItemQuality.ItemQualityJunk,
-			unique: gem.unique,
-			requiredProfession: gem.requiredProfession ?? Profession.ProfessionUnknown,
-		})),
+		enchantOptions: config.enchantOptions,
 	};
 }

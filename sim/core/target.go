@@ -187,15 +187,16 @@ func NewTarget(options *proto.Target, targetIndex int32) *Target {
 
 	target := &Target{
 		Unit: Unit{
-			Type:        EnemyUnit,
-			Index:       targetIndex,
-			Label:       "Target " + strconv.Itoa(int(targetIndex)+1),
-			Level:       options.Level,
-			MobType:     options.MobType,
-			auraTracker: newAuraTracker(),
-			stats:       unitStats,
-			PseudoStats: stats.NewPseudoStats(),
-			Metrics:     NewUnitMetrics(),
+			Type:           EnemyUnit,
+			Index:          targetIndex,
+			Label:          "Target " + strconv.Itoa(int(targetIndex)+1),
+			Level:          options.Level,
+			MobType:        options.MobType,
+			CreatureFamily: options.CreatureFamily,
+			auraTracker:    newAuraTracker(),
+			stats:          unitStats,
+			PseudoStats:    stats.NewPseudoStats(),
+			Metrics:        NewUnitMetrics(),
 
 			StatDependencyManager: stats.NewStatDependencyManager(),
 			ReactionTime:          BossGCD,
@@ -214,8 +215,7 @@ func NewTarget(options *proto.Target, targetIndex int32) *Target {
 	// accomplished by specifying the extra (or reduced) Crit within the CritRating field of the
 	// proto stats array. Any specified CritRating will be applied as an OFFSET to the default
 	// level-based values, rather than as a replacement.
-	target.stats[stats.PhysicalCritPercent] += UnitLevelFloat64(target.Level, 4.6, 5.0, 5.2, 5.4, 5.6)
-	target.stats[stats.BlockValue] = 54
+	target.stats[stats.PhysicalCritPercent] += UnitLevelFloat64(target.Level-CharacterLevel, 5.0, 5.2, 5.4, 5.6)
 	target.addUniversalStatDependencies()
 
 	if target.Level == 63 && options.SuppressDodge {
@@ -351,25 +351,23 @@ func (target *Target) GetMetricsProto() *proto.UnitMetrics {
 type DynamicDamageDoneByCaster func(sim *Simulation, spell *Spell, attackTable *AttackTable) float64
 type DynamicThreatDoneByCaster DynamicDamageDoneByCaster
 
+// The crit chance, in percentage points, a target-side aura adds to one of its caster's spells.
+type DynamicCritChanceByCaster func(spell *Spell) float64
+
 // Holds cached values for outcome/damage calculations, for a specific attacker+defender pair.
 // These are updated dynamically when attacker or defender stats change.
 type AttackTable struct {
 	Attacker *Unit
 	Defender *Unit
 
-	BaseMissChance      float64
 	BaseSpellMissChance float64
-	BaseBlockChance     float64
-	BaseDodgeChance     float64
-	BaseParryChance     float64
-	BaseGlanceChance    float64
 	BaseCrushChance     float64
 
-	GlanceMultiplier     float64 // average damage a glance keeps
-	GlanceSpread         float64 // a glance keeps GlanceMultiplier +- this, uniformly
-	MeleeCritSuppression float64
-	SpellCritSuppression float64
-	HitSuppression       float64
+	AuraCritSuppression float64 // The most of the attacker's crit beyond base and Agility crit that a defender 3 or more levels above takes off.
+
+	MH     AttackTableHand
+	OH     AttackTableHand
+	Ranged AttackTableHand
 
 	// All "Apply Aura: Mod All Damage Done Against Creature" effects in Vanilla and TBC also increase the CritMultiplier.
 	// Explicitly for hunters' "Monster Slaying" and "Humanoid Slaying", but likewise for rogues' "Murder", or trolls' "Beastslaying".
@@ -391,6 +389,11 @@ type AttackTable struct {
 	// When you need more then 1 active, default to using the above one
 	// Used with EnableDamageDoneByCaster/DisableDamageDoneByCaster
 	DamageDoneByCasterExtraMultiplier []DynamicDamageDoneByCaster
+
+	// The crit chance target-side auras add to this attacker's spells alone, indexed the way
+	// DamageDoneByCasterExtraMultiplier is.
+	// Used with EnableCritChanceByCaster/DisableCritChanceByCaster
+	CritChanceByCasterBonus []DynamicCritChanceByCaster
 }
 
 func NewAttackTable(attacker *Unit, defender *Unit) *AttackTable {
@@ -408,44 +411,149 @@ func NewAttackTable(attacker *Unit, defender *Unit) *AttackTable {
 	}
 
 	if defender.Type == EnemyUnit {
-		// Assumes attacker (the Player) is level 60.
-		table.BaseSpellMissChance = UnitLevelFloat64(defender.Level, 0.02, 0.04, 0.05, 0.06, 0.17)
-		table.BaseMissChance = UnitLevelFloat64(defender.Level, 0.04, 0.05, 0.055, 0.06, 0.08)
-		table.BaseBlockChance = 0.05
-		table.BaseDodgeChance = UnitLevelFloat64(defender.Level, 0.04, 0.05, 0.055, 0.06, 0.065)
-		table.BaseParryChance = UnitLevelFloat64(defender.Level, 0.04, 0.05, 0.055, 0.06, 0.14)
-		// Level 60 glancing blows at a full 300 weapon skill: 10% + 2% per point of the
-		// target's defense above it, so 40% against a boss. The 24% / 75% this engine had are TBC's.
-		table.BaseGlanceChance = UnitLevelFloat64(defender.Level, 0, 0.10, 0.20, 0.30, 0.40)
-		// A glance keeps a uniform roll between min(1.3 - 0.05 x gap, 0.91) and
-		// max(min(1.2 - 0.03 x gap, 0.99), 0.2) of the damage, gap = defense - weapon skill (5 a level):
-		// 91-99% against +0 and +1, 80-90% against +2, 55-75% against a boss.
-		table.GlanceMultiplier = UnitLevelFloat64(defender.Level, 0.95, 0.95, 0.95, 0.85, 0.65)
-		table.GlanceSpread = UnitLevelFloat64(defender.Level, 0.04, 0.04, 0.04, 0.05, 0.10)
-		table.HitSuppression = UnitLevelFloat64(defender.Level, 0, 0, 0, 0, 0.01)
-		table.MeleeCritSuppression = UnitLevelFloat64(defender.Level, 0, 0, 0.01, 0.02, 0.048)
-		// No spell crit suppression against a higher level target: that is TBC's (0.3%/2.1%). A
-		// Classic-era caster crits a level 63 boss at the sheet rate, as on master.
+		levelDiff := combatLevelDiff(attacker, defender)
+
+		table.BaseSpellMissChance = spellMissChance(levelDiff)
+		// Era logs show no aura crit suppression against targets 1 or 2 levels above.
+		if levelDiff >= 3 {
+			table.AuraCritSuppression = 0.018
+		}
+
+		table.setWeapons(nil, nil, nil)
 	} else {
-		// Assumes defender (the Player) is level 60.
-		table.BaseSpellMissChance = 0.05
-		table.BaseMissChance = UnitLevelFloat64(attacker.Level, 0.054, 0.05, 0.048, 0.046, 0.044)
-		table.BaseBlockChance = UnitLevelFloat64(attacker.Level, 0.054, 0.05, 0.048, 0.046, 0.044)
-		table.BaseDodgeChance = UnitLevelFloat64(attacker.Level, 0.004, 0, -0.002, -0.004, -0.006)
-		table.BaseParryChance = UnitLevelFloat64(attacker.Level, 0.054, 0.05, 0.048, 0.046, 0.044)
-		table.BaseCrushChance = UnitLevelFloat64(attacker.Level, 0.0, 0.0, 0.0, 0.0, 0.15)
+		levelDiff := combatLevelDiff(defender, attacker)
+		levelDelta := -0.002 * float64(levelDiff)
+
+		table.BaseSpellMissChance = spellMissChance(-levelDiff)
+		table.BaseCrushChance = TernaryFloat64(levelDiff >= 3, 0.15, 0)
+
+		table.MH = AttackTableHand{
+			BaseMissChance:      0.05 + levelDelta,
+			BaseDodgeChance:     levelDelta,
+			BaseParryChance:     0.05 + levelDelta,
+			BaseBlockChance:     0.05 + levelDelta,
+			BaseSpellMissChance: table.BaseSpellMissChance,
+		}
+		table.OH = table.MH
+		table.Ranged = table.MH
 	}
 
 	return table
 }
 
-func EnableDamageDoneByCaster(index int, maxIndex int, attackTable *AttackTable, handler DynamicDamageDoneByCaster) {
-	if attackTable.DamageDoneByCasterExtraMultiplier == nil {
-		attackTable.DamageDoneByCasterExtraMultiplier = make([]DynamicDamageDoneByCaster, maxIndex)
+func combatLevelDiff(attacker *Unit, defender *Unit) int32 {
+	return min(defender.Level-attacker.Level, 3)
+}
+
+// The level-based spell miss for the defender's level minus the attacker's: 4% at equal level, one point
+// per level either side, 0% at -4 and below, and 17% at +3 and above.
+func spellMissChance(levelDiff int32) float64 {
+	if levelDiff >= 3 {
+		return 0.17
 	}
-	attackTable.DamageDoneByCasterExtraMultiplier[index] = handler
+	return max(0, 0.04+0.01*float64(levelDiff))
+}
+
+// The parts of an attack table that depend on the weapon skill of the attacking hand.
+type AttackTableHand struct {
+	BaseMissChance       float64
+	BaseDodgeChance      float64
+	BaseParryChance      float64
+	BaseBlockChance      float64
+	BaseGlanceChance     float64
+	GlanceMultiplierMin  float64
+	GlanceMultiplierMax  float64
+	MeleeCritSuppression float64
+	BaseSpellMissChance  float64 // The spell table's miss with the level difference taken from the hand's skill.
+}
+
+func newAttackTableHand(attacker *Unit, defender *Unit, weapon *Item) AttackTableHand {
+	levelDiff := combatLevelDiff(attacker, defender)
+	bonus := GetWeaponSkill(attacker, weapon)
+	skillDiff := float64(levelDiff*5) - bonus
+	// Parry, glance chance and crit suppression count skill only up to the level-based maximum.
+	baseSkillDiff := float64(levelDiff*5) - min(bonus, 0)
+	// The spell table's level difference, capped at +3, less skill above the level-based maximum / 5,
+	// truncated toward zero, so 5 points of skill short of the maximum count as one more target level and
+	// 5 above it as one less.
+	skillLevelDiff := int32(float64(levelDiff) - bonus/5)
+
+	hand := AttackTableHand{
+		BaseDodgeChance:     0.05 + skillDiff*0.001,
+		BaseBlockChance:     min(0.05, 0.05+skillDiff*0.001),
+		BaseGlanceChance:    Clamp(0.1+baseSkillDiff*0.02, 0, 1),
+		GlanceMultiplierMin: Clamp(1.3-0.05*skillDiff, 0.01, 0.91),
+		GlanceMultiplierMax: Clamp(1.2-0.03*skillDiff, 0.2, 0.99),
+		BaseSpellMissChance: spellMissChance(skillLevelDiff),
+	}
+	if skillDiff > 10 {
+		hand.BaseMissChance = 0.05 + skillDiff*0.002
+	} else {
+		hand.BaseMissChance = 0.05 + skillDiff*0.001
+	}
+	if baseSkillDiff > 10 {
+		hand.BaseParryChance = 0.05 + baseSkillDiff*0.006
+	} else {
+		hand.BaseParryChance = 0.05 + baseSkillDiff*0.001
+	}
+	if baseSkillDiff > 0 {
+		hand.MeleeCritSuppression = baseSkillDiff * 0.002
+	} else {
+		hand.MeleeCritSuppression = baseSkillDiff * 0.0004
+	}
+	return hand
+}
+
+// Recomputes the hand entries against an enemy defender from the weapons in each hand.
+func (at *AttackTable) setWeapons(mh *Item, oh *Item, ranged *Item) {
+	at.MH = newAttackTableHand(at.Attacker, at.Defender, mh)
+	at.OH = newAttackTableHand(at.Attacker, at.Defender, oh)
+	at.Ranged = newAttackTableHand(at.Attacker, at.Defender, ranged)
+}
+
+// Hand returns the entry of the hand the spell attacks with.
+func (at *AttackTable) Hand(spell *Spell) *AttackTableHand {
+	if spell.ProcMask.Matches(ProcMaskRanged) {
+		return &at.Ranged
+	}
+	if spell.ProcMask.Matches(ProcMaskMeleeOH) && !spell.ProcMask.Matches(ProcMaskMeleeMH) {
+		return &at.OH
+	}
+	return &at.MH
+}
+
+// Puts a handler in slot index of one of an attack table's caster slices, which is made maxIndex long
+// on first use.
+func setCasterSlot[T any](slots *[]T, index int, maxIndex int, handler T) {
+	if *slots == nil {
+		*slots = make([]T, maxIndex)
+	}
+	(*slots)[index] = handler
+}
+
+func EnableDamageDoneByCaster(index int, maxIndex int, attackTable *AttackTable, handler DynamicDamageDoneByCaster) {
+	setCasterSlot(&attackTable.DamageDoneByCasterExtraMultiplier, index, maxIndex, handler)
 }
 
 func DisableDamageDoneByCaster(index int, attackTable *AttackTable) {
 	attackTable.DamageDoneByCasterExtraMultiplier[index] = nil
+}
+
+func EnableCritChanceByCaster(index int, maxIndex int, attackTable *AttackTable, handler DynamicCritChanceByCaster) {
+	setCasterSlot(&attackTable.CritChanceByCasterBonus, index, maxIndex, handler)
+}
+
+func DisableCritChanceByCaster(index int, attackTable *AttackTable) {
+	attackTable.CritChanceByCasterBonus[index] = nil
+}
+
+// The percentage points of crit chance the handlers add to the spell.
+func (attackTable *AttackTable) critChanceByCaster(spell *Spell) float64 {
+	bonus := 0.0
+	for _, handler := range attackTable.CritChanceByCasterBonus {
+		if handler != nil {
+			bonus += handler(spell)
+		}
+	}
+	return bonus
 }

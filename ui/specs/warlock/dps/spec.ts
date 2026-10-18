@@ -1,11 +1,12 @@
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { APLRotation } from '@generated/proto/apl';
-import { ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
+import { EquipmentSpec, ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
-import { masterEpWeights } from '@sim/proto/master_ep_weights';
-import { DEFAULT_CASTER_GEM_STATS, Stats, UnitStat } from '@sim/proto/stats';
+import { WeaponSkillGroup } from '@sim/player/weapon_skill_groups';
+import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
+import { subscribeAll, subscribePlayerField } from '@sim/state/subscriptions';
 
 import * as WarlockInputs from './inputs';
 import * as Presets from './presets';
@@ -22,12 +23,13 @@ export default defineSpec<Spec.SpecWarlock>({
 	epStats: [
 		Stat.StatStamina,
 		Stat.StatIntellect,
+		Stat.StatSpirit,
 		Stat.StatSpellDamage,
 		Stat.StatShadowDamage,
 		Stat.StatFireDamage,
-		Stat.StatSpellHitRating,
-		Stat.StatSpellCritRating,
-		Stat.StatSpellHasteRating,
+		Stat.StatHitRating,
+		Stat.StatCritRating,
+		Stat.StatHasteRating,
 		Stat.StatSpellPiercing,
 		Stat.StatMP5,
 	],
@@ -45,43 +47,26 @@ export default defineSpec<Spec.SpecWarlock>({
 			Stat.StatFireDamage,
 			Stat.StatSpellPiercing,
 			Stat.StatMP5,
-			Stat.StatArcaneResistance,
-			Stat.StatFireResistance,
-			Stat.StatFrostResistance,
-			Stat.StatNatureResistance,
-			Stat.StatShadowResistance,
 		],
 		[PseudoStat.PseudoStatSpellHitPercent, PseudoStat.PseudoStatSpellCritPercent, PseudoStat.PseudoStatSpellHastePercent],
 	),
-	gemStats: [...DEFAULT_CASTER_GEM_STATS, Stat.StatShadowDamage, Stat.StatFireDamage],
+	displayWeaponSkillGroups: [WeaponSkillGroup.Wands],
 
 	defaults: {
 		// Default equipped gear.
-		gear: Presets.DEFAULT_GEAR.gear,
+		gear: EquipmentSpec.create(),
 
 		// Default EP weights for sorting gear in the gear picker.
-		// Master's weights (percent stats per 1%), in our ratings.
-		epWeights: masterEpWeights({
-			Mana: 0.01,
-			Intellect: 0.23,
-			MP5: 0.14,
-			SpellPower: 1,
-			FirePower: 0.1,
-			ShadowPower: 0.9,
-			SpellHit: 12.79,
-			SpellCrit: 7.92,
-			SpellHaste: 7.83,
-			Stamina: 0.01,
-		}),
+		epWeights: new Stats(),
 		statCaps: (() => {
-			return new Stats().withPseudoStat(PseudoStat.PseudoStatSpellHitPercent, 16);
+			return new Stats().withPseudoStat(PseudoStat.PseudoStatSpellHitPercent, 17);
 		})(),
 
 		// Default consumes settings.
 		consumables: Presets.DefaultConsumables,
 
 		// Default talents.
-		talents: Presets.DefaultTalents.data,
+		talents: Presets.DemoFireBrandTalents.data,
 		// Default spec-specific settings.
 		specOptions: Presets.DefaultOptions,
 
@@ -99,21 +84,24 @@ export default defineSpec<Spec.SpecWarlock>({
 		Stat.StatSpirit,
 		Stat.StatMP5,
 		Stat.StatSpellDamage,
-		Stat.StatSpellCritRating,
-		Stat.StatSpellHitRating,
-		Stat.StatSpellHasteRating,
+		Stat.StatCritRating,
+		Stat.StatHitRating,
+		Stat.StatHasteRating,
 		Stat.StatShadowDamage,
 		Stat.StatFireDamage,
 	],
+	playerInputs: {
+		inputs: [WarlockInputs.SoulShardsInput()],
+	},
 	// IconInputs to include in the 'Player' section on the settings tab.
-	playerIconInputs: [WarlockInputs.PetInput(), WarlockInputs.ArmorInput(), WarlockInputs.DemonicSacrificeInput(), WarlockInputs.PactSacrificeInput()],
+	playerIconInputs: [WarlockInputs.PetInput(), WarlockInputs.ArmorInput(), WarlockInputs.DemonicSacrificeInput()],
 
 	// Buff and Debuff inputs to include/exclude, overriding the EP-based defaults.
-	includeBuffDebuffInputs: [Stat.StatAttackPower],
+	includeBuffDebuffInputs: [],
 	excludeBuffDebuffInputs: [],
 	// Inputs to include in the 'Other' section on the settings tab.
 	otherInputs: {
-		inputs: [OtherInputs.DistanceFromTarget],
+		inputs: [OtherInputs.InputDelay, OtherInputs.DistanceFromTarget],
 	},
 	itemSwapSlots: [ItemSlot.ItemSlotMainHand, ItemSlot.ItemSlotOffHand, ItemSlot.ItemSlotTrinket1, ItemSlot.ItemSlotTrinket2],
 	encounterPicker: {
@@ -124,29 +112,29 @@ export default defineSpec<Spec.SpecWarlock>({
 	presets: {
 		epWeights: [],
 		// Preset talents that the user can quickly select.
-		talents: Presets.TalentPresets,
+		talents: [Presets.DemoFireBrandTalents, Presets.DemoShadowBrandTalents, Presets.DestroTalents, Presets.SmRuinTalents, Presets.AffWrackTalents],
 		// Preset rotations that the user can quickly select.
-		rotations: Presets.APLPresets,
+		rotations: [Presets.DEMO_FIRE_BRAND_APL, Presets.DEMO_SHADOW_BRAND_APL, Presets.DESTRO_APL, Presets.SM_RUIN_APL, Presets.AFF_WRACK_APL],
 
 		// Preset gear configurations that the user can quickly select.
-		gear: Presets.GEAR_PRESETS,
-		builds: Presets.BuildPresets,
+		gear: [],
+		// Talents, demons and rotation together, one per build.
+		builds: Presets.Builds,
 	},
 
-	// Master's rule: Demonic Pact keeps a demon out beside the sacrifice, so it has its own rotation.
-	// DS/Ruin is a rotation for a sacrificed pet, whatever tree the rest of the points sit in, and
-	// Shadow and Flame adds Shadowburn on cooldown to it; otherwise the deepest tree picks.
-	autoRotation: (player: Player<Spec.SpecWarlock>): APLRotation => {
-		const talents = player.getTalents();
-		if (talents.demonicPact) return Presets.RotationDemonicPact.rotation.rotation!;
-		if (talents.demonicSacrifice && talents.ruin) {
-			return (talents.shadowAndFlame ? Presets.RotationShadowAndFlame : Presets.RotationDSRuin).rotation.rotation!;
-		}
-		const points = player.getTalentTreePoints();
-		const tree = points.indexOf(Math.max(...points));
-		return [Presets.RotationAffliction, Presets.RotationDemonicPact, Presets.RotationDSRuin][tree].rotation.rotation!;
+	autoRotation: (_player: Player<Spec.SpecWarlock>): APLRotation => {
+		return Presets.DEMO_FIRE_BRAND_APL.rotation.rotation!;
 	},
 	sections: [WarlockInputs.CursesSection],
+
+	// Re-settles the demon out and the demon sacrificed when the talents or the options change, such as
+	// dropping Demonic Pact or Demonic Sacrifice.
+	derivedSettings: [
+		{
+			subscribe: player => subscribeAll([subscribePlayerField(player, 'talentsString'), subscribePlayerField(player, 'specOptions')]),
+			apply: player => WarlockInputs.settleDemons(player),
+		},
+	],
 
 	reforge: {},
 });

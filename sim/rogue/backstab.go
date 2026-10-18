@@ -2,61 +2,40 @@ package rogue
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-var backstabRank = spellData.Backstab.Highest()
+// Rank 8 is the highest trainable. Rank 9 exists from a AQ book; acquisition TBD
+var backstabRank = spellData.Backstab.Rank(8)
 
 func (rogue *Rogue) registerBackstabSpell() {
-	baseDamage := backstabRank.DamageEffect().Average(core.CharacterLevel)
-	weaponDamage := backstabRank.EffectN(2).Average(core.CharacterLevel) / 100
+	backstabBaseDamage := backstabRank.DamageEffect().Average()
+	comboPointGen := backstabRank.EnergizeEffect().Average()
+	config := spelldata.SpellConfig(&rogue.Unit, backstabRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
+	config.Flags |= SpellFlagBuilder | SpellFlagColdBlooded
+	config.ClassSpellMask = RogueSpellBackstab
+	config.DamageMultiplier = backstabRank.EffectN(2).Percent()
+	config.ExtraCastCondition = func(sim *core.Simulation, target *core.Unit) bool {
+		return !rogue.PseudoStats.InFrontOfTarget && rogue.HasDagger(core.MainHand)
+	}
 
-	// Puncturing Wounds also hands a combo point back, on effect 2 of the talent.
-	extraComboPointChance := spellData.PuncturingWounds.EffectAt(2).ValueAt(rogue.Talents.PuncturingWounds) / 100
-	cpMetrics := rogue.NewComboPointMetrics(core.ActionID{SpellID: spellData.PuncturingWoundsTriggered.Highest().ID})
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		rogue.BreakStealth(sim)
+		baseDamage := backstabBaseDamage +
+			spell.Unit.MHNormalizedWeaponDamage(sim, spell.MeleeAttackPower(target))
 
-	rogue.Backstab = rogue.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: backstabRank.ID},
-		SpellSchool:    backstabRank.SpellSchool(),
-		DefenseType:    backstabRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskMeleeMHSpecial,
-		Flags:          core.SpellFlagMeleeMetrics | SpellFlagBuilder | core.SpellFlagAPL,
-		ClassSpellMask: RogueSpellBackstab,
-		MaxRange:       core.MaxMeleeRange,
+		result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialNoBlockDodgeParry)
 
-		EnergyCost: core.EnergyCostOptions{
-			Cost:   int32(backstabRank.Cost()),
-			Refund: backstabRank.MissRefund(),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: backstabRank.GCD(),
-			},
-			IgnoreHaste: true,
-		},
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return !rogue.PseudoStats.InFrontOfTarget && rogue.HasDagger(core.MainHand)
-		},
-
-		DamageMultiplier:         weaponDamage,
-		DamageMultiplierAdditive: 1,
-		ThreatMultiplier:         1,
-
-		BonusCoefficient: backstabRank.DamageEffect().Coeff(),
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			rogue.BreakStealth(sim)
-
-			damage := baseDamage + spell.Unit.MHNormalizedWeaponDamage(sim, spell.MeleeAttackPower(target))
-			result := spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
-
-			if result.Landed() {
-				rogue.AddComboPoints(sim, 1, spell.ComboPointMetrics())
-				if extraComboPointChance > 0 && sim.Proc(extraComboPointChance, "Puncturing Wounds") {
-					rogue.AddComboPoints(sim, 1, cpMetrics)
-				}
-			} else {
-				spell.IssueRefund(sim)
+		if result.Landed() {
+			rogue.AddComboPoints(sim, int32(comboPointGen), spell.ComboPointMetrics())
+			chanceForBonus := spellData.PuncturingWounds.EffectAt(2).FractionAt(rogue.Talents.PuncturingWounds)
+			if sim.Proc(chanceForBonus, "Puncturing Wounds") {
+				rogue.AddComboPoints(sim, 1, rogue.puncturingWoundsComboPointMetrics)
 			}
-		},
-	})
+		} else {
+			spell.IssueRefund(sim)
+		}
+	}
+
+	rogue.Backstab = rogue.RegisterSpell(config)
 }

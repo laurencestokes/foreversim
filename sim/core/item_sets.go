@@ -85,13 +85,16 @@ func NewItemSet(set ItemSet) *ItemSet {
 	return &set
 }
 
-// missingItemSets collects sets whose items this client does not ship, so the count can
+// missingItemSets collects sets whose items the game files do not ship, so the count can
 // be reported rather than silently swallowed.
 var missingItemSets []string
 
 // MissingItemSets reports the set names skipped because the loaded database holds none of
 // their items.
 func MissingItemSets() []string { return missingItemSets }
+
+// The registered sets; a set skipped for holding no items in the database is in MissingItemSets instead.
+func ItemSets() []*ItemSet { return sets }
 
 type SetBonus struct {
 	// Name of the set.
@@ -213,8 +216,7 @@ func (character *Character) applyItemSetBonusEffects(agent Agent) {
 	activeSetBonuses := character.getActiveSetBonuses()
 
 	for _, activeSetBonus := range activeSetBonuses {
-		if activeSetBonus.RequiredProfession != proto.Profession_ProfessionUnknown &&
-			!character.HasProfession(activeSetBonus.RequiredProfession) {
+		if !character.MeetsProfession(activeSetBonus.RequiredProfession, 0) {
 			continue
 		}
 		setBonusAura := character.makeSetBonusStatusAura(activeSetBonus.Name, activeSetBonus.NumPieces, activeSetBonus.Slots, true)
@@ -226,8 +228,7 @@ func (character *Character) applyItemSetBonusEffects(agent Agent) {
 			if activeSetBonuses.ContainsBonus(unequippedSetBonus.Name, unequippedSetBonus.NumPieces) {
 				continue
 			}
-			if unequippedSetBonus.RequiredProfession != proto.Profession_ProfessionUnknown &&
-				!character.HasProfession(unequippedSetBonus.RequiredProfession) {
+			if !character.MeetsProfession(unequippedSetBonus.RequiredProfession, 0) {
 				continue
 			}
 			setBonusAura := character.makeSetBonusStatusAura(unequippedSetBonus.Name, unequippedSetBonus.NumPieces, unequippedSetBonus.Slots, false)

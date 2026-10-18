@@ -2,6 +2,8 @@ package shared
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
@@ -18,18 +20,24 @@ type spellDataAuras struct {
 	enemies     core.AuraArray
 }
 
-func newSpellDataAuras(character *core.Character, row *spelldata.Spell, config core.Aura) *spellDataAuras {
+func newSpellDataAuras(character *core.Character, row *spelldata.Spell, config core.Aura, wearerOpts ...spelldata.ParseOpt) *spellDataAuras {
 	auras := &spellDataAuras{}
 	if row.RequiredAreas != 0 && !character.Env.Encounter.InArea(row.AreaType()) {
 		return auras
 	}
 
-	if effects := spelldata.EffectsOn(row, spelldata.AuraOnWearer); len(effects) > 0 {
+	if len(spelldata.EffectsOn(row, spelldata.AuraOnWearer)) > 0 {
 		auras.wearer = character.RegisterAura(config)
-		auras.wearerStats = spelldata.ParseEffects(character, auras.wearer, row, spelldata.Effects(effects...)).Stats()
+		if effects := spelldata.ItemAuraParsedOn(row, spelldata.AuraOnWearer); len(effects) > 0 {
+			auras.wearerStats = spelldata.ParseEffects(character, auras.wearer, row,
+				append([]spelldata.ParseOpt{spelldata.Effects(effects...)}, wearerOpts...)...).Stats()
+		}
+		for _, shield := range spelldata.ItemAuraDamageShields(row) {
+			buffs.AttachDamageShield(auras.wearer, row.SpellSchool(), shield.Average(), shield.Coeff())
+		}
 	}
 
-	if effects := spelldata.EffectsOn(row, spelldata.AuraOnPet); len(effects) > 0 {
+	if effects := spelldata.ItemAuraParsedOn(row, spelldata.AuraOnPet); len(effects) > 0 {
 		for _, pet := range character.Pets {
 			if pet.IsGuardian() {
 				continue
@@ -40,7 +48,7 @@ func newSpellDataAuras(character *core.Character, row *spelldata.Spell, config c
 		}
 	}
 
-	if effects := spelldata.EffectsOn(row, spelldata.AuraOnEnemy); len(effects) > 0 {
+	if effects := spelldata.ItemAuraParsedOn(row, spelldata.AuraOnEnemy); len(effects) > 0 {
 		auras.enemies = enemyDebuffAuras(character, row, config.Duration, effects)
 	}
 
@@ -73,7 +81,7 @@ func registerSpellDataAuraProc(cfg SpellDataProc) {
 		config.Duration = procBuffDuration(cfg, trigger, buff)
 		auras := newSpellDataAuras(character, buff, config)
 
-		proc := spellDataProcListener(character, cfg, source, trigger, nil)
+		proc := spellDataProcListener(character, cfg, source, trigger)
 		if proc.ICD == 0 && buff.ID != trigger.ID {
 			proc.ICD = buff.CategoryCooldown()
 		}
@@ -81,6 +89,7 @@ func registerSpellDataAuraProc(cfg SpellDataProc) {
 		proc.Handler = func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 			auras.activate(sim, procDamageTarget(character, callback, spell, result))
 		}
+		proc.ActivatesAura = auras.wearer
 
 		triggerAura := source.registerTrigger(character, proc)
 		if auras.wearer == nil {
@@ -98,8 +107,8 @@ func registerSpellDataAuraProc(cfg SpellDataProc) {
 	})
 }
 
-// An item whose equip spell applies auras: the row's auras on the wearer and on each summoned pet for
-// as long as the item is worn. An equip spell that only re-applies another aura on a period is read as
+// An item or enchant whose equip spell applies auras: the row's auras on the wearer and on each
+// summoned pet for as long as the item or the enchant is worn. An equip spell that only re-applies another aura on a period is read as
 // that aura.
 func NewSpellDataEquipAura(cfg SpellDataProc, variants []ItemVariant) {
 	forEachSpellDataVariant(cfg, variants, registerSpellDataEquipAura)
@@ -123,13 +132,19 @@ func registerSpellDataEquipAura(cfg SpellDataProc) {
 		// settled, and would otherwise put the aura back on for an item only in the swap set.
 		config := spelldata.AuraConfig(row, spelldata.Label(cfg.Name))
 		config.Duration = core.NeverExpires
+		// Worn from the start, the aura is part of the gear the character sheet shows.
+		config.BuildPhase = core.Ternary(source.isEquipped(character, slots), core.CharacterBuildPhaseGear, core.CharacterBuildPhaseNone)
 		config.OnReset = func(aura *core.Aura, sim *core.Simulation) {
-			if character.HasItemEquipped(source.id, slots) {
+			if source.isEquipped(character, slots) {
 				aura.Activate(sim)
 			}
 		}
 
-		auras := newSpellDataAuras(character, row, config)
+		var opts []spelldata.ParseOpt
+		if hands := source.weaponHands(character, slots); hands != 0 {
+			opts = append(opts, spelldata.OnHand(hands))
+		}
+		auras := newSpellDataAuras(character, row, config, opts...)
 		for _, aura := range append([]*core.Aura{auras.wearer}, auras.pets...) {
 			if aura != nil {
 				source.registerProc(character, aura, slots)
@@ -139,19 +154,65 @@ func registerSpellDataEquipAura(cfg SpellDataProc) {
 }
 
 // An on-use item whose spell applies auras: the wearer's buff, its pets' and the debuff on the enemy
-// it is used on, for the row's duration.
+// it is used on, for the row's duration. One that lowers the wearer's threat is never used on its own:
+// the sim gains nothing from less threat and a tank loses by it, so only a timing or an APL action
+// that names it uses it.
 func NewSpellDataAuraOnUse(itemID int32) {
-	registerSpellDataOnUse(itemID, core.CooldownTypeDPS, spellDataOnUseAuraSpell)
+	registerSpellDataOnUseCooldown(itemID, func(character *core.Character, row *spelldata.Spell) (core.SpellConfig, core.MajorCooldown, bool) {
+		auras := newSpellDataAuras(character, row, spelldata.AuraConfig(row))
+		cooldown := core.MajorCooldown{Type: onUseAuraCooldownType(row, auras)}
+		if lowersThreat(row) {
+			cooldown = core.MajorCooldown{
+				Type:           core.CooldownTypeUnknown,
+				ShouldActivate: func(_ *core.Simulation, _ *core.Character) bool { return false },
+			}
+		}
+		return spellDataOnUseAuraSpell(character, row, auras), cooldown, true
+	})
 }
 
-func spellDataOnUseAuraSpell(character *core.Character, row *spelldata.Spell) core.SpellConfig {
-	auras := newSpellDataAuras(character, row, spelldata.AuraConfig(row))
+// The wearer's buff decides the cooldown: a damage shield makes it a survival cooldown, and its stats
+// otherwise sort it the way a stat on-use is sorted.
+func onUseAuraCooldownType(row *spelldata.Spell, auras *spellDataAuras) core.CooldownType {
+	if len(spelldata.ItemAuraDamageShields(row)) > 0 {
+		return core.CooldownTypeSurvival
+	}
+	return (&core.StatBuffAura{BuffedStatTypes: auras.wearerStats}).InferCDType()
+}
+
+func lowersThreat(row *spelldata.Spell) bool {
+	for _, i := range spelldata.EffectsOn(row, spelldata.AuraOnWearer) {
+		if e := row.EffectN(int(i)); e.Aura == dbcenums.A_MOD_THREAT && e.BasePoints < 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// A buff the game spends by charges starts with its full count, and the hits its row names spend
+// them: Weakness Analyzer's 1291101 drops on the first non-periodic crit.
+func spellDataOnUseAuraSpell(character *core.Character, row *spelldata.Spell, auras *spellDataAuras) core.SpellConfig {
+	charged := auras.wearer != nil && SpendsItsCharges(row)
+	if charged {
+		spelldata.AttachChargeSpender(character, auras.wearer, row, auras.wearer.Label+" Charge")
+	}
 
 	return core.SpellConfig{
 		SpellSchool: row.SpellSchool(),
 		ProcMask:    core.ProcMaskEmpty,
 		ApplyEffects: func(sim *core.Simulation, target *core.Unit, _ *core.Spell) {
 			auras.activate(sim, target)
+			if charged {
+				auras.wearer.SetStacks(sim, int32(row.ProcCharges))
+			}
 		},
 	}
+}
+
+// Whether a buff on the wearer drops after its ProcCharges are spent, and its row names the hits that
+// spend them. A row stating more than one stack as well is read as a stacking one, whose charges the
+// aura cannot keep apart from its stacks.
+func SpendsItsCharges(row *spelldata.Spell) bool {
+	return row.ProcCharges > 0 && row.MaxStack <= 1 && len(spelldata.EffectsOn(row, spelldata.AuraOnWearer)) > 0 &&
+		statesATrigger(row)
 }

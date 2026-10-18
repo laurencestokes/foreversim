@@ -3,6 +3,7 @@ package paladin
 import (
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/spelldata"
+	"github.com/wowsims/forever/sim/core/stats"
 )
 
 var HolyStrikeRankMap = spellData.HolyStrike
@@ -10,46 +11,33 @@ var HolyStrikeRankMap = spellData.HolyStrike
 // Holy Strike
 // https://www.wowhead.com/forever/spell=10333
 //
-// An instant strike that causes 50% weapon damage plus an additional 93 as Holy damage. 10 sec
-// cooldown.
+// An instant strike that causes 50% weapon damage plus an additional 97 to 121 as Holy damage.
 //
-// The row states the flat part as its normalized-weapon-damage effect (121) and the percentage as a
-// weapon-percent-damage effect (31). The client adds the flat amount to the normalized swing and
-// then takes the percentage of the sum, the way it does for Backstab. Build 70009's ranks are
-// 25/29/32/36/39/43/46/50%, so rank 8 is 50% of (weapon + 81 to 105).
+// The row states the flat part as its normalized-weapon-damage effect and the percentage as a
+// second effect, and the percentage scales the flat part too: the 2 to 4 is Rank 1's 12 ± 1.5 at 25%.
+//
+// The spell power coefficient sits on the flat effect, but the paladin's own spell power goes
+// through the weapon percent, as it does for the Seal of Command proc: Rank 3's 0.429 at 32% is
+// 0.137 per point of spell power. The damage-against-mob-type gear is added after the percent at
+// the full coefficient, and the Holy damage the target takes extra, Judgement of the Crusader, is
+// taken at the full coefficient after the done multipliers, where core adds it.
 func (paladin *Paladin) registerHolyStrike(_ int32, rank *spelldata.Spell) {
-	flat := rank.DamageEffect()
-	weaponPercent := rank.EffectN(2).Percent()
+	coefficient := rank.DamageEffect().Coeff()
 
-	paladin.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    rank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskMeleeMHSpecial,
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		ClassSpellMask: SpellMaskHolyStrike,
-		Rank:           rank.RankNumber(),
-		MaxRange:       core.MaxMeleeRange,
+	// No BonusCoefficient: the spell power goes through the weapon percent, so the strike adds it by
+	// hand below rather than letting CalcDamage add it on top.
+	config := spelldata.SpellConfig(&paladin.Unit, rank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
+	config.ClassSpellMask = SpellMaskHolyStrike
+	config.TakenBonusCoefficient = coefficient
 
-		ManaCost: rank.ManaCost(),
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: rank.GCD(),
-			},
-			// Client cooldown category 2404 holds Holy Strike and Hammer of the Righteous.
-			CD: core.Cooldown{
-				Timer:    paladin.sharedTimer(&paladin.holyStrikeTimer),
-				Duration: cooldown(rank),
-			},
-		},
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		weaponDamage := spell.Unit.MHNormalizedWeaponDamage(sim, spell.MeleeAttackPower(target))
+		baseDamage := rank.WeaponStrike(sim, spell, weaponDamage, coefficient*spell.SpellDamage(target))
 
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-		BonusCoefficient: flat.Coeff(),
+		baseDamage += coefficient * spell.Unit.AttackTables[target.UnitIndex].MobTypeBonusStats[target.MobType][stats.SpellDamage]
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			baseDamage := weaponPercent * (spell.Unit.MHNormalizedWeaponDamage(sim, spell.MeleeAttackPower(target)) + flat.Roll(sim, core.CharacterLevel))
-			spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
-		},
-	})
+		spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
+	}
+
+	paladin.RegisterSpell(config)
 }

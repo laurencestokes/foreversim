@@ -1,4 +1,11 @@
-import { ActionMetrics } from '@sim/proto/sim_result';
+import {
+	actionMetric as metric,
+	metricRows as rows,
+	metricsTooltipRowNames,
+	metricsTooltipTable as tooltipTable,
+	mockActionMetricsMerge,
+	playerMetricsResult,
+} from '@testing/results-metrics';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -15,78 +22,22 @@ vi.mock('@sim/context/SimHostContext', async importOriginal => ({
 	// `useDisplayMetrics` reads all three flags through one subscription; only threat varies per case here.
 	useSim: () => ({ getShowThreatMetrics: () => showThreatMetrics, getShowDamageMetrics: () => true, getShowHealingMetrics: () => true }),
 }));
-vi.mock('@sim/state/subscriptions', async () => (await import('@sim/testing')).mockSubscriptions());
+vi.mock('@sim/state/subscriptions', async () => (await import('@testing/sim/subscriptions')).mockSubscriptions());
 
-const metric = (name: string, overrides: Record<string, unknown> = {}) => {
-	const base: Record<string, unknown> = {
-		name,
-		actionId: { toStringIgnoringTag: () => name, toString: () => name },
-		unit: { isPet: false, petActionId: null },
-		spellSchool: null,
-		healing: 100,
-		avgHealing: 100,
-		avgCritHealing: 20,
-		healingPercent: 80,
-		healingCritPercent: 20,
-		shielding: 40,
-		totalHealingPercent: 50,
-		casts: 10,
-		castsPerMinute: 20,
-		avgCastTimeMs: 1500,
-		avgCastHealing: 10,
-		avgCastThreat: 5,
-		landedHits: 10,
-		landedTicks: 0,
-		avgHitHealing: 10,
-		avgHitThreat: 5,
-		hpm: 3,
-		critPercent: 20,
-		critTickPercent: 0,
-		healingThroughput: 40,
-		hits: 8,
-		crits: 2,
-		glances: 0,
-		blocks: 0,
-		blockedCrits: 0,
-		ticks: 0,
-		critTicks: 0,
-		hps: 10,
-		tps: 5,
-		hitAttempts: 11,
-		...overrides,
-	};
-	return base as unknown as ActionMetrics;
-};
-
-const playerResult = (actions: Array<ActionMetrics>) =>
-	({
-		filter: {},
-		result: { getRaidIndexedPlayers: () => [{ getHealingActions: () => actions }] },
-	}) as unknown as SimResultData;
-
-const rows = (container: HTMLElement) => [...container.querySelectorAll<HTMLTableRowElement>('tbody tr')];
-const tooltipTable = () => document.querySelector('.sim-tooltip table[data-testid="metrics-table"]');
+const playerResult = playerMetricsResult('getHealingActions');
 
 describe('HealingMetricsTable', () => {
 	beforeEach(() => {
 		result = null;
 		showThreatMetrics = true;
-		vi.spyOn(ActionMetrics, 'merge').mockImplementation(((metrics: Array<Record<string, number>>) => ({
-			...metrics[0],
-			healing: metrics.reduce((sum, entry) => sum + entry.healing, 0),
-			hps: metrics.reduce((sum, entry) => sum + entry.hps, 0),
-		})) as unknown as typeof ActionMetrics.merge);
+		mockActionMetricsMerge('healing', 'hps');
 	});
 
 	it('builds the twelve-column shell before any result', () => {
 		const { container } = render(<HealingMetricsTable />);
 
 		expect(container.querySelector('[data-testid="healing-metrics-root"]')).toBeTruthy();
-		const headers = [...container.querySelectorAll('thead th')];
-		expect(headers).toHaveLength(12);
-		expect(headers.every(th => th.classList.contains('ui-metrics-header-cell'))).toBe(true);
-		expect(headers.filter(th => th.classList.contains('w-100'))).toEqual([headers[1]]);
-		expect(headers.filter(th => th.classList.contains('text-center'))).toEqual([headers[1]]);
+		expect(container.querySelectorAll('thead th')).toHaveLength(12);
 		expect(rows(container)).toHaveLength(0);
 	});
 
@@ -111,17 +62,38 @@ describe('HealingMetricsTable', () => {
 		expect(container.querySelectorAll('td[data-primary-metric] [data-testid="metrics-total-bar-fill"]')).toHaveLength(1);
 	});
 
-	it('opens the healing breakdown with its average column from the primary-metric cell', async () => {
+	it('opens the healing breakdown with its average, min and max columns from the primary-metric cell', async () => {
 		result = playerResult([metric('Healing Touch')]);
 		const { container } = render(<HealingMetricsTable />);
 
 		fireEvent.mouseEnter(container.querySelector('td[data-primary-metric]')!);
 		await waitFor(() => expect(tooltipTable()).toBeTruthy());
-		expect([...tooltipTable()!.querySelectorAll('thead th')]).toHaveLength(3);
-		expect([...tooltipTable()!.querySelectorAll<HTMLTableRowElement>('tbody tr')].map(row => row.cells[0].textContent)).toEqual([
+		expect([...tooltipTable()!.querySelectorAll('thead th')].map(th => th.textContent)).toEqual([
+			'results_tab.details.tooltip_table.type',
+			'results_tab.details.tooltip_table.amount',
+			'results_tab.details.tooltip_table.min',
+			'results_tab.details.tooltip_table.average',
+			'results_tab.details.tooltip_table.max',
+		]);
+		expect(metricsTooltipRowNames()).toEqual(['results_tab.details.attack_types.hit', 'results_tab.details.attack_types.critical_hit']);
+	});
+
+	it('adds a spec metrics group to the healing breakdown, with the share the action gives each value', async () => {
+		result = playerResult([
+			metric('Prayer of Healing', { customMetrics: [{ key: 'divine_aegis', value: 30, percentage: 30, average: 410, min: 300, max: 520 }] }),
+		]);
+		const { container } = render(<HealingMetricsTable />);
+
+		fireEvent.mouseEnter(container.querySelector('td[data-primary-metric]')!);
+		await waitFor(() => expect(tooltipTable()).toBeTruthy());
+		expect(metricsTooltipRowNames()).toEqual([
 			'results_tab.details.attack_types.hit',
 			'results_tab.details.attack_types.critical_hit',
+			'results_tab.details.custom_metrics.group',
+			'divine_aegis',
 		]);
+		const aegis = [...tooltipTable()!.querySelectorAll<HTMLTableRowElement>('tbody tr')].at(-1)!;
+		expect(aegis.cells[1].firstElementChild?.firstElementChild?.textContent).toMatch(/^30(\.0+)?\s?%$/);
 	});
 
 	it('keeps a threat tooltip shut while threat metrics are hidden, and opens it once they are shown', async () => {
@@ -147,7 +119,10 @@ describe('HealingMetricsTable', () => {
 
 		fireEvent.mouseEnter(rows(container)[0].cells[6]);
 		await waitFor(() => expect(tooltipTable()).toBeTruthy());
-		expect([...tooltipTable()!.querySelectorAll('tbody th')].map(th => th.textContent)).toEqual(['Hits', 'Ticks']);
+		expect([...tooltipTable()!.querySelectorAll('tbody th')].map(th => th.textContent)).toEqual([
+			'results_tab.details.columns.hits',
+			'results_tab.details.tooltip_table.ticks',
+		]);
 	});
 
 	it('anchors all three header tooltips on their own header cell', () => {

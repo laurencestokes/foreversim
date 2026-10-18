@@ -65,10 +65,10 @@ func headerFields(s *spelldata.Spell) []field {
 	return out
 }
 
-// SpellPower states either a flat amount out of the bar or a share of the caster's maximum.
+// SpellPower states either a flat amount out of the bar or a share of the caster's base.
 func cost(s *spelldata.Spell, p *spelldata.Power) string {
 	if p.CostPct != 0 {
-		return fmt.Sprintf("%s%% of maximum %s", number(float64(p.CostPct)), powerName(p.Type))
+		return fmt.Sprintf("%s%% of base %s", number(float64(p.CostPct)), powerName(p.Type))
 	}
 	if p.Cost == 0 {
 		return ""
@@ -88,7 +88,7 @@ func rangePhrase(s *spelldata.Spell) string {
 }
 
 // The attributes sim/core/spelldata/attributes.go names, which are the ones the sim acts on. IsAProc
-// is stated only when the client denies it, since every other row is one.
+// is stated only when the game files deny it, since every other row is one.
 func attributeList(s *spelldata.Spell) string {
 	var out []string
 	for _, attr := range []struct {
@@ -116,8 +116,8 @@ func attributeList(s *spelldata.Spell) string {
 // What the row says about a proc: where the rate is stated, the rate itself, the hits the mask lets
 // through and what the tooltip added that the mask cannot say.
 //
-// The heartbeat bit alone is the client's default on any aura, so a row carrying nothing else is not a
-// proc and states no summary.
+// The heartbeat bit alone is the game files' default on any aura, so a row carrying nothing else is
+// not a proc and states no summary.
 func procSummary(s *spelldata.Spell) string {
 	if s.ProcFlags[0]&^dbcenums.PROC_FLAG_HEARTBEAT == 0 && s.ProcFlags[1] == 0 && s.RPPM == 0 {
 		return ""
@@ -183,8 +183,8 @@ func seconds(ms int32) string {
 	return number(float64(ms)/1000) + " s"
 }
 
-// Read back as the float32 the client's columns are, so a base point of 5.449999809265137 - the
-// widening of the client's 5.45 - prints as the client states it.
+// Read back as the float32 the game files' columns are, so a base point of 5.449999809265137 - the
+// widening of the game files' 5.45 - prints as the game files state it.
 func number(v float64) string {
 	return strconv.FormatFloat(v, 'f', -1, 32)
 }

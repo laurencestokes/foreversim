@@ -2,38 +2,28 @@ package warlock
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+// Granted by the Shadowburn talent. The 15 sec cooldown is the row's category cooldown, and the Soul Shard
+// each cast takes the row's reagent; the one a kill returns is not modelled.
 func (warlock *Warlock) registerShadowBurn() {
-	rank := spellData.Shadowburn.Highest()
+	rankedSpell := spellData.Shadowburn.ByID(18871)
+	shadowburnHit := rankedSpell.DamageEffect()
 
-	warlock.Shadowburn = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    rank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL | core.SpellFlagBinary,
-		ClassSpellMask: WarlockSpellShadowBurn,
-		MaxRange:       float64(rank.MaxRange),
+	config := spelldata.SpellConfig(&warlock.Unit, rankedSpell, spelldata.Magic(core.ProcMaskSpellDamage))
+	config.ClassSpellMask = WarlockSpellShadowBurn
 
-		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: rank.GCD(),
-			},
-			CD: core.Cooldown{
-				Timer:    warlock.NewTimer(),
-				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
-			},
-		},
+	// Roll the damage and to hit
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealDamage(sim, target, shadowburnHit.Average(), spell.OutcomeMagicHitAndCrit)
+	}
 
-		DamageMultiplierAdditive: 1,
-		DamageMultiplier:         1,
-		ThreatMultiplier:         1,
-		BonusCoefficient:         rank.DamageEffect().Coeff(),
+	// Calculate expected damage from the row's average hit
+	config.ExpectedInitialDamage = func(sim *core.Simulation, target *core.Unit, spell *core.Spell, _ bool) *core.SpellResult {
+		return spell.CalcDamage(sim, target, shadowburnHit.Average(), spell.OutcomeExpectedMagicHitAndCrit)
+	}
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, rank.DamageEffect().Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-		},
-	})
+	warlock.useReagents(&config, rankedSpell)
+	warlock.Shadowburn = warlock.RegisterSpell(config)
 }

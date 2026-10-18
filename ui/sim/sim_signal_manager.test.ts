@@ -33,20 +33,20 @@ describe('SimSignalManager.abortType', () => {
 		expect(stopped.sort()).toEqual(['bulk', 'individual', 'reforge', 'stat-weights']);
 	});
 
-	// Bulk registered under the individual sim's type until it claimed 0x8, so the two could not be
-	// told apart: cancelling a batch reached for `All` and took a stat-weights run with it.
-	it('tells a batch apart from a single sim, and from a stat-weights run', async () => {
+	// Each run kind has its own type, so cancelling a batch leaves a stat-weights or optimizer run alone.
+	it('tells a batch apart from a single sim, a stat-weights run and a gear optimizer run', async () => {
 		const manager = new SimSignalManager();
 		const stopped: string[] = [];
 		for (const [name, type] of [
 			['individual', RequestTypes.IndividualSim],
 			['bulk', RequestTypes.BulkSim],
 			['stat-weights', RequestTypes.StatWeights],
+			['reforge', RequestTypes.ReforgeOptimize],
 		] as const) {
 			manager.registerRunning(type).abort.onTrigger(async () => void stopped.push(name));
 		}
 
-		await manager.abortType(RequestTypes.BulkSim | RequestTypes.ReforgeOptimize);
+		await manager.abortType(RequestTypes.BulkSim);
 
 		expect(stopped).toEqual(['bulk']);
 	});

@@ -1,9 +1,37 @@
-import { ErrorOutcome, ErrorOutcomeType, RaidSimRequest, RaidSimResult } from '@generated/proto/api';
-import { Profession } from '@generated/proto/common';
+import {
+	BulkCandidatesResult,
+	BulkEnchantSlotOptions,
+	BulkSettings,
+	BulkSimResult,
+	ErrorOutcome,
+	ErrorOutcomeType,
+	Raid as RaidProto,
+	RaidSimRequest,
+	RaidSimResult,
+	ReforgeOptimizeResult,
+	ReforgeSettings,
+} from '@generated/proto/api';
+import {
+	ConsumableType,
+	Encounter as EncounterProto,
+	EquipmentSpec,
+	ItemRandomSuffix,
+	ItemSlot,
+	ItemSpec,
+	ItemType,
+	Profession,
+	Stat,
+	Target,
+} from '@generated/proto/common';
+import { UIEnchant, UIItem } from '@generated/proto/ui';
+import { makeEquippedItem } from '@testing/storybook/fixtures/gear';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Gear } from './proto/gear';
+import { EquippedItem } from './proto/equipped_item';
+import { Gear } from './proto/gear';
+import { Stats } from './proto/stats';
 import { Sim, SimError } from './sim';
+import { RequestTypes } from './sim_signal_manager';
 import type { Env } from './state/env';
 
 const mocks = vi.hoisted(() => ({
@@ -12,6 +40,11 @@ const mocks = vi.hoisted(() => ({
 	isWasm: vi.fn(() => Promise.resolve(false)),
 	getNumWorkers: vi.fn(() => 1),
 	computeStats: vi.fn(() => new Promise(() => {})),
+	reforgeOptimizeAsync: vi.fn(),
+	runConcurrentBulkSim: vi.fn(),
+	bulkSimAsync: vi.fn(),
+	bulkCandidates: vi.fn(),
+	db: {} as Record<string, unknown>,
 }));
 
 vi.mock('./workers/worker_pool', () => ({
@@ -22,17 +55,25 @@ vi.mock('./workers/worker_pool', () => ({
 		isWasm = mocks.isWasm;
 		raidSimAsync = mocks.raidSimAsync;
 		computeStats = mocks.computeStats;
+		reforgeOptimizeAsync = mocks.reforgeOptimizeAsync;
+		bulkSimAsync = mocks.bulkSimAsync;
+		bulkCandidates = mocks.bulkCandidates;
 	},
 }));
 
+beforeEach(() => {
+	mocks.isWasm.mockReset().mockResolvedValue(false);
+	for (const key of Object.keys(mocks.db)) delete mocks.db[key];
+});
+
 vi.mock('./wasm', () => ({
-	runConcurrentBulkSim: vi.fn(),
+	runConcurrentBulkSim: mocks.runConcurrentBulkSim,
 	runConcurrentSim: mocks.runConcurrentSim,
 	runConcurrentStatWeights: vi.fn(),
 }));
 
 vi.mock('./proto/database', () => ({
-	Database: { get: () => Promise.resolve({}) },
+	Database: { get: () => Promise.resolve(mocks.db) },
 }));
 
 const makeEnv = (): Env => ({
@@ -56,9 +97,6 @@ const makeGear = (label: string) =>
 		withoutEnchanting: vi.fn(() => makeGear(`${label}-stripped`)),
 		toDatabase: vi.fn(() => ({ label })),
 		asSpec: vi.fn(() => ({ label })),
-		// gearAsBackendSpec reads both of these before handing equipment to the backend.
-		getItemSlots: vi.fn(() => []),
-		hasInactiveMetaGem: vi.fn(() => false),
 		adjustImbues: vi.fn((consumables: unknown) => consumables),
 	}) as unknown as Gear;
 
@@ -84,7 +122,7 @@ describe('Sim.runSim', () => {
 		const sim = makeSim();
 		vi.spyOn(sim.raid, 'isEmpty').mockReturnValue(true);
 
-		await expect(sim.runSim({ raw: true })).rejects.toThrow('Raid is empty!');
+		await expect(sim.runSim({ raw: true })).rejects.toThrow('sim.run_errors.raid_empty');
 		expect(runningSignals(sim).size).toBe(0);
 		expect(mocks.raidSimAsync).not.toHaveBeenCalled();
 	});
@@ -93,7 +131,7 @@ describe('Sim.runSim', () => {
 		const sim = makeSim();
 		vi.spyOn(sim.encounter, 'getTargets').mockReturnValue([]);
 
-		await expect(sim.runSim({ raw: true })).rejects.toThrow('Encounter has no targets!');
+		await expect(sim.runSim({ raw: true })).rejects.toThrow('sim.run_errors.no_targets');
 	});
 
 	it('substitutes the gear option onto the player, stripping ring enchants for a non-enchanter', async () => {
@@ -276,5 +314,275 @@ describe('Sim.updateCharacterStats', () => {
 		await stale;
 
 		expect(crashes).toEqual([]);
+	});
+});
+
+describe('Sim stats for an edited player', () => {
+	const hit = (value: number) => Stats.fromMap({ [Stat.StatHitRating]: value });
+
+	const makeBonusSim = () => {
+		const sim = makeSim();
+		vi.spyOn(sim, 'getModifiedRaidProto').mockReturnValue(RaidProto.create({ parties: [{ players: [{ bonusStats: hit(5).toProto() }] }] }));
+		vi.spyOn(sim.encounter, 'toProto').mockReturnValue({} as any);
+		return sim;
+	};
+
+	beforeEach(() => {
+		mocks.computeStats.mockReset();
+	});
+
+	it('reports an error result for a gear set as a crash and still returns the stats', async () => {
+		const sim = makeBonusSim();
+		const crashes: unknown[] = [];
+		sim.crashEmitter.on(e => crashes.push(e));
+		mocks.computeStats.mockResolvedValue({ errorResult: 'boom', raidStats: { parties: [{ players: [{ finalStats: hit(7).toProto() }] }] } } as any);
+
+		const playerStats = await sim.getCharacterStatsForGear(makeGear('candidate'));
+
+		expect(crashes).toEqual([new SimError('boom')]);
+		expect(Stats.fromProto(playerStats.finalStats).getStat(Stat.StatHitRating)).toBe(7);
+	});
+
+	it('hands back the stats of the raid it is given, an error result included, and reports no crash', async () => {
+		const sim = makeBonusSim();
+		const crashes: unknown[] = [];
+		sim.crashEmitter.on(e => crashes.push(e));
+		const result = { errorResult: 'boom', raidStats: { parties: [{ players: [{ finalStats: hit(7).toProto() }] }] } };
+		mocks.computeStats.mockResolvedValue(result as any);
+		const raid = RaidProto.create({ parties: [{ players: [{ bonusStats: hit(15).toProto() }] }] });
+
+		expect(await sim.computeRaidStats(raid)).toBe(result);
+		const [request] = mocks.computeStats.mock.calls[0] as unknown as [{ raid: RaidProto }];
+		expect(request.raid).toEqual(raid);
+		expect(crashes).toEqual([]);
+	});
+});
+
+describe('Sim.runRaidSimRequest', () => {
+	beforeEach(() => {
+		mocks.raidSimAsync.mockReset();
+	});
+
+	it('runs the request it is given and emits no result', async () => {
+		const sim = makeSim();
+		const emitted = vi.fn();
+		sim.simResultEmitter.on(emitted);
+		const result = RaidSimResult.create({ raidMetrics: { parties: [] } });
+		mocks.raidSimAsync.mockResolvedValue(result);
+		const request = makeRequest(2);
+
+		expect(await sim.runRaidSimRequest(request, RequestTypes.StatSweep, vi.fn())).toBe(result);
+		expect(mocks.raidSimAsync.mock.calls[0][0]).toBe(request);
+		expect(emitted).not.toHaveBeenCalled();
+	});
+
+	it('is stopped by an abort of its own type and not by an abort of the plain sims', async () => {
+		const sim = makeSim();
+		const aborted = ErrorOutcome.create({ type: ErrorOutcomeType.ErrorOutcomeAborted });
+		mocks.raidSimAsync.mockImplementation(
+			(_request, _onProgress, signals) => new Promise(resolve => signals.abort.onTrigger(async () => resolve(RaidSimResult.create({ error: aborted })))),
+		);
+		const run = sim.runRaidSimRequest(makeRequest(2), RequestTypes.StatSweep, vi.fn());
+		await vi.waitFor(() => expect(mocks.raidSimAsync).toHaveBeenCalled());
+
+		await sim.signalManager.abortType(RequestTypes.IndividualSim | RequestTypes.BulkSim);
+		let settled = false;
+		void run.then(() => (settled = true));
+		await Promise.resolve();
+		expect(settled).toBe(false);
+
+		await sim.signalManager.abortType(RequestTypes.StatSweep);
+		expect((await run).error).toEqual(aborted);
+	});
+
+	it('throws a run that failed', async () => {
+		mocks.raidSimAsync.mockResolvedValue(
+			RaidSimResult.create({ error: ErrorOutcome.create({ type: ErrorOutcomeType.ErrorOutcomeError, message: 'boom' }) }),
+		);
+
+		await expect(makeSim().runRaidSimRequest(makeRequest(2), RequestTypes.StatSweep, vi.fn())).rejects.toThrow(new SimError('boom'));
+	});
+});
+
+describe('Sim.makeRaidSimRequest seed', () => {
+	const seedOf = (sim: Sim) => {
+		vi.mocked(sim.makeRaidSimRequest).mockRestore();
+		vi.spyOn(sim, 'getModifiedRaidProto').mockReturnValue(RaidProto.create());
+		vi.spyOn(sim.encounter, 'toProto').mockReturnValue({} as any);
+		return sim.makeRaidSimRequest().simOptions!.randomSeed;
+	};
+
+	it('never draws 0, which the sim would replace with the clock', () => {
+		const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+		try {
+			expect(seedOf(makeSim())).toBeGreaterThan(0n);
+		} finally {
+			random.mockRestore();
+		}
+	});
+
+	it('takes the fixed seed when one is set', () => {
+		const sim = makeSim();
+		sim.setFixedRngSeed(42);
+
+		expect(seedOf(sim)).toBe(42n);
+	});
+});
+
+describe('Sim.reforgeOptimize', () => {
+	it('ships every row of each enchant the optimizer may pick, beside the equipped ones', async () => {
+		const crusader = UIEnchant.create({ effectId: 1900, itemId: 1, name: 'Enchant Weapon - Crusader', type: ItemType.ItemTypeWeapon });
+		const lesserImpact = UIEnchant.create({ effectId: 1897, itemId: 2, name: 'Enchant 2H Weapon - Lesser Impact', type: ItemType.ItemTypeWeapon });
+		const superiorStriking = UIEnchant.create({ effectId: 1897, itemId: 3, name: 'Enchant Weapon - Superior Striking', type: ItemType.ItemTypeWeapon });
+		Object.assign(mocks.db, {
+			getItemEffectRandPropPoints: () => undefined,
+			getEnchantsByEffectId: (effectId: number) => [crusader, lesserImpact, superiorStriking].filter(enchant => enchant.effectId === effectId),
+		});
+		mocks.reforgeOptimizeAsync.mockReset().mockResolvedValue(ReforgeOptimizeResult.create());
+		const sim = makeSim();
+		vi.spyOn(sim, 'getModifiedRaidProto').mockReturnValue(RaidProto.create({ parties: [{ players: [{}] }] }));
+
+		await sim.reforgeOptimize({
+			gear: new Gear({ [ItemSlot.ItemSlotMainHand]: makeEquippedItem({ enchant: crusader }) }),
+			preCapEPWeights: new Stats(),
+			undershootCaps: new Stats(),
+			settings: ReforgeSettings.create(),
+			softCaps: [],
+			enchantOptions: [BulkEnchantSlotOptions.create({ slot: ItemSlot.ItemSlotMainHand, effectIds: [1897] })],
+		});
+
+		const [request] = mocks.reforgeOptimizeAsync.mock.calls[0];
+		const shipped = request.raid.parties[0].players[0].database.enchants.map((enchant: { name: string }) => enchant.name).sort();
+		expect(shipped).toEqual([crusader.name, lesserImpact.name, superiorStriking.name].sort());
+	});
+});
+
+describe('Sim.runBulkSim', () => {
+	const equipmentWithBack = (back: ItemSpec) =>
+		EquipmentSpec.create({
+			items: Array.from({ length: ItemSlot.ItemSlotRanged + 1 }, (_, slot) => (slot === ItemSlot.ItemSlotBack ? back : ItemSpec.create())),
+		});
+
+	it('ships every item, suffix and enchant a candidate can carry, from the baseline and the settings alone', async () => {
+		const cloakAgility = UIEnchant.create({ effectId: 849, itemId: 1, name: 'Enchant Cloak - Minor Agility', type: ItemType.ItemTypeBack });
+		const cloakResistance = UIEnchant.create({ effectId: 1889, itemId: 2, name: 'Enchant Cloak - Superior Defense', type: ItemType.ItemTypeBack });
+		const cloakDodge = UIEnchant.create({ effectId: 2622, itemId: 3, name: 'Enchant Cloak - Dodge', type: ItemType.ItemTypeBack });
+		const baselineCloak = new EquippedItem({
+			item: UIItem.create({ id: 20, type: ItemType.ItemTypeBack, scalingOptions: { 0: { ilvl: 60 } } }),
+			enchant: cloakAgility,
+			randomSuffix: ItemRandomSuffix.create({ id: 7 }),
+		});
+		const selectedCloak = new EquippedItem({
+			item: UIItem.create({ id: 30, type: ItemType.ItemTypeBack, scalingOptions: { 0: { ilvl: 60 } } }),
+			enchant: cloakDodge,
+			randomSuffix: ItemRandomSuffix.create({ id: 8 }),
+		});
+		Object.assign(mocks.db, {
+			lookupItemSpec: (spec: ItemSpec) => (spec.id === 30 ? selectedCloak : null),
+			getItemEffectRandPropPoints: () => undefined,
+			getEnchantsByEffectId: (effectId: number) => [cloakAgility, cloakResistance, cloakDodge].filter(enchant => enchant.effectId === effectId),
+		});
+		mocks.isWasm.mockResolvedValue(true);
+		mocks.runConcurrentBulkSim.mockReset().mockResolvedValue(BulkSimResult.create());
+		const sim = makeSim();
+		vi.spyOn(sim.raid, 'getActivePlayers').mockReturnValue([{ getGear: () => new Gear({ [ItemSlot.ItemSlotBack]: baselineCloak }) }] as any);
+		const backSpecs = [
+			ItemSpec.create({ id: 20, randomSuffix: 7, enchant: 849 }),
+			ItemSpec.create({ id: 20, randomSuffix: 7, enchant: 1889 }),
+			ItemSpec.create({ id: 30, randomSuffix: 8, enchant: 2622 }),
+			ItemSpec.create({ id: 30, randomSuffix: 8, enchant: 1889 }),
+		];
+		mocks.bulkCandidates
+			.mockReset()
+			.mockResolvedValue(BulkCandidatesResult.create({ candidates: backSpecs.map((back, index) => ({ index, gear: equipmentWithBack(back) })) }));
+
+		await sim.runBulkSim(
+			() => {},
+			BulkSettings.create({
+				items: [ItemSpec.create({ id: 30, randomSuffix: 8, enchant: 2622 })],
+				enchants: [BulkEnchantSlotOptions.create({ slot: ItemSlot.ItemSlotBack, effectIds: [1889] })],
+			}),
+		);
+
+		const [request] = mocks.runConcurrentBulkSim.mock.calls[0];
+		const database = request.baseRequest.raid.parties[0].players[0].database;
+		const shipped = {
+			items: new Set(database.items.map((item: { id: number }) => item.id)),
+			suffixes: new Set(database.randomSuffixes.map((suffix: { id: number }) => suffix.id)),
+			enchants: new Set(database.enchants.map((enchant: { effectId: number }) => enchant.effectId)),
+		};
+		for (const back of backSpecs) {
+			expect(shipped.items).toContain(back.id);
+			expect(shipped.suffixes).toContain(back.randomSuffix);
+			expect(shipped.enchants).toContain(back.enchant);
+		}
+	});
+
+	const makeEmptyBulkSim = () => {
+		Object.assign(mocks.db, { lookupItemSpec: () => null, getItemEffectRandPropPoints: () => undefined, getEnchantsByEffectId: () => [] });
+		mocks.runConcurrentBulkSim.mockReset().mockResolvedValue(BulkSimResult.create());
+		mocks.bulkSimAsync.mockReset().mockResolvedValue(BulkSimResult.create());
+		mocks.bulkCandidates.mockReset();
+		const sim = makeSim();
+		vi.spyOn(sim.raid, 'getActivePlayers').mockReturnValue([{ getGear: () => new Gear({}) }] as any);
+		return sim;
+	};
+
+	it('sends the native sim no candidates, so it generates them itself', async () => {
+		const sim = makeEmptyBulkSim();
+
+		await sim.runBulkSim(() => {}, BulkSettings.create());
+
+		expect(mocks.bulkCandidates).not.toHaveBeenCalled();
+		expect(mocks.bulkSimAsync.mock.calls[0][0].candidates).toEqual([]);
+	});
+
+	it('sends an override encounter whole and leaves the live encounter as it is', async () => {
+		const sim = makeEmptyBulkSim();
+		const live = sim.encounter.toProto();
+		const override = EncounterProto.create({
+			duration: 90,
+			durationVariation: 10,
+			useHealth: true,
+			executeProportion20: 0.5,
+			targets: [Target.create(), Target.create()],
+		});
+
+		await sim.runBulkSim(() => {}, BulkSettings.create(), undefined, override);
+
+		const sent = mocks.bulkSimAsync.mock.calls[0][0].baseRequest.encounter;
+		expect(sent).toEqual(override);
+		expect(sent).not.toBe(override);
+		expect(sim.encounter.toProto()).toEqual(live);
+	});
+
+	it('drops the WASM candidates that repeat the baseline or one another', async () => {
+		mocks.isWasm.mockResolvedValue(true);
+		const sim = makeEmptyBulkSim();
+		const cloak = equipmentWithBack(ItemSpec.create({ id: 30 }));
+		mocks.bulkCandidates.mockResolvedValue(
+			BulkCandidatesResult.create({
+				candidates: [new Gear({}).asSpec(), cloak, cloak].map((gear, index) => ({ index, gear })),
+			}),
+		);
+
+		await sim.runBulkSim(() => {}, BulkSettings.create());
+
+		expect(mocks.runConcurrentBulkSim.mock.calls[0][0].candidates).toEqual([{ index: 0, gear: cloak }]);
+	});
+});
+
+describe('Sim.getMinConsumableLvl', () => {
+	it('takes the default for a type the filters leave unset, and the filters where they set one, 0 included', () => {
+		const sim = new Sim({ env: makeEnv() });
+		expect(sim.getMinConsumableLvl(ConsumableType.ConsumableTypePotion)).toBe(Sim.DEFAULT_MIN_CONSUMABLE_LVL[ConsumableType.ConsumableTypePotion]);
+		expect(sim.getMinConsumableLvl(ConsumableType.ConsumableTypeFood)).toBe(0);
+
+		const filters = sim.getFilters();
+		filters.minConsumableLvl[ConsumableType.ConsumableTypePotion] = 0;
+		filters.minConsumableLvl[ConsumableType.ConsumableTypeFood] = 45;
+		sim.setFilters(filters);
+		expect(sim.getMinConsumableLvl(ConsumableType.ConsumableTypePotion)).toBe(0);
+		expect(sim.getMinConsumableLvl(ConsumableType.ConsumableTypeFood)).toBe(45);
 	});
 });

@@ -3,6 +3,7 @@ import {
 	AuraMetrics as AuraMetricsProto,
 	DistributionMetrics as DistributionMetricsProto,
 	EncounterMetrics as EncounterMetricsProto,
+	HitKind,
 	Party as PartyProto,
 	PartyMetrics as PartyMetricsProto,
 	Player as PlayerProto,
@@ -23,7 +24,7 @@ import { PlayerClasses } from '../player/classes';
 import { PlayerSpec } from '../player/player_spec';
 import { PlayerSpecs } from '../player/specs';
 import { bucket } from '../utils/collections';
-import { sum } from '../utils/math';
+import { percentOf, sum } from '../utils/math';
 import { ActionId, defaultTargetIcon } from './action_id';
 import {
 	AuraUptimeLog,
@@ -225,6 +226,13 @@ export class SimResult {
 		return this.raidMetrics.dps;
 	}
 
+	// The damage a unit's own side deals it, such as a sapper's hit on its thrower or a hit on a pet: every
+	// action of that side, pets included, cut down to its damage on the unit. It counts as damage taken.
+	getOwnSideDamageOn(unit: UnitMetrics): Array<ActionMetrics> {
+		const side = unit.isTarget ? this.encounterMetrics.targets : this.players.flatMap(player => [player, ...player.pets]);
+		return side.flatMap(source => source.getDamageActionsOn(unit.unitIndex));
+	}
+
 	getRaidIndexedActionMetrics(filter?: SimResultFilter): Array<ActionMetrics> {
 		return ActionMetrics.joinById(
 			this.getRaidIndexedPlayers(filter)
@@ -363,7 +371,7 @@ export class UnitMetrics {
 	private memoMajorCooldownAuraUptimeLogs?: Array<AuraUptimeLog>;
 
 	get damageDealtLogs(): Array<DamageLog> {
-		return (this.memoDamageDealtLogs ??= this.logs.filter(isDamage));
+		return (this.memoDamageDealtLogs ??= this.logs.filter(isDamage).filter(log => log.target?.isTarget !== this.isTarget));
 	}
 
 	get dpsLogs(): Array<DpsLog> {
@@ -379,7 +387,7 @@ export class UnitMetrics {
 	}
 
 	get threatLogs(): Array<ThreatLogGroup> {
-		return (this.memoThreatLogs ??= buildThreatGroups(this.logs));
+		return (this.memoThreatLogs ??= buildThreatGroups(this.logs.filter(log => !isDamage(log) || log.target?.isTarget !== this.isTarget)));
 	}
 
 	get auraUptimeLogs(): Array<AuraUptimeLog> {
@@ -534,24 +542,29 @@ export class UnitMetrics {
 		return this.getActionsForDisplay().filter(e => e.isMeleeAction);
 	}
 
-	getMeleeDamageActions(): Array<ActionMetrics> {
-		return this.getMeleeActions().filter(e => e.dps !== 0 && e.hps === 0);
-	}
-
 	getSpellActions(): Array<ActionMetrics> {
 		return this.getActionsForDisplay().filter(e => !e.isMeleeAction);
 	}
 
-	getSpellDamageActions(): Array<ActionMetrics> {
-		return this.getSpellActions().filter(e => e.dps !== 0 && e.hps === 0);
+	getDamageActions(): Array<ActionMetrics> {
+		return this.getActionsForDisplay()
+			.filter(e => e.hps === 0)
+			.map(e => e.againstOpponents())
+			.filter(e => e.dps !== 0);
 	}
 
-	getDamageActions(): Array<ActionMetrics> {
-		return this.getActionsForDisplay().filter(e => e.dps !== 0 && e.hps === 0);
+	getDamageActionsOn(unitIndex: number): Array<ActionMetrics> {
+		return this.getActionsForDisplay()
+			.filter(e => e.hps === 0 && e.targets.some(target => target.data.unitIndex === unitIndex))
+			.map(e => e.forUnit(unitIndex))
+			.filter(e => e.damage > 0);
 	}
 
 	getThreatActions(): Array<ActionMetrics> {
-		return this.getActionsForDisplay().filter(e => e.tps !== 0 && e.hps === 0);
+		return this.getActionsForDisplay()
+			.filter(e => e.hps === 0)
+			.map(e => e.againstOpponents())
+			.filter(e => e.tps !== 0);
 	}
 
 	getHealingActions(): Array<ActionMetrics> {
@@ -673,7 +686,7 @@ export class AuraMetrics {
 	}
 
 	get uptimePercent() {
-		return (this.data.uptimeSecondsAvg / this.duration) * 100;
+		return percentOf(this.data.uptimeSecondsAvg, this.duration);
 	}
 
 	get averageProcs() {
@@ -853,21 +866,11 @@ export class ActionMetrics {
 		return this.data.isPassive;
 	}
 
-	get totalDamageTakenPercent() {
-		// Self-damage rows carry the player as their unit, whose unitIndex is not
-		// an index into the encounter's targets, so this lookup can come back
-		// undefined rather than merely lacking a dps field.
-		const totalAvgDtps = this.resultData.result.encounterMetrics?.targets?.[this.unit?.unitIndex || 0]?.dps?.avg;
-		if (!totalAvgDtps) return undefined;
-
-		return (this.avgDamage / (totalAvgDtps * this.duration)) * 100;
-	}
-
 	get totalDamagePercent() {
 		const totalAvgDps = this.resultData.result.raidMetrics?.dps?.avg;
 		if (!totalAvgDps) return undefined;
 
-		return (this.avgDamage / (totalAvgDps * this.duration)) * 100;
+		return percentOf(this.avgDamage, totalAvgDps * this.duration);
 	}
 
 	get damage() {
@@ -994,7 +997,7 @@ export class ActionMetrics {
 		const totalAvgTps = this.resultData.result.raidMetrics?.parties[0].players[0].threat?.avg;
 		if (!totalAvgTps) return undefined;
 
-		return (this.avgThreat / (totalAvgTps * this.duration)) * 100;
+		return percentOf(this.avgThreat, totalAvgTps * this.duration);
 	}
 
 	get tps() {
@@ -1005,7 +1008,7 @@ export class ActionMetrics {
 		const totalAvgHps = this.resultData.result.raidMetrics?.hps?.avg;
 		if (!totalAvgHps) return undefined;
 
-		return (this.avgHealing / (totalAvgHps * this.duration)) * 100;
+		return percentOf(this.avgHealing, totalAvgHps * this.duration);
 	}
 
 	get healing() {
@@ -1255,6 +1258,44 @@ export class ActionMetrics {
 		return this.combinedMetrics.healingCritPercent;
 	}
 
+	range(kind: HitKind) {
+		return this.combinedMetrics.range(kind);
+	}
+
+	private perIteration(range: DistributionMetricsProto) {
+		return (range.avg * rangeCount(range)) / this.iterations;
+	}
+
+	// Each value against the action's own amount: its damage, or its healing when it deals none.
+	get customMetrics() {
+		const actionTotal = this.avgDamage || this.avgHealing;
+		return this.combinedMetrics.customMetrics.flatMap(({ key, range }) => {
+			if (!range) return [];
+			const value = this.perIteration(range);
+			return [{ key, value, percentage: percentOf(value, actionTotal), average: range.avg, min: range.min, max: range.max }];
+		});
+	}
+
+	private bounds(kind: HitKind) {
+		const range = this.range(kind);
+		return range ? { min: range.min, max: range.max } : {};
+	}
+
+	get healingDone() {
+		const entry = (kind: HitKind) => {
+			const range = this.range(kind);
+			const value = range ? this.perIteration(range) : 0;
+			return { value, percentage: percentOf(value, this.avgHealing), average: range?.avg ?? 0, ...this.bounds(kind) };
+		};
+		return {
+			heal: entry(HitKind.HitKindHeal),
+			critHeal: entry(HitKind.HitKindCritHeal),
+			tick: entry(HitKind.HitKindHealTick),
+			critTick: entry(HitKind.HitKindCritHealTick),
+			shield: entry(HitKind.HitKindShield),
+		};
+	}
+
 	get damageDone() {
 		const normalHitAvgDamage = Number(
 			(
@@ -1287,81 +1328,107 @@ export class ActionMetrics {
 		return {
 			hit: {
 				value: normalHitAvgDamage,
-				percentage: (normalHitAvgDamage / this.avgDamage) * 100,
+				percentage: percentOf(normalHitAvgDamage, this.avgDamage),
 				average: normalHitAvgDamage / (this.hits - this.resistedHits),
+				...this.bounds(HitKind.HitKindHit),
 			},
 			resistedHit: {
 				value: normalResistedHitAvgDamage,
-				percentage: (normalResistedHitAvgDamage / this.avgDamage) * 100,
+				percentage: percentOf(normalResistedHitAvgDamage, this.avgDamage),
 				average: normalResistedHitAvgDamage / this.resistedHits,
+				...this.bounds(HitKind.HitKindResistedHit),
 			},
 			critHit: {
 				value: critHitAvgDamage,
-				percentage: (critHitAvgDamage / this.avgDamage) * 100,
+				percentage: percentOf(critHitAvgDamage, this.avgDamage),
 				average: critHitAvgDamage / (this.crits - this.resistedCrits),
+				...this.bounds(HitKind.HitKindCrit),
 			},
 			resistedCritHit: {
 				value: resistedCritHitAvgDamage,
-				percentage: (resistedCritHitAvgDamage / this.avgDamage) * 100,
+				percentage: percentOf(resistedCritHitAvgDamage, this.avgDamage),
 				average: resistedCritHitAvgDamage / this.resistedCrits,
+				...this.bounds(HitKind.HitKindResistedCrit),
 			},
 			tick: {
 				value: normalTickAvgDamage,
-				percentage: (normalTickAvgDamage / this.avgDamage) * 100,
+				percentage: percentOf(normalTickAvgDamage, this.avgDamage),
 				average: normalTickAvgDamage / (this.ticks - this.resistedTicks),
+				...this.bounds(HitKind.HitKindTick),
 			},
 			resistedTick: {
 				value: normalResistedTickAvgDamage,
-				percentage: (normalResistedTickAvgDamage / this.avgDamage) * 100,
+				percentage: percentOf(normalResistedTickAvgDamage, this.avgDamage),
 				average: normalResistedTickAvgDamage / this.resistedTicks,
+				...this.bounds(HitKind.HitKindResistedTick),
 			},
 			critTick: {
 				value: normalCritTickAvgDamage,
-				percentage: (normalCritTickAvgDamage / this.avgDamage) * 100,
+				percentage: percentOf(normalCritTickAvgDamage, this.avgDamage),
 				average: normalCritTickAvgDamage / (this.critTicks - this.resistedCritTicks),
+				...this.bounds(HitKind.HitKindCritTick),
 			},
 			resistedCritTick: {
 				value: this.avgResistedCritTickDamage,
-				percentage: (this.avgResistedCritTickDamage / this.avgDamage) * 100,
+				percentage: percentOf(this.avgResistedCritTickDamage, this.avgDamage),
 				average: this.avgResistedCritTickDamage / this.resistedCritTicks,
+				...this.bounds(HitKind.HitKindResistedCritTick),
 			},
 			glance: {
 				value: this.avgGlanceDamage,
-				percentage: (this.avgGlanceDamage / this.avgDamage) * 100,
+				percentage: percentOf(this.avgGlanceDamage, this.avgDamage),
 				average: this.avgGlanceDamage / this.glances,
+				...this.bounds(HitKind.HitKindGlance),
 			},
 			block: {
 				value: this.avgBlockDamage,
-				percentage: (this.avgBlockDamage / this.avgDamage) * 100,
+				percentage: percentOf(this.avgBlockDamage, this.avgDamage),
 				average: this.avgBlockDamage / this.blocks,
+				...this.bounds(HitKind.HitKindBlock),
 			},
 			blockedCrit: {
 				value: this.avgBlockedCritDamage,
-				percentage: (this.avgBlockedCritDamage / this.avgDamage) * 100,
+				percentage: percentOf(this.avgBlockedCritDamage, this.avgDamage),
 				average: this.avgBlockedCritDamage / this.blockedCrits,
+				...this.bounds(HitKind.HitKindBlockedCrit),
 			},
 			crush: {
 				value: this.avgCrushDamage,
-				percentage: (this.avgCrushDamage / this.avgDamage) * 100,
+				percentage: percentOf(this.avgCrushDamage, this.avgDamage),
 				average: this.avgCrushDamage / this.crushes,
+				...this.bounds(HitKind.HitKindCrush),
 			},
 		};
 	}
 
+	// The action without the units on its own side when it damages or threatens any of them. Damage and
+	// threat it puts on its own side, such as a sapper's hit on its thrower, are taken, not done.
+	againstOpponents(): ActionMetrics {
+		const enemyIndices = new Set(this.resultData.result.encounterMetrics!.targets.map(target => target.unitIndex));
+		const onEnemySide = this.unit?.isTarget ?? false;
+		const isOpponent = (target: TargetedActionMetricsProto) => enemyIndices.has(target.unitIndex) !== onEnemySide;
+		if (this.data.targets.every(target => isOpponent(target) || (target.damage === 0 && target.threat === 0))) {
+			return this;
+		}
+
+		return this.withTargets(this.data.targets.filter(isOpponent));
+	}
+
 	forTarget(filter?: SimResultFilter): ActionMetrics {
 		const unitIndex = this.unit!.getTargetIndex(filter);
-		if (unitIndex == null) {
-			return this;
-		} else {
-			const target = this.targets.find(target => target.data.unitIndex == unitIndex);
-			if (target) {
-				const targetData = ActionMetricsProto.clone(this.data);
-				targetData.targets = [target.data];
-				return new ActionMetrics(this.unit, this.actionId, targetData, this.resultData);
-			} else {
-				throw new Error('Could not find target with unitIndex ' + unitIndex);
-			}
+		return unitIndex == null ? this : this.forUnit(unitIndex);
+	}
+
+	forUnit(unitIndex: number): ActionMetrics {
+		const target = this.data.targets.find(target => target.unitIndex == unitIndex);
+		if (!target) {
+			throw new Error('Could not find target with unitIndex ' + unitIndex);
 		}
+		return this.withTargets([target]);
+	}
+
+	private withTargets(targets: Array<TargetedActionMetricsProto>): ActionMetrics {
+		return new ActionMetrics(this.unit, this.actionId, ActionMetricsProto.create({ ...this.data, targets }), this.resultData);
 	}
 
 	static async makeNew(unit: UnitMetrics | null, resultData: SimResultData, actionMetrics: ActionMetricsProto, playerIndex?: number): Promise<ActionMetrics> {
@@ -1416,8 +1483,55 @@ type TargetedActionMetricsOptions = {
 	duration: number;
 };
 
+const rangeCount = (range: DistributionMetricsProto | undefined) => range?.aggregatorData?.n ?? 0;
+
+// Joins per-value ranges into one with Chan's pairwise update of the count, mean and sum of squared
+// deviations; a range carries only its count, so the bounds skip a side that landed no values.
+const mergeRanges = (ranges: Array<DistributionMetricsProto | undefined>): DistributionMetricsProto | undefined => {
+	const filled = ranges.filter((range): range is DistributionMetricsProto => rangeCount(range) > 0);
+	if (!filled.length) return undefined;
+
+	let n = 0;
+	let avg = 0;
+	let m2 = 0;
+	for (const range of filled) {
+		const rn = rangeCount(range);
+		const delta = range.avg - avg;
+		const total = n + rn;
+		m2 += range.stdev * range.stdev * rn + (delta * delta * n * rn) / total;
+		avg += (delta * rn) / total;
+		n = total;
+	}
+	return DistributionMetricsProto.create({
+		avg,
+		stdev: Math.sqrt(m2 / n),
+		min: Math.min(...filled.map(range => range.min)),
+		max: Math.max(...filled.map(range => range.max)),
+		aggregatorData: { n, sumSq: 0 },
+	});
+};
+
+const mergeRangeMaps = (maps: Array<TargetedActionMetricsProto['ranges']>): TargetedActionMetricsProto['ranges'] => {
+	if (maps.length === 1) return maps[0];
+	const merged: TargetedActionMetricsProto['ranges'] = {};
+	for (const kind of new Set(maps.flatMap(map => Object.keys(map).map(Number)))) {
+		const range = mergeRanges(maps.map(map => map[kind]));
+		if (range) merged[kind] = range;
+	}
+	return merged;
+};
+
+const mergeCustomMetrics = (lists: Array<TargetedActionMetricsProto['customMetrics']>): TargetedActionMetricsProto['customMetrics'] => {
+	if (lists.length === 1) return lists[0];
+	const keys = [...new Set(lists.flatMap(list => list.map(metric => metric.key)))];
+	return keys.flatMap(key => {
+		const range = mergeRanges(lists.map(list => list.find(metric => metric.key == key)?.range));
+		return range ? [{ key, range }] : [];
+	});
+};
+
 // Manages the metrics for a single action applied to a specific target.
-export class TargetedActionMetrics {
+class TargetedActionMetrics {
 	private readonly iterations: number;
 	private readonly duration: number;
 	readonly data: TargetedActionMetricsProto;
@@ -1429,26 +1543,20 @@ export class TargetedActionMetrics {
 	constructor(data: TargetedActionMetricsProto, { iterations, duration }: TargetedActionMetricsOptions) {
 		this.iterations = iterations;
 		this.duration = duration;
-		this.data = data;
+		// A range or custom metric that holds no values is dropped here, so no read has to check for one.
+		this.data = {
+			...data,
+			ranges: Object.fromEntries(Object.entries(data.ranges).filter(([, range]) => rangeCount(range) > 0)),
+			customMetrics: data.customMetrics.filter(metric => rangeCount(metric.range) > 0),
+		};
 
 		this.landedHitsRaw = this.data.hits + this.data.crits + this.data.blocks + this.data.blockedCrits + this.data.glances + this.data.crushes;
 		this.landedTicksRaw = this.data.ticks + this.data.critTicks;
 
+		// A DoT counts no hit when its cast lands, so a spell that lands only ticks takes its casts,
+		// which include the misses, as its hit attempts.
 		this.hitAttempts =
-			this.data.misses +
-			this.data.dodges +
-			this.data.parries +
-			this.data.blocks +
-			this.data.blockedCrits +
-			this.data.glances +
-			this.data.crits +
-			this.data.crushes;
-
-		if (this.data.hits != 0) {
-			this.hitAttempts += this.data.hits;
-		} else if (this.data.hits == 0 && this.data.ticks > 0) {
-			this.hitAttempts += this.data.casts;
-		}
+			this.landedHitsRaw == 0 && this.landedTicksRaw > 0 ? this.data.casts : this.data.misses + this.data.dodges + this.data.parries + this.landedHitsRaw;
 	}
 
 	get damage() {
@@ -1666,6 +1774,15 @@ export class TargetedActionMetrics {
 		return (this.data.healing + this.data.shielding) / this.iterations / this.landedHits;
 	}
 
+	// The per-value range of an outcome, absent when the action landed none.
+	range(kind: HitKind): DistributionMetricsProto | undefined {
+		return this.data.ranges[kind];
+	}
+
+	get customMetrics() {
+		return this.data.customMetrics;
+	}
+
 	get avgHitThreat() {
 		const lhr = this.landedHitsRaw;
 		return lhr == 0 ? 0 : this.data.threat / lhr;
@@ -1684,7 +1801,7 @@ export class TargetedActionMetrics {
 	}
 
 	get missPercent() {
-		return (this.data.misses / this.hitAttempts) * 100;
+		return percentOf(this.data.misses, this.hitAttempts);
 	}
 
 	get dodges() {
@@ -1692,7 +1809,7 @@ export class TargetedActionMetrics {
 	}
 
 	get dodgePercent() {
-		return (this.data.dodges / this.hitAttempts) * 100;
+		return percentOf(this.data.dodges, this.hitAttempts);
 	}
 
 	get parries() {
@@ -1700,7 +1817,7 @@ export class TargetedActionMetrics {
 	}
 
 	get parryPercent() {
-		return (this.data.parries / this.hitAttempts) * 100;
+		return percentOf(this.data.parries, this.hitAttempts);
 	}
 
 	get hits() {
@@ -1708,7 +1825,7 @@ export class TargetedActionMetrics {
 	}
 
 	get hitPercent() {
-		return (this.data.hits / this.hitAttempts) * 100;
+		return percentOf(this.data.hits, this.hitAttempts);
 	}
 
 	get resistedHits() {
@@ -1716,7 +1833,7 @@ export class TargetedActionMetrics {
 	}
 
 	get resistedHitPercent() {
-		return (this.data.resistedHits / this.hitAttempts) * 100;
+		return percentOf(this.data.resistedHits, this.hitAttempts);
 	}
 
 	get ticks() {
@@ -1728,7 +1845,7 @@ export class TargetedActionMetrics {
 	}
 
 	get resistedTickPercent() {
-		return (this.data.resistedTicks / (this.data.ticks + this.data.critTicks)) * 100;
+		return percentOf(this.data.resistedTicks, this.data.ticks + this.data.critTicks);
 	}
 
 	get critTicks() {
@@ -1736,7 +1853,7 @@ export class TargetedActionMetrics {
 	}
 
 	get critTickPercent() {
-		return (this.data.critTicks / (this.data.ticks + this.data.critTicks)) * 100;
+		return percentOf(this.data.critTicks, this.data.ticks + this.data.critTicks);
 	}
 
 	get resistedCritTicks() {
@@ -1744,7 +1861,7 @@ export class TargetedActionMetrics {
 	}
 
 	get resistedCritTickPercent() {
-		return (this.data.resistedCritTicks / (this.data.ticks + this.data.critTicks)) * 100;
+		return percentOf(this.data.resistedCritTicks, this.data.ticks + this.data.critTicks);
 	}
 
 	get blocks() {
@@ -1756,11 +1873,11 @@ export class TargetedActionMetrics {
 	}
 
 	get crushPercent() {
-		return (this.data.crushes / this.hitAttempts) * 100;
+		return percentOf(this.data.crushes, this.hitAttempts);
 	}
 
 	get blockPercent() {
-		return (this.data.blocks / this.hitAttempts) * 100;
+		return percentOf(this.data.blocks, this.hitAttempts);
 	}
 
 	get blockedCrits() {
@@ -1768,7 +1885,7 @@ export class TargetedActionMetrics {
 	}
 
 	get blockedCritPercent() {
-		return (this.data.blockedCrits / this.hitAttempts) * 100;
+		return percentOf(this.data.blockedCrits, this.hitAttempts);
 	}
 
 	get glances() {
@@ -1776,7 +1893,7 @@ export class TargetedActionMetrics {
 	}
 
 	get glancePercent() {
-		return (this.data.glances / this.hitAttempts) * 100;
+		return percentOf(this.data.glances, this.hitAttempts);
 	}
 
 	get crits() {
@@ -1784,7 +1901,7 @@ export class TargetedActionMetrics {
 	}
 
 	get critPercent() {
-		return (this.data.crits / this.hitAttempts) * 100;
+		return percentOf(this.data.crits, this.hitAttempts);
 	}
 
 	get resistedCrits() {
@@ -1792,15 +1909,15 @@ export class TargetedActionMetrics {
 	}
 
 	get resistedCritPercent() {
-		return (this.data.resistedCrits / this.hitAttempts) * 100;
+		return percentOf(this.data.resistedCrits, this.hitAttempts);
 	}
 
 	get healingPercent() {
-		return ((this.healing - this.critHealing) / this.healing) * 100;
+		return percentOf(this.healing - this.critHealing, this.healing);
 	}
 
 	get healingCritPercent() {
-		return (this.data.critHealing / this.healing) * 100;
+		return percentOf(this.data.critHealing, this.healing);
 	}
 
 	// Merges an array of metrics into a single metric.
@@ -1842,6 +1959,8 @@ export class TargetedActionMetrics {
 				critHealing: sum(actions.map(a => a.data.critHealing)),
 				shielding: sum(actions.map(a => a.data.shielding)),
 				castTimeMs: sum(actions.map(a => a.data.castTimeMs)),
+				ranges: mergeRangeMaps(actions.map(a => a.data.ranges)),
+				customMetrics: mergeCustomMetrics(actions.map(a => a.data.customMetrics)),
 			}),
 			{
 				iterations,

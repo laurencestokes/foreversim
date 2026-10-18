@@ -32,6 +32,9 @@ type Meta struct {
 	Talent               spelldata.Ladder
 	TalentEffect         int32
 	TalentScalesDuration bool
+	// TalentDivisor prices the buff at talentPoints/TalentDivisor of the spell's amount, for a talent
+	// a tooltip prices by rank; 0 for a talent priced by a spell modifier.
+	TalentDivisor int32
 
 	// The aura effects the buff leaves out, by aura.
 	SkipAuras []dbcenums.EffectAuraType
@@ -42,7 +45,10 @@ type Meta struct {
 // The parse options the row states, for a caster with these talent points.
 func (m *Meta) Options(talentPoints int32) []spelldata.ParseOpt {
 	opts := spelldata.RaidBuffOptions(m.SkipAuras, m.FullComboPoints)
-	if !m.TalentScalesDuration {
+	switch {
+	case m.TalentDivisor > 0:
+		opts = append(opts, spelldata.ScaledByRanks(talentPoints, m.TalentDivisor))
+	case !m.TalentScalesDuration:
 		opts = append(opts, spelldata.ScaledBy(m.talentMod(talentPoints)))
 	}
 	return opts
@@ -105,15 +111,21 @@ func (m *Meta) actionID(isPlayer bool) core.ActionID {
 // SchoolResistances, and where Category is set, Exclusive(Category, true) for a single-aura one or
 // ExclusivePerStat(Category) for any other. Only the player's own copy joins SharedCategory.
 func newBuff(unit *core.Unit, m *Meta, isPlayer bool, talentPoints int32) *core.Aura {
-	return m.buff(unit, isPlayer, talentPoints, m.Options(talentPoints))
+	return m.buff(unit, isPlayer, m.label(isPlayer), talentPoints, m.Options(talentPoints))
+}
+
+// A caster's own copy of a generated buff, one per caster: newBuff's player copy labelled
+// "<Label>-<caster's label>". It bids in Category all the same.
+func newCasterBuff(unit *core.Unit, m *Meta, caster *core.Unit, talentPoints int32) *core.Aura {
+	return m.buff(unit, true, m.Label+"-"+caster.Label, talentPoints, m.Options(talentPoints))
 }
 
 // A buff worth its amounts once per item in the party: newBuff with Count(count).
 func newItemCountBuff(unit *core.Unit, m *Meta, isPlayer bool, count float64) *core.Aura {
-	return m.buff(unit, isPlayer, 0, append(m.Options(0), spelldata.Count(count)))
+	return m.buff(unit, isPlayer, m.label(isPlayer), 0, append(m.Options(0), spelldata.Count(count)))
 }
 
-func (m *Meta) buff(unit *core.Unit, isPlayer bool, talentPoints int32, opts []spelldata.ParseOpt) *core.Aura {
+func (m *Meta) buff(unit *core.Unit, isPlayer bool, label string, talentPoints int32, opts []spelldata.ParseOpt) *core.Aura {
 	opts = append(opts, spelldata.SchoolResistances())
 	if m.Category != "" {
 		if m.SingleAura {
@@ -124,25 +136,43 @@ func (m *Meta) buff(unit *core.Unit, isPlayer bool, talentPoints int32, opts []s
 	}
 
 	buildPhase := core.Ternary(isPlayer, core.CharacterBuildPhaseNone, core.CharacterBuildPhaseBuffs)
-	return m.parsedAura(unit, isPlayer, talentPoints, buildPhase, opts)
+	return m.parsedAura(unit, isPlayer, label, m.Category, talentPoints, buildPhase, opts)
 }
 
 // The aura a generated debuff registers on the target: labelled and tagged like newBuff, never in a
 // build phase, with Exclusive(Category, SingleAura) where it names a category and no school
-// resistance categories of its own.
+// resistance categories of its own. A debuff in a category that holds more than one aura bids each
+// effect alone, so a stronger one holds only the effects of its own kind.
 func newDebuff(target *core.Unit, m *Meta, isPlayer bool, talentPoints int32) *core.Aura {
+	return m.debuff(target, isPlayer, m.label(isPlayer), m.Category, talentPoints)
+}
+
+// A caster's own copy of a generated debuff, one per caster: newDebuff's player copy labelled
+// "<Label>-<caster's label>" and tagged with tag, which the caster finds it by. It bids in Category
+// all the same.
+func newCasterDebuff(target *core.Unit, m *Meta, caster *core.Unit, tag string, talentPoints int32) *core.Aura {
+	return m.debuff(target, true, m.Label+"-"+caster.Label, tag, talentPoints)
+}
+
+func (m *Meta) debuff(target *core.Unit, isPlayer bool, label string, tag string, talentPoints int32) *core.Aura {
 	opts := m.Options(talentPoints)
 	if m.Category != "" {
 		opts = append(opts, spelldata.Exclusive(m.Category, m.SingleAura))
 	}
-	return m.parsedAura(target, isPlayer, talentPoints, core.CharacterBuildPhaseNone, opts)
+	return m.parsedAura(target, isPlayer, label, tag, talentPoints, core.CharacterBuildPhaseNone, opts)
 }
 
-func (m *Meta) parsedAura(unit *core.Unit, isPlayer bool, talentPoints int32, buildPhase core.CharacterBuildPhase,
-	opts []spelldata.ParseOpt) *core.Aura {
-	aura := unit.GetOrRegisterAura(core.Aura{
-		Label:      m.label(isPlayer),
-		Tag:        m.Category,
+func (m *Meta) parsedAura(unit *core.Unit, isPlayer bool, label string, tag string, talentPoints int32,
+	buildPhase core.CharacterBuildPhase, opts []spelldata.ParseOpt) *core.Aura {
+	// A second caller of the same copy shares the aura the first registered, which carries its
+	// effects already.
+	if aura := unit.GetAura(label); aura != nil {
+		return aura
+	}
+
+	aura := unit.RegisterAura(core.Aura{
+		Label:      label,
+		Tag:        tag,
 		ActionID:   m.actionID(isPlayer),
 		Duration:   m.Duration(talentPoints),
 		MaxStacks:  int32(m.Spell.MaxStack),
@@ -151,23 +181,15 @@ func (m *Meta) parsedAura(unit *core.Unit, isPlayer bool, talentPoints int32, bu
 
 	// No row a raid buff states acts through a character rather than its unit.
 	spelldata.ParseEffects(nil, aura, m.Spell, opts...)
-	core.JoinSharedCategory(aura, m.SharedCategory, isPlayer)
+	joinSharedCategory(aura, m.SharedCategory, isPlayer)
 	return aura
 }
 
-// Thorns scales with the druid's spell power at 6% though its client row carries no coefficient.
-// Blizzard's beta notes: Thorns "will now dynamically update its values based on the caster's spell
-// power" (24 Sep 2026), and "the spell power ratio has been reduced to 6% (was 13.3%)" (8 Oct 2026).
-// Only the druid's own copy carries it: the raid option has no druid spell power, and the notes say
-// Thorns "reverts to its base values" when the caster cannot be found.
-const ThornsSpellPowerCoefficient = 0.06
-
-// A damage shield, which the parse does not read: core.NewDamageShield with the spell's school and
+// A damage shield, which the parse does not read: NewDamageShield with the spell's school and
 // Value as its damage.
 func newDamageShield(unit *core.Unit, m *Meta, isPlayer bool, talentPoints int32) *core.Aura {
-	coefficient := core.TernaryFloat64(isPlayer && m == thornsMeta, ThornsSpellPowerCoefficient, 0)
-	aura := core.NewDamageShield(unit, m.label(isPlayer), m.actionID(isPlayer), m.Duration(talentPoints),
-		m.Category, m.SingleAura, m.Spell.School, m.Value(talentPoints), coefficient)
-	core.JoinSharedCategory(aura, m.SharedCategory, isPlayer)
+	aura := NewDamageShield(unit, m.label(isPlayer), m.actionID(isPlayer), m.Duration(talentPoints),
+		m.Category, m.SingleAura, m.Spell.School, m.Value(talentPoints), 0)
+	joinSharedCategory(aura, m.SharedCategory, isPlayer)
 	return aura
 }

@@ -37,17 +37,16 @@ func FreshDefaultTargetConfig() *proto.Target {
 	return &proto.Target{
 		Level: CharacterLevel + 3,
 		Stats: stats.Stats{
-			// Level 63 raid boss armor, as in our Forever encounter presets. 7685 was TBC's.
 			stats.Armor:       3731,
 			stats.AttackPower: 320,
 		}.ToProtoArray(),
 		MobType: proto.MobType_MobTypeMechanical,
 
 		SwingSpeed:    2,
-		MinBaseDamage: 4192.05,
+		MinBaseDamage: 2601,
 		ParryHaste:    true,
 		CanCrush:      true,
-		DamageSpread:  0.3333,
+		DamageSpread:  0.5,
 	}
 }
 
@@ -58,29 +57,29 @@ var FullRaidBuffs = &proto.RaidBuffs{
 	PrayerOfFortitude:        true,
 	PrayerOfSpirit:           true,
 	GiftOfTheWild:            true,
-	Thorns:                   true,
 	PrayerOfShadowProtection: true,
+
+	GraceOfAirTotem:      true,
+	StrengthOfEarthTotem: true,
+	WindfuryTotem:        true,
+	BattleShout:          proto.TristateEffect_TristateEffectRegular,
+	TrueshotAura:         true,
+	LeaderOfThePack:      true,
+	MoonkinAura:          true,
 }
 
 var FullPartyBuffs = &proto.PartyBuffs{
 	BloodPact:         true,
-	MoonkinAura:       true,
-	LeaderOfThePack:   true,
 	DevotionAura:      true,
 	RetributionAura:   true,
 	ConcentrationAura: true,
-	TrueshotAura:      true,
 	AtieshDruid:       1,
 	AtieshMage:        1,
 	AtieshPriest:      1,
 	AtieshWarlock:     1,
 
-	ManaSpringTotem:      proto.TristateEffect_TristateEffectImproved,
-	ManaTideTotems:       1,
-	StrengthOfEarthTotem: true,
-	WindfuryTotem:        true, // one air totem per party since client build 70009
-
-	BattleShout: proto.TristateEffect_TristateEffectRegular,
+	ManaSpringTotem: proto.TristateEffect_TristateEffectImproved,
+	ManaTideTotems:  1,
 }
 
 var FullIndividualBuffs = &proto.IndividualBuffs{
@@ -89,6 +88,7 @@ var FullIndividualBuffs = &proto.IndividualBuffs{
 	GreaterBlessingOfWisdom:    true,
 	GreaterBlessingOfMight:     true,
 	GreaterBlessingOfLight:     true,
+	Thorns:                     true,
 }
 
 var FullTankIndividualBuffs = &proto.IndividualBuffs{
@@ -96,6 +96,7 @@ var FullTankIndividualBuffs = &proto.IndividualBuffs{
 	GreaterBlessingOfWisdom: true,
 	GreaterBlessingOfMight:  true,
 	GreaterBlessingOfLight:  true,
+	Thorns:                  true,
 }
 
 var FullDebuffs = &proto.Debuffs{
@@ -221,6 +222,28 @@ func RaidBenchmark(b *testing.B, rsr *proto.RaidSimRequest) {
 			b.Fatalf("RaidBenchmark() at iteration %d failed: %v", i, result.Error.Message)
 		}
 	}
+}
+
+// CharacterBenchmark sims a suite config's default setup against one target. The seed is fixed,
+// so the reported dps only moves when a change alters results.
+func CharacterBenchmark(b *testing.B, config CharacterSuiteConfig) {
+	_, raid := config.defaultPlayerAndRaid()
+	rsr := &proto.RaidSimRequest{
+		Raid:       raid,
+		Encounter:  Ternary(config.Encounter.Encounter != nil, config.Encounter.Encounter, MakeSingleTargetEncounter(0)),
+		SimOptions: &proto.SimOptions{Iterations: 1000, RandomSeed: 101},
+	}
+
+	b.ReportAllocs()
+	var dps float64
+	for b.Loop() {
+		result := RunRaidSim(rsr)
+		if result.Error != nil {
+			b.Fatalf("CharacterBenchmark() failed: %v", result.Error.Message)
+		}
+		dps = result.RaidMetrics.Dps.Avg
+	}
+	b.ReportMetric(dps, "dps")
 }
 
 // The gear sets and encounter builds were removed with the rest of the TBC presets, so a

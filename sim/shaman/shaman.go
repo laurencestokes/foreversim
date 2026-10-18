@@ -5,7 +5,6 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
-	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -31,35 +30,21 @@ func NewShaman(character *core.Character, talents string, selfBuffs SelfBuffs) *
 	// Add Shaman stat dependencies
 	shaman.AddStatDependency(stats.BonusArmor, stats.Armor, 1)
 	shaman.AddStatDependency(stats.Agility, stats.PhysicalCritPercent, core.CritPerAgiMaxLevel[shaman.Class])
-	// Dodge per agility equals crit per agility, as in Classic (20 agility at 60, not TBC's 25).
-	shaman.AddStatDependency(stats.Agility, stats.DodgeRating, core.CritPerAgiMaxLevel[shaman.Class]*core.DodgeRatingPerDodgePercent)
 	shaman.EnableManaBarWithModifier()
 
 	shaman.AddStatDependency(stats.Strength, stats.AttackPower, 2.0)
 
-	shaman.WindfuryAPBonus = windfuryImbue.EffectN(1).Average(core.CharacterLevel) // 16361, 333 at 60
+	shaman.windfuryWeaponMultiplier = 1
+	shaman.rockbiterWeaponMultiplier = 1
 
 	return shaman
-}
-
-func (shaman *Shaman) GetImbueProcMask(imbue proto.ShamanImbue) core.ProcMask {
-	var mask core.ProcMask
-	if shaman.SelfBuffs.ImbueMH == imbue || shaman.SelfBuffs.ImbueMHSwap == imbue {
-		mask |= core.ProcMaskMeleeMH
-	}
-	if shaman.SelfBuffs.ImbueOH == imbue {
-		mask |= core.ProcMaskMeleeOH
-	}
-	return mask
 }
 
 // Which buffs this shaman is using.
 type SelfBuffs struct {
 	ShieldProcrate float64
 	ImbueMH        proto.ShamanImbue
-	ImbueOH        proto.ShamanImbue
 	ImbueMHSwap    proto.ShamanImbue
-	ImbueOHSwap    proto.ShamanImbue
 }
 
 // Indexes into NextTotemDrops for self buffs
@@ -74,7 +59,24 @@ const (
 type Shaman struct {
 	core.Character
 
-	WindfuryAPBonus float64
+	// Elemental Weapons' share of the imbues' attack power, and the threat Spirit Weapons adds to
+	// Rockbiter Weapon's effect 2.
+	windfuryWeaponMultiplier     float64
+	rockbiterWeaponMultiplier    float64
+	spiritWeaponsRockbiterThreat float64
+
+	// Windfury Weapon's extra strikes, which spend no Flurry charge.
+	windfuryWeaponStrike *core.Spell
+
+	// The equipped main hand and the swap set's, which the imbue options name.
+	mainHandID     int32
+	swapMainHandID int32
+
+	// The imbue on each of those main hands as the sim runs: the options set them at reset, and an
+	// imbue's cast replaces the one on the main hand in use.
+	imbues        [2]proto.ShamanImbue
+	imbueAuras    [proto.ShamanImbue_RockbiterWeapon + 1]*core.Aura // Active while the main hand in use carries that imbue.
+	onImbueChange []func(sim *core.Simulation)
 
 	Talents   *proto.ShamanTalents
 	SelfBuffs SelfBuffs
@@ -84,38 +86,33 @@ type Shaman struct {
 	// The expiration time of each totem (earth, air, fire, water).
 	TotemExpirations [4]time.Duration
 
-	LightningBoltOverloads map[int32]*core.Spell
+	LavaBurst []*core.Spell // One per rank in castableRanks.
 
-	ChainLightningOverloads map[int32][]*core.Spell
+	Stormstrike *core.Spell
 
-	// Added to Chain Lightning's per-bounce damage multiplier (Gift of the Gathering Storm).
-	ChainLightningBounceBonus float64
-
-	Stormstrike           *core.Spell
-	StormstrikeCastResult *core.SpellResult
-
+	LightningShield     *core.Spell
 	LightningShieldAura *core.Aura
 	WaterShieldAura     *core.Aura
-	ShieldSelfProcSpell *core.Spell
+	// Spends a charge of the shield that is up the way a hit taken does, for the shield proc rate option.
+	ShieldSelfProc func(sim *core.Simulation)
 
-	EarthShock *core.Spell
-	FlameShock *core.Spell
-	FrostShock *core.Spell
+	EarthShock []*core.Spell // One per rank in castableRanks.
+	FlameShock []*core.Spell
+	FrostShock []*core.Spell
 
-	StormStrikeDebuffAuras core.AuraArray
+	StormstrikeDebuffAuras core.AuraArray
 
-	TotemOfWrath *core.Spell
 	MagmaTotem   *core.Spell
+	SearingTotem *core.Spell
+	FireNova     *core.Spell
+
+	WindfuryTotem    *core.Spell
+	FlametongueTotem *core.Spell
 	// Always nil: its registrar is commented out in totems.go, upstream of the fork.
 	HealingStreamTotem *core.Spell
-	SearingTotem       *core.Spell
-	FlametongueTotem   *core.Spell
-	TremorTotem        *core.Spell
-	SearingReplaced    bool // Used for cancelling searing dot if the totem is replaced during prepull
 
-	EarthTotemAura *core.Aura
-	WaterTotemAura *core.Aura
-	AirTotemAura   *core.Aura
+	// The aura of the totem standing in each element's slot, indexed like TotemExpirations.
+	TotemAuras [4]*core.Aura
 }
 
 // Implemented by each Shaman spec.
@@ -133,28 +130,25 @@ func (shaman *Shaman) GetCharacter() *core.Character {
 func (shaman *Shaman) AddRaidBuffs(raidBuffs *proto.RaidBuffs) {
 }
 
-// The talented Mana Tide Totem (16190) is the party buff's totem, dropped by this shaman.
-// ponytail: it does not take Mana Spring's water slot for its 12 s; model the slot if a sim ever
-// shows the overlap mattering.
-func (shaman *Shaman) AddPartyBuffs(partyBuffs *proto.PartyBuffs) {
-	if shaman.Talents.ManaTideTotem {
-		partyBuffs.ManaTideTotems++
-	}
-}
-
+// The shocks, Lightning Bolt, Chain Lightning and Lava Burst register every rank in castableRanks; the
+// other spells register their highest rank only.
 func (shaman *Shaman) Initialize() {
 	shaman.registerChainLightningSpell()
 	shaman.registerLightningBoltSpell()
 	shaman.registerShieldsSpells()
 	shaman.registerMagmaTotemSpell()
 	shaman.registerSearingTotemSpell()
-	shaman.registerFlametongueTotemSpell()
 	shaman.registerFireNovaSpell()
 	shaman.registerWindfuryTotemSpell()
+	shaman.registerFlametongueTotemSpell()
+	shaman.registerFrostResistanceTotemSpell()
 	shaman.registerStrengthOfEarthTotemSpell()
 	shaman.registerGraceOfAirTotemSpell()
 	shaman.registerManaSpringTotemSpell()
 	shaman.registerShocks()
+
+	// In Initialize so that the imbues read the multipliers the talents set.
+	shaman.registerImbues()
 }
 
 func (shaman *Shaman) ApplyTalents() {
@@ -168,16 +162,18 @@ func (shaman *Shaman) Reset(sim *core.Simulation) {
 	shaman.TotemExpirations[AirTotem] = -10 * time.Hour
 	shaman.TotemExpirations[EarthTotem] = -10 * time.Hour
 	shaman.TotemExpirations[WaterTotem] = -10 * time.Hour
+
+	shaman.imbues = [2]proto.ShamanImbue{shaman.SelfBuffs.ImbueMH, shaman.SelfBuffs.ImbueMHSwap}
+	shaman.applyImbues(sim)
 }
 
 func (shaman *Shaman) OnEncounterStart(sim *core.Simulation) {
 	shaman.startShieldProcPeriodicAction(sim)
 }
 
+// The chance is the talent's ranked dummy, 3/7/10, which the tooltip of 408438 reads as $m1; the
+// effect's base points, 30, are what the talent's ranks replace.
 func (shaman *Shaman) GetOverloadChance() float64 {
-	if shaman.Talents.LightningOverload == 0 {
-		return 0.0
-	}
 	return spellData.LightningOverload.FractionAt(shaman.Talents.LightningOverload)
 }
 
@@ -194,43 +190,21 @@ const (
 	SpellMaskMagmaTotem
 	SpellMaskSearingTotem
 	SpellMaskFireNova
-	SpellMaskFlametongueTotem
-	SpellMaskStormstrikeCast
-	SpellMaskStormstrikeDamage
+	SpellMaskStormstrike
 	SpellMaskEarthShield
 	SpellMaskFrostShock
 	SpellMaskFlametongueWeapon
-	SpellMaskWindfuryWeapon
 	SpellMaskFrostbrandWeapon
-	SpellMaskRockbiterWeapon
 	SpellMaskElementalMastery
 	SpellMaskShamanisticRage
 	SpellMaskBasicTotem
-	SpellMaskShieldSelfProc
-	SpellMaskLavaBurst
 
-	SpellMaskStormstrike = SpellMaskStormstrikeCast | SpellMaskStormstrikeDamage
-	SpellMaskFlameShock  = SpellMaskFlameShockDirect | SpellMaskFlameShockDot
-	SpellMaskFire        = SpellMaskFlameShock | SpellMaskFireNova | SpellMaskLavaBurst
-	SpellMaskNature      = SpellMaskLightningBolt | SpellMaskLightningBoltOverload | SpellMaskChainLightning | SpellMaskChainLightningOverload | SpellMaskEarthShock
-	SpellMaskFrost       = SpellMaskFrostShock
-	SpellMaskOverload    = SpellMaskLightningBoltOverload | SpellMaskChainLightningOverload
-	SpellMaskShock       = SpellMaskFlameShock | SpellMaskEarthShock | SpellMaskFrostShock
-	SpellMaskFireTotem   = SpellMaskMagmaTotem | SpellMaskSearingTotem
-	SpellMaskTotem       = SpellMaskFireTotem | SpellMaskFlametongueTotem | SpellMaskBasicTotem
-	SpellMaskImbue       = SpellMaskFrostbrandWeapon | SpellMaskWindfuryWeapon | SpellMaskFlametongueWeapon | SpellMaskRockbiterWeapon
+	SpellMaskFlameShock = SpellMaskFlameShockDirect | SpellMaskFlameShockDot
+	SpellMaskFire       = SpellMaskFlameShock
+	SpellMaskNature     = SpellMaskLightningBolt | SpellMaskLightningBoltOverload | SpellMaskChainLightning | SpellMaskChainLightningOverload | SpellMaskEarthShock
+	SpellMaskFrost      = SpellMaskFrostShock
+	SpellMaskOverload   = SpellMaskLightningBoltOverload | SpellMaskChainLightningOverload
+	SpellMaskShock      = SpellMaskFlameShock | SpellMaskEarthShock | SpellMaskFrostShock
+	SpellMaskFireTotem  = SpellMaskMagmaTotem | SpellMaskSearingTotem
+	SpellMaskTotem      = SpellMaskFireTotem | SpellMaskBasicTotem
 )
-
-// The tick outcome the family table picked: a crit roll where the client marks Periodic Can Crit, a
-// plain tick otherwise, and never a per-tick hit roll. The store's TickOutcome adds that hit roll on
-// magic ticks, which would move every dot.
-func periodicTickOutcome(s *spelldata.Spell, dot *core.Dot) core.OutcomeApplier {
-	switch {
-	case s.PeriodicCanCrit() && s.DefenseTypeCore() == core.DefenseTypeMagic:
-		return dot.Spell.OutcomeTickMagicCrit
-	case s.PeriodicCanCrit():
-		return dot.Spell.OutcomeTickPhysicalCrit
-	default:
-		return dot.OutcomeTick
-	}
-}

@@ -1,152 +1,118 @@
-import { GemColor, ItemType, WeaponType } from '@generated/proto/common';
-import { UIEnchant as Enchant, UIGem as Gem, UIItem as Item } from '@generated/proto/ui';
+import { ItemRandomSuffix, ItemSlot, ItemType, PseudoStat, Stat } from '@generated/proto/common';
+import { UIEnchant as Enchant, UIItem as Item } from '@generated/proto/ui';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@i18n/localization', () => ({
-	translateStat: (stat: unknown) => String(stat),
-	translatePseudoStat: (pseudoStat: unknown) => String(pseudoStat),
-}));
+vi.mock('@i18n/localization', async () => (await import('@testing/sim/localization')).localizationStub);
 
-import { EquippedItem } from './equipped_item';
+import { enchantEP, EquippedItem } from './equipped_item';
+import { Stats } from './stats';
 
-const socketedItem = () =>
+const chestItem = () =>
 	Item.create({
 		id: 30107,
 		name: 'Vestments of the Sea-Witch',
 		type: ItemType.ItemTypeChest,
-		gemSockets: [GemColor.GemColorRed],
 		scalingOptions: { 0: { ilvl: 141, randPropPoints: 0, weaponDamageMin: 0, weaponDamageMax: 0, stats: [] } },
 	});
 
-const swordItem = () =>
-	Item.create({
-		id: 19324,
-		name: 'The Lobotomizer',
-		type: ItemType.ItemTypeWeapon,
-		weaponType: WeaponType.WeaponTypeSword,
-		scalingOptions: { 0: { ilvl: 76, randPropPoints: 0, weaponDamageMin: 59, weaponDamageMax: 111, stats: [] } },
-	});
-
-const shieldItem = () =>
-	Item.create({
-		id: 17066,
-		name: 'Drillborer Disk',
-		type: ItemType.ItemTypeWeapon,
-		weaponType: WeaponType.WeaponTypeShield,
-		scalingOptions: { 0: { ilvl: 76, randPropPoints: 0, weaponDamageMin: 0, weaponDamageMax: 0, stats: [] } },
-	});
-
-const gem = (id: number) => Gem.create({ id, color: GemColor.GemColorRed });
 const enchant = (effectId: number) => Enchant.create({ effectId, itemId: effectId });
 
-// TBC's signature is equals(other, ignoreEnchants?, ignoreGems?) where MoP's is
-// equals(other, ignoreReforge?, ignoreEnchants?, ignoreGems?, ignoreUpgrades?). A call written
-// against one silently means something else against the other, so pin the positions.
+// The second parameter of equals(other, ignoreEnchants?) is ignoreEnchants; pin its position.
 describe('EquippedItem.equals', () => {
-	const base = new EquippedItem({ item: socketedItem(), enchant: enchant(2661), gems: [gem(32196)] });
+	const base = new EquippedItem({ item: chestItem(), enchant: enchant(2661) });
 
-	it('takes enchants and gems into account by default', () => {
-		expect(base.equals(new EquippedItem({ item: socketedItem(), enchant: enchant(2661), gems: [gem(32196)] }))).toBe(true);
-		expect(base.equals(new EquippedItem({ item: socketedItem(), enchant: enchant(2669), gems: [gem(32196)] }))).toBe(false);
-		expect(base.equals(new EquippedItem({ item: socketedItem(), enchant: enchant(2661), gems: [gem(32215)] }))).toBe(false);
+	it('takes enchants into account by default', () => {
+		expect(base.equals(new EquippedItem({ item: chestItem(), enchant: enchant(2661) }))).toBe(true);
+		expect(base.equals(new EquippedItem({ item: chestItem(), enchant: enchant(2669) }))).toBe(false);
 	});
 
 	it('reads the second parameter as ignoreEnchants', () => {
-		const otherEnchant = new EquippedItem({ item: socketedItem(), enchant: enchant(2669), gems: [gem(32196)] });
+		const otherEnchant = new EquippedItem({ item: chestItem(), enchant: enchant(2669) });
 		expect(base.equals(otherEnchant, true)).toBe(true);
 		expect(base.equals(otherEnchant, false)).toBe(false);
 	});
+});
 
-	it('reads the third parameter as ignoreGems, and the second does not cover gems', () => {
-		const otherGem = new EquippedItem({ item: socketedItem(), enchant: enchant(2661), gems: [gem(32215)] });
-		expect(base.equals(otherGem, true)).toBe(false);
-		expect(base.equals(otherGem, false, true)).toBe(true);
+describe('EquippedItem with a random suffix', () => {
+	const ring = Item.create({
+		id: 12017,
+		name: 'Prismatic Band',
+		type: ItemType.ItemTypeFinger,
+		scalingOptions: { 0: { ilvl: 65, randPropPoints: 16, weaponDamageMin: 0, weaponDamageMax: 0, stats: { [Stat.StatIntellect]: 5 }, areaStats: [] } },
+	});
+	const suffixStats = new Array<number>(Stat.StatPhysicalDamage + 1).fill(0);
+	suffixStats[Stat.StatIntellect] = 4106; // 6.57 at 16 points.
+	suffixStats[Stat.StatStamina] = 7266; // 11.63.
+	const suffixPseudoStats = new Array<number>(PseudoStat.PseudoStatDodgePercent + 1).fill(0);
+	suffixPseudoStats[PseudoStat.PseudoStatDodgePercent] = 1;
+	const suffix = ItemRandomSuffix.create({ id: 12748, name: 'of the Test', stats: suffixStats, pseudoStats: suffixPseudoStats });
+
+	it('adds each rounded suffix stat on top of the item stats, and its pseudo stats unscaled', () => {
+		const stats = new EquippedItem({ item: ring, randomSuffix: suffix }).withDynamicStats().calcStats();
+		expect(stats.getStat(Stat.StatIntellect)).toBe(5 + 7);
+		expect(stats.getStat(Stat.StatStamina)).toBe(12);
+		expect(stats.getPseudoStat(PseudoStat.PseudoStatDodgePercent)).toBe(1);
 	});
 
-	it('ignores both when both flags are set', () => {
-		const other = new EquippedItem({ item: socketedItem(), enchant: enchant(2669), gems: [gem(32215)] });
-		expect(base.equals(other, true, true)).toBe(true);
+	it('gives the same stats when the dynamic item is worked out again', () => {
+		const once = new EquippedItem({ item: ring, randomSuffix: suffix }).withDynamicStats();
+		const twice = new EquippedItem({ item: once.item, randomSuffix: suffix }).withDynamicStats();
+		expect(twice.calcStats().equals(once.calcStats())).toBe(true);
 	});
 });
 
-describe('EquippedItem weapon type override', () => {
-	it('defaults effectiveWeaponType to the item’s own type', () => {
-		const sword = new EquippedItem({ item: swordItem() });
-		expect(sword.weaponTypeOverride).toBe(WeaponType.WeaponTypeUnknown);
-		expect(sword.effectiveWeaponType).toBe(WeaponType.WeaponTypeSword);
+describe('EquippedItem with a random suffix that reduces caster DPS', () => {
+	const axe = () =>
+		Item.create({
+			id: 3210,
+			name: 'Brutal War Axe',
+			type: ItemType.ItemTypeWeapon,
+			weaponSpeed: 3.6,
+			scalingOptions: {
+				0: {
+					ilvl: 30,
+					randPropPoints: 11,
+					weaponDamageMin: 58,
+					weaponDamageMax: 88,
+					unroundedDps: 20.483225,
+					stats: [],
+					areaStats: [],
+					reducedCasterWeaponDamage: { weaponDamageMin: 43, weaponDamageMax: 66, unroundedDps: 15.231116 },
+				},
+			},
+		});
+	const physician = ItemRandomSuffix.create({ id: 12911, name: 'of the Physician', stats: [], pseudoStats: [], reducedCasterDps: true });
+	const bear = ItemRandomSuffix.create({ id: 12718, name: 'of the Bear', stats: [], pseudoStats: [] });
+
+	it('swaps in the reduced damage range and its DPS', () => {
+		const equipped = new EquippedItem({ item: axe(), randomSuffix: physician }).withDynamicStats();
+		expect([equipped.item.weaponDamageMin, equipped.item.weaponDamageMax]).toEqual([43, 66]);
+		expect(equipped.calcStats(ItemSlot.ItemSlotMainHand).getPseudoStat(PseudoStat.PseudoStatMainHandDps)).toBeCloseTo((43 + 66) / 2 / 3.6);
 	});
 
-	it('withWeaponTypeOverride relabels effectiveWeaponType without touching the item itself', () => {
-		const sword = new EquippedItem({ item: swordItem() });
-		const asAxe = sword.withWeaponTypeOverride(WeaponType.WeaponTypeAxe);
+	it('keeps the weapon damage with any other suffix, and with none', () => {
+		for (const randomSuffix of [bear, null]) {
+			const equipped = new EquippedItem({ item: axe(), randomSuffix }).withDynamicStats();
+			expect([equipped.item.weaponDamageMin, equipped.item.weaponDamageMax]).toEqual([58, 88]);
+			expect(equipped.calcStats(ItemSlot.ItemSlotMainHand).getPseudoStat(PseudoStat.PseudoStatMainHandDps)).toBeCloseTo((58 + 88) / 2 / 3.6);
+		}
+	});
+});
 
-		expect(asAxe.weaponTypeOverride).toBe(WeaponType.WeaponTypeAxe);
-		expect(asAxe.effectiveWeaponType).toBe(WeaponType.WeaponTypeAxe);
-		// The underlying item is untouched -- it's still, physically, a sword.
-		expect(asAxe.item.weaponType).toBe(WeaponType.WeaponTypeSword);
-		expect(asAxe.item.id).toBe(sword.item.id);
+// One point of ArmorNoMods is one point of sheet armor and has a weight of its own, which the gear optimizer's candidate
+// filter reads with no scale; the Armor weight is per point of armor from items.
+describe('enchantEP with ArmorNoMods', () => {
+	const armor = 125;
+	const armorEnchant = (stat: Stat) => Enchant.create({ effectId: 1504, stats: Stats.fromMap({ [stat]: armor, [Stat.StatStamina]: 3 }).asProtoArray() });
+
+	it('values ArmorNoMods at its own weight and Armor at the Armor weight', () => {
+		const weights = Stats.fromMap({ [Stat.StatArmor]: 0.5, [Stat.StatArmorNoMods]: 0.125, [Stat.StatStamina]: 2 });
+		expect(enchantEP(armorEnchant(Stat.StatArmorNoMods), weights, 0, 0)).toBeCloseTo(armor * 0.125 + 3 * 2);
+		expect(enchantEP(armorEnchant(Stat.StatArmor), weights, 0, 0)).toBeCloseTo(armor * 0.5 + 3 * 2);
 	});
 
-	it('clears the override when relabelled to WeaponTypeUnknown', () => {
-		const overridden = new EquippedItem({ item: swordItem() }).withWeaponTypeOverride(WeaponType.WeaponTypeAxe);
-		const cleared = overridden.withWeaponTypeOverride(WeaponType.WeaponTypeUnknown);
-		expect(cleared.weaponTypeOverride).toBe(WeaponType.WeaponTypeUnknown);
-		expect(cleared.effectiveWeaponType).toBe(WeaponType.WeaponTypeSword);
-	});
-
-	it('is a no-op for non-weapons', () => {
-		const chest = new EquippedItem({ item: socketedItem() }).withWeaponTypeOverride(WeaponType.WeaponTypeAxe);
-		expect(chest.weaponTypeOverride).toBe(WeaponType.WeaponTypeUnknown);
-	});
-
-	it('is a no-op when the item itself is a shield', () => {
-		const shield = new EquippedItem({ item: shieldItem() }).withWeaponTypeOverride(WeaponType.WeaponTypeSword);
-		expect(shield.weaponTypeOverride).toBe(WeaponType.WeaponTypeUnknown);
-		expect(shield.effectiveWeaponType).toBe(WeaponType.WeaponTypeShield);
-	});
-
-	it('is a no-op when relabelling into OffHand or Shield', () => {
-		const sword = new EquippedItem({ item: swordItem() });
-		expect(sword.withWeaponTypeOverride(WeaponType.WeaponTypeShield).weaponTypeOverride).toBe(WeaponType.WeaponTypeUnknown);
-		expect(sword.withWeaponTypeOverride(WeaponType.WeaponTypeOffHand).weaponTypeOverride).toBe(WeaponType.WeaponTypeUnknown);
-	});
-
-	it('is dropped by withItem, since a new item is not a relabel of the old one', () => {
-		const overridden = new EquippedItem({ item: swordItem() }).withWeaponTypeOverride(WeaponType.WeaponTypeAxe);
-		const replaced = overridden.withItem(swordItem());
-		expect(replaced.weaponTypeOverride).toBe(WeaponType.WeaponTypeUnknown);
-	});
-
-	it('survives withEnchant, withGem and withRandomSuffix', () => {
-		const overridden = new EquippedItem({ item: swordItem() }).withWeaponTypeOverride(WeaponType.WeaponTypeAxe);
-		expect(overridden.withEnchant(enchant(2661)).weaponTypeOverride).toBe(WeaponType.WeaponTypeAxe);
-		expect(overridden.withRandomSuffix(null).weaponTypeOverride).toBe(WeaponType.WeaponTypeAxe);
-	});
-
-	it('feeds into equals, so a different override is a different EquippedItem', () => {
-		const asAxe = new EquippedItem({ item: swordItem() }).withWeaponTypeOverride(WeaponType.WeaponTypeAxe);
-		const asMace = new EquippedItem({ item: swordItem() }).withWeaponTypeOverride(WeaponType.WeaponTypeMace);
-		const plain = new EquippedItem({ item: swordItem() });
-
-		expect(asAxe.equals(asMace)).toBe(false);
-		expect(asAxe.equals(plain)).toBe(false);
-		expect(asAxe.equals(new EquippedItem({ item: swordItem() }).withWeaponTypeOverride(WeaponType.WeaponTypeAxe))).toBe(true);
-	});
-
-	// The override has to round-trip through the ItemSpec proto (save/share links), same as
-	// enchant/gems/randomSuffix.
-	it('round-trips through asSpec()', () => {
-		const overridden = new EquippedItem({ item: swordItem() }).withWeaponTypeOverride(WeaponType.WeaponTypeAxe);
-		const spec = overridden.asSpec();
-		expect(spec.weaponTypeOverride).toBe(WeaponType.WeaponTypeAxe);
-
-		const rebuilt = new EquippedItem({ item: swordItem(), weaponTypeOverride: spec.weaponTypeOverride });
-		expect(rebuilt.effectiveWeaponType).toBe(WeaponType.WeaponTypeAxe);
-		expect(rebuilt.equals(overridden)).toBe(true);
-	});
-
-	it('omits the override from asSpec() when unset', () => {
-		const plain = new EquippedItem({ item: swordItem() });
-		expect(plain.asSpec().weaponTypeOverride).toBe(WeaponType.WeaponTypeUnknown);
+	it('gives ArmorNoMods nothing where only Armor has a weight', () => {
+		const weights = Stats.fromMap({ [Stat.StatArmor]: 0.5 });
+		expect(enchantEP(armorEnchant(Stat.StatArmorNoMods), weights, 0, 0)).toBe(0);
 	});
 });

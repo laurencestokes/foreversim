@@ -6,6 +6,8 @@ export type DEFAULT_UNIT_REF = 'self' | 'currentTarget';
 export interface FieldOptions {
 	label?: string;
 	labelTooltip?: string;
+	/** Text that runs long, such as a schedule's list of times: the field gets a wide input under its label. */
+	wide?: boolean;
 }
 
 // The DOM-free half of an APL picker field: which proto field it edits, how to
@@ -23,9 +25,8 @@ type FieldDescriptorPayloads = {
 	placeholderName: { field: string; options?: FieldOptions };
 	groupName: { field: string; options?: FieldOptions };
 	groupReferenceVariables: { field: string; groupNameField: string; options?: FieldOptions };
-	eclipseType: { field: string };
-	hotwStrategy: { field: string };
 	curseType: { field: string };
+	summonType: { field: string };
 	autoType: { field: string };
 	autoSwingType: { field: string };
 	statType: { field: string };
@@ -38,6 +39,8 @@ type FieldDescriptorPayloads = {
 	mathOperator: { field: string };
 	executePhaseThreshold: { field: string };
 	totemType: { field: string };
+	mobType: { field: string };
+	areaType: { field: string };
 	value: { field: string; options?: FieldOptions };
 	valueList: { field: string };
 	// Rendered by ActionPicker (they nest an APL action).
@@ -96,16 +99,12 @@ export function groupReferenceVariablesFieldConfig(field: string, groupNameField
 	return { type: 'groupReferenceVariables', field, groupNameField, options };
 }
 
-export function eclipseTypeFieldConfig(field: string): Descriptor<'eclipseType'> {
-	return { type: 'eclipseType', field };
-}
-
-export function hotwStrategyFieldConfig(field: string): Descriptor<'hotwStrategy'> {
-	return { type: 'hotwStrategy', field };
-}
-
 export function curseTypeFieldConfig(field: string): Descriptor<'curseType'> {
 	return { type: 'curseType', field };
+}
+
+export function summonTypeFieldConfig(field: string): Descriptor<'summonType'> {
+	return { type: 'summonType', field };
 }
 
 export function autoTypeFieldConfig(field: string): Descriptor<'autoType'> {
@@ -148,6 +147,14 @@ export function executePhaseThresholdFieldConfig(field: string): Descriptor<'exe
 
 export function totemTypeFieldConfig(field: string): Descriptor<'totemType'> {
 	return { type: 'totemType', field };
+}
+
+export function mobTypeFieldConfig(field: string): Descriptor<'mobType'> {
+	return { type: 'mobType', field };
+}
+
+export function areaTypeFieldConfig(field: string): Descriptor<'areaType'> {
+	return { type: 'areaType', field };
 }
 
 export function valueFieldConfig(field: string, options?: FieldOptions): Descriptor<'value'> {

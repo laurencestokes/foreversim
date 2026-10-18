@@ -2,45 +2,43 @@ package priest
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-// Dark Sacrifice is new in Forever: five ranks (1277324-1277328, trained 20 to 60), a free instant
-// self buff on a 10 minute cooldown that turns health into mana over 15 sec. The client row carries the
-// base: rank 5 ticks 320 every 3 sec, five ticks. The tooltip's "(1640 + Spirit) Mana" adds Spirit on
-// top, which the row does not state; a beta combat log settles how: Papa (report 40, rank 1, Spirit 72)
-// took 80 health and gained 94, 94, 95, 94, 95 mana a tick, so each tick pays base + Spirit / 5. The
-// health cost is not modelled. Every rank is flagged No Threat (1.60.1.70205 SpellMisc Attributes[1]
-// 0x400), so the mana adds no threat. The cooldown manager uses it once the whole gain fits in the mana bar.
-var DarkSacrificeRank = spellData.DarkSacrifice.Highest()
-
-func (priest *Priest) registerDarkSacrificeSpell() {
-	rank := DarkSacrificeRank
-	effect := rank.ProcEnergizeEffect()
-	metrics := priest.NewManaMetrics(core.ActionID{SpellID: rank.ID})
-	metrics.NoThreat = rank.NoThreat()
-	tick := func() float64 {
-		return effect.Average(priest.Level) + priest.GetStat(stats.Spirit)/5
-	}
+func (priest *Priest) registerDarkSacrifice(_ int32, rank *spelldata.Spell) {
+	healthPerTick := rank.Effect(dbcenums.A_PERIODIC_DUMMY, 0).Average()
+	manaTick := rank.FirstAura(dbcenums.A_PERIODIC_ENERGIZE)
+	manaPerTick := manaTick.Average()
+	manaMetrics := priest.NewManaMetrics(core.ActionID{SpellID: rank.ID})
 
 	config := spelldata.SpellConfig(&priest.Unit, rank, spelldata.Flags(core.SpellFlagAPL))
-	config.ProcMask = core.ProcMaskEmpty
-	config.Hot = spelldata.DotConfig(rank, effect)
+
+	config.Hot = spelldata.DotConfig(rank, manaTick, spelldata.RankLabel(rank, &priest.Unit))
 	config.Hot.SelfOnly = true
+	ticks := float64(config.Hot.NumberOfTicks)
+	rowMana := manaPerTick * ticks
 	config.Hot.OnTick = func(sim *core.Simulation, _ *core.Unit, _ *core.Dot) {
-		priest.AddMana(sim, tick(), metrics)
+		// The tooltip's ${$o2+$SPI}: the row's mana over the duration, and Spirit once, shared over the ticks.
+		priest.RemoveHealth(sim, healthPerTick)
+		priest.AddMana(sim, manaPerTick+priest.GetStat(stats.Spirit)/ticks, manaMetrics)
 	}
+
 	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
 		spell.SelfHot().Apply(sim)
 	}
-	ticks := float64(config.Hot.NumberOfTicks)
+
+	darkSacrifice := priest.RegisterSpell(config)
+	if rank != spellData.DarkSacrifice.Highest() {
+		return
+	}
 
 	priest.AddMajorCooldown(core.MajorCooldown{
-		Spell: priest.RegisterSpell(config),
+		Spell: darkSacrifice,
 		Type:  core.CooldownTypeMana,
-		ShouldActivate: func(_ *core.Simulation, _ *core.Character) bool {
-			return priest.MaxMana()-priest.CurrentMana() >= tick()*ticks
+		ShouldActivate: func(_ *core.Simulation, character *core.Character) bool {
+			return character.MaxMana()-character.CurrentMana() >= rowMana+character.GetStat(stats.Spirit)
 		},
 	})
 }

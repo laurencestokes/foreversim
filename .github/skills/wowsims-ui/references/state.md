@@ -1,241 +1,229 @@
 # State: one Zustand store per page
 
-**Source of truth:** `ui/sim/state/sim_store.ts` for the shape, `ui/sim/state/subscriptions.ts` for
-the read side, `ui/sim/state/batch.ts` for gating. `ui/sim/state/README.md` is the long-form
-companion and has the add-a-field recipe — it predates the `runs` slice, so read the slice list from
-the code:
+**Source of truth:** `ui/sim/state/sim_store.ts` for the shape, `ui/sim/state/subscriptions.ts` for the read side,
+`ui/sim/state/batch.ts` for gating, `ui/sim/hooks/` for the React reads. `ui/sim/state/README.md` is the long-form
+companion. Print the slice list from the code:
 
 ```
 sed -n '/^export interface SimState {/,/^}/p' ui/sim/state/sim_store.ts
 ```
 
-There is exactly one store per page: `Sim.store`, built by `createSimStore()` and wrapped in
-`subscribeWithSelector`. It is UI-free _and_ browser-free (see the `no-restricted-globals` ban in
-`layers.md`), which is what lets `tools/state-snapshots` construct the whole model in node.
+There is one store per page, `Sim.store`, built by `createSimStore()` and wrapped in `subscribeWithSelector`. It needs
+no browser (see the `no-restricted-globals` ban in `layers.md`), which is what lets `ui/sim/sim.test.ts` build a `Sim`
+against an in-memory `Env`.
+
+## Contents
+
+- Slices and who owns them
+- The write path
+- The read path
+- Reading the store from React
+- Bindings: `useInput`, hide/restore, kept selections, text fields, lists
+- The dominant defect: reading state you did not subscribe to
+- State vs events
+- Writes that need a specific shape
+- Adding a field
+- Player lifetime
 
 ## Slices and who owns them
 
 | Slice                   | Owner facade                       | Contents                                                                                            |
 | ----------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `ui`                    | `Sim`                              | show\* flags, language, `wasmConcurrency` — presentation                                            |
+| `ui`                    | `Sim`                              | show\* flags, language, `wasmConcurrency`: presentation                                             |
 | `sim`                   | `Sim`                              | iterations, phase, faction, `fixedRngSeed`, filters, `lastUsedRngSeed(+version)`, `metadataVersion` |
 | `encounter`             | `Encounter`                        | duration, execute proportions, `useHealth`, `targets` (replace-on-write)                            |
 | `raid`                  | `Raid` / `Party`                   | buffs, debuffs, tanks, targetDummies, numActiveParties, `partyBuffs[5]`, `composition[5][5]`        |
 | `players[storeKey]`     | `Player` / `ItemSwapSettings`      | the values, as `PlayerSlice`, plus a per-field version counter `v` keyed by `PLAYER_FIELDS`         |
-| `reforge[storeKey]`     | `ReforgeSettings`                  | reforge-optimizer settings (`REFORGE_FIELDS`) + counters                                            |
-| `statWeights[storeKey]` | `StatWeightActionSettings`         | excluded stats + counter                                                                            |
+| `reforge[storeKey]`     | `ReforgeSettings`                  | gear-optimizer settings (`REFORGE_FIELDS`) and counters                                             |
+| `statWeights[storeKey]` | `StatWeightActionSettings`         | excluded stats, EP precision settings and a counter                                                 |
+| `statSweep[storeKey]`   | `StatSweepSettings`                | the stat sweep's stats, range, step, plotted metric and precision settings, and a counter           |
 | `bulk[storeKey]`        | `ui/sim/settings/bulk_settings.ts` | the batch's items, picker groups, limits, run flags and results, plus `v: { settings, items }`      |
-| `runs`                  | `SimRuns` (`ui/sim/sim_runs.ts`)   | `{ isRunning, isAborting }` per `SimRunKind` — one _user-visible operation_, not one worker request |
+| `runs`                  | `SimRuns` (`ui/sim/sim_runs.ts`)   | `{ isRunning, isAborting }` per `SimRunKind`: one user-visible operation, not one worker request    |
 
-`runs` is keyed by `SimRunKind` (`individual-sim`, `bulk-sim`, `stat-weights`,
-`reforge-optimize`) and written only through `patchRun`. A bulk-sim run issues one staged sequence
-of worker requests per candidate (low/medium/high, then a finalist pass — see the
-`wowsims-bulk-sim` skill) under one progress bar and one stop button; that is why the unit is the
-operation, not the worker request.
+`runs` is keyed by `SimRunKind` and written only through `patchRun`. A bulk sim issues many worker requests under one
+progress bar and one stop button (see `wowsims-bulk-sim`), which is why the unit is the operation.
 
-Class-side by design, deliberately not in the store: the Party↔Player object graph (composition in
-the store is the notification source, the objects stay on the classes), `aplRotation` (tracked by
-the `rotation` counter), caches, and server-derived metadata objects.
+Kept on the classes on purpose: the Party↔Player object graph (the store's `composition` is the notification source),
+`aplRotation` (tracked by the `rotation` counter), caches, and server-derived metadata objects.
 
 ## The write path
 
-A facade setter keeps `setX(eventID, value)`. `eventID` is an opaque action id from
-`nextEventID()` (`ui/sim/state/batch.ts`), kept for future undo grouping and **unused by the store**. It
-survives lint only because `no-unused-vars` is configured `args: "after-used"` — an unused parameter
-before a used one is not reported. A setter that takes an eventID and nothing else needs the `_`
-prefix (`argsIgnorePattern: "^_"`). The setter guards equality exactly as it always did, then writes
-ONCE:
+A facade setter is `setX(value)`: it guards equality, then writes once through one of the writers in `sim_store.ts`:
 
-- `patchSlice(store, 'sim', patch)` — the unkeyed slices
-- `patchKeyed(store, 'players', key, patch, bumps)` — the per-entity slices, with `seedKeyed` /
-  `deleteKeyed` for lifetime
-- `patchRun(store, kind, patch)` — the `runs` slice
+- `patchSlice(store, 'sim', patch)` for the unkeyed slices
+- `patchKeyed(store, 'players', key, patch, bumps)` for the per-entity slices, with `seedKeyed` / `deleteKeyed` for
+  lifetime
+- `patchRun(store, kind, patch)` for `runs`
 
-One logical change is one `setState`: the value and its counter bump go in the same write, so a
-subscriber sees it once. Values that must notify even when the new value compares equal
-(`epWeights`, `epRatios`, `currentStats`, `rotation`, `itemSwap`, `lastUsedRngSeed`, the reforge and
-stat-weight counters) bump a version counter instead of relying on reference identity. Never
-content-hash to force a notification.
-
-Features are lint-banned from importing the four writers directly — go through a facade.
+One logical change is one `setState`: the value and its counter bump go in the same write, so a subscriber sees it once.
+Values that must notify even when the new value compares equal (`epWeights`, `epRatios`, `currentStats`, `rotation`,
+`itemSwap`, `lastUsedRngSeed`, the reforge and stat-weight counters) bump a version counter. Bump the counter rather
+than content-hashing a value to force a notification. Features may not import the writers (lint-enforced); they go
+through a facade.
 
 ## The read path
 
-Subscribe through `ui/sim/state/subscriptions.ts`, never by hand:
+Subscribe through the helpers in `ui/sim/state/subscriptions.ts`, which come in two kinds:
 
 - field level: `subscribePlayerField(player, 'gear')`, `subscribeSimField`, `subscribeUiField`,
-  `subscribeEncounterField`, `subscribeRaidField`, `subscribePartyBuffs`, `subscribeReforgeField`,
-  `subscribePlayerReforgeField`, `subscribePlayerStatWeightsField`, `subscribeBulkField`,
-  `subscribeUnitMetadata`, `subscribeRunState(sim, kind)`
-- aggregate level: `subscribePlayerChange`, `subscribePartyChange`, `subscribeRaidChange`,
-  `subscribeEncounterChange`, `subscribeSimSettingsChange`, `subscribeSimChange`,
-  `subscribeReforgeChange`, `subscribeStatWeightsChange`, `subscribeBulkChange`,
-  `subscribeStatsInputs`
-- `subscribeAll([...])` folds several selector sources into ONE tuple selector, so a write or batch
-  touching all of them notifies exactly once. Prefer it over a hand-written combined selector;
-  only non-selector sources fall back to one fire per source.
+  `subscribeEncounterField`, `subscribeRaidField`, `subscribeBulkField`, `subscribeRunState(sim, kind)`, …
+- aggregate level: `subscribePlayerChange`, `subscribeEncounterChange`, `subscribeSimChange`, `subscribeStatsInputs`, …
 
-Everything above is **batch-gated** through `subscribeGated` (`ui/sim/state/batch.ts`): inside
-`batch(() => …)` a subscriber is deferred and fires once at the end with final state. `batch()`
-replaced `freezeAllAndDo` and logs errors the same way. `TypedEvent` is gone.
+`subscribeAll([...])` folds several selector sources into one tuple selector, so a write or batch that touches all of
+them notifies once. List the current set with `/usr/bin/grep -n "^export function" ui/sim/state/subscriptions.ts`.
 
-Aggregates deliberately exclude server-derived state: `PLAYER_CHANGE_FIELDS` drops `currentStats`
-and `simSettingsKey` drops the rng seed and metadata counters. Including them makes stat
-recomputation re-trigger itself — a self-sustaining loop that looks like a perf bug.
+Every helper is batch-gated through `subscribeGated` (`ui/sim/state/batch.ts`): inside `batch(() => …)` a subscriber
+is deferred and fires once at the end with the final state. An error thrown inside `batch()` is logged, not propagated,
+and pending listeners still flush.
+
+Aggregates leave out server-derived state on purpose: `PLAYER_CHANGE_FIELDS` drops `currentStats`, and `simSettingsKey`
+drops the rng seed and metadata counters. Including them makes the stat recomputation re-trigger itself, a loop that
+looks like a perf bug.
 
 ## Reading the store from React
 
-Four kinds of read. Picking the wrong one is the most common defect in this codebase — see the last
-section of this file. In order of preference:
+Picking the wrong read is the most common defect here (see "The dominant defect" below). In order of preference:
 
-**`usePlayerStore('gear')`** (`ui/sim/hooks/usePlayerStore.ts`) for one player field. It is typed on
-`keyof Omit<PlayerSlice, 'v'>`, deliberately **not** on `PlayerField`. `PlayerSlice` holds the real
-values as stable references, and `patchKeyed` replaces one only on a real change, so Zustand's own
-identity check is the entire subscription: no counter, no snapshot cache, no read callback.
-`PlayerField` is the version-_counter_ list (`PLAYER_FIELDS`) and is a **different set** in both
-directions — it carries `rotation`, `itemSwap` and `epRefStat`, which have no value in the slice at
-all, and it omits the six slice values the last two stand for (`itemSwap*`, `*RefStat`). Reach for
-the one that matches what you want: a value, or a notification. The hook reads its player from
-`usePlayer()`, and there is exactly one — there is no raid sim UI, so "which player" is never a
-question a component has to answer.
+**A plain selector.** `usePlayerStore('gear')`, `useSimStore('phase')`, `useUiStore('showEPValues')` in
+`ui/sim/hooks/`. `PlayerSlice` holds the real values as stable references and `patchKeyed` replaces one only on a real
+change, so Zustand's identity check is the whole subscription. `usePlayerStore` is typed on `keyof PlayerSlice`, not
+on `PlayerField`: `PlayerField` is the version-counter list (`PLAYER_FIELDS`), which carries `rotation`, `itemSwap` and
+`epRefStat` (no value in the slice) and omits the values those stand for. Use the slice for a value and the counter for
+a notification. There is one player per page, read from `usePlayer()`.
 
-**A named store field on an `InputConfig`.** `InputConfig` (`ui/ui-kit/input.ts`) takes
-`storeField`, resolved by `ui/sim/hooks/useStoreField.ts` against the host from context. A
-`StoreField` is either a bare player field or a scoped one — `sim:` `ui:` `encounter:` `raid:`
-`reforge:` `bulk:` `statWeights:` — and an array of them folds into one `subscribeAll`, so several
-fields still notify once. The `StoreBinding` type requires one of `storeField` / `storeSubscribe`,
-and `storeSubscribe` wins where a config carries both. Prefer naming the field: it is data rather
-than a closure, it is greppable, and it cannot capture the wrong object.
+**Store fields named as data.** `StoreField` (`ui/sim/hooks/useStoreField.ts`) is a bare player field or a scoped one
+(`sim:` `ui:` `encounter:` `raid:` `reforge:` `bulk:` `statWeights:`). `useStoreField(field | [fields])` resolves it
+against the host from context and folds an array into one `subscribeAll`, memoised on the names. Pass the result to
+`useStoreSubscribe(useStoreField([...]), read)` when a component reads a facade method; `ConsumesPicker` does this
+with `CONSUMABLE_ORDER_FIELDS`. Prefer it to a hand-built `subscribeAll([...])` in a render body: that builds a new
+source each render, and `useStoreSubscribe` re-subscribes whenever the source identity changes. A named field is also
+greppable and cannot capture the wrong object.
 
-`StoreField` also has two aggregates, `'player:*'` and `'encounter:*'`, which watch a whole slice.
-**They are a last resort** — each one is a component re-rendering on writes it does not read. There
-are five uses today; that number should fall and never rise:
+`StoreField` has two aggregates, `'player:*'` and `'encounter:*'`, which re-render a component on every write to the
+slice. Use one only when nothing narrower works, and keep their number from growing:
 
 ```
-/usr/bin/grep -rn "player:\*\|encounter:\*" --include=*.ts --include=*.tsx ui/ | /usr/bin/grep -v useStoreField.ts
+/usr/bin/grep -rn "player:\*\|encounter:\*" --include=*.ts --include=*.tsx ui/ | /usr/bin/grep -v "useStoreField.ts\|\.test\."
 ```
 
-**`useStoreSubscribe(source, read)`** (`ui/sim/hooks/useStoreSubscribe.ts`) for a source that is not
-a field: an APL per-row source, a facade that owns its own `.subscribe`, an aggregate. It caches the
-snapshot and invalidates on notification, because `useSyncExternalStore` reports a fresh object from
-`getSnapshot` as _"The result of getSnapshot should be cached to avoid an infinite loop"_ and most
-model getters here return one. Its before-init form is
-`useReadyStoreSubscribe(source, read, ready)`, and the shape is the point: `ready` is folded into the
-**subscription's identity**, not only into the read. `getSnapshot` runs on the first render, long
-before a `useSimReady` gate can flip, so gating the read alone caches a `null` that nothing ever
-invalidates.
+**`useStoreSubscribe(source, read)`** (`ui/sim/hooks/useStoreSubscribe.ts`) for any other source: an APL row, a facade
+with its own `.subscribe`, an `Emitter`. It caches the snapshot and re-reads only on a notification or a new source,
+because `useSyncExternalStore` loops on a fresh object from `getSnapshot` and most model getters return one. So `read`
+may touch only live model state: a prop or component state it captures is answered one notification late, for good. A
+value keyed by a prop belongs in the render body or in a plain selector. The before-init form is
+`useReadyStoreSubscribe(source, read, ready)` (`ui/sim/hooks/useReadyStoreSubscribe.ts`), which folds `ready` into the
+subscription's identity, because `getSnapshot` runs on the first render and would otherwise cache a `null` forever.
 
-**Not a subscription at all.** `useSpecConfig()` and `useSpecPresets()`
-(`ui/sim/context/SimHostContext.tsx`) are plain context reads: the spec declaration is built once in
-the `SimHostObject` constructor and never replaced, so they re-render nothing, by design. That makes
-them the wrong tool for anything reactive — a value read through one is correct on mount and stale
-afterwards. `useSimHost()` / `usePlayer()` / `useSim()` are the same kind of read.
-`useOptionalSimHost()` is the nullable variant, for a hook that needs the host on only some paths
-and still has to run unconditionally.
+**Context reads, not subscriptions.** `useSpecConfig()`, `useSpecPresets()`, `useSimHost()`, `usePlayer()`, `useSim()`
+and the nullable `useOptionalSimHost()` (`ui/sim/context/SimHostContext.tsx`). The spec declaration is built once and
+never replaced, so these re-render nothing; a reactive value read through one is right on mount and stale afterwards.
 
-Composite hooks, so nobody rebuilds one: `useIsBlacksmithing()` (`ui/sim/hooks/`, both profession
-fields), `useTalents()` (`ui/features/talents/hooks/useTalents.ts`), and `useAplRotation(select)` —
-the rotation is the one player field with no value in the store, so that hook keys a `useMemo` on the
-`rotation` counter and reads `player.aplRotation` through it.
+Composite hooks already exist: `useTalents()` (`ui/features/talents/hooks/useTalents.ts`) and
+`useAplRotation(select)` (`ui/sim/hooks/useAplRotation.ts`), which keys on the `rotation` counter because the rotation
+has no value in the store.
 
-### `revision`, and why the pickers need it
+Outside React, cache a derived value with `memoLast()` (`ui/sim/utils/misc.ts`), a one-entry memo that recomputes when
+one of its dependencies changes identity. Use it instead of a hand-written "recompute when these change" cache; the
+consumables order and the stat-filter model use it.
 
-`ui/ui-kit/hooks/useInput.ts` returns `{ value, setValue, hidden, disabled, revision }`. `revision`
-increments on **every** notification, including ones that leave the value unchanged. It is not a
-change counter, and deleting it looks safe right up to the point an input stops re-syncing.
+## Bindings: `useInput`, hide/restore, kept selections, text fields, lists
 
-Four pickers own an **uncontrolled** DOM node and write it from a `useLayoutEffect` keyed
-`[value, revision]`: `NumberPicker`, `AdaptiveStringPicker`, `NumberListPicker` and `EnumPicker`.
-Without `revision`, a store write that lands back on the value already displayed runs no effect and
-the node keeps whatever the user last typed. `IconPicker` and `IconEnumPicker` use it the other way
-round, as a `lastRevision` guard that tells a real notification apart from construction.
+`ui/features/inputs/` is the one place a kit picker meets the store. An `InputConfig` (`ui/features/inputs/input.ts`)
+goes to a `Connected*` adapter (`ui/features/inputs/components/`), which calls `useInput`
+(`ui/features/inputs/hooks/useInput.ts`) and hands the kit picker plain `value` / `onChange`. A config names its source
+with `storeField` (preferred, resolved by `useStoreField`) or `storeSubscribe`; the `StoreBinding` type requires one,
+and `storeSubscribe` wins when both are set. Omit both for an input its parent re-syncs (the nested APL pickers) or a
+UI-local toggle; `useInput` then notifies itself after `setValue`.
 
-The three text pickers commit through `useCommitChange` (`ui/ui-kit/hooks/useCommitChange.ts`),
-which listens for the **native `change` event** — blur-after-edit and Enter — not React's `onChange`,
-which fires per keystroke. Typing into one of them writes nothing to the store until the edit is
-committed; `EnumPicker`'s `<select>` is the exception and commits on selection.
+`useInput` returns `{ value, setValue, hidden, disabled, revision }`. `revision` increments on every notification,
+including ones that leave the value unchanged, so it is not a change counter. Its reader is `useHideZeroRestore`
+(`ui/features/inputs/hooks/useHideZeroRestore.ts`), which uses it to tell a real notification from construction and a
+StrictMode replay before it zeroes a hidden input or restores a shown one. The stored value comes back only onto a
+source that still reads as zeroed, so a value set while hidden (a loaded build) is kept. `ConnectedIconPicker` and
+`ConnectedIconEnumPicker` call it; the enum adapter also passes `onSettled` to reset a value whose option its
+`showWhen` hides, and a user pick calls `clearStored()` first.
 
-Omit both `storeField` and `storeSubscribe` for an input re-synced by its parent — the nested APL
-pickers — and for UI-local toggles; `useInput` then rings its own notification after `setValue`, and
-the `input_helpers.ts` factories already supply a source where one is wanted.
+**Values that change with the model.** An icon-enum config's `values` may be an array or `(obj) => Array`, resolved
+through `iconEnumValues` (`ui/features/inputs/components/ConnectedIconEnumPicker/utils.ts`) on every render and every
+time the menu opens. That is how the consumables follow their EP order (`orderedByEp`, `consumableOrderOf`) without
+the picker subscribing to the EP fields.
+
+**Kept selections.** The icon, icon-enum and multi-icon configs implement `KeptInput.keptBy(obj, value)`
+(`ui/features/inputs/input.ts`): true when the stat filter hides a selection that stays offered because it is
+selected. The adapter turns that into the kit's single `keptTooltip` prop through `keptTooltipOf`; present means kept.
+`IconSwatch` (`ui/ui-kit/IconSwatch/IconSwatch.tsx`) owns the dimmed swatch, the corner badge with the tooltip, and
+the `data-kept` attribute on the swatch box. `valuePicked` and `inputPicked` (same `utils.ts`) answer whether a value or
+an input holds a pick. The adapters derive the kept tooltip, the active input and `showWhen` in the render body, not
+inside a `useStoreSubscribe` read: the stat filter hands in a new config when its stats change, and a read cached in
+the snapshot would answer from the old config.
+
+**Text fields.** `TextField` (`ui/ui-kit/TextField/TextField.tsx`) and its presets hold an uncommitted edit in
+`useDraft` (`ui/ui-kit/hooks/useDraft.ts`), keyed on the formatted display string, so a same-value write or a
+`revision` bump keeps a mid-edit draft. With the default `commit="blur"`, used by every connected text field, they
+commit through `useCommitChange` (`ui/ui-kit/hooks/useCommitChange.ts`) on the native `change` event (blur after an
+edit, or Enter), so typing writes nothing to the store until the edit is committed. `SearchField` commits per
+keystroke or when typing pauses, and `ChoiceField` (`ui/ui-kit/ChoiceField/ChoiceField.tsx`) on selection.
+
+**Lists.** `useListItems` (`ui/features/inputs/hooks/useListItems.ts`) binds an array field: `create`, `remove`,
+`copy`, `move` and each row's `itemConfig` write one fresh array through `config.setValue` and never mutate the array
+they read. Rows find their item by key (`ui/features/inputs/list_ids.ts`), so a row keeps its item through a reorder
+and through a source that returns clones. The caller renders the array on the kit `Tree` (`ui/ui-kit/Tree/`) and wires
+`move` to `sortable.onMove`.
 
 ## The dominant defect: reading state you did not subscribe to
 
-Every other bug class here is rarer than this one. A component subscribes to the fields it obviously
-uses, then calls a facade method that reads a field it did not name, and the render is correct on
-mount and silently stale afterwards. There is no error, no warning and no failing test; the value is
-simply the one it had when the component last re-rendered for some other reason.
+A component subscribes to the fields it obviously uses, then calls a facade method that reads a field it did not name.
+The render is right on mount and silently stale afterwards, with no error, warning or failing test.
 
-A shape worth checking for on sight, because it has bitten this exact architecture before: a
-component calling `player.isBlacksmithing()` — which decides whether an item's extra Blacksmithing
-socket counts — while subscribing only to `gear`, so toggling the profession leaves gem totals and
-the favourite-gem socket colour stale until the next gear edit; or a component reading
-`player.hasProfession(...)` inside a `useMemo(…, [player, item])` with no profession subscription
-anywhere in the file, so a bulk-sim gear-change tooltip keeps whichever socket count was current
-when it mounted. The fix in both cases is `useIsBlacksmithing()`, which selects `profession1` and
-`profession2` directly. What surfaces this class of bug is naming the fields at the subscription
-site: an aggregate, or a hand-built `storeSubscribe`, hides the read set, and `storeField` puts it
-in one greppable place. That is the practical argument for the preference order above.
+The shape to look for: a component calling `player.hasProfession(...)` (which decides whether a profession-only enchant
+is offered) while subscribing only to `gear`, or inside a `useMemo(…, [player, item])` with no profession subscription
+in the file. Toggling the profession leaves the list stale until some other re-render. The fix is to subscribe to what
+the method reads, here `profession1` and `profession2`. Naming fields at the subscription site (`storeField`,
+`useStoreField`) puts the read set in one greppable place, which is the practical reason for the preference order
+above.
 
-**No lint can find these.** The read is a method call on a facade, so the dependency is only visible
-by following `player.isBlacksmithing()` into `ui/sim/player/player.ts` and seeing which slice fields
-it touches. When you add a facade call to a component, audit what that method reads, not what the
-component names.
+No lint finds these: the dependency is only visible by following the call into `ui/sim/player/player.ts`. When you add
+a facade call to a component, audit what that method reads.
 
-**And `react-hooks/exhaustive-deps` reports the inverse case backwards.** This architecture has
-already hit one case where `ui/features/gear/components/SelectorModal/ItemList.tsx`'s
-`itemsToDisplay` memo listed `filters` in its dependency array while its body never named it
-directly — it read as a stray entry to delete. It was load-bearing: the body called
-`player.filterItemData(…)`, and that method reaches `sim.getFilters()` internally. Deleting the
-entry on a lint's word left the memo's correctness resting on another dependency happening to close
-over `filters` too — an accident of the code, not the reason the entry was there. Check for the same
-shape once `SelectorModal/ItemList.tsx` exists here: treat a dependency a lint calls unnecessary the
-same way you treat a missing one — go read the callee, don't trust the lint's diff.
+`react-hooks/exhaustive-deps` gets the inverse case backwards. The `itemsToDisplay` memo in
+`ui/features/gear/components/SelectorModal/ItemList.tsx` lists `filters` although its body never names it, because
+`player.filterItemData` reads `sim.getFilters()` inside; the comment beside it says so. Treat a dependency the lint
+calls unnecessary like a missing one: read the callee before deleting it.
 
-## State vs events — the rule that gets got wrong
+## State vs events
 
-- A **value in the store changed** → a store subscription. Class-side values (`aplRotation`, item
-  swap, rng seed, reforge / stat-weight settings) are tracked by version counters in their slice;
-  bump the counter where the old emitter fired.
-- **Something happened** (a sim result, a crash, a reference set or swapped, progress, "filters
-  changed") → `Emitter<T>` from `ui/sim/state/events.ts`. `on` returns an unsubscribe function,
-  `emit` fires synchronously. No `EventID`, no batching, no dedup. **Never put these in the store.**
+- A value in the store changed: a store subscription. Class-side values (`aplRotation`, item swap, rng seed, reforge
+  and stat-weight settings) are tracked by version counters; bump the counter on every write that should notify.
+- Something happened (a sim result, a crash, a reference set, progress): an `Emitter<T>` from
+  `ui/sim/state/events.ts`. `on` returns an unsubscribe function and `emit` fires synchronously, with no batching or
+  dedup. Keep these out of the store, which would turn an event into a value that a late subscriber reads as current.
 
 `Emitter.on` is an arrow property, so `storeSubscribe: () => this.changeEmitter.on` is valid.
 
 ## Writes that need a specific shape
 
-**Rotation.** `player.modifyAplRotation(eventID, r => …)` is sugar for "mutate, then
-`player.touchRotation(eventID)`". The APL pickers hold references _into_ the rotation tree, so they
-mutate in place and call `touchRotation` themselves — either form is fine, but a missed
-`touchRotation` is silently stale, with no error anywhere.
+**Rotation.** `player.modifyAplRotation(r => …)` mutates and then bumps the `rotation` counter, as
+`player.touchRotation()` does. The APL pickers hold
+references into the rotation tree, so they mutate in place and call `touchRotation()` themselves. A missed
+`touchRotation()` leaves every reader stale, with no error.
 
-**Targets.** `encounter.modifyTarget(eventID, i, draft => …)`. Mutate **only the draft**: targets are
-replace-on-write, so re-reading state inside the closure hands you a stale object and your edit
-disappears.
-
-**Lists.** A picker that hands a list to `ListPicker` must return a COPY from `getValue`
-(`.slice()`), never the live store array. `ListPicker.tsx` splices the array `getValue` returns, in
-place, and relies on the store notification to re-render — the React port kept that behaviour
-deliberately. Confirm with `/usr/bin/grep -n splice ui/ui-kit/ListPicker/ListPicker.tsx`.
+**Targets.** `encounter.modifyTarget(i, draft => …)` hands the callback a clone and writes a new targets array. Mutate
+only the draft: re-reading state inside the callback returns the old object and the edit disappears.
 
 ## Adding a field
 
-1. Add it to the slice with its default in `sim_store.ts`. Player fields must also be appended to
-   `PLAYER_FIELDS` (the version counters are derived from that list), reforge fields to
-   `REFORGE_FIELDS`.
-2. Facade getter reads the store; setter keeps the old equality guard and writes via `patchSlice` /
-   `patchKeyed`. If the old code notified unconditionally, pass the field in `bumps`.
-3. Consumers read it through `usePlayerStore('<field>')` where it is a player field, or by naming it
-   as an `InputConfig.storeField` — see "Reading the store from React". A non-React consumer calls
-   the matching `subscribe*` helper and keeps the returned unsubscribe.
-4. `npm run test:snapshots` — the store contract test runs first and asserts the notification
-   contract, so a field that notifies twice fails there rather than in the browser.
+1. Add it to its slice with a default in `sim_store.ts`. A player field also goes into `PLAYER_FIELDS` (the counters
+   derive from that list), a reforge field into `REFORGE_FIELDS`.
+2. The facade getter reads the store; the setter keeps an equality guard and writes through `patchSlice` /
+   `patchKeyed`, passing the field in `bumps` if it must notify on an equal value.
+3. React reads it through a plain selector or a `StoreField`; a non-React consumer calls the matching `subscribe*`
+   helper and keeps the unsubscribe.
+4. `npm run test:unit` covers the hooks' gating (`ui/sim/hooks/*.test.tsx`), but no suite asserts one notification per
+   facade write, so count a new field's notifications yourself.
 
 ## Player lifetime
 
-`Player.dispose()` unsubscribes its store reactions and drops its `players` / `reforge` /
-`statWeights` / `bulk` slices on the next tick. The discard rule: `Party.setPlayer` disposes a
-_displaced_ player on the next microtask if it still has no party — moves and swaps re-place the
-instance within the same task and are never disposed, and removals (`setPlayer(…, null)`) never
-dispose. Explicit `dispose()` remains for `Party.fromProto` spec changes and import temporaries.
+`Player.dispose()` unsubscribes its store reactions and drops its `players` / `reforge` / `statWeights` / `statSweep` /
+`bulk` slices on the next tick. `Party.setPlayer` disposes a displaced player on the next microtask if it still has no party: moves
+and swaps re-place the instance within the same task and are never disposed, and removals (`setPlayer(…, null)`) never
+dispose. `Party.fromProto` spec changes and import temporaries call `dispose()` explicitly.

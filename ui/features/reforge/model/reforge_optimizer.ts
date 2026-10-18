@@ -1,25 +1,27 @@
-// DOM-free half of the gem optimizer: settings access, EP / soft-cap math and the solve itself
+// DOM-free half of the gear optimizer: settings access, EP / soft-cap math and the solve itself
 // (cache lookup, sim request, abort). The rendering half lives in ../components/ReforgePanel and
 // owns every button, tooltip, toast and modal.
 //
-// TBC has no item reforging. The "reforge" naming is inherited from the MoP port; what this
-// optimizer actually chooses is gems and socket bonuses.
+// There is no item reforging: "reforge" is only the optimizer's name.
+import { enchantPresetPool } from '@features/enchant-presets/model/enchant_presets';
 import { ReforgeOptimizeRequest, ReforgeSettings } from '@generated/proto/api';
-import { ItemQuality, Spec, Stat } from '@generated/proto/common';
+import { Profession, Spec, Stat } from '@generated/proto/common';
+import i18n from '@i18n/config';
 import { ReforgeGearCache } from '@sim/cache/reforge_cache';
 import { Player } from '@sim/player/player';
 import { Gear } from '@sim/proto/gear';
 import { getReforgeCacheGearKey } from '@sim/proto/items';
 import { StatCap, Stats, UnitStatPresets } from '@sim/proto/stats';
+import { bulkState } from '@sim/settings/bulk_settings';
 import { ReforgeSettings as ReforgeSettingsState } from '@sim/settings/reforge_settings';
 import type { ReforgeOptimizeConfig, Sim } from '@sim/sim';
-import { RequestTypes } from '@sim/sim_signal_manager';
 import type { IndividualSimUIConfig, StatTooltipContent } from '@sim/spec_config';
 import { getReforgeConfigHash, makeReforgeConfigRequestFields } from '@sim/state/reforge_request';
 import { SimRunKind } from '@sim/state/sim_store';
 import { subscribeAll, subscribePlayerField, subscribeReforgeField } from '@sim/state/subscriptions';
 import { isDevMode } from '@sim/utils/env';
 
+import { buildEnchantOptions, classifyEnchantSlots, type EnchantSlot, type SkippedEnchantSlot, skippedEnchantSlots } from './enchant_options';
 import { applyBreakpointLimits, clearSoftCappedStats, toRelativeSoftCaps } from './utils';
 
 // Handed to the option callbacks below so a spec config can reach the optimizer and
@@ -70,12 +72,11 @@ export interface ReforgeOptimizerModel {
 	readonly statCaps: Stats;
 	readonly processedStatCaps: Stats;
 	setUseSoftCapBreakpoints(newValue: boolean): void;
-	setMaxGemPhase(phase: number): void;
-	getMaxGemPhase(): number;
-	setMaxGemQuality(quality: ItemQuality): void;
-	getMaxGemQuality(): ItemQuality;
-	setDisableUniqueGems(newValue: boolean): void;
-	getReforgeOptimizeConfig(gear: Gear): ReforgeOptimizeConfig;
+	/**
+	 * The slots whose enchant the optimizer leaves alone: those whose item can take a proc enchant the sim
+	 * implements (see classifyEnchantSlots), and with the enchant presets on, those no checked preset lists.
+	 */
+	getSkippedEnchantSlots(gear: Gear): SkippedEnchantSlot[];
 	optimizeReforges(gear?: Gear): Promise<Gear>;
 	abortReforgeOptimization(): Promise<void>;
 	updateGear(gear: Gear): Promise<Stats>;
@@ -125,6 +126,19 @@ export const createReforgeOptimizer = (sim: Sim, player: Player<any>, options: R
 
 	const processedStatCaps = () => (isAllowedToOverrideStatCaps() ? settings.statCaps : clearSoftCappedStats(settings.statCaps, softCapsConfigWithLimits()));
 
+	// The skipped list the panel shows and the solve's enchant options share one classification, rebuilt only when
+	// the gear, Enchanting, the frozen slots or the enchant presets change.
+	let enchantSlotsMemo: { key: unknown[]; slots: EnchantSlot[] } | null = null;
+	const enchantSlots = (gear: Gear): EnchantSlot[] => {
+		const frozenSlots = settings.freezeItemSlots ? [...settings.frozenItemSlots] : [];
+		const presets = settings.useEnchantPresets ? bulkState(player).enchantPresets : undefined;
+		const key = [gear, player.hasProfession(Profession.Enchanting), frozenSlots.join(), presets];
+		if (!enchantSlotsMemo || key.some((part, index) => part !== enchantSlotsMemo!.key[index])) {
+			enchantSlotsMemo = { key, slots: classifyEnchantSlots(player, gear, frozenSlots, presets && enchantPresetPool(player)) };
+		}
+		return enchantSlotsMemo.slots;
+	};
+
 	const getReforgeOptimizeConfig = (gear: Gear): ReforgeOptimizeConfig => {
 		const proto = settings.toProto();
 		proto.statCaps = processedStatCaps().toProto();
@@ -135,40 +149,42 @@ export const createReforgeOptimizer = (sim: Sim, player: Player<any>, options: R
 			undershootCaps: settings.undershootCaps,
 			settings: proto,
 			softCaps: softCapsConfigWithLimits(),
+			enchantOptions: buildEnchantOptions(enchantSlots(gear), preCapEPs(), settings.useEnchantPresets),
 		};
 	};
 
 	const runReforgeOptimization = async (gear?: Gear) => {
-		if (isDevMode()) console.log('Starting backend gem optimization...');
+		if (isDevMode()) console.log('Starting backend gear optimization...');
 		previousGear = gear || player.getGear();
 
 		const config = getReforgeOptimizeConfig(previousGear);
+		if (!config.enchantOptions.length) return previousGear;
 		const cache = ReforgeGearCache.get(player.getPlayerSpec(), player.sim.env);
 		const configHash = await getReforgeConfigHash({
 			player,
-			// THE cache-key contract for the 14-day gem cache. `makeReforgeConfigRequestFields` declares
+			// THE cache-key contract for the 14-day optimizer cache. `makeReforgeConfigRequestFields` declares
 			// exactly which player/request state a solve depends on; when a new field that affects solve
 			// output is added to Player or ReforgeOptimizeRequest, it must be reflected there or stale
 			// results are served silently - and an irrelevant field left in busts every user's cache on
 			// unrelated changes. Raid and gear are excluded: those are separate components of the key.
-			reforgeRequest: ReforgeOptimizeRequest.create({ ...makeReforgeConfigRequestFields(config, sim.db) }),
+			reforgeRequest: ReforgeOptimizeRequest.create({ ...makeReforgeConfigRequestFields(config) }),
 			raidBuffs: sim.raid.getBuffs(),
 			partyBuffs: player.getParty()?.getBuffs(),
 			debuffs: sim.raid.getDebuffs(),
 		});
 		const frozenItemSlots = config.settings.freezeItemSlots && config.settings.frozenItemSlots.length ? config.settings.frozenItemSlots : undefined;
-		// The equipped gems are part of the cache key because a frozen slot keeps its gems and
-		// regem minimization reuses them, so the optimized gear depends on what is already socketed.
+		// The frozen slots are part of the gear key: the optimizer leaves a frozen slot alone, so
+		// the optimized gear depends on which slots are frozen.
 		const cacheKey = ReforgeGearCache.getKey(getReforgeCacheGearKey(previousGear.asSpec(), frozenItemSlots), configHash);
 		const cachedGear = await cache.get(cacheKey);
 		if (cachedGear) {
-			if (isDevMode()) console.log('Gem optimization: cache hit.');
+			if (isDevMode()) console.log('Gear optimization: cache hit.');
 			return sim.db.lookupEquipmentSpec(cachedGear);
 		}
 
 		const result = await sim.reforgeOptimize(config);
 		if (!result.optimizedGear) {
-			throw new Error('Native Go gem optimizer did not return optimized gear.');
+			throw new Error(i18n.t('sidebar.buttons.suggest_reforges.no_result'));
 		}
 
 		await cache.setGear(cacheKey, result.optimizedGear);
@@ -203,18 +219,10 @@ export const createReforgeOptimizer = (sim: Sim, player: Player<any>, options: R
 			return processedStatCaps();
 		},
 		setUseSoftCapBreakpoints: newValue => settings.setUseSoftCapBreakpoints(newValue),
-		setMaxGemPhase: phase => settings.setMaxGemPhase(phase),
-		getMaxGemPhase: () => settings.getMaxGemPhase(),
-		setMaxGemQuality: quality => settings.setMaxGemQuality(quality),
-		getMaxGemQuality: () => settings.getMaxGemQuality(),
-		setDisableUniqueGems: newValue => settings.setDisableUniqueGems(newValue),
-		getReforgeOptimizeConfig,
+		getSkippedEnchantSlots: gear => skippedEnchantSlots(enchantSlots(gear)),
 		optimizeReforges: gear => sim.runs.start(SimRunKind.ReforgeOptimize, () => runReforgeOptimization(gear)),
-		// Left unconditional rather than routed through `SimRuns.abort`: bulk's pre-pass registers under
-		// this type without going through `start`, so a store-gated abort would silently miss it.
-		abortReforgeOptimization: async () => {
-			await sim.signalManager.abortType(RequestTypes.ReforgeOptimize);
-		},
+		// Every optimizer request starts through `optimizeReforges`, so the store-gated abort reaches each one.
+		abortReforgeOptimization: () => sim.runs.abort(SimRunKind.ReforgeOptimize),
 		updateGear: async gear => {
 			const currentStats = await sim.getCharacterStatsForGear(gear);
 			const baseStats = Stats.fromProto(currentStats.finalStats).add(player.getDebuffStats());

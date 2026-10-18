@@ -6,9 +6,13 @@ import (
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+// Not generated:
+//   Metamorphosis : Demon Charge: Season of Discovery rune ability
+//   Shadow Cleave: Season of Discovery rune ability
+//   Tamed Pet Passive (DND): ambiguous rank 1 between spells 18727, 18728, 18729, 18730, 18735, 18736, 18737, 18738, 18739, 18740, 18741, 18742, 19007, 412729
+
 // Generated with an effect held at its base points, the talent tree stating no rank value for it:
 //   Decimation: effect 2 of spell 440870 has no rank curve and is held at its base points
-//   Demonic Embrace: effect 1 of spell 18697 has no rank curve and is held at its base points
 //   Demonic Pact: effect 0 of spell 425464 has no rank curve and is held at its base points
 //   Pyroclasm: effect 1 of spell 18073 has no rank curve and is held at its base points
 
@@ -23,8 +27,10 @@ type generatedSpellData struct {
 	BaneOfDoomEffect            spelldata.Ladder
 	BaneOfHavoc                 spelldata.Ladder
 	Banish                      spelldata.Ladder
+	BloodPact                   spelldata.Ladder
 	Cataclysm                   spelldata.Ladder
 	Conflagrate                 spelldata.Ladder
+	ConsumeShadows              spelldata.Ladder
 	Corruption                  spelldata.Ladder
 	CreateFirestone             spelldata.Ladder
 	CreateFirestoneTriggered    spelldata.Ladder
@@ -56,15 +62,23 @@ type generatedSpellData struct {
 	DemonicSacrificeTriggered   spelldata.Ladder
 	DestructiveReach            spelldata.Ladder
 	DetectInvisibility          spelldata.Ladder
+	DevourMagic                 spelldata.Ladder
+	DevourMagicTriggered        spelldata.Ladder
+	DevourMagicEffect           spelldata.Ladder
 	DrainLife                   spelldata.Ladder
 	DrainMana                   spelldata.Ladder
 	DrainSoul                   spelldata.Ladder
 	ExplorerImp                 spelldata.Ladder
+	EyeOfKilrogg                spelldata.Ladder
 	Fear                        spelldata.Ladder
 	FelConcentration            spelldata.Ladder
 	FelDomination               spelldata.Ladder
 	FelVitality                 spelldata.Ladder
+	FireShield                  spelldata.Ladder
 	FireAndBrimstone            spelldata.Ladder
+	Firebolt                    spelldata.Ladder
+	FireboltTriggered           spelldata.Ladder
+	GrimReach                   spelldata.Ladder
 	HealthFunnel                spelldata.Ladder
 	Hellfire                    spelldata.Ladder
 	HellfireTriggered           spelldata.Ladder
@@ -92,18 +106,23 @@ type generatedSpellData struct {
 	ImprovedSubjugateDemon      spelldata.Ladder
 	ImprovedVoidwalker          spelldata.Ladder
 	Incinerate                  spelldata.Ladder
+	Inferno                     spelldata.Ladder
+	InfernoTriggered            spelldata.Ladder
 	Intensity                   spelldata.Ladder
+	LashOfPain                  spelldata.Ladder
+	LashOfPainTriggered         spelldata.Ladder
+	LesserInvisibility          spelldata.Ladder
 	LifeTap                     spelldata.Ladder
 	LifeTapTriggered            spelldata.Ladder
-	Malediction                 spelldata.Ladder
 	Malevolence                 spelldata.Ladder
 	MasterDemonologist          spelldata.Ladder
 	MasterSummoner              spelldata.Ladder
-	MetamorphosisDemonCharge    spelldata.Ladder
 	MoltenSkin                  spelldata.Ladder
 	Nightfall                   spelldata.Ladder
 	NightfallTriggered          spelldata.Ladder
 	Pandemic                    spelldata.Ladder
+	Paranoia                    spelldata.Ladder
+	PhaseShift                  spelldata.Ladder
 	PortalOfSummoning           spelldata.Ladder
 	Pyroclasm                   spelldata.Ladder
 	PyroclasmTriggered          spelldata.Ladder
@@ -112,27 +131,40 @@ type generatedSpellData struct {
 	RitualOfDoom                spelldata.Ladder
 	RitualOfSummoning           spelldata.Ladder
 	Ruin                        spelldata.Ladder
+	Sacrifice                   spelldata.Ladder
 	SearingPain                 spelldata.Ladder
+	Seduction                   spelldata.Ladder
 	SenseDemons                 spelldata.Ladder
 	ShadowBolt                  spelldata.Ladder
-	ShadowCleave                spelldata.Ladder
-	ShadowCleaveTriggered       spelldata.Ladder
 	ShadowMastery               spelldata.Ladder
 	ShadowWard                  spelldata.Ladder
 	ShadowAndFlame              spelldata.Ladder
 	ShadowAndFlameTriggered     spelldata.Ladder
 	Shadowburn                  spelldata.Ladder
 	SiphonLife                  spelldata.Ladder
+	SoothingKiss                spelldata.Ladder
 	SoulFire                    spelldata.Ladder
 	SoulHarvest                 spelldata.Ladder
 	SoulHarvestTriggered        spelldata.Ladder
 	SoulLink                    spelldata.Ladder
 	SoulLinkTriggered           spelldata.Ladder
 	SoulSiphon                  spelldata.Ladder
+	SpellLock                   spelldata.Ladder
+	SpellLockTriggered          spelldata.Ladder
 	SubjugateDemon              spelldata.Ladder
+	Suffering                   spelldata.Ladder
+	SummonFelhunter             spelldata.Ladder
+	SummonImp                   spelldata.Ladder
+	SummonIncubus               spelldata.Ladder
+	SummonSuccubus              spelldata.Ladder
+	SummonVoidwalker            spelldata.Ladder
 	Suppression                 spelldata.Ladder
+	TaintedBlood                spelldata.Ladder
+	TaintedBloodTriggered       spelldata.Ladder
+	Torment                     spelldata.Ladder
 	UnendingBreath              spelldata.Ladder
 	UnholyPower                 spelldata.Ladder
+	WarlockPetScaling           spelldata.Ladder
 	Wrack                       spelldata.Ladder
 }
 
@@ -147,8 +179,10 @@ var spellData = generatedSpellData{
 	BaneOfDoomEffect:            spelldata.Ranked(18662),
 	BaneOfHavoc:                 spelldata.Ranked(1225228),
 	Banish:                      spelldata.Ranked(710, 18647),
+	BloodPact:                   spelldata.Ranked(6307, 7804, 7805, 11766, 11767),
 	Cataclysm:                   spelldata.Talent(17778, 3),
 	Conflagrate:                 spelldata.Ranked(1293817, 1293818, 17962, 18930, 18931, 18932),
+	ConsumeShadows:              spelldata.Ranked(17767, 17850, 17851, 17852, 17853, 17854),
 	Corruption:                  spelldata.Ranked(172, 6222, 6223, 7648, 11671, 11672, 25311),
 	CreateFirestone:             spelldata.Ranked(6366, 17951, 17952, 17953),
 	CreateFirestoneTriggered:    spelldata.Ranked(23480, 23481, 23482, 23483),
@@ -180,15 +214,23 @@ var spellData = generatedSpellData{
 	DemonicSacrificeTriggered:   spelldata.Ranked(18789, 18790, 18791, 18792),
 	DestructiveReach:            spelldata.Talent(17917, 2),
 	DetectInvisibility:          spelldata.Ranked(132, 2970, 11743),
+	DevourMagic:                 spelldata.Ranked(19505, 19731, 19734, 19736),
+	DevourMagicTriggered:        spelldata.Ranked(19658, 19732, 19733, 19735),
+	DevourMagicEffect:           spelldata.Ranked(19658, 19732, 19733, 19735),
 	DrainLife:                   spelldata.Ranked(689, 699, 709, 7651, 11699, 11700),
 	DrainMana:                   spelldata.Ranked(5138, 6226, 11703, 11704),
 	DrainSoul:                   spelldata.Ranked(1120, 8288, 8289, 11675),
 	ExplorerImp:                 spelldata.Ranked(445459),
+	EyeOfKilrogg:                spelldata.Ranked(126),
 	Fear:                        spelldata.Ranked(5782, 6213, 6215),
 	FelConcentration:            spelldata.Talent(17783, 3),
 	FelDomination:               spelldata.Ranked(18708),
 	FelVitality:                 spelldata.Talent(18731, 3),
+	FireShield:                  spelldata.Ranked(2947, 8316, 8317, 11770, 11771),
 	FireAndBrimstone:            spelldata.Talent(412751, 3),
+	Firebolt:                    spelldata.Ranked(3110, 7799, 7800, 7801, 7802, 11762, 11763),
+	FireboltTriggered:           spelldata.Ranked(18769),
+	GrimReach:                   spelldata.Talent(18218, 2),
 	HealthFunnel:                spelldata.Ranked(755, 3698, 3699, 3700, 11693, 11694, 11695),
 	Hellfire:                    spelldata.Ranked(1949, 11683, 11684),
 	HellfireTriggered:           spelldata.Ranked(5857, 11681, 11682),
@@ -216,18 +258,23 @@ var spellData = generatedSpellData{
 	ImprovedSubjugateDemon:      spelldata.Ranked(18821, 18822, 18823, 18824, 18825),
 	ImprovedVoidwalker:          spelldata.Talent(18705, 3),
 	Incinerate:                  spelldata.Ranked(412758, 1293812, 1293813),
+	Inferno:                     spelldata.Ranked(1122),
+	InfernoTriggered:            spelldata.Ranked(20310, 20882, 22699),
 	Intensity:                   spelldata.Talent(18135, 3),
+	LashOfPain:                  spelldata.Ranked(7814, 7815, 7816, 11778, 11779, 11780),
+	LashOfPainTriggered:         spelldata.Ranked(18769),
+	LesserInvisibility:          spelldata.Ranked(7870),
 	LifeTap:                     spelldata.Ranked(1454, 1455, 1456, 11687, 11688, 11689),
 	LifeTapTriggered:            spelldata.Ranked(18182),
-	Malediction:                 spelldata.Talent(1225177, 5),
 	Malevolence:                 spelldata.Talent(1310949, 5),
 	MasterDemonologist:          spelldata.Talent(23785, 5),
 	MasterSummoner:              spelldata.Talent(18709, 2),
-	MetamorphosisDemonCharge:    spelldata.Ranked(412783),
 	MoltenSkin:                  spelldata.Talent(1225220, 5),
 	Nightfall:                   spelldata.Talent(18094, 2),
 	NightfallTriggered:          spelldata.Ranked(17941),
 	Pandemic:                    spelldata.Talent(427712, 3),
+	Paranoia:                    spelldata.Ranked(19480),
+	PhaseShift:                  spelldata.Ranked(4511),
 	PortalOfSummoning:           spelldata.Ranked(437169),
 	Pyroclasm:                   spelldata.Talent(18073, 2),
 	PyroclasmTriggered:          spelldata.Ranked(18093, 18350),
@@ -236,26 +283,39 @@ var spellData = generatedSpellData{
 	RitualOfDoom:                spelldata.Ranked(18540),
 	RitualOfSummoning:           spelldata.Ranked(698),
 	Ruin:                        spelldata.Talent(17959, 5),
+	Sacrifice:                   spelldata.Ranked(7812, 19438, 19440, 19441, 19442, 19443),
 	SearingPain:                 spelldata.Ranked(5676, 17919, 17920, 17921, 17922, 17923),
+	Seduction:                   spelldata.Ranked(6358),
 	SenseDemons:                 spelldata.Ranked(5500),
 	ShadowBolt:                  spelldata.Ranked(686, 695, 705, 1088, 1106, 7641, 11659, 11660, 11661, 25307),
-	ShadowCleave:                spelldata.Ranked(403835, 403839, 403840, 403841, 403842, 403843, 403844, 403848, 403851, 403852),
-	ShadowCleaveTriggered:       spelldata.Ranked(460171, 460200),
 	ShadowMastery:               spelldata.Talent(18271, 5),
 	ShadowWard:                  spelldata.Ranked(6229, 11739, 11740, 28610),
 	ShadowAndFlame:              spelldata.Talent(426316, 5),
 	ShadowAndFlameTriggered:     spelldata.Ranked(426311, 1293816),
 	Shadowburn:                  spelldata.Ranked(17877, 18867, 18868, 18869, 18870, 18871),
 	SiphonLife:                  spelldata.Ranked(18265, 18879, 18880, 18881),
+	SoothingKiss:                spelldata.Ranked(6360, 7813, 11784, 11785),
 	SoulFire:                    spelldata.Ranked(6353, 17924),
 	SoulHarvest:                 spelldata.Talent(437032, 2),
 	SoulHarvestTriggered:        spelldata.Ranked(1242853),
 	SoulLink:                    spelldata.Ranked(19028),
 	SoulLinkTriggered:           spelldata.Ranked(18814, 25228),
 	SoulSiphon:                  spelldata.Talent(17804, 3),
+	SpellLock:                   spelldata.Ranked(19244, 19647),
+	SpellLockTriggered:          spelldata.Ranked(24259),
 	SubjugateDemon:              spelldata.Ranked(1098, 11725, 11726),
+	Suffering:                   spelldata.Ranked(17735, 17750, 17751, 17752),
+	SummonFelhunter:             spelldata.Ranked(691),
+	SummonImp:                   spelldata.Ranked(688),
+	SummonIncubus:               spelldata.Ranked(713),
+	SummonSuccubus:              spelldata.Ranked(712),
+	SummonVoidwalker:            spelldata.Ranked(697),
 	Suppression:                 spelldata.Talent(18174, 5),
+	TaintedBlood:                spelldata.Ranked(19478, 19655, 19656, 19660),
+	TaintedBloodTriggered:       spelldata.Ranked(19479, 19652, 19653, 19654),
+	Torment:                     spelldata.Ranked(3716, 7809, 7810, 7811, 11774, 11775),
 	UnendingBreath:              spelldata.Ranked(5697),
 	UnholyPower:                 spelldata.Talent(18769, 5),
+	WarlockPetScaling:           spelldata.Ranked(416189),
 	Wrack:                       spelldata.Ranked(1316697),
 }

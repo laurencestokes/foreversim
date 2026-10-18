@@ -131,16 +131,21 @@ func (mcd *MajorCooldown) shouldActivateHelper(sim *Simulation, character *Chara
 		return false
 	}
 
+	// A major cooldown never leaves the form, timed or not; an APL cast of its spell does.
+	if mcd.Spell.hasCastRequirement {
+		if _, unshift := mcd.Spell.castRequirementFailure(sim, character.CurrentTarget); unshift {
+			return false
+		}
+	}
+
 	if mcd.numUsages < len(mcd.timings) {
 		return sim.CurrentTime >= mcd.timings[mcd.numUsages]
 	}
 
-	// Survival cooldowns wait for health to fall to the threshold, as on master. At 0 (the default
-	// outside the tank UIs) they never fire on their own, as on master, where health without a
-	// healing model never drops; here it does, and would fire them all once it hit 0.
-	hpThreshold := character.cooldownConfigs.HpPercentForDefensives
-	if mcd.Type.Matches(CooldownTypeSurvival) && (hpThreshold == 0 || character.CurrentHealthPercent() > hpThreshold) {
-		return false
+	if mcd.Type.Matches(CooldownTypeSurvival) && character.cooldownConfigs.HpPercentForDefensives != 0 {
+		if character.CurrentHealthPercent() > character.cooldownConfigs.HpPercentForDefensives {
+			return false
+		}
 	}
 
 	return mcd.ShouldActivate(sim, character)
@@ -153,9 +158,9 @@ func (mcd *MajorCooldown) tryActivateHelper(sim *Simulation, character *Characte
 
 	if shouldActivate {
 		if mcd.Spell.Flags.Matches(SpellFlagHelpful) {
-			mcd.Spell.Cast(sim, &character.Unit)
+			mcd.Spell.castForRotation(sim, &character.Unit, nil)
 		} else {
-			mcd.Spell.Cast(sim, character.CurrentTarget)
+			mcd.Spell.castForRotation(sim, character.CurrentTarget, nil)
 		}
 
 		mcd.numUsages++
@@ -264,9 +269,17 @@ func (mcdm *majorCooldownManager) AddMajorCooldown(mcd MajorCooldown) {
 		mcd.Spell.Flags |= SpellFlagReactive
 	}
 
+	// A defensive cooldown that adds no damage or mana fires on its own only for a tank; a timing or
+	// an APL action still uses it for anyone.
 	if mcd.ShouldActivate == nil {
-		mcd.ShouldActivate = func(sim *Simulation, character *Character) bool {
-			return true
+		if mcd.Type.Matches(CooldownTypeSurvival) && !mcd.Type.Matches(CooldownTypeDPS|CooldownTypeMana) {
+			mcd.ShouldActivate = func(_ *Simulation, character *Character) bool {
+				return character.isTank
+			}
+		} else {
+			mcd.ShouldActivate = func(sim *Simulation, character *Character) bool {
+				return true
+			}
 		}
 	}
 
@@ -310,21 +323,6 @@ func (mcdm *majorCooldownManager) removeInitialMajorCooldown(actionID ActionID) 
 		if mcd.Spell.CD.Timer == removedTimer && mcd.Spell.SameActionIgnoreTag(actionID) {
 			mcdm.initialMajorCooldowns = append(mcdm.initialMajorCooldowns[:i], mcdm.initialMajorCooldowns[i+1:]...)
 			mcdm.majorCooldowns = mcdm.majorCooldowns[:len(mcdm.majorCooldowns)-1]
-		}
-	}
-}
-
-// Adds a condition to the automatic use of a cooldown someone else registered - a druid holding
-// its potions in animal form. Explicit casts from a rotation are not affected.
-func (mcdm *majorCooldownManager) AddActivationCondition(actionID ActionID, condition CooldownActivationCondition) {
-	for i := range mcdm.initialMajorCooldowns {
-		mcd := &mcdm.initialMajorCooldowns[i]
-		if !mcd.Spell.SameAction(actionID) {
-			continue
-		}
-		should := mcd.ShouldActivate
-		mcd.ShouldActivate = func(sim *Simulation, character *Character) bool {
-			return condition(sim, character) && (should == nil || should(sim, character))
 		}
 	}
 }

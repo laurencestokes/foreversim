@@ -17,12 +17,13 @@ type OnCastComplete func(aura *Aura, sim *Simulation, spell *Spell)
 type Hardcast struct {
 	Expires     time.Duration
 	ActionID    ActionID
-	Spell       *Spell
+	Cost        float64 // The mana the cast pays when it completes.
 	OnComplete  func(*Simulation, *Unit)
 	Target      *Unit
 	CanMove     bool
 	IsChanneled bool
 	Pushback    bool
+	ResetsSwing bool // The melee swing waits out the cast, then starts a full swing when it completes.
 	CastTime    time.Duration
 }
 
@@ -85,6 +86,10 @@ func (cast *Cast) GCDTime() time.Duration {
 	return gcd
 }
 
+func (spell *Spell) hastedGCD(gcd time.Duration) time.Duration {
+	return max(0, spell.Unit.ApplyCastSpeed(gcd)).Round(time.Millisecond)
+}
+
 func (cast *Cast) EffectiveTime() time.Duration {
 	return max(cast.GCDTime(), cast.CastTime)
 }
@@ -133,7 +138,7 @@ func (spell *Spell) makeCastFunc(config CastConfig) CastSuccessFunc {
 		unshift := false
 		if spell.hasCastRequirement {
 			var reason string
-			if reason, unshift = spell.castRequirementFailure(); reason != "" {
+			if reason, unshift = spell.castRequirementFailure(sim, target); reason != "" {
 				return spell.castFailureHelper(sim, reason)
 			}
 		}
@@ -144,21 +149,12 @@ func (spell *Spell) makeCastFunc(config CastConfig) CastSuccessFunc {
 			}
 		}
 
-		if spell.Cost != nil {
-			if !spell.Cost.MeetsRequirement(sim, spell) {
-				return spell.castFailureHelper(sim, spell.Cost.CostFailureReason(sim, spell))
-			}
-		}
-
 		if spell.MaxCharges > 0 && spell.charges == 0 {
 			return spell.castFailureHelper(sim, "not enough charges")
 		}
 
-		// Forever hastes the spell GCD (as TBC, unlike Classic 1.12, which classic-legacy followed).
-		// Beta logs (foreverlogs 2667): troll shaman Toma's instants under Berserking's 10% came
-		// 1344-1421 ms apart (5 of 5), against a 1475-1525 ms mode for shaman instants without it.
 		if !config.IgnoreHaste {
-			spell.CurCast.GCD = max(0, spell.Unit.ApplyCastSpeed(spell.CurCast.GCD)).Round(time.Millisecond)
+			spell.CurCast.GCD = spell.hastedGCD(spell.CurCast.GCD)
 			spell.CurCast.CastTime = spell.Unit.ApplyCastSpeedForSpell(spell.CurCast.CastTime, spell).Round(time.Millisecond)
 		}
 
@@ -189,6 +185,17 @@ func (spell *Spell) makeCastFunc(config CastConfig) CastSuccessFunc {
 			return spell.castFailureHelper(sim, "casting/channeling while moving not allowed!")
 		}
 
+		if !spell.meetsCost(sim, true) {
+			return false
+		}
+
+		var manaCost float64
+		if spell.Cost != nil {
+			if _, ok := spell.Cost.ResourceCostImpl.(*ManaCost); ok {
+				manaCost = spell.CurCast.Cost
+			}
+		}
+
 		if unshift {
 			spell.Unit.AutoUnshift(sim)
 		}
@@ -214,7 +221,7 @@ func (spell *Spell) makeCastFunc(config CastConfig) CastSuccessFunc {
 			spell.Unit.Hardcast = Hardcast{
 				Expires:  sim.CurrentTime + spell.CurCast.CastTime,
 				ActionID: spell.ActionID,
-				Spell:    spell,
+				Cost:     manaCost,
 				OnComplete: func(sim *Simulation, target *Unit) {
 					if sim.Log != nil && !spell.Flags.Matches(SpellFlagNoLogs) {
 						spell.Unit.Log(sim, "Completed cast %s", spell.ActionID)
@@ -222,8 +229,13 @@ func (spell *Spell) makeCastFunc(config CastConfig) CastSuccessFunc {
 
 					spell.Unit.HardcastAvoidanceAura.Deactivate(sim)
 
-					if !spell.CanCompleteCast(sim, target, true) {
+					if !spell.CanCompleteCast(sim, target, true) || !spell.meetsCost(sim, true) {
+						spell.Unit.AutoAttacks.releaseMeleeHeldByCast(sim)
 						return
+					}
+
+					if spell.Unit.Hardcast.ResetsSwing {
+						spell.Unit.AutoAttacks.StopMeleeUntil(sim, sim.CurrentTime)
 					}
 
 					if spell.Cost != nil {
@@ -239,7 +251,7 @@ func (spell *Spell) makeCastFunc(config CastConfig) CastSuccessFunc {
 					}
 
 					if config.SharedCD.Timer != nil {
-						spell.SharedCD.Set(sim.CurrentTime + time.Duration(float64(spell.SharedCD.Duration)*spell.CdMultiplier))
+						spell.SharedCD.Set(sim.CurrentTime + time.Duration(float64(spell.SharedCD.Duration)*spell.CooldownMultiplier()))
 					}
 
 					spell.applyEffects(sim, target)
@@ -256,6 +268,7 @@ func (spell *Spell) makeCastFunc(config CastConfig) CastSuccessFunc {
 				CanMove:     spell.Flags&SpellFlagCanCastWhileMoving > 0,
 				IsChanneled: isChanneled,
 				Pushback:    spell.Flags.Matches(SpellFlagPushback),
+				ResetsSwing: !isChanneled && !spell.Flags.Matches(SpellFlagKeepsSwingTimer),
 				CastTime:    spell.CurCast.CastTime,
 			}
 
@@ -282,7 +295,7 @@ func (spell *Spell) makeCastFunc(config CastConfig) CastSuccessFunc {
 		}
 
 		if config.SharedCD.Timer != nil {
-			spell.SharedCD.Set(sim.CurrentTime + time.Duration(float64(spell.SharedCD.Duration)*spell.CdMultiplier))
+			spell.SharedCD.Set(sim.CurrentTime + time.Duration(float64(spell.SharedCD.Duration)*spell.CooldownMultiplier()))
 		}
 
 		spell.applyEffects(sim, target)
@@ -296,7 +309,7 @@ func (spell *Spell) makeCastFunc(config CastConfig) CastSuccessFunc {
 }
 
 func (spell *Spell) triggerCooldown(sim *Simulation) {
-	cd := time.Duration(float64(spell.CD.Duration) * spell.CdMultiplier)
+	cd := time.Duration(float64(spell.CD.Duration) * spell.CooldownMultiplier())
 
 	// if recharge timer is higher than the actual cooldown of the spell we use
 	if spell.MaxCharges > 0 && spell.charges == 0 {
@@ -326,7 +339,7 @@ func (spell *Spell) makeCastFuncSimple() CastSuccessFunc {
 		unshift := false
 		if spell.hasCastRequirement {
 			var reason string
-			if reason, unshift = spell.castRequirementFailure(); reason != "" {
+			if reason, unshift = spell.castRequirementFailure(sim, target); reason != "" {
 				return spell.castFailureHelper(sim, reason)
 			}
 		}
@@ -360,8 +373,11 @@ func (spell *Spell) makeCastFuncSimple() CastSuccessFunc {
 		}
 
 		if sim.Log != nil && !spell.Flags.Matches(SpellFlagNoLogs) {
-			spell.Unit.Log(sim, "Casting %s (Cost = %0.03f, Cast Time = %s, GCD = %s, Effective Time = %s)",
-				spell.ActionID, 0.0, "0s", "0s", "0s")
+			// The ranged auto's windup already logged its cast start.
+			if spell != spell.Unit.AutoAttacks.ranged.spell {
+				spell.Unit.Log(sim, "Casting %s (Cost = %0.03f, Cast Time = %s, GCD = %s, Effective Time = %s)",
+					spell.ActionID, 0.0, "0s", "0s", "0s")
+			}
 			spell.Unit.Log(sim, "Completed cast %s", spell.ActionID)
 		}
 
@@ -374,7 +390,7 @@ func (spell *Spell) makeCastFuncSimple() CastSuccessFunc {
 		}
 
 		if spell.SharedCD.Timer != nil {
-			spell.SharedCD.Set(sim.CurrentTime + time.Duration(float64(spell.SharedCD.Duration)*spell.CdMultiplier))
+			spell.SharedCD.Set(sim.CurrentTime + time.Duration(float64(spell.SharedCD.Duration)*spell.CooldownMultiplier()))
 		}
 
 		spell.applyEffects(sim, target)
@@ -390,8 +406,11 @@ func (spell *Spell) makeCastFuncSimple() CastSuccessFunc {
 func (spell *Spell) makeCastFuncAutosOrProcs() CastSuccessFunc {
 	return func(sim *Simulation, target *Unit) bool {
 		if sim.Log != nil && !spell.Flags.Matches(SpellFlagNoLogs) {
-			spell.Unit.Log(sim, "Casting %s (Cost = %0.03f, Cast Time = %s, GCD = %s, Effective Time = %s)",
-				spell.ActionID, 0.0, "0s", "0s", "0s")
+			// The ranged auto's windup already logged its cast start.
+			if spell != spell.Unit.AutoAttacks.ranged.spell {
+				spell.Unit.Log(sim, "Casting %s (Cost = %0.03f, Cast Time = %s, GCD = %s, Effective Time = %s)",
+					spell.ActionID, 0.0, "0s", "0s", "0s")
+			}
 			spell.Unit.Log(sim, "Completed cast %s", spell.ActionID)
 		}
 

@@ -2,35 +2,28 @@ package warlock
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 func (warlock *Warlock) registerSearingPain() {
-	rank := spellData.SearingPain.Highest()
+	rankedSpell := spellData.SearingPain.ByID(17923)
+	searingPainHit := rankedSpell.DamageEffect()
 
-	warlock.SearingPain = warlock.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    rank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: WarlockSpellSearingPain,
-		MaxRange:       float64(rank.MaxRange),
+	config := spelldata.SpellConfig(&warlock.Unit, rankedSpell, spelldata.Magic(core.ProcMaskSpellDamage))
+	config.ClassSpellMask = WarlockSpellSearingPain
+	// The tooltip's "Causes a high amount of threat" states no number and the row has no threat effect.
+	config.ThreatMultiplier = 2 // TODO: Measure Searing Pain's threat in game.
 
-		ManaCost: core.ManaCostOptions{FlatCost: int32(rank.Cost())},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD:      rank.GCD(),
-				CastTime: rank.CastTime(),
-			},
-		},
+	// Roll the damage and to hit
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcDamage(sim, target, searingPainHit.Average(), spell.OutcomeMagicHitAndCrit)
+		spell.DealDamage(sim, result)
+	}
 
-		DamageMultiplierAdditive: 1,
-		DamageMultiplier:         1,
-		ThreatMultiplier:         2,
-		BonusCoefficient:         rank.DamageEffect().Coeff(),
+	// Calculate expected damage from the row's average hit
+	config.ExpectedInitialDamage = func(sim *core.Simulation, target *core.Unit, spell *core.Spell, _ bool) *core.SpellResult {
+		return spell.CalcDamage(sim, target, searingPainHit.Average(), spell.OutcomeExpectedMagicHitAndCrit)
+	}
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, rank.DamageEffect().Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-		},
-	})
+	warlock.SearingPain = warlock.RegisterSpell(config)
 }

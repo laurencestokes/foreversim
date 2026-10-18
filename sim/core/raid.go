@@ -15,6 +15,9 @@ type Party struct {
 	Players []Agent
 	Pets    []PetAgent // Cached list of all the pets in the party.
 
+	// The buffs the party is configured with, before its members add theirs.
+	buffs *proto.PartyBuffs
+
 	PlayersAndPets []Agent // Cached list of players + pets, concatenated.
 
 	dpsMetrics DistributionMetrics
@@ -25,6 +28,7 @@ func NewParty(raid *Raid, index int, partyConfig *proto.Party, raidConfig *proto
 	party := &Party{
 		Raid:       raid,
 		Index:      index,
+		buffs:      partyConfig.Buffs,
 		dpsMetrics: NewDistributionMetrics(),
 		hpsMetrics: NewDistributionMetrics(),
 	}

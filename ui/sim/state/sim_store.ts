@@ -12,24 +12,24 @@ import {
 	ConsumesSpec,
 	Faction,
 	HealingModel,
-	type ItemQuality,
 	type ItemSlot,
 	type ItemSpec,
 	Target as TargetProto,
 	UnitReference,
+	type WeaponSkillValue,
 	type WeaponType,
 } from '@generated/proto/common';
-import { DatabaseFilters } from '@generated/proto/ui';
+import { type BulkEnchantPreset, type BulkEncounterRef, DatabaseFilters } from '@generated/proto/ui';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { createStore } from 'zustand/vanilla';
 
 import type { BulkSimItemSlot } from '../bulk/constants_auto_gen';
-import type { BulkPickerEntry, BulkResults } from '../bulk/types';
+import type { BulkEncounterResults, BulkPickerEntry } from '../bulk/types';
 import { ENCOUNTER_DEFAULTS } from '../constants/encounter';
 import { CURRENT_PHASE } from '../constants/other';
 import type { EquippedItem } from '../proto/equipped_item';
 import type { Gear, ItemSwapGear } from '../proto/gear';
-import type { StatCap, Stats } from '../proto/stats';
+import type { StatCap, Stats, UnitStat } from '../proto/stats';
 
 // Presentation flags (owned by UISettings).
 export interface UISlice {
@@ -37,6 +37,7 @@ export interface UISlice {
 	showThreatMetrics: boolean;
 	showHealingMetrics: boolean;
 	showExperimental: boolean;
+	showPowerTools: boolean;
 	wasmConcurrency: number;
 	showQuickSwap: boolean;
 	showEPValues: boolean;
@@ -102,6 +103,8 @@ export interface PlayerSlice {
 	race: number;
 	profession1: number;
 	profession2: number;
+	prof1Rank: number;
+	prof2Rank: number;
 	buffs: IndividualBuffs;
 	consumables: ConsumesSpec;
 	bonusStats: Stats;
@@ -113,6 +116,8 @@ export interface PlayerSlice {
 	channelClipDelay: number;
 	inFrontOfTarget: boolean;
 	distanceFromTarget: number;
+	// Only the skills not at the maximum for the level; a missing skill is at the maximum.
+	weaponSkills: Array<WeaponSkillValue>;
 	healingModel: HealingModel;
 	epWeights: Stats;
 	epRatios: Array<number>;
@@ -133,6 +138,8 @@ export const PLAYER_FIELDS = [
 	'race',
 	'profession1',
 	'profession2',
+	'prof1Rank',
+	'prof2Rank',
 	'buffs',
 	'consumables',
 	'bonusStats',
@@ -143,6 +150,7 @@ export const PLAYER_FIELDS = [
 	'channelClipDelay',
 	'inFrontOfTarget',
 	'distanceFromTarget',
+	'weaponSkills',
 	'healingModel',
 	'epWeights',
 	'epRatios',
@@ -156,7 +164,7 @@ export const PLAYER_FIELDS = [
 ] as const;
 export type PlayerField = (typeof PLAYER_FIELDS)[number];
 
-// Gem-optimizer settings, one slice per player (keyed by storeKey).
+// Gear-optimizer settings, one slice per player (keyed by storeKey).
 // Values are the source of truth; `v` counters are what subscribers watch
 // (bumped exactly where a change counts).
 export const REFORGE_FIELDS = [
@@ -166,9 +174,7 @@ export const REFORGE_FIELDS = [
 	'softCapBreakpoints',
 	'breakpointLimits',
 	'freezeItemSlots',
-	'maxGemPhase',
-	'maxGemQuality',
-	'disableUniqueGems',
+	'useEnchantPresets',
 ] as const;
 export type ReforgeField = (typeof REFORGE_FIELDS)[number];
 
@@ -180,19 +186,40 @@ export interface ReforgeSlice {
 	softCapBreakpoints: Array<StatCap>;
 	freezeItemSlots: boolean;
 	frozenItemSlots: Array<number>;
-	// TBC optimizes gems, not reforges: these three are the gem-pool knobs.
-	maxGemPhase: number;
-	maxGemQuality: ItemQuality;
-	disableUniqueGems: boolean;
-	// Written silently by the optimizer (no counter, like the old bare field).
+	useEnchantPresets: boolean;
+	// Written silently by the optimizer (no counter).
 	undershootCaps: Stats;
 	v: Record<ReforgeField, number>;
 }
+
+// A fixed iteration count, or simulating each EP stat or sweep step until its ± reaches a target.
+export type PrecisionMode = 'iterations' | 'target';
 
 // Stat-weight modal settings, one slice per player (keyed by storeKey).
 export interface StatWeightsSlice {
 	excludedStats: Array<number>;
 	excludedPseudoStats: Array<number>;
+	precisionMode: PrecisionMode;
+	iterations: number; // 0 runs the global sim iteration count.
+	targetCi: number; // The 90% ± of each EP to reach.
+	maxIterationMultiplier: number; // Caps a stat's iterations at this multiple of the probe count; 0 means no cap.
+	v: { settings: number };
+}
+
+// The metrics a stat sweep records at every step.
+export type StatSweepMetric = 'dps' | 'hps' | 'tps' | 'dtps' | 'tmi';
+
+// Stat sweep settings, one slice per player (keyed by storeKey).
+export interface StatSweepSlice {
+	stats: UnitStat[] | null; // null, or only ones the spec does not offer, means the first one offered, and [] means none.
+	range: number;
+	step: number;
+	metric: StatSweepMetric; // Plotted when offered, else DPS; a run's Target ± follows the one plotted when it starts.
+	showSpread: boolean; // Shades ± 1 standard deviation around each line.
+	precisionMode: PrecisionMode;
+	iterations: number; // 0 runs the global sim iteration count.
+	targetCi: number; // In the units of the run's metric.
+	maxIterationMultiplier: number; // Caps a step's iterations at this multiple of its first pass; 0 means no cap.
 	v: { settings: number };
 }
 
@@ -203,16 +230,19 @@ export interface BulkSlice {
 	// A removed item leaves a null, so the picker entries' indexes never shift.
 	items: ReadonlyArray<ItemSpec | null>;
 	pickerGroups: ReadonlyMap<BulkSimItemSlot, readonly BulkPickerEntry[]>;
-	useLegacyBulkSim: boolean;
 	frozenItems: ReadonlyMap<BulkSimItemSlot, EquippedItem | null>;
 	frozenWeaponSlot: ItemSlot.ItemSlotMainHand | ItemSlot.ItemSlotOffHand | undefined;
 	weaponTypeFilters: ReadonlyMap<ItemSlot.ItemSlotMainHand | ItemSlot.ItemSlotOffHand, WeaponType[]>;
+	enchantPresets: readonly BulkEnchantPreset[];
+	// The checked saved encounters, in list order; the current encounter is read live and never stored here.
+	encounters: readonly BulkEncounterRef[];
 	combinations: number;
 	iterations: number;
 	combinationsPending: boolean;
 	isRunning: boolean;
 	started: boolean;
-	results: BulkResults | null;
+	// One per finished encounter of the last run, the current one first.
+	results: readonly BulkEncounterResults[] | null;
 	// The gear the last batch started from. The set-bonus feasibility check judges against it, not
 	// against the candidate gear a run swaps in and out of the player.
 	runGear: Gear | null;
@@ -226,6 +256,7 @@ export enum SimRunKind {
 	IndividualSim = 'individual-sim',
 	BulkSim = 'bulk-sim',
 	StatWeights = 'stat-weights',
+	StatSweep = 'stat-sweep',
 	ReforgeOptimize = 'reforge-optimize',
 }
 
@@ -240,6 +271,7 @@ export interface SimState {
 	runs: Record<SimRunKind, RunSlice>;
 	reforge: { [storeKey: number]: ReforgeSlice };
 	statWeights: { [storeKey: number]: StatWeightsSlice };
+	statSweep: { [storeKey: number]: StatSweepSlice };
 	bulk: { [storeKey: number]: BulkSlice };
 	sim: SimSettingsSlice;
 	ui: UISlice;
@@ -265,6 +297,7 @@ const initialState = (): SimState => ({
 		showThreatMetrics: false,
 		showHealingMetrics: false,
 		showExperimental: false,
+		showPowerTools: false,
 		wasmConcurrency: 0,
 		showQuickSwap: true,
 		showEPValues: false,
@@ -292,6 +325,7 @@ const initialState = (): SimState => ({
 	players: {},
 	reforge: {},
 	statWeights: {},
+	statSweep: {},
 	bulk: {},
 });
 
@@ -324,7 +358,7 @@ export function patchSlice<N extends UnkeyedSlice>(store: SimStore, slice: N, pa
 // The slices keyed by a player's storeKey. Single source of truth: `KeyedSlice`
 // is derived from it, and deleteKeyed iterates it, so adding a keyed slice
 // cannot leave the disposal path behind.
-export const KEYED_SLICES = ['players', 'reforge', 'statWeights', 'bulk'] as const;
+export const KEYED_SLICES = ['players', 'reforge', 'statWeights', 'statSweep', 'bulk'] as const;
 type KeyedSlice = (typeof KEYED_SLICES)[number];
 type KeyedEntry<N extends KeyedSlice> = SimState[N][number];
 type Versions<N extends KeyedSlice> = KeyedEntry<N>['v'];
@@ -346,8 +380,8 @@ export function seedKeyed<N extends KeyedSlice>(store: SimStore, slice: N, key: 
 }
 
 // Writes `patch` into store[slice][key] and bumps the given version counters.
-// A bump with an empty patch is the old bare emit; a patch with no bumps is
-// the old silent field write.
+// A bump with an empty patch notifies without a value change; a patch with no
+// bumps is a silent write.
 export function patchKeyed<N extends KeyedSlice>(
 	store: SimStore,
 	slice: N,

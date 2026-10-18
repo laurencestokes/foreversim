@@ -1,19 +1,17 @@
 import i18n from '@i18n/config';
-import { ActionMetrics } from '@sim/proto/sim_result';
-import { bucket } from '@sim/utils/collections';
+import type { ActionMetrics } from '@sim/proto/sim_result';
 import { Tooltip } from '@ui-kit/Tooltip';
 import { useMemo } from 'react';
 
-import { useSimResult } from '../../hooks/useSimResult';
-import { buildMetricRows, indexMetricRows, type MetricGrouping, type MetricRow } from '../../model/grouping';
+import { useActionRows } from '../../hooks/useActionRows';
+import { indexMetricRows } from '../../model/grouping';
+import { groupActionsWithPets } from '../../model/pet_groups';
 import type { SimResultData } from '../../model/result_data';
 import { amountHeader, attackFormat, attackMetricsColumns, castsTooltip, hitsTooltip, missTooltip, useMetricMax } from '../AttackMetricsColumns';
 import { MetricsCombinedTooltip } from '../MetricsCombinedTooltip';
 import { createMetricsColumnHelper, metricForAnchor, MetricsTable, MetricTooltip } from '../MetricsTable';
 
 const helper = createMetricsColumnHelper<ActionMetrics>();
-
-const NO_ROWS: Array<MetricRow<ActionMetrics>> = [];
 
 const TOOLTIP = {
 	casts: 'threat-metrics-casts',
@@ -27,33 +25,16 @@ const threatGroups = (resultData: SimResultData): Array<Array<ActionMetrics>> =>
 	const players = resultData.result.getRaidIndexedPlayers(resultData.filter);
 	if (!players.length) return [];
 
-	const player = players[0];
-	const actions = player.getThreatActions().map(action => action.forTarget(resultData.filter));
-	const petsByName = bucket(player.pets, pet => pet.name);
-	const petGroups = Object.values(petsByName).map(pets =>
-		ActionMetrics.joinById(
-			pets.flatMap(pet => pet.getThreatActions().map(action => action.forTarget(resultData.filter))),
-			true,
-		),
-	);
-
-	return ActionMetrics.groupById(actions).concat(petGroups);
-};
-
-const grouping: MetricGrouping<ActionMetrics> = {
-	merge: metrics => ActionMetrics.merge(metrics, { removeTag: true, actionIdOverride: metrics[0].unit?.petActionId || undefined }),
-	shouldCollapse: metric => !metric.unit?.isPet,
+	return groupActionsWithPets(players[0], unit => unit.getThreatActions().map(action => action.forTarget(resultData.filter)));
 };
 
 /**
- * TBC's per-action threat table. Threat is a first-class metric here — TPS decides who tanks — so it
+ * The per-action threat table. Threat is a first-class metric here — TPS decides who tanks — so it
  * gets its own tab rather than the per-column threat tooltips the damage table carries. The table is
  * mounted only while `showThreatMetrics` is on; nothing inside it re-checks that.
  */
 export const ThreatMetricsTable = () => {
-	const resultData = useSimResult();
-
-	const rows = useMemo(() => (resultData ? buildMetricRows(threatGroups(resultData), grouping) : NO_ROWS), [resultData]);
+	const { resultData, rows } = useActionRows(threatGroups);
 	const metricsByRowId = useMemo(() => indexMetricRows(rows), [rows]);
 	const maxThreat = useMetricMax(rows, metric => metric.threat);
 

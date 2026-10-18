@@ -1,13 +1,12 @@
 package dps
 
 import (
-	"testing"
-
-	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
 	_ "github.com/wowsims/forever/sim/common" // imported to get item effects included.
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+
+	"testing"
 )
 
 func init() {
@@ -15,67 +14,53 @@ func init() {
 	common.RegisterAllEffects()
 }
 
-// The three builds our Forever sim ships for the DPS warrior: its default DPS build, Fury 17/34/0
-// and Arms 39/12/0.
-var DpsTalents = "30305013-05553005150010501"
-var FuryTalents = "30305213-55051105050010501"
-var ArmsTalents = "32305213132515201-5502"
-
-func TestFury(t *testing.T) {
-	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator([]core.CharacterSuiteConfig{
-		warriorSuite(DualWieldGear, DpsTalents, []core.TalentsCombo{{Label: "Fury", Talents: FuryTalents}}),
-	}))
+func TestDpsWarrior(t *testing.T) {
+	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator([]core.CharacterSuiteConfig{dpsWarriorSuite()}))
 }
 
-// Arms runs dps_battle, the rotation the site's Auto picks for 5/5 Bloodthrill on a two-hander
-// (#641): the Berserker rotations never Rend or Overpower, so Bloodthrill, Improved Rend and
-// Improved Overpower went untested.
-func TestArms(t *testing.T) {
-	arms := warriorSuite(TwoHandGear, ArmsTalents, nil)
-	arms.Rotation = core.GetAplRotation("../../../ui/specs/warrior/dps/apls", "dps_battle")
-	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator([]core.CharacterSuiteConfig{arms}))
+func BenchmarkDpsWarrior(b *testing.B) {
+	fury := dpsWarriorSuite()
+	arms := fury
+	arms.GearSet = core.GetGearSet("../../../ui/specs/warrior/dps/gear_sets", "p1_arms")
+	arms.Talents = DefaultArmsTalents
+	arms.Rotation = core.GetAplRotation("../../../ui/specs/warrior/dps/apls", "arms")
+
+	b.Run("Fury", func(b *testing.B) { core.CharacterBenchmark(b, fury) })
+	b.Run("Arms", func(b *testing.B) { core.CharacterBenchmark(b, arms) })
 }
 
-// Weapons and nothing else. The generated item database does not carry the Forever gear our sim
-// tests with and gives the rest TBC-shaped stats, so the comparison against master runs on the same
-// statless axes on both sides instead.
-var DualWieldGear = core.GearSetCombo{Label: "DualWield", GearSet: weaponsOnly(15240, 15238)}
-var TwoHandGear = core.GearSetCombo{Label: "TwoHand", GearSet: weaponsOnly(15273, 0)}
-
-func weaponsOnly(mainHand int32, offHand int32) *proto.EquipmentSpec {
-	items := make([]*proto.ItemSpec, proto.ItemSlot_ItemSlotRanged+1)
-	for i := range items {
-		items[i] = &proto.ItemSpec{}
-	}
-	items[proto.ItemSlot_ItemSlotMainHand] = &proto.ItemSpec{Id: mainHand} // Demon's Claw 61-115 2.3, or Death Striker 109-165 2.8
-	items[proto.ItemSlot_ItemSlotOffHand] = &proto.ItemSpec{Id: offHand}   // Warlord's Axe 55-104 2.3
-	return &proto.EquipmentSpec{Items: items}
-}
-
-func warriorSuite(gear core.GearSetCombo, talents string, otherTalents []core.TalentsCombo) core.CharacterSuiteConfig {
+func dpsWarriorSuite() core.CharacterSuiteConfig {
 	return core.CharacterSuiteConfig{
-		Class:           proto.Class_ClassWarrior,
-		Race:            proto.Race_RaceOrc,
-		OtherRaces:      []proto.Race{proto.Race_RaceHuman},
-		GearSet:         gear,
-		Talents:         talents,
-		OtherTalentSets: otherTalents,
-		Consumables:     DefaultConsumables,
-		SpecOptions:     core.SpecOptionsCombo{Label: "DPS", SpecOptions: DefaultOptions},
+		Class:      proto.Class_ClassWarrior,
+		Race:       proto.Race_RaceOrc,
+		OtherRaces: []proto.Race{proto.Race_RaceHuman},
+		GearSet:    core.GetGearSet("../../../ui/specs/warrior/dps/gear_sets", "p1_fury"),
+		OtherGearSets: []core.GearSetCombo{
+			core.GetGearSet("../../../ui/specs/warrior/dps/gear_sets", "p1_arms"),
+		},
+		Talents: DefaultFuryTalents,
+		OtherTalentSets: []core.TalentsCombo{
+			{Label: "Arms", Talents: DefaultArmsTalents},
+		},
+		Consumables:      DefaultConsumables,
+		SpecOptions:      core.SpecOptionsCombo{Label: "Fury", SpecOptions: DefaultOptions},
+		StartingDistance: 0,
+		Profession1:      proto.Profession_Engineering,
+		Profession2:      proto.Profession_Blacksmithing,
 
-		Rotation: core.GetAplRotation("../../../ui/specs/warrior/dps/apls", "dps_reck"),
+		Rotation: core.GetAplRotation("../../../ui/specs/warrior/dps/apls", "fury"),
 		OtherRotations: []core.RotationCombo{
-			core.GetAplRotation("../../../ui/specs/warrior/dps/apls", "dps_no_reck"),
+			core.GetAplRotation("../../../ui/specs/warrior/dps/apls", "arms"),
+			armsStanceDanceRotation(),
 		},
 
 		ItemFilter: core.ItemFilter{
-			ArmorType: proto.ArmorType_ArmorTypePlate,
+			ArmorType: proto.ArmorType_ArmorTypeLeather,
 			WeaponTypes: []proto.WeaponType{
-				proto.WeaponType_WeaponTypeAxe,
-				proto.WeaponType_WeaponTypeSword,
-				proto.WeaponType_WeaponTypeMace,
-				proto.WeaponType_WeaponTypeDagger,
 				proto.WeaponType_WeaponTypeFist,
+				proto.WeaponType_WeaponTypeMace,
+				proto.WeaponType_WeaponTypeSword,
+				proto.WeaponType_WeaponTypeAxe,
 			},
 			HandTypes: []proto.HandType{
 				proto.HandType_HandTypeMainHand,
@@ -83,33 +68,24 @@ func warriorSuite(gear core.GearSetCombo, talents string, otherTalents []core.Ta
 				proto.HandType_HandTypeOneHand,
 				proto.HandType_HandTypeTwoHand,
 			},
-			// Enchant effects sim/common registers that the generated database has no row for.
-			EnchantBlacklist: []int32{963, 1899, 1900, 2523, 2613, 2621, 2673, 2714, 2722, 2723, 2724, 2939, 2940, 3225, 3273},
 		},
 	}
 }
 
-// The arena pulls at 0 rage, as a real pull does (rage decays out of combat); Bloodrage still goes
-// at 0 s. The UI default of 50 opened every arena row with two free Heroic Strikes (+0.2..+0.6%).
-var arenaOptions = &proto.Player_DpsWarrior{
-	DpsWarrior: &proto.DpsWarrior{
-		Options: &proto.DpsWarrior_Options{
-			ClassOptions: &proto.WarriorOptions{
-				StartingRage:   0,
-				QueueDelay:     250,
-				UseBattleShout: true,
-				DefaultStance:  proto.WarriorStance_WarriorStanceBerserker,
-			},
-		},
-	},
+func armsStanceDanceRotation() core.RotationCombo {
+	rotation := core.GetAplRotation("../../../ui/specs/warrior/dps/apls", "arms").Rotation
+	for _, item := range rotation.PriorityList {
+		if item.GetAction().GetGroupReference().GetGroupName() == "Stance Dance ON/OFF" {
+			item.Hide = false
+		}
+	}
+	return core.RotationCombo{Label: "arms_stance_dance", Rotation: rotation}
 }
 
 var DefaultOptions = &proto.Player_DpsWarrior{
 	DpsWarrior: &proto.DpsWarrior{
 		Options: &proto.DpsWarrior_Options{
 			ClassOptions: &proto.WarriorOptions{
-				StartingRage:   50,
-				QueueDelay:     250,
 				UseBattleShout: true,
 				DefaultStance:  proto.WarriorStance_WarriorStanceBerserker,
 			},
@@ -117,37 +93,15 @@ var DefaultOptions = &proto.Player_DpsWarrior{
 	},
 }
 
+var DefaultFuryTalents = "30305013002-25053005052010501"
+var DefaultArmsTalents = "30325213132515201-0505-2"
+
 var DefaultConsumables = &proto.ConsumesSpec{
-	PotId:   22838,
-	FlaskId: 22854,
-	FoodId:  27658,
-}
-
-// The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
-func TestArena(t *testing.T) {
-	arenalib.Run(t, arenaSpec)
-}
-
-// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
-func TestRaceArena(t *testing.T) {
-	arenalib.RunRaceArena(t, arenaSpec)
-}
-
-var arenaSpec = arenalib.Spec{
-	Dir:         "warrior",
-	UI:          "warrior/dps",
-	Class:       proto.Class_ClassWarrior,
-	Race:        proto.Race_RaceOrc,
-	SpecOptions: arenaOptions,
-	Role:        arenalib.Melee,
-	// The page plays every build with its No Reck rotation (autoRotation). Arms is a two-hander build
-	// and the page's default set dual wields, so Arms wears the page's one two-hander set short of P1.
-	// That set's two-hander is an axe, and Arms takes Weaponmaster, which pays swords (extra attacks)
-	// well over axes (crit) or maces (armor penetration) whatever the race: on the axe only the
-	// Human's relabel would reach the sword branch. So it runs as a sword for every race, and the
-	// Orc and Dwarf try theirs on top.
-	RaceBuilds: map[string]arenalib.RaceBuild{
-		"Fury 17/34/0": {Rotation: "dps_no_reck"},
-		"Arms 39/12/0": {Gear: "arms_launch", Rotation: "dps_no_reck", WeaponType: proto.WeaponType_WeaponTypeSword},
-	},
+	ResourcePotId: 13442,  // Mighty Rage Potion
+	FlaskId:       274274, // Flask of Natural Aggression
+	FoodId:        20452,  // Smoked Desert Dumplings
+	ExplosiveId:   18588,
+	OhImbueId:     12404,
+	// Goblin Sapper Charge, Scroll of Agility IV, Scroll of Strength IV
+	ExtraIds: []int32{10646, 10309, 10310},
 }

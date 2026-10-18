@@ -5,12 +5,13 @@ import (
 
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-// The six slots of a Justice set. The client ships the sets' current pieces under encryption, so
-// the slots follow the older pieces the client has seen: shoulders, hands, legs and feet, with head
-// and chest for the two the ItemSet row still lists.
+// The six slots of a Justice set. The game files ship the sets' current pieces under encryption, so
+// the slots follow the older pieces the game files have seen: shoulders, hands, legs and feet, with
+// head and chest for the two the ItemSet row still lists.
 var justiceSetSlots = []proto.ItemSlot{
 	proto.ItemSlot_ItemSlotHead,
 	proto.ItemSlot_ItemSlotShoulder,
@@ -37,23 +38,10 @@ var ItemSetJusticeBattlegear = core.NewItemSet(core.ItemSet{
 				ExposeToAPL(1300951)
 		},
 		4: func(agent core.Agent, setBonusAura *core.Aura) {
-			// +36 Attack Power against Undead. The client's text says Demons; the effect's
+			// +36 Attack Power against Undead. The game files' text says Demons; the effect's
 			// creature-type mask is Undead.
-			character := agent.GetCharacter()
-			bonus := stats.Stats{stats.AttackPower: 36, stats.RangedAttackPower: 36}
-
-			setBonusAura.
-				ApplyOnGain(func(_ *core.Aura, _ *core.Simulation) {
-					for _, at := range character.AttackTables {
-						at.MobTypeBonusStats[proto.MobType_MobTypeUndead] = at.MobTypeBonusStats[proto.MobType_MobTypeUndead].Add(bonus)
-					}
-				}).
-				ApplyOnExpire(func(_ *core.Aura, _ *core.Simulation) {
-					for _, at := range character.AttackTables {
-						at.MobTypeBonusStats[proto.MobType_MobTypeUndead] = at.MobTypeBonusStats[proto.MobType_MobTypeUndead].Subtract(bonus)
-					}
-				}).
-				ExposeToAPL(1301084)
+			spelldata.ParseEffects(agent.GetCharacter(), setBonusAura, spelldata.MustFind(1301084))
+			setBonusAura.ExposeToAPL(1301084)
 		},
 		5: func(_ core.Agent, setBonusAura *core.Aura) {
 			// Reduces the cooldown on your Judgement spell by 0.5 sec.
@@ -129,94 +117,6 @@ var ItemSetJusticeBattleplate = core.NewItemSet(core.ItemSet{
 			// Reduces the duration of Forbearance any time you gain it by 10 sec.
 			agent.(PaladinAgent).GetPaladin().forbearanceReduction += time.Second * 10
 			setBonusAura.ExposeToAPL(1301697)
-		},
-	},
-})
-
-// Classic tier and PvP sets, ported from our master sim. Bonuses master does not model (aura
-// radius, Judgement of Light chance, blessing duration, Holy Light cast time, Judgement duration,
-// Hammer of Justice cooldown, the Lawbringer party heal) are left out here too.
-
-var ItemSetLawbringerArmor = core.NewItemSet(core.ItemSet{
-	Name: "Lawbringer Armor",
-	Bonuses: map[int32]core.ApplySetBonus{
-		// Improves your chance to get a critical strike with spells by 1%, and with melee by 1%.
-		5: func(_ core.Agent, setBonusAura *core.Aura) {
-			setBonusAura.AttachStatsBuff(stats.Stats{
-				stats.MeleeCritRating: 1 * core.PhysicalCritRatingPerCritPercent,
-				stats.SpellCritRating: 1 * core.SpellCritRatingPerCritPercent,
-			})
-		},
-	},
-})
-
-var ItemSetFreethinkersArmor = core.NewItemSet(core.ItemSet{
-	Name: "Freethinker's Armor",
-	Bonuses: map[int32]core.ApplySetBonus{
-		// Restores 4 mana per 5 sec.
-		2: func(_ core.Agent, setBonusAura *core.Aura) {
-			setBonusAura.AttachStatBuff(stats.MP5, 4)
-		},
-	},
-})
-
-var ItemSetAvengersBattlegear = core.NewItemSet(core.ItemSet{
-	Name: "Avenger's Battlegear",
-	Bonuses: map[int32]core.ApplySetBonus{
-		// Increases damage and healing done by magical spells and effects by up to 71.
-		5: func(_ core.Agent, setBonusAura *core.Aura) {
-			setBonusAura.AttachStatsBuff(stats.Stats{stats.SpellDamage: 71, stats.HealingPower: 71})
-		},
-	},
-})
-
-var ItemSetBattlegearOfEternalJustice = core.NewItemSet(core.ItemSet{
-	Name: "Battlegear of Eternal Justice",
-	Bonuses: map[int32]core.ApplySetBonus{
-		// 20% chance to regain 100 mana when you cast a Judgement (master: Command and Righteousness).
-		3: func(agent core.Agent, setBonusAura *core.Aura) {
-			character := agent.GetCharacter()
-			manaMetrics := character.NewManaMetrics(core.ActionID{SpellID: 26135})
-			setBonusAura.AttachProcTrigger(core.ProcTrigger{
-				Name:           "Battlegear of Eternal Justice - 3PC",
-				ClassSpellMask: SpellMaskJudgementOfCommand | SpellMaskJudgementOfRighteousness,
-				Callback:       core.CallbackOnCastComplete,
-				ProcChance:     0.2,
-				Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
-					if character.HasManaBar() {
-						character.AddMana(sim, 100, manaMetrics)
-					}
-				},
-			})
-		},
-	},
-})
-
-var ItemSetLieutenantCommandersRedoubt = core.NewItemSet(core.ItemSet{
-	Name: "Lieutenant Commander's Redoubt",
-	Bonuses: map[int32]core.ApplySetBonus{
-		// Increases damage and healing done by magical spells and effects by up to 23.
-		2: func(_ core.Agent, setBonusAura *core.Aura) {
-			setBonusAura.AttachStatsBuff(stats.Stats{stats.SpellDamage: 23, stats.HealingPower: 23})
-		},
-		// +20 Stamina.
-		6: func(_ core.Agent, setBonusAura *core.Aura) {
-			setBonusAura.AttachStatBuff(stats.Stamina, 20)
-		},
-	},
-})
-
-var ItemSetFieldMarshalsAegis = core.NewItemSet(core.ItemSet{
-	Name: "Field Marshal's Aegis",
-	Bonuses: map[int32]core.ApplySetBonus{
-		// +20 Stamina.
-		2: func(_ core.Agent, setBonusAura *core.Aura) {
-			setBonusAura.AttachStatBuff(stats.Stamina, 20)
-		},
-		// Increases healing done by up to 44 and damage done by up to 15 for all magical spells and
-		// effects (467550).
-		6: func(_ core.Agent, setBonusAura *core.Aura) {
-			setBonusAura.AttachStatsBuff(stats.Stats{stats.HealingPower: 44, stats.SpellDamage: 15})
 		},
 	},
 })

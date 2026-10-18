@@ -18,25 +18,8 @@ interface WowheadGearPlannerImportJSON {
 		slotId: number;
 		itemId: number;
 		randomEnchantId?: number;
-		gemItemIds: number[];
 		enchantId?: number;
 	}[];
-}
-
-// Talent digits packed two per byte, 0xf closing each tree.
-function readTalents(bytes: number[]): string {
-	let talents = '';
-	let trees = 0;
-	for (const nibble of bytes.flatMap(b => [b >> 4, b & 15])) {
-		if (trees >= 3) break;
-		if (nibble === 15) {
-			talents += '-';
-			trees++;
-		} else {
-			talents += nibble;
-		}
-	}
-	return talents.replace(/-+$/, '');
 }
 
 // Taken from Wowhead
@@ -71,40 +54,28 @@ function readHash(hash: string): WowheadGearPlannerImportJSON {
 	}
 
 	const r = gearPlannerBits.shift()!;
-	if (r >= 4) {
-		// Wowhead Classic's layout, the one the classic-engine site imported and exported: a gender
-		// byte before the level, and 24-bit enchant spell ids.
-		t.genderId = gearPlannerBits.shift()!;
-		t.level = gearPlannerBits.shift()!;
-		t.talentString = readTalents(gearPlannerBits.splice(0, gearPlannerBits.shift()!));
-		while (gearPlannerBits.length >= 4) {
-			const slotBits = gearPlannerBits.shift()!;
-			const gemBits = gearPlannerBits.shift()!;
-			const item: WowheadGearPlannerImportJSON['items'][number] = {
-				slotId: slotBits & ~enchantOffset & ~randomEnchantOffset,
-				itemId: ((gemBits & 31) << 16) | (gearPlannerBits.shift()! << 8) | gearPlannerBits.shift()!,
-				randomEnchantId: undefined,
-				gemItemIds: [],
-				enchantId: undefined,
-			};
-			if (slotBits & enchantOffset) {
-				item.enchantId = (gearPlannerBits.shift()! << 16) | (gearPlannerBits.shift()! << 8) | gearPlannerBits.shift()!;
-			}
-			if (slotBits & randomEnchantOffset) {
-				const randomEnchantId = (gearPlannerBits.shift()! << 8) | gearPlannerBits.shift()!;
-				item.randomEnchantId = randomEnchantId & 32768 ? randomEnchantId - 65536 : randomEnchantId;
-			}
-			t.items.push(item);
-		}
-		return t;
-	}
 	if (r < 4) {
 		if (r > 0) {
 			t.level = gearPlannerBits.shift()!;
 		}
 		t.talentString = '';
 		if (r > 1) {
-			t.talentString = readTalents(gearPlannerBits.splice(0, gearPlannerBits.shift()!));
+			const e = gearPlannerBits.shift()!;
+			const a = gearPlannerBits.splice(0, e);
+			const s = [];
+			for (let e = 0; e < a.length; e++) {
+				s.push(a[e] >> 4, a[e] & 15);
+			}
+			let n = 0;
+			for (let e = 0; e < s.length && n < 3; e++) {
+				if (s[e] === 15) {
+					t.talentString += '-';
+					n++;
+				} else {
+					t.talentString += '' + s[e];
+				}
+			}
+			t.talentString = t.talentString.replace(/-+$/, '');
 		}
 		while (gearPlannerBits.length >= 3) {
 			let slotIdx = gearPlannerBits.shift()!;
@@ -124,7 +95,6 @@ function readHash(hash: string): WowheadGearPlannerImportJSON {
 				slotId: slotIdx,
 				itemId: itemID,
 				randomEnchantId: undefined,
-				gemItemIds: [],
 				enchantId: undefined,
 			};
 
@@ -141,14 +111,8 @@ function readHash(hash: string): WowheadGearPlannerImportJSON {
 				}
 				item.randomEnchantId = randomEnchantId;
 			}
-			while (n--) {
-				let gemID = 0;
-				const s = gearPlannerBits.shift()!;
-				gemID |= (s & 31) << 16;
-				gemID |= gearPlannerBits.shift()! << 8;
-				gemID |= gearPlannerBits.shift()!;
-				item.gemItemIds.push(gemID);
-			}
+			// Skips the item's n gem ids, three bytes each.
+			gearPlannerBits.splice(0, 3 * n);
 			t.items.push(item);
 		}
 	}
@@ -156,10 +120,10 @@ function readHash(hash: string): WowheadGearPlannerImportJSON {
 	return t;
 }
 
-export function parseWowheadGearLink(link: string): WowheadGearPlannerImportJSON {
-	const match = link.match(new RegExp(`(?:${WOWHEAD_DOMAIN}|classic)/gear-planner/(.+)`));
+function parseWowheadGearLink(link: string): WowheadGearPlannerImportJSON {
+	const match = link.match(new RegExp(`${WOWHEAD_DOMAIN}/gear-planner/(.+)`));
 	if (!match) {
-		throw new Error(`Invalid Wowhead Gear Planner URL ${link}, must look like "${WOWHEAD_GEAR_PLANNER_URL}/CLASS/RACE/XXXX"`);
+		throw new Error(i18n.t('import.wowhead.error_invalid_link', { url: link, example: `${WOWHEAD_GEAR_PLANNER_URL}/CLASS/RACE/XXXX` }));
 	}
 	return readHash(match[1]);
 }
@@ -188,7 +152,7 @@ export const WOWHEAD_GEAR_PLANNER_IMPORTER: ImporterDefinition = {
 	title: i18n.t('import.wowhead.title'),
 	allowFileUpload: true,
 	onImport: async (host, url) => {
-		const match = url.match(new RegExp(`www\\.wowhead\\.com/(?:${WOWHEAD_DOMAIN}|classic)/gear-planner/([a-z\\-]+)/([a-z\\-]+)/([a-zA-Z0-9_\\-]+)`));
+		const match = url.match(new RegExp(`www\\.wowhead\\.com/${WOWHEAD_DOMAIN}/gear-planner/([a-z\\-]+)/([a-z\\-]+)/([a-zA-Z0-9_\\-]+)`));
 		if (!match) {
 			throw new Error(i18n.t('import.wowhead.error_invalid_url', { url }));
 		}
@@ -202,13 +166,7 @@ export const WOWHEAD_GEAR_PLANNER_IMPORTER: ImporterDefinition = {
 			throw new Error(i18n.t('import.wowhead.error_cannot_parse_class', { classId: parsed.classId }));
 		}
 
-		const converWowheadRace = (raceId: string): string => {
-			const allianceSuffix = raceId.startsWith('alliance-') ? ' (A)' : undefined;
-			const hordeSuffix = raceId.startsWith('horde-') ? ' (H)' : undefined;
-			return raceId.replaceAll('alliance', '').replaceAll('horde', '').replaceAll('-', '') + (allianceSuffix ?? hordeSuffix ?? '');
-		};
-
-		const race = nameToRace(converWowheadRace(parsed.raceId));
+		const race = nameToRace(parsed.raceId.replaceAll('-', ''));
 		if (race == Race.RaceUnknown) {
 			throw new Error(i18n.t('import.wowhead.error_cannot_parse_race', { raceId: parsed.raceId }));
 		}
@@ -231,9 +189,6 @@ export const WOWHEAD_GEAR_PLANNER_IMPORTER: ImporterDefinition = {
 					return;
 				}
 				itemSpec.enchant = enchant.effectId;
-			}
-			if (item.gemItemIds) {
-				itemSpec.gems = item.gemItemIds;
 			}
 			if (item.randomEnchantId) {
 				itemSpec.randomSuffix = item.randomEnchantId;

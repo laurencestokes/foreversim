@@ -2,7 +2,7 @@ import {
 	AreaType,
 	ArmorType,
 	Class,
-	ItemQuality,
+	CreatureFamily,
 	ItemSlot,
 	MobType,
 	Profession,
@@ -12,6 +12,7 @@ import {
 	Spec,
 	SpellSchool,
 	Stat,
+	WeaponSkill,
 	WeaponType,
 } from '@generated/proto/common';
 import { ResourceType } from '@generated/proto/spell';
@@ -33,6 +34,7 @@ export const statI18nKeys: Record<Stat, string> = {
 	[Stat.StatRangedAttackPower]: 'ranged_attack_power',
 	[Stat.StatArmor]: 'armor',
 	[Stat.StatBonusArmor]: 'bonus_armor',
+	[Stat.StatArmorNoMods]: 'armor_no_mods',
 	[Stat.StatHealth]: 'health',
 	[Stat.StatMana]: 'mana',
 	[Stat.StatMP5]: 'mp5',
@@ -45,14 +47,11 @@ export const statI18nKeys: Record<Stat, string> = {
 	[Stat.StatNatureDamage]: 'nature_damage',
 	[Stat.StatShadowDamage]: 'shadow_damage',
 	[Stat.StatPhysicalDamage]: 'physical_damage',
-	[Stat.StatSpellHitRating]: 'spell_hit_rating',
-	[Stat.StatSpellCritRating]: 'spell_crit_rating',
-	[Stat.StatSpellHasteRating]: 'spell_haste_rating',
+	[Stat.StatHitRating]: 'hit_rating',
+	[Stat.StatCritRating]: 'crit_rating',
+	[Stat.StatHasteRating]: 'haste_rating',
 	[Stat.StatSpellPiercing]: 'spell_penetration',
 	[Stat.StatFeralAttackPower]: 'feral_attack_power',
-	[Stat.StatMeleeHitRating]: 'melee_hit_rating',
-	[Stat.StatMeleeCritRating]: 'melee_crit_rating',
-	[Stat.StatMeleeHasteRating]: 'melee_haste_rating',
 	[Stat.StatArmorPenetration]: 'armor_penetration',
 	[Stat.StatDefenseRating]: 'defense_rating',
 	[Stat.StatBlockRating]: 'block_rating',
@@ -70,26 +69,24 @@ export const protoStatNameI18nKeys: Record<string, string> = {
 	['Stamina']: 'stamina',
 	['Intellect']: 'intellect',
 	['Spirit']: 'spirit',
-	['SpellHitRating']: 'spell_hit_rating',
-	['SpellCritRating']: 'spell_crit_rating',
-	['SpellHasteRating']: 'spell_haste_rating',
 	['SpellPiercing']: 'spell_penetration',
-	['MeleeHitRating']: 'melee_hit_rating',
-	['MeleeCritRating']: 'melee_crit_rating',
-	['MeleeHasteRating']: 'melee_haste_rating',
 	['ExpertiseRating']: 'expertise_rating',
+	['ExpertisePercent']: 'expertise',
 	['HitRating']: 'hit_rating',
 	['CritRating']: 'crit_rating',
 	['HasteRating']: 'haste_rating',
 	['ArmorPenetration']: 'armor_penetration',
 	['DodgeRating']: 'dodge',
+	['DodgePercent']: 'dodge',
 	['ParryRating']: 'parry',
+	['ParryPercent']: 'parry',
 	['AttackPower']: 'attack_power',
 	['RangedAttackPower']: 'ranged_attack_power',
 	['FeralAttackPower']: 'feral_attack_power',
 	['HealingPower']: 'healing_power',
 	['SpellPower']: 'spell_power',
 	['SpellDamage']: 'spell_damage',
+	['PhysicalDamage']: 'physical_damage',
 	['ArcaneDamage']: 'arcane_damage',
 	['FireDamage']: 'fire_damage',
 	['FrostDamage']: 'frost_damage',
@@ -98,15 +95,19 @@ export const protoStatNameI18nKeys: Record<string, string> = {
 	['ShadowDamage']: 'shadow_damage',
 	['Armor']: 'armor',
 	['BonusArmor']: 'bonus_armor',
+	['ArmorNoMods']: 'armor_no_mods',
 	['Health']: 'health',
 	['Mana']: 'mana',
 	['MP5']: 'mp5',
-	['PhysicalHitPercent']: 'physical_hit_percent',
-	['SpellHitPercent']: 'spell_hit_percent',
-	['PhysicalCritPercent']: 'physical_crit_percent',
-	['SpellCritPercent']: 'spell_crit_percent',
-	['BlockPercent']: 'block_percent',
+	['PhysicalHitPercent']: 'melee_hit',
+	['RangedHitPercent']: 'ranged_hit',
+	['SpellHitPercent']: 'spell_hit',
+	['PhysicalCritPercent']: 'melee_crit',
+	['RangedCritPercent']: 'ranged_crit',
+	['SpellCritPercent']: 'spell_crit',
+	['BlockPercent']: 'block',
 	['DefenseRating']: 'defense_rating',
+	['ReducedCritTakenPercent']: 'reduced_crit_taken',
 	['BlockRating']: 'block_rating',
 	['BlockValue']: 'block_value',
 	['ArcaneResistance']: 'arcane_resistance',
@@ -145,6 +146,20 @@ export const pseudoStatI18nKeys: Record<PseudoStat, string> = {
 	[PseudoStat.PseudoStatRangedHitPercent]: 'ranged_hit',
 	[PseudoStat.PseudoStatRangedCritPercent]: 'ranged_crit',
 	[PseudoStat.PseudoStatExpertisePercent]: 'expertise',
+	[PseudoStat.PseudoStatOffHandHitPercent]: 'off_hand_hit',
+	[PseudoStat.PseudoStatOffHandCritPercent]: 'off_hand_crit',
+	[PseudoStat.PseudoStatMainHandHitRating]: 'main_hand_hit_rating',
+	[PseudoStat.PseudoStatMainHandCritRating]: 'main_hand_crit_rating',
+	[PseudoStat.PseudoStatOffHandHitRating]: 'off_hand_hit_rating',
+	[PseudoStat.PseudoStatOffHandCritRating]: 'off_hand_crit_rating',
+	[PseudoStat.PseudoStatRangedHitRating]: 'ranged_hit_rating',
+	[PseudoStat.PseudoStatRangedCritRating]: 'ranged_crit_rating',
+	[PseudoStat.PseudoStatMeleeCritSuppressionPercent]: 'melee_crit_suppression',
+	[PseudoStat.PseudoStatRangedCritSuppressionPercent]: 'ranged_crit_suppression',
+	[PseudoStat.PseudoStatMainHandMissPercent]: 'main_hand_miss',
+	[PseudoStat.PseudoStatMainHandDodgePercent]: 'main_hand_dodge',
+	[PseudoStat.PseudoStatMainHandParryPercent]: 'main_hand_parry',
+	[PseudoStat.PseudoStatMainHandGlancePercent]: 'main_hand_glance',
 };
 
 export const spellSchoolI18nKeys: Record<SpellSchool, string> = {
@@ -191,17 +206,6 @@ export const resourceTypeI18nKeys: Record<ResourceType, string> = {
 	[ResourceType.ResourceTypeComboPoints]: 'combo_points',
 	[ResourceType.ResourceTypeFocus]: 'focus',
 	[ResourceType.ResourceTypeGenericResource]: 'generic_resource',
-};
-
-export const itemQualityI18nKeys: Record<ItemQuality, string> = {
-	[ItemQuality.ItemQualityJunk]: 'junk',
-	[ItemQuality.ItemQualityCommon]: 'common',
-	[ItemQuality.ItemQualityUncommon]: 'uncommon',
-	[ItemQuality.ItemQualityRare]: 'rare',
-	[ItemQuality.ItemQualityEpic]: 'epic',
-	[ItemQuality.ItemQualityLegendary]: 'legendary',
-	[ItemQuality.ItemQualityArtifact]: 'artifact',
-	[ItemQuality.ItemQualityHeirloom]: 'heirloom',
 };
 
 export const specI18nKeys: Record<Spec, string> = {
@@ -260,6 +264,16 @@ export const mobTypeI18nKeys: Record<MobType, string> = {
 	[MobType.MobTypeUndead]: 'undead',
 };
 
+export const creatureFamilyI18nKeys: Record<CreatureFamily, string> = {
+	[CreatureFamily.CreatureFamilyUnknown]: 'unknown',
+	[CreatureFamily.CreatureFamilyNaga]: 'naga',
+	[CreatureFamily.CreatureFamilySatyr]: 'satyr',
+	[CreatureFamily.CreatureFamilyAquatic]: 'aquatic',
+	[CreatureFamily.CreatureFamilyEarthElemental]: 'earth_elemental',
+	[CreatureFamily.CreatureFamilyFireElemental]: 'fire_elemental',
+	[CreatureFamily.CreatureFamilyMountainGiant]: 'mountain_giant',
+};
+
 export const areaTypeI18nKeys: Record<AreaType, string> = {
 	[AreaType.AreaTypeUnknown]: 'unknown',
 	[AreaType.AreaTypeForestGrassland]: 'forest_grassland',
@@ -297,7 +311,6 @@ export const professionI18nKeys: Record<Profession, string> = {
 	[Profession.Engineering]: 'engineering',
 	[Profession.Herbalism]: 'herbalism',
 	[Profession.Inscription]: 'inscription',
-	[Profession.Jewelcrafting]: 'jewelcrafting',
 	[Profession.Leatherworking]: 'leatherworking',
 	[Profession.Mining]: 'mining',
 	[Profession.Skinning]: 'skinning',
@@ -321,15 +334,13 @@ export const sourceFilterI18nKeys: Record<SourceFilterOption, string> = {
 
 export const raidFilterI18nKeys: Record<RaidFilterOption, string> = {
 	[RaidFilterOption.RaidUnknown]: 'unknown',
-	[RaidFilterOption.RaidKara]: 'kara',
-	[RaidFilterOption.RaidGruul]: 'gruuls',
-	[RaidFilterOption.RaidMag]: 'mag',
-	[RaidFilterOption.RaidTK]: 'tk',
-	[RaidFilterOption.RaidSSC]: 'ssc',
-	[RaidFilterOption.RaidMH]: 'mh',
-	[RaidFilterOption.RaidBT]: 'bt',
-	[RaidFilterOption.RaidZA]: 'za',
-	[RaidFilterOption.RaidSWP]: 'swp',
+	[RaidFilterOption.RaidMC]: 'mc',
+	[RaidFilterOption.RaidOny]: 'ony',
+	[RaidFilterOption.RaidBWL]: 'bwl',
+	[RaidFilterOption.RaidZG]: 'zg',
+	[RaidFilterOption.RaidAQ20]: 'aq20',
+	[RaidFilterOption.RaidAQ40]: 'aq40',
+	[RaidFilterOption.RaidNaxx]: 'naxx',
 };
 
 export const armorTypeI18nKeys: Record<ArmorType, string> = {
@@ -364,6 +375,25 @@ export const rangedWeaponTypeI18nKeys: Record<RangedWeaponType, string> = {
 	[RangedWeaponType.RangedWeaponTypeLibram]: 'libram',
 	[RangedWeaponType.RangedWeaponTypeTotem]: 'totem',
 	[RangedWeaponType.RangedWeaponTypeSigil]: 'sigil',
+};
+
+export const weaponSkillI18nKeys: Record<WeaponSkill, string> = {
+	[WeaponSkill.WeaponSkillUnknown]: 'unknown',
+	[WeaponSkill.WeaponSkillAxes]: 'axes',
+	[WeaponSkill.WeaponSkillTwoHandedAxes]: 'two_handed_axes',
+	[WeaponSkill.WeaponSkillMaces]: 'maces',
+	[WeaponSkill.WeaponSkillTwoHandedMaces]: 'two_handed_maces',
+	[WeaponSkill.WeaponSkillSwords]: 'swords',
+	[WeaponSkill.WeaponSkillTwoHandedSwords]: 'two_handed_swords',
+	[WeaponSkill.WeaponSkillPolearms]: 'polearms',
+	[WeaponSkill.WeaponSkillStaves]: 'staves',
+	[WeaponSkill.WeaponSkillDaggers]: 'daggers',
+	[WeaponSkill.WeaponSkillFistWeapons]: 'fist_weapons',
+	[WeaponSkill.WeaponSkillBows]: 'bows',
+	[WeaponSkill.WeaponSkillCrossbows]: 'crossbows',
+	[WeaponSkill.WeaponSkillGuns]: 'guns',
+	[WeaponSkill.WeaponSkillThrown]: 'thrown',
+	[WeaponSkill.WeaponSkillWands]: 'wands',
 };
 
 export const slotNamesI18nKeys: Record<ItemSlot, string> = {
@@ -425,6 +455,9 @@ export const getTargetInputI18nKey = (label: string): string => targetInputI18nK
 
 export const getMobTypeI18nKey = (mobType: MobType): string => mobTypeI18nKeys[mobType] || MobType[mobType].toLowerCase();
 
+export const getCreatureFamilyI18nKey = (creatureFamily: CreatureFamily): string =>
+	creatureFamilyI18nKeys[creatureFamily] || CreatureFamily[creatureFamily].toLowerCase();
+
 export const getAreaTypeI18nKey = (areaType: AreaType): string => areaTypeI18nKeys[areaType] || AreaType[areaType].toLowerCase();
 
 export const getRaceI18nKey = (race: Race): string => raceI18nKeys[race] || Race[race].toLowerCase();
@@ -443,6 +476,8 @@ export const getWeaponTypeI18nKey = (weaponType: WeaponType): string => weaponTy
 
 export const getRangedWeaponTypeI18nKey = (rangedWeaponType: RangedWeaponType): string =>
 	rangedWeaponTypeI18nKeys[rangedWeaponType] || RangedWeaponType[rangedWeaponType].toLowerCase();
+
+export const getWeaponSkillI18nKey = (weaponSkill: WeaponSkill): string => weaponSkillI18nKeys[weaponSkill] || WeaponSkill[weaponSkill].toLowerCase();
 
 export const getSlotNameI18nKey = (slot: ItemSlot): string => slotNamesI18nKeys[slot] || ItemSlot[slot].toLowerCase();
 

@@ -8,13 +8,14 @@ import (
 )
 
 // The readers a Meta and the judgement ranks turn a store row into a buff's numbers with. An amount
-// is the caster's at core.CharacterLevel, in the client's units.
+// is the caster's at core.CharacterLevel, in the game files' units.
 
 func amount(e *spelldata.Effect) float64 {
-	return e.Average(core.CharacterLevel)
+	return e.Average()
 }
 
-// The client states a permanent aura as -1 and an aura with no duration of its own, a totem's, as 0.
+// The game files state a permanent aura as -1 and an aura with no duration of its own, a totem's,
+// as 0.
 func auraDuration(s *spelldata.Spell) time.Duration {
 	if s.DurationMs <= 0 {
 		return core.NeverExpires

@@ -1,85 +1,56 @@
 package warrior
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-func (warrior *Warrior) registerRevenge() {
-	// TODO: Manual review needed -- spell 25288 states "a high amount of threat" with no number;
-	// none is modelled until measured in game.
-	revengeRank := spellData.Revenge.Highest()
+var revengeRank = spellData.Revenge.Highest()
 
+// The "high amount of threat" the game files state with no number: Revenge's threat is 2.25 times
+// its damage, measured in game on Rank 2.
+// TODO: Ingame test needed -- confirm the multiplier on the top rank.
+const revengeThreatMultiplier = 2.25
+
+// The window a block, dodge or parry opens: the aura Defensive State (DND) fires on the hit taken.
+var revengeWindow = spellData.DefensiveStateTriggered.Highest()
+
+func (warrior *Warrior) registerRevenge() {
 	actionID := core.ActionID{SpellID: revengeRank.ID}
 
-	// TODO: In-game test needed
 	aura := warrior.RegisterAura(core.Aura{
 		Label:    "Revenge",
-		Duration: 5 * time.Second,
+		Duration: revengeWindow.Duration(),
 		ActionID: actionID,
 	})
 
-	warrior.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Revenge - Trigger",
-		TriggerImmediately: true,
-		Outcome:            core.OutcomeBlock | core.OutcomeDodge | core.OutcomeParry,
-		Callback:           core.CallbackOnSpellHitTaken,
-		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+	trigger := spelldata.ProcTrigger(&warrior.Character, spellData.DefensiveState.Highest(),
+		func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 			aura.Activate(sim)
-		},
-	})
+		})
+	trigger.Outcome = core.OutcomeBlock | core.OutcomeDodge | core.OutcomeParry
+	trigger.RequireDamageDealt = false
+	trigger.TriggerImmediately = true
+	warrior.MakeProcTriggerAura(trigger)
 
-	warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       actionID,
-		SpellSchool:    core.SpellSchoolPhysical,
-		DefenseType:    core.DefenseTypeMelee,
-		ProcMask:       core.ProcMaskMeleeMHSpecial,
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		ClassSpellMask: SpellMaskRevenge,
-		MaxRange:       core.MaxMeleeRange,
+	config := spelldata.SpellConfig(&warrior.Unit, revengeRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
+	config.ThreatMultiplier = revengeThreatMultiplier
 
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: revengeRank.GCD(),
-			},
-			IgnoreHaste: true,
-			CD: core.Cooldown{
-				Timer:    warrior.NewTimer(),
-				Duration: cooldownOf(revengeRank),
-			},
-		},
+	config.ExtraCastCondition = func(sim *core.Simulation, target *core.Unit) bool {
+		return aura.IsActive()
+	}
 
-		RageCost: core.RageCostOptions{
-			Cost:   int32(revengeRank.Cost()),
-			Refund: revengeRank.MissRefund(),
-		},
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		baseDamage := revengeRank.DamageEffect().Roll(sim) + revengeRank.DamageEffect().APCoeff()*spell.MeleeAttackPower(target)
+		result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
+		aura.Deactivate(sim)
 
-		DamageMultiplier: 1,
-		// Measured in the level 20 beta (2026-09-28): damage x1 plus a flat bonus of ~40 at rank 1
-		// (46 damage, 96 threat in Defensive Stance), before the stance modifier. Was 2.25x damage
-		// plus 270. The flat keeps the 2-per-level shape the old value had, which the rank 1
-		// reading (2 x 20 = 40) fits; rank 6's own bonus has not been measured.
-		ThreatMultiplier: 1,
-		FlatThreatBonus:  2 * 60,
+		if !result.Landed() {
+			spell.IssueRefund(sim)
+		}
+	}
 
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return warrior.StanceMatches(DefensiveStance) && aura.IsActive()
-		},
+	config.RelatedSelfBuff = aura
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			// Rank 6 rolls 153 +-10% (138-168) off the row. Forever adds 25% of attack power, which the
-			// client row doesn't carry: 4 level 20 warriors in beta logs (rank 1, 20-24) land 0.23-0.27
-			// AP over the base once armor is taken out, on 1H and 2H alike, with Battle Shout up or not.
-			baseDamage := revengeRank.DamageEffect().Roll(sim, core.CharacterLevel) + 0.25*spell.MeleeAttackPower(target)
-			result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
-			aura.Deactivate(sim)
-
-			if !result.Landed() {
-				spell.IssueRefund(sim)
-			}
-		},
-
-		RelatedSelfBuff: aura,
-	})
+	warrior.RegisterSpell(config)
 }

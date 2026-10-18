@@ -2,8 +2,11 @@
 	--color-black: #000;
 	--color-white: #fff;
 	--color-grey: #808080;
+	--color-blue: #0d6efd;
 
 	--color-gray-300: #dee2e6;
+	--color-gray-400: #ced4da;
+	--color-gray-500: #adb5bd;
 	--color-gray-600: #6c757d;
 	--color-gray-700: #495057;
 	--color-gray-800: #343a40;
@@ -21,7 +24,7 @@
 	--color-panel-hover: color-mix(in srgb, var(--color-background) 85%, transparent);
 	--color-border: var(--color-gray-600);
 	--color-border-muted: color-mix(in srgb, var(--color-border) 50%, transparent);
-	--color-primary: #0d6efd;
+	--color-primary: var(--color-blue);
 	--color-primary-foreground: var(--color-white);
 	--color-primary-disabled-foreground: var(--color-white);
 	--color-secondary: var(--color-gray-600);
@@ -38,16 +41,14 @@
 	--color-cancel-hover: #ea937d;
 	--color-cancel-active: #eb9985;
 
-	--color-brand: #a9cfe7;
-	--color-expansion: #f3eee2;
+	--color-brand: #f8b700;
+	--color-expansion: #4fc3f7;
+	--color-discord: #5865f2;
+	--color-discord-hover: #4752c4;
+	--color-landing-sheen-tint: rgb(255 250 235 / 0.3);
+	--color-landing-action-hover: color-mix(in srgb, var(--color-background) 75%, var(--color-white) 10%);
 
-	--color-evidence-measured: #6dbf6d;
-	--color-evidence-forever: #4a7fb5;
-	--color-evidence-classic: var(--color-gray-600);
-	--color-evidence-core: #8a7f6d;
-	--color-evidence-assumed: #e0a335;
-
-	--color-muted: #212529bf;
+	--color-muted: #dee2e6bf;
 	--color-link: #a5b1d6;
 	--color-link-hover: var(--color-white);
 	--color-link-danger: #ef9eaa;
@@ -114,6 +115,15 @@
 	--color-timeline-travel: rgb(249 192 255 / 0.6);
 	--color-timeline-aura: rgb(0 0 255 / 0.52);
 
+	--color-chart-series-1: #3987e5;
+	--color-chart-series-2: #d95926;
+	--color-chart-series-3: #199e70;
+	--color-chart-series-4: #c98500;
+	--color-chart-series-5: #d55181;
+	--color-chart-series-6: #008300;
+	--color-chart-series-7: #9085e9;
+	--color-chart-series-8: #e66767;
+
 	--color-faction-horde: red;
 	--color-faction-alliance: blue;
 
@@ -122,7 +132,7 @@
 
 	--color-input-disabled: color-mix(in srgb, var(--color-background), var(--color-white) 20%);
 	--color-scrim: --alpha(var(--color-black) / 50%);
-	--color-spinner: #3498db;
+	--color-spinner: var(--color-white);
 
 	--color-cr-scene-glow: color-mix(in srgb, var(--color-background) 65%, var(--color-warning) 35%);
 	--color-cr-dmg-num: color-mix(in srgb, var(--color-warning) 80%, var(--color-white));
@@ -136,7 +146,7 @@
 	--color-off-white: var(--color-zinc-100);
 	--color-table-even: var(--color-zinc-900);
 	--color-table-odd: var(--color-zinc-800);
-	--color-spinner-track: var(--color-zinc-100);
+	--color-spinner-track: var(--color-surface-border);
 	--color-primary-hover: color-mix(in srgb, var(--color-primary) 70%, var(--color-black));
 	--color-primary-active: color-mix(in srgb, var(--color-primary) 80%, var(--color-black));
 	--color-primary-dampened: color-mix(in srgb, var(--color-primary) 25%, var(--color-black));

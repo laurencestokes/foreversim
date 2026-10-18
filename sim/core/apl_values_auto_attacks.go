@@ -29,6 +29,8 @@ func (value *APLValueAutoSwingTime) GetDuration(sim *Simulation) time.Duration {
 		return max(0, value.unit.AutoAttacks.OffhandSwingSpeed())
 	case proto.APLValueAutoSwingTime_Ranged:
 		return max(0, value.unit.AutoAttacks.RangedSwingSpeed())
+	case proto.APLValueAutoSwingTime_Wand:
+		return value.unit.Wand.swingSpeed()
 	}
 	// defaults to 0
 	return 0
@@ -62,9 +64,20 @@ func (value *APLValueAutoTimeToNext) GetDuration(sim *Simulation) time.Duration 
 		return max(0, value.unit.AutoAttacks.OffhandSwingAt()-sim.CurrentTime)
 	case proto.APLValueAutoAttackType_RangedAuto:
 		return max(0, value.unit.AutoAttacks.NextRangedAttackAt()-sim.CurrentTime)
+	case proto.APLValueAutoAttackType_WandAuto:
+		return value.unit.Wand.timeToNext(sim)
 	}
 	// defaults to Any
-	return max(0, value.unit.AutoAttacks.NextAnyAttackAt()-sim.CurrentTime)
+	nextAt := value.unit.AutoAttacks.NextAnyAttackAt()
+	if shotAt, wanding := value.unit.Wand.nextShotAt(); wanding {
+		// With no autos running the swing times are unset (0), not a next swing.
+		if value.unit.AutoAttacks.anyEnabled() {
+			nextAt = min(nextAt, shotAt)
+		} else {
+			nextAt = shotAt
+		}
+	}
+	return max(0, nextAt-sim.CurrentTime)
 }
 func (value *APLValueAutoTimeToNext) String() string {
 	return "Auto Time To Next"
@@ -99,6 +112,8 @@ func (value *APLValueAutoTimeSinceLast) GetDuration(sim *Simulation) time.Durati
 		swingValue = sim.CurrentTime - value.unit.AutoAttacks.OffhandPreviousSwing()
 	case proto.APLValueAutoAttackType_RangedAuto:
 		swingValue = sim.CurrentTime - value.unit.AutoAttacks.PreviousRangedAttack()
+	case proto.APLValueAutoAttackType_WandAuto:
+		swingValue = value.unit.Wand.timeSinceLast(sim)
 	// defaults to Any
 	default:
 		swingValue = sim.CurrentTime - value.unit.AutoAttacks.MainhandPreviousSwing()
@@ -107,6 +122,9 @@ func (value *APLValueAutoTimeSinceLast) GetDuration(sim *Simulation) time.Durati
 		}
 		if value.unit.AutoAttacks.ranged.enabled {
 			swingValue = min(swingValue, sim.CurrentTime-value.unit.AutoAttacks.PreviousRangedAttack())
+		}
+		if value.unit.Wand != nil {
+			swingValue = min(swingValue, value.unit.Wand.timeSinceLast(sim))
 		}
 	}
 

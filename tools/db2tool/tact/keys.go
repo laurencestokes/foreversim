@@ -18,7 +18,7 @@ const defaultKeyFileURL = "https://raw.githubusercontent.com/wowdev/TACTKeys/mas
 
 // KeyStore holds TACT keys by their 64-bit lookup name — the value a BLTE
 // 'E' chunk and a WDC5 section header both carry to say which key they
-// need. Keys reach it from three places: the client's own TactKey.db2,
+// need. Keys reach it from three places: the game files' own TactKey.db2,
 // TACTKEY hotfix records the server pushed into DBCache.bin, and the
 // community list. It also remembers every name a chunk asked for and did
 // not find, so the extractor can say what is still locked.

@@ -1,8 +1,9 @@
 import { Popover as BasePopover } from '@base-ui/react/popover';
+import { isNativeButtonTrigger } from '@ui-kit/Button';
 import { usePortalContainer } from '@ui-kit/hooks/usePortalContainer';
 import type { ClassValue } from 'clsx';
 import clsx from 'clsx';
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { type ComponentPropsWithoutRef, type ReactElement, type ReactNode, useState } from 'react';
 
 export type PopoverSide = 'top' | 'right' | 'bottom' | 'left';
 export type PopoverAlign = 'start' | 'center' | 'end';
@@ -10,6 +11,8 @@ export type PopoverAlign = 'start' | 'center' | 'end';
 export interface PopoverProps {
 	/** Contents of the trigger button. `Popover.Root` renders no element of its own, so the trigger is the only element the popover puts in the page's flow. Omit it and give `anchor` instead, for a popover a control opens without becoming its trigger. */
 	trigger?: ReactNode;
+	/** The trigger's own element, e.g. a kit `<Button variant="primary" />`, with `trigger` as its children; a plain `<button>` otherwise. */
+	triggerRender?: ReactElement;
 	/** What the popup is positioned against when there is no trigger. */
 	anchor?: BasePopover.Positioner.Props['anchor'];
 	triggerClassName?: ClassValue;
@@ -21,16 +24,19 @@ export interface PopoverProps {
 	onOpenChange?: (open: boolean) => void;
 	/** On the popup, which is the box a consumer sizes. */
 	className?: ClassValue;
-	maxWidth?: string;
-	/** Base UI's default is `<body>`, and that is outside `.sim-ui` — where the spec theme lives. See `Dialog`. */
+	maxWidthClassName?: string;
+	/** Base UI's default is `<body>`, and that is outside `.sim-ui` — where the spec theme lives. */
 	container?: HTMLElement | null;
 	side?: PopoverSide;
 	align?: PopoverAlign;
 	sideOffset?: BasePopover.Positioner.Props['sideOffset'];
-	openOnHover?: boolean;
-	delay?: number;
-	/** Base UI moves focus to the first tabbable element in the popup; `false` leaves it on the trigger. */
-	initialFocus?: boolean;
+	/** Dims the page behind the popup, as a dialog does; a press on it closes the popover. */
+	backdrop?: boolean;
+	/**
+	 * A heading at the top of the popup that also names it for screen readers. The popup is then a column, so the
+	 * heading stays in view above a body carrying `ui-popover-body`, which scrolls on its own across the popup's padding.
+	 */
+	title?: ReactNode;
 	children?: ReactNode;
 	testId?: string;
 }
@@ -40,6 +46,7 @@ const ANCHOR_DISTANCE = 10;
 
 export const Popover = ({
 	trigger,
+	triggerRender,
 	anchor,
 	triggerClassName,
 	triggerTestId,
@@ -47,38 +54,54 @@ export const Popover = ({
 	open,
 	onOpenChange,
 	className,
-	maxWidth,
+	maxWidthClassName,
 	container,
 	side = 'bottom',
 	align = 'center',
 	sideOffset = ANCHOR_DISTANCE,
-	openOnHover,
-	delay,
-	initialFocus = false,
+	backdrop = false,
+	title,
 	children,
 	testId,
 }: PopoverProps) => {
 	const portalContainer = usePortalContainer();
+	const [triggerElement, setTriggerElement] = useState<HTMLElement | null>(null);
+	// The popup is portaled out of a dialog its trigger sits in, so only this keeps it inside that dialog.
+	const collisionBoundary = triggerElement?.closest<HTMLElement>('[role="dialog"]') ?? undefined;
 	return (
 		<BasePopover.Root open={open} modal={false} onOpenChange={nextOpen => onOpenChange?.(nextOpen)}>
 			{trigger != null && (
-				<BasePopover.Trigger className={clsx(triggerClassName)} data-testid={triggerTestId} openOnHover={openOnHover} delay={delay} {...triggerProps}>
+				<BasePopover.Trigger
+					ref={setTriggerElement}
+					render={triggerRender}
+					nativeButton={isNativeButtonTrigger(triggerRender)}
+					className={clsx(triggerClassName)}
+					data-testid={triggerTestId}
+					{...triggerProps}>
 					{trigger}
 				</BasePopover.Trigger>
 			)}
 			{/* Named, because with a `container` the portal renders a wrapper element of its own. */}
 			<BasePopover.Portal className="contents" data-testid="sim-popover-portal" container={container ?? portalContainer ?? undefined}>
+				{backdrop && <BasePopover.Backdrop className="ui-popover-backdrop" data-testid="sim-popover-backdrop" />}
 				<BasePopover.Positioner
 					className="ui-popover-positioner"
 					data-testid="sim-popover-positioner"
 					anchor={anchor}
 					side={side}
 					align={align}
-					sideOffset={sideOffset}>
+					sideOffset={sideOffset}
+					collisionBoundary={collisionBoundary}>
 					<BasePopover.Popup
-						className={clsx(maxWidth ?? 'max-w-(--available-width)', 'ui-popover', className)}
+						className={clsx(
+							maxWidthClassName ?? 'max-w-(--available-width)',
+							'ui-popup-surface ui-popover',
+							title != null && 'flex flex-col',
+							className,
+						)}
 						data-testid={testId ?? 'sim-popover-popup'}
-						initialFocus={initialFocus}>
+						initialFocus={false}>
+						{title != null && <BasePopover.Title className="ui-popover-title">{title}</BasePopover.Title>}
 						{children}
 					</BasePopover.Popup>
 				</BasePopover.Positioner>

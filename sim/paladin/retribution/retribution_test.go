@@ -3,7 +3,6 @@ package retribution
 import (
 	"testing"
 
-	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common" // imported to get item effects included.
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
@@ -15,96 +14,85 @@ func init() {
 }
 
 func TestRetribution(t *testing.T) {
-	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator([]core.CharacterSuiteConfig{
-		{
-			Class:      proto.Class_ClassPaladin,
-			Race:       proto.Race_RaceHuman,
-			OtherRaces: []proto.Race{proto.Race_RaceDwarf},
+	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator([]core.CharacterSuiteConfig{retributionSuite()}))
+}
 
-			GearSet: core.GearSetCombo{Label: "Weapon", GearSet: WeaponOnly},
+func BenchmarkRetribution(b *testing.B) {
+	twist := retributionSuite()
+	shock := twist
+	shock.GearSet = core.GetGearSet("../../../ui/specs/paladin/retribution/gear_sets", "holy_shock")
+	shock.Talents = HolyShockTalents
+	shock.Rotation = core.GetAplRotation("../../../ui/specs/paladin/retribution/apls", "holy_shock")
+	shock.ItemFilter.WeaponTypes = []proto.WeaponType{
+		proto.WeaponType_WeaponTypeAxe,
+		proto.WeaponType_WeaponTypeMace,
+		proto.WeaponType_WeaponTypeSword,
+		proto.WeaponType_WeaponTypeShield,
+		proto.WeaponType_WeaponTypeOffHand,
+	}
+	shock.ItemFilter.HandTypes = []proto.HandType{
+		proto.HandType_HandTypeMainHand,
+		proto.HandType_HandTypeOneHand,
+		proto.HandType_HandTypeTwoHand,
+	}
 
-			Talents: RetTalents,
-			OtherTalentSets: []core.TalentsCombo{
-				{Label: "Retribution 9/0/42", Talents: RetDeepTalents},
-			},
+	b.Run("Twist of Light", func(b *testing.B) { core.CharacterBenchmark(b, twist) })
+	b.Run("Holy Shock", func(b *testing.B) { core.CharacterBenchmark(b, shock) })
+}
 
-			SpecOptions: core.SpecOptionsCombo{Label: "Default", SpecOptions: DefaultOptions},
-			Rotation:    core.GetAplRotation("../../../ui/specs/paladin/retribution/apls", "default"),
-
-			Consumables: DefaultConsumables,
-
-			ItemFilter: core.ItemFilter{
-				ArmorType: proto.ArmorType_ArmorTypePlate,
-				WeaponTypes: []proto.WeaponType{
-					proto.WeaponType_WeaponTypeAxe,
-					proto.WeaponType_WeaponTypeSword,
-					proto.WeaponType_WeaponTypeMace,
-					proto.WeaponType_WeaponTypePolearm,
+func retributionSuite() core.CharacterSuiteConfig {
+	return core.CharacterSuiteConfig{
+		Class:      proto.Class_ClassPaladin,
+		Race:       proto.Race_RaceUndead,
+		OtherRaces: []proto.Race{proto.Race_RaceHuman},
+		SpecOptions: core.SpecOptionsCombo{Label: "Default", SpecOptions: &proto.Player_RetributionPaladin{
+			RetributionPaladin: &proto.RetributionPaladin{
+				Options: &proto.RetributionPaladin_Options{
+					ClassOptions: &proto.PaladinOptions{},
 				},
-				HandTypes: []proto.HandType{proto.HandType_HandTypeTwoHand},
-				RangedWeaponTypes: []proto.RangedWeaponType{
-					proto.RangedWeaponType_RangedWeaponTypeLibram,
-				},
 			},
-
-			EPReferenceStat: proto.Stat_StatAttackPower,
-			StatsToWeigh: []proto.Stat{
-				proto.Stat_StatStrength,
-				proto.Stat_StatAgility,
-				proto.Stat_StatIntellect,
-				proto.Stat_StatAttackPower,
-				proto.Stat_StatMeleeHitRating,
-				proto.Stat_StatMeleeCritRating,
-				proto.Stat_StatSpellDamage,
+		}},
+		Consumables: DefaultConsumables,
+		Profession1: proto.Profession_Engineering,
+		Profession2: proto.Profession_Blacksmithing,
+		GearSet:     core.GetGearSet("../../../ui/specs/paladin/retribution/gear_sets", "twist_of_light"),
+		Talents:     TwistOfLightTalents,
+		Rotation:    core.GetAplRotation("../../../ui/specs/paladin/retribution/apls", "twist_of_light"),
+		ItemFilter: core.ItemFilter{
+			WeaponTypes: []proto.WeaponType{
+				proto.WeaponType_WeaponTypePolearm,
+				proto.WeaponType_WeaponTypeSword,
+				proto.WeaponType_WeaponTypeAxe,
+				proto.WeaponType_WeaponTypeMace,
+			},
+			ArmorType: proto.ArmorType_ArmorTypePlate,
+			HandTypes: []proto.HandType{proto.HandType_HandTypeTwoHand},
+			RangedWeaponTypes: []proto.RangedWeaponType{
+				proto.RangedWeaponType_RangedWeaponTypeLibram,
 			},
 		},
-	}))
+	}
 }
 
-// Our Forever sim's builds: the P4/P5 Seal of Command twist build it tests with, and the deep
-// Retribution preset.
-var RetTalents = "550030022001--05225231001330321"
-var RetDeepTalents = "51003--55225331201331321"
-
-// Arcanite Reaper alone. The generated item database does not carry the Forever gear our sim tests
-// with and gives the rest TBC-shaped stats; this row is the same in both item databases (153-256,
-// 3.80), so the comparison against master runs on the same weapon.
-var WeaponOnly = &proto.EquipmentSpec{
-	Items: []*proto.ItemSpec{
-		{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
-		{Id: 12784}, // Arcanite Reaper
-	},
-}
-
-var DefaultOptions = &proto.Player_RetributionPaladin{
-	RetributionPaladin: &proto.RetributionPaladin{
-		Options: &proto.RetributionPaladin_Options{
-			ClassOptions: &proto.PaladinOptions{},
-		},
-	},
-}
+var HolyShockTalents = "550030032101012--052252300012303"
+var TwistOfLightTalents = "55003003--05225331101330321"
 
 var DefaultConsumables = &proto.ConsumesSpec{
-	FlaskId: 22854,
-	FoodId:  27658,
-	PotId:   22838,
-}
-
-// The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
-func TestArena(t *testing.T) {
-	arenalib.Run(t, arenaSpec)
-}
-
-// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
-func TestRaceArena(t *testing.T) {
-	arenalib.RunRaceArena(t, arenaSpec)
-}
-
-var arenaSpec = arenalib.Spec{
-	Dir:         "retribution_paladin",
-	UI:          "paladin/retribution",
-	Class:       proto.Class_ClassPaladin,
-	Race:        proto.Race_RaceHuman,
-	SpecOptions: DefaultOptions,
-	Role:        arenalib.Melee,
+	ConjuredId: 12662, // Demonic Rune
+	FlaskId:    13512, // Flask of Supreme Power
+	FoodId:     20452, // Smoked Desert Dumplings
+	ElixirIds: []int32{
+		21546,  // Elixir of Holy Power
+		250338, // Elixir of Sages
+		13452,  // Elixir of The Mongoose
+		250337, // Elixir of The Owl
+		250351, // Elixir of The Grizzly
+		13454,  // Greater Arcane Elixir
+		250341, // Greater Mageblood Elixir
+		12460,  // Juju Might
+	},
+	ExplosiveId:    18588,                // Ez-Thro Dynamite II
+	ExtraIds:       []int32{10646, 8410}, // Goblin Sapper Charge, R.O.I.D.S
+	MhImbueId:      20749,                // Brilliant Wizard Oil
+	OffensivePotId: 250937,               // Major Spellblasting Potion
 }

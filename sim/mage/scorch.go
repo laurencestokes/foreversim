@@ -5,78 +5,48 @@ import (
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Every rank is registered: the fire rotation drops to rank 1 when mana runs short.
 func (mage *Mage) registerScorchSpell() {
-	mage.registerImprovedScorch()
-	spellData.Scorch.Each(func(_ int32, rank *spelldata.Spell) { mage.registerScorchRank(rank) })
-}
+	procChance := spellData.ImprovedScorch.EffectAt(1).FractionAt(mage.Talents.ImprovedScorch)
 
-func (mage *Mage) registerScorchRank(scorchRank *spelldata.Spell) {
-	procChance := spellData.ImprovedScorch.FractionAt(mage.Talents.ImprovedScorch)
-
-	mage.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: scorchRank.ID},
-		SpellSchool:    scorchRank.SpellSchool(),
-		DefenseType:    scorchRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskSpellDamage,
-		Flags:          core.SpellFlagAPL,
-		ClassSpellMask: MageSpellScorch,
-		MaxRange:       float64(scorchRank.MaxRange),
-		Rank:           scorchRank.RankNumber(),
-
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(scorchRank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD:      scorchRank.GCD(),
-				CastTime: scorchRank.CastTime(),
-			},
-		},
-
-		DamageMultiplier: 1,
-		BonusCoefficient: scorchRank.DamageEffect().Coeff(),
-		ThreatMultiplier: 1,
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcAndDealDamage(sim, target, scorchRank.DamageEffect().Roll(sim, core.CharacterLevel), spell.OutcomeMagicHitAndCrit)
-			if result.Landed() && mage.ImprovedScorchAura != nil && sim.Proc(procChance, "Improved Scorch") {
-				mage.ImprovedScorchAura.Activate(sim)
-				mage.ImprovedScorchAura.AddStack(sim)
-			}
-		},
-	})
-}
-
-// In Forever the Fire Vulnerability Improved Scorch stacks only raises the fire damage of the mage
-// who applied it (beta client 1.60.1), where Classic and TBC made it a raid debuff.
-func (mage *Mage) registerImprovedScorch() {
-	if mage.Talents.ImprovedScorch == 0 {
-		return
+	if mage.Talents.ImprovedScorch > 0 {
+		mage.ImprovedScorchAuras = mage.newFireVulnerabilityAuras()
 	}
 
-	vulnerabilityRank := spellData.ImprovedScorchTriggered.Highest()
-	damagePerStack := vulnerabilityRank.EffectN(1).Average(core.CharacterLevel) / 100
+	// Only the highest rank is registered: the mage casts the rank configured here, not every rank
+	// spellData.Scorch lists.
+	mage.registerScorchRank(spellData.Scorch.Highest(), procChance)
+}
 
-	damageMod := mage.AddDynamicMod(core.SpellModConfig{
-		ClassMask: MageSpellsAll,
-		School:    core.SpellSchoolFire,
-		Kind:      core.SpellMod_DamageDone_Pct,
-	})
+func (mage *Mage) registerScorchRank(rank *spelldata.Spell, procChance float64) {
+	damage := rank.DamageEffect()
 
-	mage.ImprovedScorchAura = mage.RegisterAura(core.Aura{
-		Label:     "Fire Vulnerability",
-		ActionID:  core.ActionID{SpellID: vulnerabilityRank.ID},
-		Duration:  vulnerabilityRank.Duration(),
-		MaxStacks: 5,
-		OnGain: func(_ *core.Aura, _ *core.Simulation) {
-			damageMod.Activate()
-		},
-		OnExpire: func(_ *core.Aura, _ *core.Simulation) {
-			damageMod.Deactivate()
-		},
-		OnStacksChange: func(_ *core.Aura, _ *core.Simulation, _ int32, newStacks int32) {
-			damageMod.UpdateFloatValue(damagePerStack * float64(newStacks))
-		},
+	config := spelldata.SpellConfig(&mage.Unit, rank, spelldata.Magic(core.ProcMaskSpellDamage))
+	config.ClassSpellMask = MageSpellScorch
+
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcAndDealDamage(sim, target, damage.Average(), spell.OutcomeMagicHitAndCrit)
+		if result.Landed() && sim.Proc(procChance, "Improved Scorch") {
+			aura := mage.ImprovedScorchAuras.Get(target)
+			aura.Activate(sim)
+			aura.AddStack(sim)
+		}
+	}
+
+	config.RelatedAuraArrays = mage.ImprovedScorchAuras.ToMap()
+
+	mage.RegisterSpell(config)
+}
+
+// Fire Vulnerability (22959), Improved Scorch's debuff: "Increases Fire damage taken from the Mage by
+// 3% per stack", up to 5. It is A_MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER with misc 4, so it scales only
+// the Fire damage of the mage whose Scorch applied it, never another player's: each mage keeps its
+// own stack on the target, parsed onto this mage's attack table against it.
+func (mage *Mage) newFireVulnerabilityAuras() core.AuraArray {
+	debuff := spellData.ImprovedScorchTriggered.Highest()
+
+	return mage.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
+		aura := target.GetOrRegisterAura(spelldata.AuraConfig(debuff, spelldata.Label(debuff.Name+mage.Label)))
+		spelldata.ParseEffects(nil, aura, debuff, spelldata.FromCaster(&mage.Unit, DDBC_FireVulnerability, DDBC_Total))
+		return aura
 	})
 }

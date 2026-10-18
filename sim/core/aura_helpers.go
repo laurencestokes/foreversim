@@ -2,7 +2,7 @@
 package core
 
 import (
-	"math"
+	"slices"
 	"time"
 
 	"github.com/wowsims/forever/sim/core/stats"
@@ -25,6 +25,7 @@ const (
 	CallbackOnCastComplete
 	CallbackOnApplyEffects
 	CallbackOnPeriodicDamageTaken
+	CallbackOnCastResult
 
 	CallbackLast
 )
@@ -44,38 +45,48 @@ type ProcTrigger struct {
 	SpellFlagsExclude  SpellFlag
 	Outcome            HitOutcome
 	RequireDamageDealt bool
-	ProcChance         float64
-	DPM                *DynamicProcManager
-	ICD                time.Duration
-	Handler            ProcHandler
-	TriggerImmediately bool // If false (default), the handler will be called one spell batch window later for improved realism.
-	ClassSpellMask     int64
-	// The client's EffectSpellClassMask: the spells this listener fires on. A trigger that sets
-	// both this and ClassSpellMask fires only on the spells both name.
-	ClassFlags      ClassFlags
-	ClassSpellsOnly bool // Corresponds to the Only Proc From Class Abilities flag, e.g. https://www.wowhead.com/forever/spell=32106/lesser-spell-blasting
-	ExtraCondition  ProcExtraCondition
+
+	// The trigger must be a spell with a damage component: a hit that deals damage, or the landed
+	// cast of a spell with a DoT, whose application deals none. A DoT counts whether or not its
+	// ticks deal damage, and a hit absorbed to 0 from a spell without one does not count.
+	RequireDamageComponent bool
+
+	ProcChance          float64
+	DPM                 *DynamicProcManager
+	ICD                 time.Duration
+	Handler             ProcHandler
+	TriggerImmediately  bool       // If false (default), the handler will be called one spell batch window later for improved realism.
+	ActivatesAura       *Aura      // The aura the handler activates, which the APL then reads as active while the handler waits out the spell batch window.
+	ActivatesAuras      AuraArray  // The same for a per-target aura, the one on the result's target, or on the attacker for a hit taken; a trigger without a result falls back to ActivatesAura.
+	ClassSpellMask      int64      // The sim's own custom spell masks, not from the game files.
+	ClassFlags          ClassFlags // The spells this trigger fires on (EffectSpellClassMask in the game files); with ClassSpellMask, both must match.
+	ProcSpellClassFlags ClassFlags // The proccing spell's class flags, which proc chance talents match (e.g. Improved Poisons on Instant Poison).
+	Caster              *Unit      // Whose proc chance mods apply, when not the aura's unit (e.g. Judgement of Light on the target).
+	ClassSpellsOnly     bool       // Corresponds to the Only Proc From Class Abilities flag, e.g. https://www.wowhead.com/forever/spell=32106/lesser-spell-blasting
+	ExtraCondition      ProcExtraCondition
 
 	// The Can Proc From Procs attribute (Attributes[3] 0x4000000): the listener also fires on hits
 	// from spells flagged SpellFlagProc. Without it a proc's hits are invisible to this listener,
 	// which is how the game treats every talent, set bonus and Equip effect by default.
 	CanProcFromProcs bool
 	// A weapon proc: a "Chance on hit" item effect (ItemEffect.TriggerType 2) or a combat enchant
-	// (SpellItemEnchantment.Effect 1, e.g. Mongoose, Crusader, poisons, imbues, Windfury Totem).
+	// (SpellItemEnchantment.Effect 1, e.g. Mongoose, Crusader, poisons, imbues).
 	// The game casts these off every melee or ranged hit that lacks SpellFlagSuppressWeaponProcs,
 	// whether or not that hit was itself a proc, so SpellFlagProc and CanProcFromProcs are ignored.
+	// A weapon proc's own strike is such a hit, unless an off-hand hit cast it.
 	// Which hand's hits qualify is still the DPM's or ProcMask's job.
 	IsWeaponProc bool
 }
 
 // The game's rule for whether a hit may reach a listener at all, before the proc flags are
-// matched. Weapon procs (Player::CastItemCombatSpell) skip only spells with Suppress Weapon Procs.
-// Aura procs (Aura::IsProcTriggeredOnEvent) skip triggered spells that lack Not a Proc, unless the
-// listener carries Can Proc From Procs. Auto attacks, extra attacks included, carry neither flag and
-// so are always eligible.
+// matched. Weapon procs (Player::CastItemCombatSpell) hear only melee and ranged hits, and of those
+// skip the spells with Suppress Weapon Procs; a hit with no melee or ranged mask, such as the damage
+// of a magic item proc, never casts them. Aura procs (Aura::IsProcTriggeredOnEvent) skip triggered
+// spells that lack Not a Proc, unless the listener carries Can Proc From Procs. Auto attacks, extra
+// attacks included, carry neither flag and so are always eligible.
 func (config *ProcTrigger) canProcFrom(spell *Spell) bool {
 	if config.IsWeaponProc {
-		return !spell.Flags.Matches(SpellFlagSuppressWeaponProcs)
+		return spell.ProcMask.Matches(ProcMaskMeleeOrRanged) && !spell.Flags.Matches(SpellFlagSuppressWeaponProcs)
 	}
 	return config.CanProcFromProcs || !spell.Flags.Matches(SpellFlagProc)
 }
@@ -95,7 +106,7 @@ func (config *ProcTrigger) matchesSpell(spell *Spell) bool {
 	if config.ClassSpellMask > 0 && config.ClassSpellMask&spell.ClassSpellMask == 0 {
 		return false
 	}
-	if !config.ClassFlags.IsZero() && !spell.MatchesFlags(config.ClassFlags) {
+	if !config.ClassFlags.Reaches(spell) {
 		return false
 	}
 	if config.ClassSpellsOnly && spell.ClassSpellMask == 0 && spell.ClassFlags.IsZero() {
@@ -110,6 +121,51 @@ func (config *ProcTrigger) matchesSpell(spell *Spell) bool {
 	return true
 }
 
+// Whether the trigger's rolls let a hit of this proc mask through. The stated chance draws unless it
+// is 1 or more; a manager then rolls its own chance for the mask, and a mask none of its masks hears
+// fails without a draw. The unit's proc chance mods raise the manager's chance where there is one and
+// the stated chance otherwise. The cast and apply-effects listeners roll no manager.
+func (config *ProcTrigger) rolls(sim *Simulation, unit *Unit, dpm *DynamicProcManager, procMask ProcMask) bool {
+	if config.Caster != nil {
+		unit = config.Caster
+	}
+
+	stated := config.ProcChance
+	if dpm == nil {
+		stated = unit.ModifiedProcChance(config.ProcSpellClassFlags, stated)
+	}
+	if stated < 1 && sim.RandomFloat(config.Name) > stated {
+		return false
+	}
+	if dpm == nil {
+		return true
+	}
+
+	chance, heard := dpm.chanceFor(procMask, sim)
+	return heard && sim.Proc(unit.ModifiedProcChance(config.ProcSpellClassFlags, chance), config.Name)
+}
+
+type deferredProc struct {
+	pa        PendingAction
+	spell     *Spell
+	result    SpellResult
+	hasResult bool
+	pending   *Aura // The declared aura, pending activation until the handler runs.
+	own       bool  // Whether a guaranteed trigger fired off a spell its unit cast from its APL.
+	cleanUp   func(*Simulation)
+}
+
+func (config *ProcTrigger) activatedAura(spell *Spell, result *SpellResult) *Aura {
+	if config.ActivatesAuras == nil || result == nil {
+		return config.ActivatesAura
+	}
+	// A hit taken lands on the wearer, so a per-target aura goes on the attacker.
+	if config.Callback.Matches(CallbackOnSpellHitTaken) {
+		return config.ActivatesAuras.Get(spell.Unit)
+	}
+	return config.ActivatesAuras.Get(result.Target)
+}
+
 func (procAura *Aura) AttachProcTriggerCallback(unit *Unit, config ProcTrigger) {
 	var icd Cooldown
 	if config.ICD != 0 {
@@ -119,6 +175,16 @@ func (procAura *Aura) AttachProcTriggerCallback(unit *Unit, config ProcTrigger) 
 		}
 		procAura.Icd = &icd
 	}
+	icdOwner := unit
+	if config.Caster != nil {
+		icdOwner = config.Caster
+	}
+	startICD := func(sim *Simulation) {
+		if config.ICD == 0 {
+			return
+		}
+		icd.Set(sim.CurrentTime + icdOwner.ModifiedProcCooldown(config.ProcSpellClassFlags, config.ICD))
+	}
 
 	var dpm *DynamicProcManager
 	if config.DPM != nil {
@@ -126,28 +192,78 @@ func (procAura *Aura) AttachProcTriggerCallback(unit *Unit, config ProcTrigger) 
 		procAura.Dpm = config.DPM
 	}
 
+	if config.ProcChance == 0 {
+		config.ProcChance = 1
+	}
+	// The player can count on a proc that always fires off their own cast; a rolled one they only see land.
+	guaranteed := config.ProcChance == 1 && dpm == nil
+
 	handler := config.Handler
+	var freeDeferred []*deferredProc
+
+	// An own trigger marks the aura as the player's only if its handler put the aura up, refreshed it or changed its stacks.
+	runOwnHandler := func(sim *Simulation, spell *Spell, result *SpellResult, activated *Aura) {
+		wasActive, expiresAt, stacks := activated.IsActive(), activated.ExpiresAt(), activated.GetStacks()
+		handler(sim, spell, result)
+		if activated.IsActive() && (!wasActive || activated.ExpiresAt() != expiresAt || activated.GetStacks() != stacks) {
+			activated.lastOwnProcAt = sim.CurrentTime
+		}
+	}
 
 	applyHandler := func(sim *Simulation, spell *Spell, result *SpellResult) {
+		activated := config.activatedAura(spell, result)
+		// A major cooldown's proc stays a proc, as the cooldown manager may cast it on its own.
+		own := guaranteed && activated != nil && spell.Unit == unit &&
+			spell.Flags.Matches(SpellFlagAPL) && !spell.Flags.Matches(SpellFlagMCD)
 		if config.TriggerImmediately {
-			handler(sim, spell, result)
+			if own {
+				runOwnHandler(sim, spell, result, activated)
+			} else {
+				handler(sim, spell, result)
+			}
 			return
 		}
 
-		pa := sim.GetConsumedPendingActionFromPool()
-		pa.NextActionAt = sim.CurrentTime + SpellBatchWindow
-		pa.Priority = ActionPriorityDOT
-
-		// Due to the result struct possibly being disposed of after this handler is triggered
-		// we need to clone the result to make sure the values don't get overwritten
-		newResult := spell.CloneResult(result)
-
-		pa.OnAction = func(sim *Simulation) {
-			handler(sim, spell, newResult)
-			spell.DisposeResult(newResult)
+		// Deferred-proc records (PendingAction + result snapshot) come from a
+		// per-trigger free list and return to it when they fire or are cleaned up.
+		var dp *deferredProc
+		if n := len(freeDeferred); n > 0 {
+			dp = freeDeferred[n-1]
+			freeDeferred = freeDeferred[:n-1]
+		} else {
+			dp = &deferredProc{}
+			release := func() {
+				dp.spell = nil
+				freeDeferred = append(freeDeferred, dp)
+			}
+			dp.pa.OnAction = func(sim *Simulation) {
+				res := &dp.result
+				if !dp.hasResult {
+					res = nil
+				}
+				dp.pending.addPending(dp.own, -1)
+				if dp.own {
+					runOwnHandler(sim, dp.spell, res, dp.pending)
+				} else {
+					handler(sim, dp.spell, res)
+				}
+				release()
+			}
+			dp.cleanUp = func(sim *Simulation) { release() }
 		}
-
-		sim.AddPendingAction(pa)
+		dp.pending, dp.own = activated, own
+		dp.pending.addPending(own, 1)
+		dp.spell = spell
+		dp.hasResult = result != nil
+		if result != nil {
+			// Snapshot the result: the original may be reused before the handler runs.
+			dp.result = *result
+			dp.result.inUse = true
+		}
+		dp.pa.NextActionAt = sim.CurrentTime + SpellBatchWindow
+		dp.pa.Priority = ActionPriorityDOT
+		dp.pa.CleanUp = dp.cleanUp
+		sim.AddPendingAction(&dp.pa)
 	}
 
 	callback := func(aura *Aura, sim *Simulation, spell *Spell, result *SpellResult) {
@@ -162,26 +278,21 @@ func (procAura *Aura) AttachProcTriggerCallback(unit *Unit, config ProcTrigger) 
 		if config.RequireDamageDealt && result.Damage == 0 {
 			return
 		}
+		if config.RequireDamageComponent && result.Damage == 0 && !spell.hasDot(result.Target) {
+			return
+		}
 		if icd.Duration != 0 && !icd.IsReady(sim) {
 			return
 		}
 		if config.ExtraCondition != nil && !config.ExtraCondition(sim, spell, result) {
 			return
 		}
-		if config.ProcChance != 1 && sim.RandomFloat(config.Name) > config.ProcChance {
-			return
-		} else if dpm != nil && !dpm.Proc(sim, spell.ProcMask, config.Name) {
+		if !config.rolls(sim, unit, dpm, spell.ProcMask) {
 			return
 		}
 
-		if icd.Duration != 0 {
-			icd.Use(sim)
-		}
+		startICD(sim)
 		applyHandler(sim, spell, result)
-	}
-
-	if config.ProcChance == 0 {
-		config.ProcChance = 1
 	}
 
 	if config.Callback.Matches(CallbackOnSpellHitDealt) {
@@ -211,13 +322,11 @@ func (procAura *Aura) AttachProcTriggerCallback(unit *Unit, config ProcTrigger) 
 			if config.ExtraCondition != nil && !config.ExtraCondition(sim, spell, nil) {
 				return
 			}
-			if config.ProcChance != 1 && sim.RandomFloat(config.Name) > config.ProcChance {
+			if !config.rolls(sim, unit, nil, ProcMaskUnknown) {
 				return
 			}
 
-			if icd.Duration != 0 {
-				icd.Use(sim)
-			}
+			startICD(sim)
 			applyHandler(sim, spell, nil)
 		}
 	}
@@ -234,18 +343,19 @@ func (procAura *Aura) AttachProcTriggerCallback(unit *Unit, config ProcTrigger) 
 			if config.ExtraCondition != nil && !config.ExtraCondition(sim, spell, emptyResult) {
 				return
 			}
-			if config.ProcChance != 1 && sim.RandomFloat(config.Name) > config.ProcChance {
+			if !config.rolls(sim, unit, nil, ProcMaskUnknown) {
 				return
 			}
 
-			if icd.Duration != 0 {
-				icd.Use(sim)
-			}
+			startICD(sim)
 			applyHandler(sim, spell, emptyResult)
 		}
 	}
 	if config.Callback.Matches(CallbackOnPeriodicDamageTaken) {
 		procAura.OnPeriodicDamageTaken = callback
+	}
+	if config.Callback.Matches(CallbackOnCastResult) {
+		procAura.OnCastResult = callback
 	}
 }
 
@@ -299,16 +409,32 @@ func (aura *StatBuffAura) CanProc(sim *Simulation) bool {
 	return !aura.IsSwapped && ((aura.CustomProcCondition == nil) || aura.CustomProcCondition(sim, aura.Aura))
 }
 
-func (aura *StatBuffAura) InferCDType() CooldownType {
-	cdType := CooldownTypeUnknown
+// The stats a buff to any of makes a survival cooldown.
+var SurvivalStats = []stats.Stat{stats.Armor, stats.ArmorNoMods, stats.BlockPercent, stats.BlockValue, stats.DodgeRating, stats.ParryRating,
+	stats.DodgePercent, stats.ParryPercent, stats.Health, stats.ArcaneResistance, stats.FireResistance, stats.FrostResistance,
+	stats.NatureResistance, stats.ShadowResistance}
 
-	if aura.BuffsMatchingStat([]stats.Stat{stats.Armor, stats.BlockPercent, stats.DodgeRating, stats.ParryRating, stats.DodgePercent, stats.ParryPercent, stats.Health}) {
-		cdType |= CooldownTypeSurvival
-	} else {
-		cdType |= CooldownTypeDPS
+// The stats a buff to only these makes a mana cooldown.
+var ManaStats = []stats.Stat{stats.MP5, stats.Spirit}
+
+// A buff to any defensive stat or resistance is a survival cooldown, one to mana regen or spirit
+// alone a mana cooldown, and any other a DPS cooldown.
+func CooldownTypeOf(buffed []stats.Stat) CooldownType {
+	if CheckSliceOverlap(buffed, SurvivalStats) {
+		return CooldownTypeSurvival
 	}
 
-	return cdType
+	if len(buffed) > 0 && !slices.ContainsFunc(buffed, func(stat stats.Stat) bool {
+		return !slices.Contains(ManaStats, stat)
+	}) {
+		return CooldownTypeMana
+	}
+
+	return CooldownTypeDPS
+}
+
+func (aura *StatBuffAura) InferCDType() CooldownType {
+	return CooldownTypeOf(aura.BuffedStatTypes)
 }
 
 type StackingStatAura struct {
@@ -365,7 +491,7 @@ type TemporaryStatBuffWithStacksConfig struct {
 	// Set when stacks come from an event rather than a timer. The window aura is still built and
 	// still bounds the stacking aura, but nothing ticks - the caller adds stacks from its own
 	// trigger. The stacking aura is then given no duration of its own and is dropped when the
-	// window ends, which is what a child aura with no duration in the client data does.
+	// window ends, which is what a child aura with no duration in the game files does.
 	StacksFromEvent bool
 }
 
@@ -552,6 +678,26 @@ func (parentAura *Aura) AttachProcTrigger(config ProcTrigger) *Aura {
 	return parentAura
 }
 
+// One charge per cast, however many targets it hits: first is true for a cast's first hit only. A
+// cast's hits share its spell id and time, so a tagged off-hand strike counts with its main-hand one.
+// reset forgets the last cast.
+func OncePerCast() (first func(sim *Simulation, spell *Spell) bool, reset func()) {
+	var recorded bool
+	var lastID int32
+	var lastAt time.Duration
+	first = func(sim *Simulation, spell *Spell) bool {
+		if recorded && spell.ActionID.SpellID == lastID && sim.CurrentTime == lastAt {
+			return false
+		}
+		recorded, lastID, lastAt = true, spell.ActionID.SpellID, sim.CurrentTime
+		return true
+	}
+	reset = func() {
+		recorded = false
+	}
+	return first, reset
+}
+
 // Attaches a SpellMod to a parent Aura
 // Returns parent aura for chaining
 func (parentAura *Aura) AttachSpellMod(spellModConfig SpellModConfig) *Aura {
@@ -687,6 +833,18 @@ func (parentAura *Aura) AttachMultiplyMeleeSpeed(multiplier float64) *Aura {
 
 	parentAura.ApplyOnExpire(func(_ *Aura, sim *Simulation) {
 		parentAura.Unit.MultiplyMeleeSpeed(sim, 1/multiplier)
+	})
+
+	return parentAura
+}
+
+func (parentAura *Aura) AttachMultiplyWeaponSpeed(multiplier float64) *Aura {
+	parentAura.ApplyOnGain(func(_ *Aura, sim *Simulation) {
+		parentAura.Unit.MultiplyWeaponSpeed(sim, multiplier)
+	})
+
+	parentAura.ApplyOnExpire(func(_ *Aura, sim *Simulation) {
+		parentAura.Unit.MultiplyWeaponSpeed(sim, 1/multiplier)
 	})
 
 	return parentAura
@@ -895,40 +1053,4 @@ func (caster *Unit) NewAllyDamageAbsorptionAuraArray(makeAura func(*Unit) *Damag
 		}
 	}
 	return auras
-}
-
-func ApplyFixedUptimeAura(aura *Aura, uptime float64, tickLength time.Duration, startTime time.Duration) {
-	auraDuration := aura.Duration
-	ticksPerAura := float64(auraDuration) / float64(tickLength)
-	chancePerTick := TernaryFloat64(uptime == 1, 1, 1.0-math.Pow(1-uptime, 1/ticksPerAura))
-
-	aura.Unit.RegisterResetEffect(func(sim *Simulation) {
-		StartPeriodicAction(sim, PeriodicActionOptions{
-			Period: tickLength,
-			OnAction: func(sim *Simulation) {
-				if sim.RandomFloat("FixedAura") < chancePerTick {
-					aura.Activate(sim)
-					if aura.MaxStacks > 0 {
-						aura.AddStack(sim)
-					}
-				}
-			},
-		})
-
-		// Also try once at the start.
-		StartPeriodicAction(sim, PeriodicActionOptions{
-			Period:   startTime,
-			NumTicks: 1,
-			OnAction: func(sim *Simulation) {
-				if sim.RandomFloat("FixedAura") < uptime {
-					// Use random duration to compensate for increased chance collapsed into single tick.
-					randomDur := tickLength + time.Duration(float64(auraDuration-tickLength)*sim.RandomFloat("FixedAuraDur"))
-
-					aura.Duration = randomDur
-					aura.Activate(sim)
-					aura.Duration = auraDuration
-				}
-			},
-		})
-	})
 }

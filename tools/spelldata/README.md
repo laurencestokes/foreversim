@@ -10,17 +10,28 @@ go run ./tools/spelldata 11574 -json            # the same as JSON
 go run ./tools/spelldata -family warrior/Execute
 go run ./tools/spelldata -expr 'spellData.Execute.Highest().EffectN(1).Average(core.CharacterLevel)' -package warrior
 go run ./tools/spelldata -config 'spelldata.SpellConfig(&warrior.Unit, executeRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))' -package warrior
+go run ./tools/spelldata -config 'core.SpellModConfig{Kind: core.SpellMod_BonusCrit_Percent, ProcMask: core.ProcMaskMelee, EquipSubclass: dbcenums.ITEM_SUBCLASS_BIT_WEAPON_1H_AXE | dbcenums.ITEM_SUBCLASS_BIT_WEAPON_2H_AXE}'
 go run ./tools/spelldata -hover sim/warrior/execute.go 12:40   # the markdown an editor shows at line:column (1-based)
 go run ./tools/spelldata -lsp                   # a language server on stdio
 ```
 
 `-hover` prints the hover's markdown on stdout and its trace on stderr, and exits 1 where there is no
 hover. `-config` resolves a `spelldata.SpellConfig` call - the row pick substituted through the
-package's declarations, each option applied - and states each field with the step that filled it.
+package's declarations, each option applied - and states each field with the step that filled it. Given
+a `core.SpellModConfig` literal it states each field it can read, the weapon its Equip fields require
+and the rule core applies to it: per weapon, or ranged weapons only; magic-defense spells and pets never
+match; an item swap re-filters it; `FromRating` counts on the sheet as rating.
 `-expr` reads a chain the way a class file writes it: a family's `spelldata.Ladder`, then any accessor
 of the store (`Highest()`, `Rank(n)`, `EffectAt(1).TenthsAt(1)`, `Effect(dbcenums.A_X, misc)`, ...),
-with arguments that are literals or constants of `dbcenums` or of `sim/core`'s `flags.go` and
-`constants.go`.
+with arguments that are literals or constants of `dbcenums`, of `stats` (`stats.HitRating`) or of
+`sim/core`'s `flags.go`, `constants.go`, `base_stats_auto_gen.go` (`core.HitRatingPerHitPercent`) and
+`spell_mod.go` (`core.SpellMod_BonusCrit_Percent`).
+
+A hit, crit or rating effect names the rule `spelldata.WeaponScope` gives it, which is the one the parse
+attaches it by: `per weapon: only attacks made with <weapons>`, `ranged weapons only`,
+`while <weapons> is equipped: every spell and attack`, `the weapon requirement only gates casting` for an
+aura on the enemy, and for a rating the ratings `spelldata.RatingStats` reads (the expertise bit among
+them) or, on a scoped row, the percent it is worth and the ratings it leaves unread.
 
 ## JSON output
 
@@ -52,7 +63,7 @@ object:
 - `header` holds the columns the row states, in the order the text form prints them. It is a list
   because a key can repeat (`cost`, `cooldown`); `proc` and `refs` are keys like the rest.
 - `effects[].human` is `unrecognised shape` where no wording applies, and `literal` is always the
-  client's own columns. `read: true` marks the effect an `-expr` chain read.
+  game files' own columns. `read: true` marks the effect an `-expr` chain read.
 
 By mode:
 
@@ -70,18 +81,20 @@ By mode:
 
 `-lsp` speaks JSON-RPC 2.0 over stdio with Content-Length framing.
 
-| method                                                           |                                                                                                               |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `initialize`                                                     | `hoverProvider`, incremental `textDocumentSync`; `initializationOptions.trace` is `"on"` (default) or `"off"` |
-| `initialized`, `$/cancelRequest`, `didSave`, other notifications | ignored                                                                                                       |
-| `textDocument/didOpen`, `didChange`                              | keeps the buffer, so a hover reads unsaved edits; the next hover re-reads that file's declarations            |
-| `textDocument/didClose`                                          | drops the buffer; the next hover re-reads the file from disk                                                  |
-| `textDocument/hover`                                             | markdown `MarkupContent`, or `null`                                                                           |
-| `shutdown`, `exit`                                               | exits 0 after a `shutdown`, 1 without one                                                                     |
-| any other request                                                | `MethodNotFound`                                                                                              |
+| method                                                           |                                                                                                                                                                                                                                                                                                            |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `initialize`                                                     | `hoverProvider`, `codeActionProvider`, `executeCommandProvider` (`wowsims-spelldata.setRank`), incremental `textDocumentSync`; `initializationOptions.trace` is `"on"` (default) or `"off"`, and `initializationOptions.rankLinks: true` says the editor runs `command:wowsims-spelldata.changeRank` links |
+| `initialized`, `$/cancelRequest`, `didSave`, other notifications | ignored                                                                                                                                                                                                                                                                                                    |
+| `textDocument/didOpen`, `didChange`                              | keeps the buffer, so a hover reads unsaved edits; the next hover re-reads that file's declarations                                                                                                                                                                                                         |
+| `textDocument/didClose`                                          | drops the buffer; the next hover re-reads the file from disk                                                                                                                                                                                                                                               |
+| `textDocument/hover`                                             | markdown `MarkupContent`, or `null`                                                                                                                                                                                                                                                                        |
+| `textDocument/codeAction`                                        | where a hover reads a `Ladder.Each` callback parameter, a `wowsims-spelldata.setRank` command for each other rank of its ladder; nothing when `context.only` asks for kinds                                                                                                                                |
+| `workspace/executeCommand`                                       | `wowsims-spelldata.setRank` with one `{uri, function, parameter, rank}`: hovers in that document read the parameter as that rank until the server restarts                                                                                                                                                 |
+| `shutdown`, `exit`                                               | exits 0 after a `shutdown`, 1 without one                                                                                                                                                                                                                                                                  |
+| any other request                                                | `MethodNotFound`                                                                                                                                                                                                                                                                                           |
 
 Every hover sends its trace as `window/logMessage` of type Log: the position, what matched (`id`,
-`family`, `ident`, `segment`, `SpellConfig`), each substitution with the file and line it came from,
+`family`, `ident`, `segment`, `SpellConfig`, `SpellModConfig`), each substitution with the file and line it came from,
 the declaration cache hit or miss, and the result (`✓ 20662 Execute (Rank 5) → effect 1 → 600`) or why
 it stopped (`✗ ...`).
 
@@ -89,8 +102,8 @@ What a hover reads: a spell id in the shapes hand-written code states (`MustFind
 `.ByID(n)`, `SpellID: n`, `"spellId": n`, `fromSpellId(n)`, `spellId: n`) in any file; in a Go file
 also a `spellData.<Family>` token, a name the package folder binds to a ladder chain with `var`, `=` or
 `:=` at package level, or the hovered function binds before the cursor (substituted through at most
-four names, cycles refused), one accessor of a chain anywhere in an expression, and
-`spelldata.SpellConfig`. A file the editor does not hold is read again when its modification time
+four names, cycles refused), one accessor of a chain anywhere in an expression,
+`spelldata.SpellConfig`, and the type name of a `core.SpellModConfig` literal. A file the editor does not hold is read again when its modification time
 moves. The server compiles the store in; restart it after regenerating.
 
 ## Editors

@@ -4,7 +4,7 @@
 // subscribeGated() are deferred; when the outermost batch closes each pending
 // listener fires once, seeing final state. Because subscribeWithSelector only
 // invokes a listener when its selected value changed, this yields exactly one
-// fire per changed field per batch — freezeAllAndDo semantics without EventIDs.
+// fire per changed field per batch, with no EventIDs.
 //
 // No imports here on purpose: this module sits at the bottom of the graph.
 
@@ -31,8 +31,8 @@ function endBatch() {
 	});
 }
 
-// Errors inside func are logged, not propagated (same contract as the old
-// freezeAllAndDo), and pending listeners are still flushed.
+// Errors inside func are logged, not propagated, and pending listeners are
+// still flushed.
 export function batch<T>(func: () => T): T | undefined {
 	beginBatch();
 	try {

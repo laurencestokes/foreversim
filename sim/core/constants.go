@@ -20,8 +20,12 @@ const SpellPushbackDuration = time.Millisecond * 500
 
 // How often a ranged auto that came due while moving checks whether it can fire.
 const RangedAutoRetryInterval = time.Millisecond * 500
-const MaxMeleeRange = 5.0  // in yards
-const MinRangedRange = 8.0 // in yards; bows, guns, crossbows and thrown weapons cannot fire inside this, leaving a deadzone above melee range
+
+// A ranged auto winds up for this long before it fires. Haste doesn't shorten it, only the rest of the swing.
+const RangedSwingWindup = time.Millisecond * 500
+
+const MaxMeleeRange = 5.0   // in yards
+const MinRangedRange = 11.0 // in yards; bows, guns and crossbows cannot fire inside this on Forever, leaving a deadzone above melee range
 
 const DefaultAttackPowerPerDPS = 14.0
 
@@ -58,7 +62,7 @@ func AllMeleeWeaponSlots() []proto.ItemSlot {
 //go:generate stringer -type=DefenseType
 
 // Which hit table a spell rolls on and which crit multiplier it takes. Values match the
-// DefenseType column of the client's SpellCategories table, so a spell's value is looked up
+// DefenseType column of the game files' SpellCategories table, so a spell's value is looked up
 // there rather than inferred from its school: Thunder Clap is Physical but rolls as Magic,
 // Seal of Command procs are Holy but roll as Melee.
 type DefenseType byte

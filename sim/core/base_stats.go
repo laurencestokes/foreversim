@@ -12,24 +12,18 @@ type BaseStatsKey struct {
 
 var BaseStats = map[BaseStatsKey]stats.Stats{}
 
-// ClassBaseStats are the LEVEL 60 rows (health and the five attributes) from Wowhead's
-// Forever gear planner, wow.gearPlanner.classicplus.baseStats (index 60 of each class's
-// per-level arrays; snapshot in ElliotWood/Forever master, assets/db_inputs/
-// wowhead_forever_gearplanner.txt). Its raceOffsets match RaceOffsets below exactly.
-// These replace the level 70 rows fitted from TBC-anniversary logs, which a level 60
-// character was running on (e.g. mage 151 intellect instead of 125).
+// ClassBaseStats holds the level 60 base attributes of each class: health,
+// the five primary attributes and the flat attack power before any stat
+// converts into it. The game files carry no table for these.
 //
-// The client itself carries no attribute table, verified against build 1.60.1.69913:
-// CharBaseInfo is race x class validity only; ChrClasses has AttackPowerPerStrength/Agility
-// but no attributes; ChrRaces has no stat columns; RaceStat is one row per race and every
-// value is 0; and PlayerExpectedStat carries BaseMana/CritPerAgility/SpellCritPerIntellect
-// but no attributes.
+// Health is the class base; the character adds 10 health per Stamina point
+// beyond the first 20.
 //
 // ClassBaseStats + RaceOffsets hold TRUE pre-racial base attributes: the
 // multiplier racials (The Human Spirit ×1.05 spirit, applied via MultiplyStat
 // in racials.go) are NOT included here.
 // A naked character sheet shows floor(base × racial), e.g. human paladin
-// spirit 89 shows as 93; multipliers (racial, Kings, %-stat talents) stack
+// spirit 75 shows as 78; multipliers (racial, Kings, %-stat talents) stack
 // multiplicatively on the unfloored value with a single floor at the end.
 //
 // The game keeps one attribute row per race and class, but that table is a
@@ -43,7 +37,7 @@ var BaseStats = map[BaseStatsKey]stats.Stats{}
 //   4. 2.169*22.08 (rating per crit percent) = 47.89 crit rating.
 //
 // TODO: the 22.08 in step 4 is the level-70 crit rating per percent. At level 60
-// it is 14 (see SpellCritRatingPerCritPercent in base_stats_auto_gen.go), so this
+// it is 14 (see CritRatingPerCritPercent in base_stats_auto_gen.go), so this
 // worked example no longer reproduces the numbers above it.
 
 // Base mana can be looked up here: https://wowwiki-archive.fandom.com/wiki/Base_mana
@@ -131,7 +125,7 @@ var ClassBaseStats = map[proto.Class]stats.Stats{
 		stats.Intellect:   30,
 		stats.Spirit:      45,
 		stats.Stamina:     110,
-		stats.AttackPower: float64(CharacterLevel)*3.0 - 20,
+		stats.AttackPower: 160,
 	},
 	proto.Class_ClassPaladin: {
 		stats.Health:      1381,
@@ -140,7 +134,7 @@ var ClassBaseStats = map[proto.Class]stats.Stats{
 		stats.Intellect:   70,
 		stats.Spirit:      75,
 		stats.Stamina:     100,
-		stats.AttackPower: float64(CharacterLevel)*3.0 - 20,
+		stats.AttackPower: 160,
 	},
 	proto.Class_ClassHunter: {
 		stats.Health:            1467,
@@ -149,8 +143,8 @@ var ClassBaseStats = map[proto.Class]stats.Stats{
 		stats.Intellect:         65,
 		stats.Spirit:            70,
 		stats.Stamina:           90,
-		stats.AttackPower:       float64(CharacterLevel)*2.0 - 20,
-		stats.RangedAttackPower: float64(CharacterLevel)*2.0 - 20,
+		stats.AttackPower:       100,
+		stats.RangedAttackPower: 110, // Level×2 − 10, before 2 per Agility.
 	},
 	proto.Class_ClassRogue: {
 		stats.Health:      1523,
@@ -159,7 +153,7 @@ var ClassBaseStats = map[proto.Class]stats.Stats{
 		stats.Intellect:   35,
 		stats.Spirit:      50,
 		stats.Stamina:     75,
-		stats.AttackPower: float64(CharacterLevel)*2.0 - 20,
+		stats.AttackPower: 100,
 	},
 	proto.Class_ClassPriest: {
 		stats.Health:      1397,
@@ -177,7 +171,7 @@ var ClassBaseStats = map[proto.Class]stats.Stats{
 		stats.Intellect:   90,
 		stats.Spirit:      100,
 		stats.Stamina:     95,
-		stats.AttackPower: float64(CharacterLevel)*2.0 - 20,
+		stats.AttackPower: 100,
 	},
 	proto.Class_ClassMage: {
 		stats.Health:      1370,
@@ -208,6 +202,25 @@ var ClassBaseStats = map[proto.Class]stats.Stats{
 	},
 }
 
+// ClassBaseDodge is each class's dodge chance before Agility; a class missing here has none.
+var ClassBaseDodge = map[proto.Class]float64{
+	proto.Class_ClassPaladin: 0.007,
+	proto.Class_ClassPriest:  0.03,
+	proto.Class_ClassShaman:  0.017,
+	proto.Class_ClassMage:    0.032,
+	proto.Class_ClassWarlock: 0.02,
+	proto.Class_ClassDruid:   0.009,
+}
+
+// Dodge percent per point of Agility at level 60: the game files' crit per Agility
+// (PlayerExpectedStat), which rogues and hunters get twice over.
+func dodgePerAgility(class proto.Class) float64 {
+	if class == proto.Class_ClassRogue || class == proto.Class_ClassHunter {
+		return 2 * CritPerAgiMaxLevel[class]
+	}
+	return CritPerAgiMaxLevel[class]
+}
+
 // The LEVEL 60 rows of GameTables/SpellScaling.txt. Only tools/tooltip reads this
 // (dbc_data_provider.go:249), so the sim is unaffected either way, but tooltip spell
 // values used to be computed off the level 90 row -- a MoP-port leftover that was never
@@ -230,29 +243,8 @@ var ClassBaseScaling = map[proto.Class]float64{
 	proto.Class_ClassDruid:   282.633330,
 }
 
-// Base melee and spell crit at level 60, before agility and intellect: the Classic client's
-// gtChanceToMeleeCritBase / gtChanceToSpellCritBase, as master carries them. The generated
-// ExtraClassBaseStats hold TBC's level 70 fits (hunter -1.53%, warrior +1.14% melee), which a
-// level 60 Forever character has no business with. The Forever client ships no gt tables;
-// its PlayerExpectedStat level 60 CritPerAgility/SpellCritPerIntellect rows equal both
-// engines' per-point rates, so only these constants differed.
-var ClassBaseCritPercent = map[proto.Class]struct{ Physical, Spell float64 }{
-	proto.Class_ClassWarrior: {0, 0},
-	proto.Class_ClassPaladin: {0.7, 3.5},
-	proto.Class_ClassHunter:  {0, 3.6},
-	proto.Class_ClassRogue:   {0, 0},
-	proto.Class_ClassPriest:  {3.0, 0.8},
-	proto.Class_ClassShaman:  {1.7, 2.3},
-	proto.Class_ClassMage:    {3.2, 0.2},
-	proto.Class_ClassWarlock: {2.0, 1.7},
-	proto.Class_ClassDruid:   {0.9, 1.8},
-}
-
 func AddBaseStatsCombo(r proto.Race, c proto.Class) {
-	s := ClassBaseStats[c].Add(RaceOffsets[r]).Add(ExtraClassBaseStats[c])
-	s[stats.PhysicalCritPercent] = ClassBaseCritPercent[c].Physical
-	s[stats.SpellCritPercent] = ClassBaseCritPercent[c].Spell
-	BaseStats[BaseStatsKey{Race: r, Class: c}] = s
+	BaseStats[BaseStatsKey{Race: r, Class: c}] = ClassBaseStats[c].Add(RaceOffsets[r]).Add(ExtraClassBaseStats[c])
 }
 
 func init() {

@@ -100,6 +100,8 @@ func (rot *APLRotation) newAPLValueWithContext(config *proto.APLValue, groupVari
 		value = rot.newValueIsExecutePhase(config.GetIsExecutePhase(), config.Uuid)
 	case *proto.APLValue_NumberTargets:
 		value = rot.newValueNumberTargets(config.GetNumberTargets(), config.Uuid)
+	case *proto.APLValue_EncounterInArea:
+		value = rot.newValueEncounterInArea(config.GetEncounterInArea(), config.Uuid)
 
 	// Boss
 	case *proto.APLValue_BossSpellIsCasting:
@@ -108,6 +110,8 @@ func (rot *APLRotation) newAPLValueWithContext(config *proto.APLValue, groupVari
 		value = rot.newValueBossSpellTimeToReady(config.GetBossSpellTimeToReady(), config.Uuid)
 	case *proto.APLValue_BossCurrentTarget:
 		value = rot.newValueBossCurrentTarget(config.GetBossCurrentTarget(), config.Uuid)
+	case *proto.APLValue_TargetIsMobType:
+		value = rot.newValueTargetIsMobType(config.GetTargetIsMobType(), config.Uuid)
 
 	// Resources
 	case *proto.APLValue_CurrentHealth:
@@ -252,6 +256,8 @@ func (rot *APLRotation) newAPLValueWithContext(config *proto.APLValue, groupVari
 		value = rot.newValueDotPercentIncrease(config.GetDotPercentIncrease(), config.Uuid)
 	case *proto.APLValue_DotTickRatePercentIncrease:
 		value = rot.newValueDotTickRatePercentIncrease(config.GetDotTickRatePercentIncrease(), config.Uuid)
+	case *proto.APLValue_DotExpectedDps:
+		value = rot.newValueDotExpectedDps(config.GetDotExpectedDps(), config.Uuid)
 
 	// Sequences
 	case *proto.APLValue_SequenceIsComplete:
@@ -266,8 +272,6 @@ func (rot *APLRotation) newAPLValueWithContext(config *proto.APLValue, groupVari
 		value = rot.newValueChannelClipDelay(config.GetChannelClipDelay(), config.Uuid)
 	case *proto.APLValue_InputDelay:
 		value = rot.newValueInputDelay(config.GetInputDelay(), config.Uuid)
-	case *proto.APLValue_FrontOfTarget:
-		value = rot.newValueFrontOfTarget(config.GetFrontOfTarget(), config.Uuid)
 
 	case *proto.APLValue_VariableRef:
 		value = rot.newValueVariableRef(config.GetVariableRef(), config.Uuid)

@@ -11,7 +11,7 @@ import (
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// The class of each client spell family, which is SpellClassOptions.SpellClassSet.
+// The class of each game files spell family, which is SpellClassOptions.SpellClassSet.
 var familyClasses = map[int32]string{
 	3: "mage", 4: "warrior", 5: "warlock", 6: "priest", 7: "druid",
 	8: "rogue", 9: "hunter", 10: "paladin", 11: "shaman",
@@ -19,7 +19,7 @@ var familyClasses = map[int32]string{
 
 // Writes every class spell in the store to <dir>/<class>.txt as its text card, sorted by name and
 // id and split by a line of =======, so two dumps diff spell by spell. The ladder calls are left
-// out: they say where the sim reads a row, not what the client changed.
+// out: they say where the sim reads a row, not what the game files changed.
 func runDump(dir string) error {
 	byClass := map[string][]*spelldata.Spell{}
 	for _, s := range spelldata.All() {

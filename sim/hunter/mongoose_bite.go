@@ -2,72 +2,70 @@ package hunter
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/buffs"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-func (hunter *Hunter) registerMongooseBiteSpell() {
-	rank := spellData.MongooseBite.Highest()
-	baseDamage := rank.DamageEffect().Average(core.CharacterLevel)
+var mongooseBiteRank = spellData.MongooseBite.Highest()
 
-	// The aura is only a pre-requisite for Mongoose Bite: a dodge opens the window (client
-	// SpellAuraRestrictions CasterAuraState 1 on every rank), and Expose Prey opens it off any
-	// landed hit on a marked target. The dodge watch is its own permanent aura, since an aura's
-	// OnSpellHitTaken only runs while that aura is up.
-	defensiveWindow := spellData.ExposePreyTriggered.Rank(1)
-	hunter.DefensiveState = hunter.RegisterAura(core.Aura{
-		Label:    "Defensive State",
-		ActionID: core.ActionID{SpellID: defensiveWindow.ID},
-		Duration: defensiveWindow.Duration(),
-	})
+// The window the hunter's own dodge opens: the aura Defensive State fires when the hunter dodges an attack.
+var mongooseBiteWindow = spellData.DefensiveStateTriggered.Highest()
+
+func (hunter *Hunter) registerMongooseBite() {
+	hunter.MongooseBiteAura = hunter.RegisterAura(spelldata.AuraConfig(mongooseBiteWindow))
+
 	hunter.MakeProcTriggerAura(core.ProcTrigger{
-		Name:               "Defensive State - Trigger",
+		Name:               "Mongoose Bite - Trigger",
 		TriggerImmediately: true,
-		Outcome:            core.OutcomeDodge,
-		Callback:           core.CallbackOnSpellHitTaken,
+		// Defensive State (13358) hears melee swings and abilities taken, not ranged attacks.
+		ProcMask: core.ProcMaskMelee,
+		Outcome:  core.OutcomeDodge,
+		Callback: core.CallbackOnSpellHitTaken,
 		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
-			hunter.DefensiveState.Activate(sim)
+			hunter.MongooseBiteAura.Activate(sim)
 		},
 	})
 
-	hunter.MongooseBite = hunter.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    rank.DefenseTypeCore(),
-		ClassSpellMask: HunterSpellMongooseBite,
-		ProcMask:       core.ProcMaskMeleeSpecial,
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		MaxRange:       float64(rank.MaxRange),
+	exposePrey := hunter.registerExposePrey()
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(rank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: rank.GCD(),
-			},
-			IgnoreHaste: true,
-			CD: core.Cooldown{
-				Timer:    hunter.NewTimer(),
-				Duration: max(rank.Cooldown(), rank.CategoryCooldown()),
-			},
-		},
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return hunter.DefensiveState.IsActive()
-		},
+	config := spelldata.SpellConfig(&hunter.Unit, mongooseBiteRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
 
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
-		BonusCoefficient: 1,
+	config.ExtraCastCondition = func(sim *core.Simulation, target *core.Unit) bool {
+		return hunter.MongooseBiteAura.IsActive() || exposePrey.IsActive()
+	}
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			hunter.DefensiveState.Deactivate(sim)
-			// Forever: normalized melee weapon damage plus a smaller flat amount, where Classic
-			// dealt the flat amount alone.
-			damage := baseDamage + hunter.AutoAttacks.MH().CalculateNormalizedWeaponDamage(sim, spell.MeleeAttackPower(target))
-			result := spell.CalcAndDealDamage(sim, target, damage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		baseDamage := mongooseBiteRank.WeaponStrike(sim, spell, hunter.MHNormalizedWeaponDamage(sim, spell.MeleeAttackPower(target)), 0)
+		spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
+		// TODO: Ingame test needed: which window a bite spends when both are up.
+		hunter.MongooseBiteAura.Deactivate(sim)
+		exposePrey.Deactivate(sim)
+	}
 
-			if hunter.LaceratingStrikes != nil && result.Landed() {
-				hunter.procLaceratingStrikes(sim, result)
-			}
-		},
-	})
+	hunter.RegisterSpell(config)
+}
+
+// The window Expose Prey opens: the aura its proc casts.
+var exposePreyWindow = spellData.ExposePreyTriggered.Highest()
+
+// Expose Prey opens its own Mongoose Bite window off any attack on a target carrying Hunter's Mark.
+// The rate is the effect ladder the tooltip's $m1 names, 5/10 by rank, and the mark is the caller's
+// condition. Without the talent the window is nil, which reads as an aura that is down.
+func (hunter *Hunter) registerExposePrey() *core.Aura {
+	if hunter.Talents.ExposePrey == 0 {
+		return nil
+	}
+
+	window := hunter.RegisterAura(spelldata.AuraConfig(exposePreyWindow))
+	trigger := spelldata.ProcTrigger(&hunter.Character, spellData.ExposePrey.Rank(hunter.Talents.ExposePrey),
+		func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			window.Activate(sim)
+		})
+	trigger.Name = "Expose Prey - Trigger"
+	trigger.ExtraCondition = func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) bool {
+		return result.Target.HasActiveAuraWithTag(buffs.HuntersMarkCategory)
+	}
+
+	hunter.MakeProcTriggerAura(trigger)
+	return window
 }

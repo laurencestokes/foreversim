@@ -3,7 +3,6 @@ package elemental
 import (
 	"testing"
 
-	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
@@ -29,11 +28,12 @@ func TestElemental(t *testing.T) {
 					},
 				},
 			}},
-			// Naked: the generated item database does not carry the Forever gear our sim tests with
-			// yet, and gives the rest TBC-shaped stats. Same call as the merged Mage port.
-			GearSet:  core.GearSetCombo{Label: "Naked", GearSet: &proto.EquipmentSpec{}},
-			Talents:  DefaultTalents,
-			Rotation: core.GetAplRotation("../../../ui/specs/shaman/elemental/apls", "forever"),
+			GearSet:     testingBuild.GearSet,
+			Talents:     DefaultTalents,
+			Consumables: DefaultConsumables,
+			Profession1: proto.Profession_Leatherworking,
+			Profession2: proto.Profession_Enchanting,
+			Rotation:    core.RotationCombo{Label: "default", Rotation: testingBuild.Rotation.Rotation},
 			ItemFilter: core.ItemFilter{
 				WeaponTypes:       DefaultWeaponTypes,
 				ArmorType:         DefaultArmorType,
@@ -43,8 +43,21 @@ func TestElemental(t *testing.T) {
 	}))
 }
 
-// The community build our Forever sim ranks Elemental with.
-const DefaultTalents = "5505301300103051--503352001"
+// The Testing build's gear, talents and rotation, which the UI's Testing gear set, Standard talents and
+// Default rotation read too.
+var testingBuild = core.GetTestBuildFromJSON(proto.Class_ClassShaman, "../../../ui/specs/shaman/elemental/builds", "testing",
+	core.ItemFilter{}, nil, nil)
+
+var DefaultTalents = testingBuild.Talents
+
+// The UI's Elemental defaults: Major Mana Potion, Flask of Supreme Power, Demonic Rune and Brilliant
+// Wizard Oil.
+var DefaultConsumables = &proto.ConsumesSpec{
+	ResourcePotId: 13444,
+	FlaskId:       13512,
+	ConjuredId:    12662,
+	MhImbueId:     20749,
+}
 
 const DefaultArmorType = proto.ArmorType_ArmorTypeMail
 
@@ -59,32 +72,4 @@ var DefaultWeaponTypes = []proto.WeaponType{
 
 var DefaultRangedWeaponTypes = []proto.RangedWeaponType{
 	proto.RangedWeaponType_RangedWeaponTypeTotem,
-}
-
-// The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
-func TestArena(t *testing.T) {
-	arenalib.Run(t, arenaSpec)
-}
-
-// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
-func TestRaceArena(t *testing.T) {
-	arenalib.RunRaceArena(t, arenaSpec)
-}
-
-var arenaSpec = arenalib.Spec{
-	Dir:   "elemental_shaman",
-	UI:    "shaman/elemental",
-	Class: proto.Class_ClassShaman,
-	Race:  proto.Race_RaceOrc,
-	SpecOptions: &proto.Player_ElementalShaman{ElementalShaman: &proto.ElementalShaman{
-		Options: &proto.ElementalShaman_Options{ClassOptions: &proto.ShamanOptions{}},
-	}},
-	Role: arenalib.Caster,
-	// Flame Shock is 20 yd in the client (SpellRange 3).
-	DistanceFromTarget: 20,
-	// The low-rank rotation is a build arena comparison, not the page's.
-	RaceBuilds: map[string]arenalib.RaceBuild{
-		"Elemental 31/6/14":   {Rotation: "forever"},
-		"Stormcaller 28/23/0": {Rotation: "forever"},
-	},
 }

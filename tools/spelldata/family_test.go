@@ -7,20 +7,29 @@ import (
 	"testing"
 )
 
+func rankValues(t *testing.T, key string) func(rank int32) string {
+	t.Helper()
+	ladder := ladderOf(t, key)
+	return func(rank int32) string {
+		return "effect 1 = " + column(ladder.Rank(rank).EffectN(1).BasePoints)
+	}
+}
+
 func TestFamilyIndex(t *testing.T) {
 	var out bytes.Buffer
 	if err := run([]string{"-family", "warrior/Execute"}, &out); err != nil {
 		t.Fatal(err)
 	}
 
+	value := rankValues(t, "warrior/Execute")
 	lines := strings.Split(out.String(), "\n")
 	want := []string{
 		"warrior spellData.Execute",
-		"5308     Execute  Rank 1   Rank(1)   effect 1 = 125",
-		"20658    Execute  Rank 2   Rank(2)   effect 1 = 200",
-		"20660    Execute  Rank 3   Rank(3)   effect 1 = 325",
-		"20661    Execute  Rank 4   Rank(4)   effect 1 = 450",
-		"20662    Execute  Rank 5   Highest() effect 1 = 600",
+		"5308     Execute  Rank 1   Rank(1)   " + value(1),
+		"20658    Execute  Rank 2   Rank(2)   " + value(2),
+		"20660    Execute  Rank 3   Rank(3)   " + value(3),
+		"20661    Execute  Rank 4   Rank(4)   " + value(4),
+		"20662    Execute  Rank 5   Highest() " + value(5),
 		"",
 		"20662 Execute (Rank 5) warrior spellData.Execute.Highest()",
 	}
@@ -39,14 +48,15 @@ func TestFamilyIndexTalent(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	value := rankValues(t, "warrior/Cruelty")
 	lines := strings.Split(out.String(), "\n")
 	want := []string{
 		"warrior spellData.Cruelty",
-		"12320    Cruelty  rank 1 of 5 Rank(1)   effect 1 = 1",
-		"12320    Cruelty  rank 2 of 5 Rank(2)   effect 1 = 2",
-		"12320    Cruelty  rank 3 of 5 Rank(3)   effect 1 = 3",
-		"12320    Cruelty  rank 4 of 5 Rank(4)   effect 1 = 4",
-		"12320    Cruelty  rank 5 of 5 Highest() effect 1 = 5",
+		"12320    Cruelty  rank 1 of 5 Rank(1)   " + value(1),
+		"12320    Cruelty  rank 2 of 5 Rank(2)   " + value(2),
+		"12320    Cruelty  rank 3 of 5 Rank(3)   " + value(3),
+		"12320    Cruelty  rank 4 of 5 Rank(4)   " + value(4),
+		"12320    Cruelty  rank 5 of 5 Highest() " + value(5),
 		"",
 		"12320 Cruelty (rank 5 of 5) warrior spellData.Cruelty.Rank(n), n up to 5",
 	}
@@ -71,7 +81,8 @@ func TestFamilyTalentJSON(t *testing.T) {
 	for _, rank := range got.Ranks {
 		values = append(values, rank.Value)
 	}
-	if strings.Join(values, ", ") != "effect 1 = 12, effect 1 = 23, effect 1 = 35" {
+	value := rankValues(t, "warrior/ImprovedRend")
+	if strings.Join(values, ", ") != strings.Join([]string{value(1), value(2), value(3)}, ", ") {
 		t.Errorf("the ranks read %v", values)
 	}
 	if got.Highest.heading() != "12286 Improved Rend (rank 3 of 3)" {
@@ -105,7 +116,7 @@ func TestFamilyJSON(t *testing.T) {
 	if len(got.Ranks) != 5 {
 		t.Fatalf("%d ranks", len(got.Ranks))
 	}
-	if got.Ranks[0] != (familyRow{ID: 5308, Name: "Execute", Rank: "Rank 1", Accessor: "Rank(1)", Value: "effect 1 = 125"}) {
+	if got.Ranks[0] != (familyRow{ID: 5308, Name: "Execute", Rank: "Rank 1", Accessor: "Rank(1)", Value: rankValues(t, "warrior/Execute")(1)}) {
 		t.Errorf("rank 1 is %+v", got.Ranks[0])
 	}
 	if got.Ranks[4].Accessor != "Highest()" {
@@ -150,17 +161,20 @@ func TestExpr(t *testing.T) {
 
 // A talent rank is the rank Talent builds from the curve, so every accessor after it reads what the sim
 // reads at that rank rather than the store's base row. Improved Rend's curve is not linear, and its base
-// row states 15, which no rank has.
+// row states a value no rank has.
 func TestExprTalentRank(t *testing.T) {
+	cruelty := ladderOf(t, "warrior/Cruelty")
+	improvedRend := ladderOf(t, "warrior/ImprovedRend")
+	dualWield := ladderOf(t, "warrior/DualWieldSpecialization")
 	cases := map[string]string{
-		"spellData.Cruelty.Rank(1).EffectN(1).BaseValue()":                 "1",
-		"spellData.Cruelty.Rank(3).EffectN(1).BaseValue()":                 "3",
-		"spellData.Cruelty.Rank(5).EffectN(1).BaseValue()":                 "5",
-		"spellData.Cruelty.ByID(12320).EffectN(1).BaseValue()":             "1",
-		"spellData.ImprovedRend.Rank(1).EffectN(1).BaseValue()":            "12",
-		"spellData.ImprovedRend.Rank(2).EffectN(1).BaseValue()":            "23",
-		"spellData.ImprovedRend.Highest().EffectN(1).BaseValue()":          "35",
-		"spellData.DualWieldSpecialization.Rank(2).EffectN(2).BaseValue()": "20",
+		"spellData.Cruelty.Rank(1).EffectN(1).BaseValue()":                 column(cruelty.Rank(1).EffectN(1).BaseValue()),
+		"spellData.Cruelty.Rank(3).EffectN(1).BaseValue()":                 column(cruelty.Rank(3).EffectN(1).BaseValue()),
+		"spellData.Cruelty.Rank(5).EffectN(1).BaseValue()":                 column(cruelty.Rank(5).EffectN(1).BaseValue()),
+		"spellData.Cruelty.ByID(12320).EffectN(1).BaseValue()":             column(cruelty.Rank(1).EffectN(1).BaseValue()),
+		"spellData.ImprovedRend.Rank(1).EffectN(1).BaseValue()":            column(improvedRend.Rank(1).EffectN(1).BaseValue()),
+		"spellData.ImprovedRend.Rank(2).EffectN(1).BaseValue()":            column(improvedRend.Rank(2).EffectN(1).BaseValue()),
+		"spellData.ImprovedRend.Highest().EffectN(1).BaseValue()":          column(improvedRend.Highest().EffectN(1).BaseValue()),
+		"spellData.DualWieldSpecialization.Rank(2).EffectN(2).BaseValue()": column(dualWield.Rank(2).EffectN(2).BaseValue()),
 	}
 	for expr, want := range cases {
 		if got := evalJSON(t, expr); got.Value != want {
@@ -179,7 +193,7 @@ func TestExprTalentRank(t *testing.T) {
 	for _, want := range []string{
 		"spellData.Cruelty.Rank(3).EffectN(1) = effect 1 of 12320 Cruelty (rank 3 of 5)",
 		"12320 Cruelty (rank 3 of 5) warrior spellData.Cruelty.Rank(n), n up to 5",
-		"E_APPLY_AURA A_MOD_WEAPON_CRIT_PERCENT base=3 ",
+		"E_APPLY_AURA A_MOD_WEAPON_CRIT_PERCENT base=" + column(cruelty.Rank(3).EffectN(1).BasePoints) + " ",
 	} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("the text lacks %q:\n%s", want, out.String())

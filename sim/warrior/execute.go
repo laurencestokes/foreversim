@@ -2,63 +2,47 @@ package warrior
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+var executeRank = spellData.Execute.Highest()
+
+// TODO: The dummy effect carries the base damage, and no finder picks it out: the row states no
+// damage effect, and both of its effects share the aura and misc values Effect() selects on.
+var executeBaseDamage = executeRank.EffectN(1).Average()
+
+// The tooltip's $*10;F1: the dummy's chain amplitude, times 10, per extra point of rage.
+var executeDamagePerRage = float64(executeRank.EffectN(1).ChainAmp) * 10
+
 func (warrior *Warrior) registerExecute() {
-	executeRank := spellData.Execute.Highest()
-	// TODO: The dummy effect carries the base damage; Execute has no Direct role, and both of its
-	// effects share the aura/misc pair Effect() selects on.
-	executeBaseDamage := executeRank.EffectN(1).Average(core.CharacterLevel)
-	// The tooltip's $*10;F1: the dummy's chain amplitude, times 10, per extra point of rage.
-	executeDamagePerRage := float64(executeRank.EffectN(1).ChainAmp) * 10
 
 	var rageMetrics *core.ResourceMetrics
 
-	spell := warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: executeRank.ID},
-		SpellSchool:    executeRank.SpellSchool(),
-		DefenseType:    executeRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskMeleeMHSpecial,
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		ClassSpellMask: SpellMaskExecute,
-		MaxRange:       core.MaxMeleeRange,
+	// TODO: Manual review needed -- the game files state no threat coefficient; 1 until measured in game.
+	config := spelldata.SpellConfig(&warrior.Unit, executeRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
 
-		RageCost: core.RageCostOptions{
-			Cost:   int32(executeRank.Cost()),
-			Refund: executeRank.MissRefund(),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: executeRank.GCD(),
-			},
-			IgnoreHaste: true,
-		},
+	config.ExtraCastCondition = func(sim *core.Simulation, target *core.Unit) bool {
+		return sim.IsExecutePhase20()
+	}
 
-		DamageMultiplier: 1,
-		// Not in the client table; our Classic value until measured in game.
-		ThreatMultiplier: 1.25,
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		extraRage := spell.Unit.CurrentRage()
+		maxRage := warrior.MaximumRage() - spell.Cost.GetCurrentCost()
+		if extraRage > maxRage {
+			extraRage = maxRage
+		}
+		warrior.SpendRage(sim, extraRage, rageMetrics)
+		rageMetrics.Events--
 
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return warrior.StanceMatches(BerserkerStance|BattleStance) && sim.IsExecutePhase20()
-		},
+		baseDamage := executeBaseDamage + executeDamagePerRage*extraRage
+		result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			extraRage := spell.Unit.CurrentRage()
-			maxRage := warrior.MaximumRage() - spell.Cost.GetCurrentCost()
-			if extraRage > maxRage {
-				extraRage = maxRage
-			}
-			warrior.SpendRage(sim, extraRage, rageMetrics)
-			rageMetrics.Events--
+		if !result.Landed() {
+			spell.IssueRefund(sim)
+		}
+	}
 
-			baseDamage := executeBaseDamage + executeDamagePerRage*extraRage
-			result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
-
-			if !result.Landed() {
-				spell.IssueRefund(sim)
-			}
-		},
-	})
+	spell := warrior.RegisterSpell(config)
 
 	rageMetrics = spell.Cost.ResourceCostImpl.(*core.RageCost).ResourceMetrics
 

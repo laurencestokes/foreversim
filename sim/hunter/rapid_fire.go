@@ -1,74 +1,29 @@
 package hunter
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-func (hunter *Hunter) registerRapidFireCD() {
-	rank := spellData.RapidFire.Highest()
-	actionID := core.ActionID{SpellID: rank.ID}
-	hasteMultiplier := 1 + rank.Effect(dbcenums.A_MOD_RANGED_HASTE, 0).Average(core.CharacterLevel)/100
+var rapidFireRank = spellData.RapidFire.Highest()
 
-	hunter.RapidFireAura = hunter.RegisterAura(core.Aura{
-		Label:    "Rapid Fire",
-		ActionID: actionID,
-		Duration: rank.Duration(),
+func (hunter *Hunter) registerRapidFire() {
+	aura := hunter.RegisterAura(spelldata.AuraConfig(rapidFireRank))
 
-		// Forever: ranged and melee attack speed, where Classic's was ranged only.
-		OnGain: func(aura *core.Aura, sim *core.Simulation) {
-			aura.Unit.MultiplyAttackSpeed(sim, hasteMultiplier)
-		},
-		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
-			aura.Unit.MultiplyAttackSpeed(sim, 1/hasteMultiplier)
-		},
-	})
+	spelldata.ParseEffects(&hunter.Character, aura, rapidFireRank)
 
-	// Rapid Killing takes a minute off a rank (client curve -60000/-120000 ms). The buff a kill
-	// grants (415407: 20% on the next Shot within 20 sec) is not modelled, nothing dies in a boss
-	// fight.
-	cooldown := max(rank.Cooldown(), rank.CategoryCooldown()) + time.Duration(spellData.RapidKilling.
-		Effect(dbcenums.A_ADD_FLAT_MODIFIER, int32(dbcenums.SPELLMOD_COOLDOWN)).
-		ValueAt(hunter.Talents.RapidKilling))*time.Millisecond
+	config := spelldata.SpellConfig(&hunter.Unit, rapidFireRank, spelldata.Flags(core.SpellFlagAPL))
 
-	hunter.RapidFire = hunter.RegisterSpell(core.SpellConfig{
-		ActionID:       actionID,
-		SpellSchool:    rank.SpellSchool(),
-		ClassSpellMask: HunterSpellRapidFire,
-		ProcMask:       core.ProcMaskEmpty,
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		aura.Activate(sim)
+	}
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(rank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				NonEmpty: true,
-			},
-			CD: core.Cooldown{
-				Timer:    hunter.NewTimer(),
-				Duration: cooldown,
-			},
-		},
+	config.RelatedSelfBuff = aura
 
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return !hunter.RapidFireAura.IsActive()
-		},
-
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
-			hunter.RapidFireAura.Activate(sim)
-		},
-
-		RelatedSelfBuff: hunter.RapidFireAura,
-	})
+	hunter.RapidFire = hunter.RegisterSpell(config)
 
 	hunter.AddMajorCooldown(core.MajorCooldown{
 		Spell: hunter.RapidFire,
 		Type:  core.CooldownTypeDPS,
-
-		ShouldActivate: func(sim *core.Simulation, character *core.Character) bool {
-			return !hunter.RapidFireAura.IsActive()
-		},
 	})
 }

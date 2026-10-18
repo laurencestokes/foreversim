@@ -1,79 +1,108 @@
 import * as PresetUtils from '@app/preset_utils';
+import * as Consumables from '@features/settings/model/consumables_auto_gen';
 import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
-import { ConsumesSpec, Profession, Race, TristateEffect } from '@generated/proto/common';
-import { DpsPriest_Options as Options } from '@generated/proto/priest';
+import { ConsumesSpec, Profession, Race, Spec, Stat, TristateEffect } from '@generated/proto/common';
+import { DpsPriest_Options as Options, PriestOptions_Armor } from '@generated/proto/priest';
 import { SavedTalents } from '@generated/proto/ui';
+import { Stats } from '@sim/proto/stats';
 
-import ShadowApl from './apls/shadow.apl.json';
-import SmiteApl from './apls/smite.apl.json';
-import LaunchGear from './gear_sets/launch.gear.json';
-import P0BisGear from './gear_sets/p0.bis.gear.json';
-import P1BisGear from './gear_sets/p1.bis.gear.json';
-import SmiteLaunchGear from './gear_sets/smite_launch.gear.json';
+import SmiteTestingBuildJson from './builds/smite_testing.build.json';
+import ShadowTestingBuildJson from './builds/testing.build.json';
 
-// Defaults are master's ui/shadow_priest and ui/smite_priest (the Forever site before the switch),
-// on our Forever APLs. Both pages sim the one dps priest spec; ../smite/spec.ts is the Smite page.
+export const ROTATION_PRESET_DEFAULT = PresetUtils.makePresetAPLRotation('Default', ShadowTestingBuildJson.player.rotation);
+export const ROTATION_SMITE_DEFAULT = PresetUtils.makePresetAPLRotation('Smite', SmiteTestingBuildJson.player.rotation);
 
-export const ROTATION_PRESET_SHADOW = PresetUtils.makePresetAPLRotation('Shadow', ShadowApl);
-export const ROTATION_PRESET_SMITE = PresetUtils.makePresetAPLRotation('Smite', SmiteApl);
+export const ShadowTestingGear = PresetUtils.makePresetGear('Shadow Testing', ShadowTestingBuildJson.player.equipment, { devOnly: true });
+export const SmiteTestingGear = PresetUtils.makePresetGear('Smite Testing', SmiteTestingBuildJson.player.equipment, { devOnly: true });
 
-export const TalentsP1Shadow = PresetUtils.makePresetTalents('Shadow', SavedTalents.create({ talentsString: '005300231303--505120501201300051' }));
-// The community builds the rankings page runs on our Forever sim: Shadow 15/0/36 and Smite 31/17/3.
-export const ShadowTalents = PresetUtils.makePresetTalents('Shadow 15/0/36', SavedTalents.create({ talentsString: '0253000311--550022501201302251' }));
-// Thirty-one points of Discipline for Power Infusion, twenty of Holy for the pieces that scale Smite.
-export const TalentsLaunchSmite = PresetUtils.makePresetTalents('Smite', SavedTalents.create({ talentsString: '515330031305001001-30505113002' }));
-export const SmiteTalents = PresetUtils.makePresetTalents('Smite 31/17/3', SavedTalents.create({ talentsString: '515030031305001031-00505023002-003' }));
+export const StandardTalents = PresetUtils.makePresetTalents('Standard', SavedTalents.create({ talentsString: ShadowTestingBuildJson.player.talentsString }));
+export const ShadowTestingBuild = PresetUtils.makePresetBuildFromJSON('Shadow Testing', Spec.SpecDpsPriest, ShadowTestingBuildJson, {
+	gear: ShadowTestingGear,
+});
 
-// Master's priest options are empty: no Inner Fire, and the Shadow rotation casts Shadowform itself.
+export const SmiteTalents = PresetUtils.makePresetTalents('Smite', SavedTalents.create({ talentsString: SmiteTestingBuildJson.player.talentsString }));
+export const SmiteTestingBuild = PresetUtils.makePresetBuildFromJSON('Smite Testing', Spec.SpecDpsPriest, SmiteTestingBuildJson, { gear: SmiteTestingGear });
+
 export const DefaultOptions = Options.create({
-	classOptions: {},
+	classOptions: {
+		armor: PriestOptions_Armor.InnerFire,
+		preShadowform: true,
+	},
 });
 
-export const ShadowConsumables = ConsumesSpec.create({
-	flaskId: 13512, // Flask of Supreme Power
-	spellPowerElixirId: 13454, // Greater Arcane Elixir
-	schoolElixirId: 9264, // Elixir of Shadow Power
-	guardianElixirId: 20007, // Mageblood Elixir
-	zanzaId: 8423, // Cerebral Cortex Compound
-	foodId: 18254, // Runn Tum Tuber Surprise
-	potId: 13444, // Major Mana Potion
-	conjuredId: 12662, // Demonic Rune
-	mhImbueId: 20749, // Brilliant Wizard Oil
+export const DefaultConsumables = ConsumesSpec.create({
+	flaskId: Consumables.FlaskOfSupremePower.id,
+	foodId: Consumables.NightfinSoup.id,
+	mhImbueId: Consumables.BrilliantWizardOil.id,
+	offensivePotId: Consumables.MajorSpellblastingPotion.id,
+	resourcePotId: Consumables.MajorManaPotion.id,
+	conjuredId: Consumables.DemonicRune.id,
+	elixirIds: [
+		Consumables.ElixirOfShadowPower.id,
+		Consumables.GreaterArcaneElixir.id,
+		Consumables.ElixirOfCunning.id,
+		Consumables.ElixirOfTheOwl.id,
+		Consumables.ElixirOfSages.id,
+		Consumables.GreaterMagebloodElixir.id,
+	],
 });
-export const SmiteConsumables = ShadowConsumables;
 
-// What master's page opens with once it has applied its presets (it drops the Fire Resistance
-// Aura, Blessing of Wisdom and Judgement of Wisdom its presets name).
 export const DefaultRaidBuffs = RaidBuffs.create({
 	arcaneBrilliance: true,
 	giftOfTheWild: true,
+	prayerOfFortitude: true,
 	prayerOfSpirit: true,
-	fireResistanceTotem: true, // a raid buff in the new buffs proto
-});
-
-export const DefaultPartyBuffs = PartyBuffs.create({
-	manaSpringTotem: TristateEffect.TristateEffectImproved,
 	moonkinAura: true,
 });
 
-export const DefaultIndividualBuffs = IndividualBuffs.create({});
+export const DefaultPartyBuffs = PartyBuffs.create({
+	manaSpringTotem: TristateEffect.TristateEffectRegular,
+});
 
-export const DefaultDebuffs = Debuffs.create({});
+export const DefaultIndividualBuffs = IndividualBuffs.create({
+	greaterBlessingOfKings: true,
+	greaterBlessingOfWisdom: true,
+});
 
-export const ShadowOtherDefaults = {
-	reactionTime: 200, // master's default
+export const DefaultDebuffs = Debuffs.create({
+	judgementOfTheCrusader: true,
+	judgementOfWisdom: true,
+	curseOfElements: true,
+});
+
+export const OtherDefaults = {
 	channelClipDelay: 100,
-	distanceFromTarget: 20, // Mind Flay is 20 yd in the client
-	profession1: Profession.Alchemy,
-	profession2: Profession.Enchanting,
-	race: Race.RaceTroll,
+	distanceFromTarget: 20,
+	profession1: Profession.Enchanting,
+	profession2: Profession.Tailoring,
+	race: Race.RaceUndead,
+	reactionTime: 100,
 };
-export const SmiteOtherDefaults = { ...ShadowOtherDefaults, distanceFromTarget: 30 };
 
-// Our Forever sim's gear presets (master ui/<spec>/gear_sets).
-export const GEAR_LAUNCH = PresetUtils.makePresetGear('Launch', LaunchGear);
-export const GEAR_P0_BIS = PresetUtils.makePresetGear('Pre-BiS', P0BisGear);
-export const GEAR_P1_BIS = PresetUtils.makePresetGear('P1 BiS', P1BisGear);
-export const GEAR_SMITE_LAUNCH = PresetUtils.makePresetGear('Launch', SmiteLaunchGear);
-export const DEFAULT_GEAR = GEAR_P0_BIS;
-export const GEAR_PRESETS = [GEAR_LAUNCH, GEAR_P0_BIS, GEAR_P1_BIS];
+export const ShadowEpWeights = PresetUtils.makePresetEpWeights(
+	'Shadow',
+	Stats.fromMap({
+		[Stat.StatIntellect]: 0.24,
+		[Stat.StatSpellDamage]: 1.0,
+		[Stat.StatShadowDamage]: 1.0,
+		[Stat.StatSpirit]: 0.01,
+		[Stat.StatHitRating]: 1.14,
+		[Stat.StatCritRating]: 0.84,
+		[Stat.StatHasteRating]: 0.73,
+	}),
+);
+
+export const SmiteEpWeights = PresetUtils.makePresetEpWeights(
+	'Smite',
+	Stats.fromMap({
+		[Stat.StatIntellect]: 0.58,
+		[Stat.StatSpellDamage]: 1.0,
+		[Stat.StatHolyDamage]: 0.81,
+		[Stat.StatShadowDamage]: 0.19,
+		[Stat.StatSpirit]: 0.57,
+		[Stat.StatHitRating]: 0.37,
+		[Stat.StatCritRating]: 0.32,
+		[Stat.StatHasteRating]: 0.43,
+		[Stat.StatMP5]: 1.46,
+	}),
+);

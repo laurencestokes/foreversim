@@ -1,9 +1,11 @@
+import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { APLRotation } from '@generated/proto/apl';
+import { Debuffs, RaidBuffs } from '@generated/proto/buffs';
 import { ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
-import { masterEpWeights } from '@sim/proto/master_ep_weights';
+import { WeaponSkillGroup } from '@sim/player/weapon_skill_groups';
 import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
@@ -27,9 +29,9 @@ export default defineSpec<Spec.SpecProtectionWarrior>({
 		Stat.StatStrength,
 		Stat.StatAgility,
 		Stat.StatAttackPower,
-		Stat.StatMeleeHitRating,
-		Stat.StatMeleeHasteRating,
-		Stat.StatMeleeCritRating,
+		Stat.StatHitRating,
+		Stat.StatHasteRating,
+		Stat.StatCritRating,
 		Stat.StatArmorPenetration,
 		Stat.StatExpertiseRating,
 		Stat.StatDefenseRating,
@@ -39,6 +41,7 @@ export default defineSpec<Spec.SpecProtectionWarrior>({
 		Stat.StatParryRating,
 		Stat.StatArmor,
 		Stat.StatBonusArmor,
+		Stat.StatArmorNoMods,
 	],
 	epPseudoStats: [PseudoStat.PseudoStatMainHandDps],
 	// Reference stat against which to calculate EP. I think all classes use either spell power or attack power.
@@ -50,6 +53,7 @@ export default defineSpec<Spec.SpecProtectionWarrior>({
 			Stat.StatHealth,
 			Stat.StatArmor,
 			Stat.StatBonusArmor,
+			Stat.StatArmorNoMods,
 			Stat.StatStamina,
 			Stat.StatStrength,
 			Stat.StatAgility,
@@ -65,6 +69,8 @@ export default defineSpec<Spec.SpecProtectionWarrior>({
 		[
 			PseudoStat.PseudoStatMeleeHitPercent,
 			PseudoStat.PseudoStatMeleeCritPercent,
+			PseudoStat.PseudoStatOffHandHitPercent,
+			PseudoStat.PseudoStatOffHandCritPercent,
 			PseudoStat.PseudoStatMeleeHastePercent,
 			PseudoStat.PseudoStatBlockPercent,
 			PseudoStat.PseudoStatDodgePercent,
@@ -72,32 +78,15 @@ export default defineSpec<Spec.SpecProtectionWarrior>({
 			PseudoStat.PseudoStatExpertisePercent,
 		],
 	),
+	displayWeaponSkillGroups: [WeaponSkillGroup.Melee],
 
 	defaults: {
 		// Default equipped gear.
-		gear: Presets.DEFAULT_GEAR.gear,
+		gear: Presets.PreBiSGear.gear,
 		// Default EP weights for sorting gear in the gear picker.
-		// Master's weights (percent stats per 1%), in our ratings.
-		epWeights: masterEpWeights({
-			Armor: 0.174,
-			BonusArmor: 0.155,
-			Stamina: 2.336,
-			Strength: 1.555,
-			Agility: 2.771,
-			AttackPower: 0.32,
-			MeleeHit: 1.432,
-			MeleeCrit: 0.925,
-			Block: 1.32,
-			BlockValue: 1.373,
-			Dodge: 2.606,
-			Parry: 2.649,
-			Defense: 3.305,
-			MainHandDps: 11.92,
-			OffHandDps: 4.69,
-			MeleeSpeedMultiplier: 4.69,
-		}),
+		epWeights: Presets.PreBiSEpWeights.epWeights,
 		statCaps: (() => {
-			const hitCap = new Stats().withPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, 9);
+			const hitCap = new Stats().withPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, 8);
 			const expCap = new Stats().withPseudoStat(PseudoStat.PseudoStatExpertisePercent, 6.5);
 			const critImmunityCap = new Stats().withPseudoStat(PseudoStat.PseudoStatReducedCritTakenPercent, 5.6);
 
@@ -111,23 +100,32 @@ export default defineSpec<Spec.SpecProtectionWarrior>({
 		// Default spec-specific settings.
 		specOptions: Presets.DefaultOptions,
 		// Default raid/party buffs settings.
-		raidBuffs: Presets.DefaultRaidBuffs,
-		partyBuffs: Presets.DefaultPartyBuffs,
+		raidBuffs: RaidBuffs.create({
+			...WarriorPresets.DefaultRaidBuffs,
+			prayerOfShadowProtection: true,
+		}),
+		partyBuffs: WarriorPresets.DefaultPartyBuffs,
 		individualBuffs: WarriorPresets.DefaultIndividualBuffs,
-		debuffs: Presets.DefaultDebuffs,
+		debuffs: Debuffs.create({
+			curseOfRecklessness: true,
+			faerieFire: true,
+			exposeArmor: true,
+			insectSwarm: true,
+			curseOfWeakness: true,
+			vindication: true,
+		}),
 	},
 
 	// IconInputs to include in the 'Player' section on the settings tab.
-	// The two Battle Shout icon toggles used to sit in `otherInputs`; icon pickers are not part
-	// of the `InputConfig` union any more, so they join the player icon row.
+	// Icon pickers are not part of the `InputConfig` union, so the two Battle Shout icon toggles
+	// sit in the player icon row.
 	playerIconInputs: [WarriorInputs.ShoutPicker(), WarriorInputs.StancePicker(), WarriorInputs.BattleShoutT2()],
 	// Buff and Debuff inputs to include/exclude, overriding the EP-based defaults.
 	includeBuffDebuffInputs: [],
-	excludeBuffDebuffInputs: [],
+	excludeBuffDebuffInputs: [BuffDebuffInputs.AtieshMage],
 	// Inputs to include in the 'Other' section on the settings tab.
 	otherInputs: {
 		inputs: [
-			OtherInputs.TotemTwisting,
 			WarriorInputs.StartingRage(),
 			WarriorInputs.StanceSnapshot(),
 			WarriorInputs.QueueDelay(),
@@ -151,18 +149,17 @@ export default defineSpec<Spec.SpecProtectionWarrior>({
 	},
 
 	presets: {
-		epWeights: [],
+		epWeights: [Presets.PreBiSEpWeights, Presets.PreBiSThreatEpWeights],
 		// Preset talents that the user can quickly select.
-		talents: [Presets.ProtectionTalents, Presets.DeepProtectionTalents],
+		talents: [Presets.ProtectionTalents],
 		// Preset rotations that the user can quickly select.
-		rotations: [Presets.ROTATION_PRESET_PROTECTION, Presets.ROTATION_PRESET_NO_RECK, Presets.ROTATION_PRESET_RECK],
+		rotations: [Presets.ROTATION_DEFAULT],
 		// Preset gear configurations that the user can quickly select.
-		gear: Presets.GEAR_PRESETS,
-		builds: [Presets.BUILD_TANKY],
+		gear: [Presets.PreBiSGear, Presets.PreBiSThreatGear],
 	},
 
 	autoRotation: (_player: Player<Spec.SpecProtectionWarrior>): APLRotation => {
-		return Presets.ROTATION_PRESET_PROTECTION.rotation.rotation!;
+		return Presets.ROTATION_DEFAULT.rotation.rotation!;
 	},
 
 	reforge: {},

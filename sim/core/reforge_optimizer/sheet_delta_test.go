@@ -7,12 +7,33 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/wowsims/forever/sim"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
+	"github.com/wowsims/forever/sim/core/testagent"
 	protopkg "google.golang.org/protobuf/proto"
 )
+
+// A protection warrior's gear on a character that can parry. The sheet reads nothing else off the
+// warrior, and blocking comes with the shield.
+func init() {
+	testagent.RegisterAsProtectionWarrior(func(agent *testagent.Agent) {
+		agent.PseudoStats.CanParry = true
+	})
+}
+
+// Diffs a sheet against the optimizer's base stats.
+func subtractUnitStats(a core.UnitStats, b core.UnitStats) core.UnitStats {
+	result := a
+	result.Stats = a.Stats.Subtract(b.Stats)
+	maxLen := max(len(a.PseudoStats), len(b.PseudoStats))
+	result.PseudoStats = make([]float64, maxLen)
+	copy(result.PseudoStats, a.PseudoStats)
+	for idx, value := range b.PseudoStats {
+		result.PseudoStats[idx] -= value
+	}
+	return result
+}
 
 func protectionWarriorRaid(gearSet string) *proto.Raid {
 	return core.SinglePlayerRaidProto(&proto.Player{
@@ -27,7 +48,7 @@ func protectionWarriorRaid(gearSet string) *proto.Raid {
 
 func sheetStats(t *testing.T, raid *proto.Raid) core.UnitStats {
 	t.Helper()
-	result := computeReforgeStats(&proto.ComputeStatsRequest{Raid: raid})
+	result := core.ComputeStats(&proto.ComputeStatsRequest{Raid: raid, SkipRotation: true})
 	if result.ErrorResult != "" {
 		t.Fatalf("ComputeStats: %s", result.ErrorResult)
 	}
@@ -35,7 +56,6 @@ func sheetStats(t *testing.T, raid *proto.Raid) core.UnitStats {
 }
 
 func TestCapSpaceDeltaMatchesTheSheet(t *testing.T) {
-	sim.RegisterAll()
 	unshielded := protectionWarriorRaid("preraid")
 	unshielded.Parties[0].Players[0].Equipment.Items[proto.ItemSlot_ItemSlotOffHand] = &proto.ItemSpec{}
 
@@ -80,7 +100,7 @@ func TestCapSpaceDeltaMatchesTheSheet(t *testing.T) {
 				bonusRaid := protopkg.Clone(character.raid).(*proto.Raid)
 				bonusRaid.Parties[0].Players[0].BonusStats = &proto.UnitStats{Stats: delta[:stats.ProtoStatsLen]}
 				sheetDelta := subtractUnitStats(sheetStats(t, bonusRaid), o.baseStats)
-				capCoeffs := o.resolveCapCoeffs(delta)
+				capCoeffs := o.resolveCapCoeffs(rawUnitStatsFromStats(delta))
 
 				for _, pseudoStat := range []proto.PseudoStat{block, dodge, parry, critTaken} {
 					moves := slices.Contains(test.moves, pseudoStat) &&

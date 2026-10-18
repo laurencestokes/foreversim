@@ -4,9 +4,37 @@ import (
 	"bytes"
 	"encoding/json"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/dbcenums"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
+
+// The ladder a class file states under `<package>/<field>`, built the way the printer builds it, so
+// an expected value is read off the same rank the printer reads.
+func ladderOf(t *testing.T, key string) spelldata.Ladder {
+	t.Helper()
+	family := ladderFamilies()[key]
+	if family == nil || family.err != nil {
+		t.Fatalf("the class files state no ladder %s", key)
+	}
+	return family.ladder
+}
+
+// A number off a row as the printer states it: read back as the float32 the game files' column is.
+func column(v float64) string {
+	return strconv.FormatFloat(v, 'f', -1, 32)
+}
+
+func signedColumn(v float64) string {
+	if v >= 0 {
+		return "+" + column(v)
+	}
+	return column(v)
+}
 
 func evalJSON(t *testing.T, expr string) exprJSON {
 	t.Helper()
@@ -34,6 +62,9 @@ func readEffect(got exprJSON) int {
 }
 
 func TestExprValue(t *testing.T) {
+	execute := ladderOf(t, "warrior/Execute").Highest()
+	bloodthirst := ladderOf(t, "warrior/Bloodthirst").Highest()
+	rend := ladderOf(t, "warrior/Rend").Highest()
 	cases := []struct {
 		expr  string
 		kind  string
@@ -43,19 +74,19 @@ func TestExprValue(t *testing.T) {
 		id    int32
 	}{
 		{
-			expr:  "spellData.Execute.Highest().EffectN(1).Average(60)",
+			expr:  "spellData.Execute.Highest().EffectN(1).AverageAt(60)",
 			kind:  kindValue,
-			trail: "spellData.Execute.Highest().EffectN(1).Average(60)",
-			value: "600",
+			trail: "spellData.Execute.Highest().EffectN(1).AverageAt(60)",
+			value: column(execute.EffectN(1).AverageAt(60)),
 			read:  1,
 			id:    20662,
 		},
 		{
 			// The name a class file writes is substituted, and the trail states what it stood for.
-			expr:  "spellData.Bloodthirst.Highest().DamageEffect().Average(core.CharacterLevel)",
+			expr:  "spellData.Bloodthirst.Highest().DamageEffect().Average()",
 			kind:  kindValue,
-			trail: "spellData.Bloodthirst.Highest().DamageEffect().Average(60)",
-			value: "48",
+			trail: "spellData.Bloodthirst.Highest().DamageEffect().Average()",
+			value: column(bloodthirst.DamageEffect().Average()),
 			read:  1,
 			id:    23894,
 		},
@@ -63,15 +94,15 @@ func TestExprValue(t *testing.T) {
 			expr:  "spellData.Rend.Highest().EffectN(1).Period()",
 			kind:  kindValue,
 			trail: "spellData.Rend.Highest().EffectN(1).Period()",
-			value: "3s",
+			value: rend.EffectN(1).Period().String(),
 			read:  1,
 			id:    11574,
 		},
 		{
 			// An effect the row does not carry answers the zero the store answers, and reads no effect.
-			expr:  "spellData.Execute.Highest().EffectN(9).Average(60)",
+			expr:  "spellData.Execute.Highest().EffectN(9).AverageAt(60)",
 			kind:  kindValue,
-			trail: "spellData.Execute.Highest().EffectN(9).Average(60)",
+			trail: "spellData.Execute.Highest().EffectN(9).AverageAt(60)",
 			value: "0",
 			read:  0,
 			id:    20662,
@@ -97,7 +128,7 @@ func TestExprValue(t *testing.T) {
 			expr:  "spelldata.MustFind(11574).SpellSchool()",
 			kind:  kindValue,
 			trail: "spelldata.MustFind(11574).SpellSchool()",
-			value: "1",
+			value: "SpellSchoolPhysical",
 			read:  0,
 			id:    11574,
 		},
@@ -118,7 +149,13 @@ func TestExprValue(t *testing.T) {
 func TestExprEffectAccessors(t *testing.T) {
 	got := evalJSON(t, "spellData.Execute.Highest().EffectN(1)")
 
-	for _, want := range []string{"Average(60) = 600", "BaseValue() = 600", "Tenths() = 60"} {
+	damage := ladderOf(t, "warrior/Execute").Highest().EffectN(1)
+	for _, want := range []string{
+		"Average() = " + column(damage.Average()),
+		"AverageAt(60) = " + column(damage.AverageAt(60)),
+		"BaseValue() = " + column(damage.BaseValue()),
+		"Tenths() = " + column(damage.Tenths()),
+	} {
 		if !slices.Contains(got.Accessors, want) {
 			t.Errorf("the accessors are %v, want %q in them", got.Accessors, want)
 		}
@@ -133,7 +170,7 @@ func TestExprEffectAccessors(t *testing.T) {
 
 // The doc comment sim/core/spelldata writes on the accessor that answered, read out of its source.
 func TestExprDoc(t *testing.T) {
-	got := evalJSON(t, "spellData.Execute.Highest().EffectN(1).Average(60)")
+	got := evalJSON(t, "spellData.Execute.Highest().EffectN(1).AverageAt(60)")
 	if !strings.Contains(got.Doc, "level") || !strings.Contains(got.Doc, "scaling") {
 		t.Errorf("Average's doc is %q", got.Doc)
 	}
@@ -153,16 +190,17 @@ func TestExprDoc(t *testing.T) {
 // marked in it.
 func TestExprValueText(t *testing.T) {
 	var out bytes.Buffer
-	args := []string{"-expr", "spellData.Execute.Highest().EffectN(1).Average(core.CharacterLevel)", "-package", "warrior"}
+	args := []string{"-expr", "spellData.Execute.Highest().EffectN(1).AverageAt(core.CharacterLevel)", "-package", "warrior"}
 	if err := run(args, &out); err != nil {
 		t.Fatal(err)
 	}
 
+	damage := ladderOf(t, "warrior/Execute").Highest().EffectN(1)
 	lines := strings.Split(out.String(), "\n")
-	if lines[0] != "spellData.Execute.Highest().EffectN(1).Average(60) = 600" {
+	if lines[0] != "spellData.Execute.Highest().EffectN(1).AverageAt(60) = "+column(damage.AverageAt(60)) {
 		t.Fatalf("the first line is %q", lines[0])
 	}
-	if !strings.Contains(out.String(), "effect 1 (read) a dummy effect holding 600 to the enemy") {
+	if !strings.Contains(out.String(), "effect 1 (read) a dummy effect holding "+column(damage.Mean())+" to the enemy") {
 		t.Errorf("the effect the chain read is not marked:\n%s", out.String())
 	}
 	if !strings.Contains(out.String(), "    The amount at a caster level") {
@@ -176,12 +214,12 @@ func TestExprChainRefused(t *testing.T) {
 		want string
 	}{
 		{"spellData.Execute.Highest().EffectN(1).Nope()", `"Nope" is not a method of *spelldata.Effect`},
-		{"spellData.Execute.Highest().Average(60)", `"Average" is not a method of *spelldata.Spell`},
-		{"spellData.Execute.Highest().EffectN(1).Average()", "*spelldata.Effect.Average takes 1 argument, not 0"},
+		{"spellData.Execute.Highest().AverageAt(60)", `"AverageAt" is not a method of *spelldata.Spell`},
+		{"spellData.Execute.Highest().EffectN(1).AverageAt()", "*spelldata.Effect.AverageAt takes 1 argument, not 0"},
 		{"spellData.Execute.Highest().EffectN(1, 2)", "*spelldata.Spell.EffectN takes 1 argument, not 2"},
-		{"spellData.Execute.Highest().EffectN(1).Average(level)", "level is not a literal"},
-		{"spellData.Execute.Highest().EffectN(1).Average(60.5)", "60.5 is not the int32 it takes"},
-		{"spellData.Execute.Highest().EffectN(1).Average(4294967356)", "4294967356 is not the int32 it takes"},
+		{"spellData.Execute.Highest().EffectN(1).AverageAt(level)", "level is not a literal"},
+		{"spellData.Execute.Highest().EffectN(1).AverageAt(60.5)", "60.5 is not the int32 it takes"},
+		{"spellData.Execute.Highest().EffectN(1).AverageAt(4294967356)", "4294967356 is not the int32 it takes"},
 		{"spellData.Execute.Highest().EffectN([]int{1}[0])", "[]int{…}[0] is not a literal"},
 		{"spelldata.MustFind(4294978870)", "4294978870 is not the int32 it takes"},
 		{"spellData.Execute.Highest().Refs()", "a []*spelldata.Spell is not a value to read"},
@@ -207,6 +245,7 @@ func TestExprChainRefused(t *testing.T) {
 
 // A value read off the ladder itself reads the rank its ...At(rank) names, with the effect it read.
 func TestExprLadderAccessors(t *testing.T) {
+	battleShout := ladderOf(t, "warrior/BattleShout").Highest()
 	cases := []struct {
 		expr  string
 		trail string
@@ -217,21 +256,21 @@ func TestExprLadderAccessors(t *testing.T) {
 		{
 			expr:  "spellData.Bloodrage.EffectAt(1).TenthsAt(1)",
 			trail: "spellData.Bloodrage.EffectAt(1).TenthsAt(1)",
-			value: "10",
+			value: column(ladderOf(t, "warrior/Bloodrage").EffectAt(1).TenthsAt(1)),
 			title: "2687 Bloodrage",
 			read:  1,
 		},
 		{
 			expr:  "spellData.ImprovedBloodrage.MultiplierAt(2)",
 			trail: "spellData.ImprovedBloodrage.MultiplierAt(2)",
-			value: "1.5",
+			value: column(ladderOf(t, "warrior/ImprovedBloodrage").MultiplierAt(2)),
 			title: "12301 Improved Bloodrage (rank 2 of 2)",
 			read:  1,
 		},
 		{
-			expr:  "spellData.BattleShout.Highest().Effect(dbcenums.A_MOD_ATTACK_POWER, 0).Average(core.CharacterLevel)",
-			trail: "spellData.BattleShout.Highest().Effect(99, 0).Average(60)",
-			value: "139",
+			expr:  "spellData.BattleShout.Highest().Effect(dbcenums.A_MOD_ATTACK_POWER, 0).AverageAt(core.CharacterLevel)",
+			trail: "spellData.BattleShout.Highest().Effect(99, 0).AverageAt(60)",
+			value: column(battleShout.Effect(dbcenums.A_MOD_ATTACK_POWER, 0).AverageAt(core.CharacterLevel)),
 			title: "25289 Battle Shout (Rank 7)",
 			read:  1,
 		},

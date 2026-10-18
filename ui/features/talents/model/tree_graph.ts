@@ -7,6 +7,7 @@
 // deeper chain paints under the one above it.
 
 import type { TalentConfig, TalentLocation, TalentsConfig, TalentTreeConfig } from '@sim/talents/config';
+import { locationKey } from '@sim/talents/config';
 
 export type ReqDir = 'down' | 'right' | 'left' | 'rightdown' | 'leftdown';
 
@@ -37,8 +38,6 @@ export interface TalentGraph {
 }
 
 const ROOT_Z_INDEX = 20;
-
-const locationKey = (location: TalentLocation): string => `${location.rowIdx},${location.colIdx}`;
 
 const arrowFor = (parent: TalentLocation, child: TalentLocation, parentIdx: number, childIdx: number): TalentArrow => {
 	let gridRowEnd = Math.max(parent.rowIdx, child.rowIdx) + 1;

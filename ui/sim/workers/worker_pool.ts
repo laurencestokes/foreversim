@@ -15,23 +15,26 @@ import {
 	RaidSimRequestSplitResult,
 	RaidSimResult,
 	RaidSimResultCombinationRequest,
-	ReforgeOptimizeMode,
 	ReforgeOptimizeRequest,
 	ReforgeOptimizeResult,
 	StatWeightRequestsData,
 	StatWeightsCalcRequest,
 	StatWeightsRequest,
 	StatWeightsResult,
+	StatWeightsTopUpPlan,
+	StatWeightsTopUpRequest,
 } from '@generated/proto/api';
+import i18n from '@i18n/config';
 import { AsyncSimRequest, SimRequest, WorkerReceiveMessage, WorkerSendMessage } from '@worker/types';
 
+import { getSitePath } from '../constants/other';
 import { SimSignals } from '../sim_signal_manager';
 import { isDevMode } from '../utils/env';
 import { noop } from '../utils/misc';
 import { WorkerPoolManager } from './concurrent_worker_pool';
 
-const SIM_WORKER_URL = '/forever/sim_worker.js';
-const SIM_WASM_URL = '/forever/lib.wasm.gz';
+const SIM_WORKER_URL = getSitePath('sim_worker.js');
+const SIM_WASM_URL = getSitePath('lib.wasm.gz');
 
 // lib.wasm ships gzipped (Cloudflare Pages caps files at 25 MiB; the raw module exceeds it)
 // and is fetched + compiled exactly once here, then shared with every wasm worker as a
@@ -43,7 +46,7 @@ let sharedWasmModule: Promise<WebAssembly.Module> | undefined;
 const getSharedWasmModule = (): Promise<WebAssembly.Module> => {
 	sharedWasmModule ??= (async () => {
 		if (typeof DecompressionStream === 'undefined') {
-			throw new Error('This browser does not support DecompressionStream; the in-browser sim requires a current browser version.');
+			throw new Error(i18n.t('sim.run_errors.browser_unsupported'));
 		}
 		const response = await fetch(SIM_WASM_URL);
 		if (!response.ok || !response.body) {
@@ -120,15 +123,10 @@ export class WorkerPool {
 	async reforgeOptimizeAsync(request: ReforgeOptimizeRequest, signals?: SimSignals): Promise<ReforgeOptimizeResult> {
 		const worker = this.getLeastBusyWorker();
 		const id = request.requestId || generateRequestId(SimRequest.reforgeOptimizeAsync);
-		const shouldLog = request.mode != ReforgeOptimizeMode.ReforgeOptimizeModeBulk;
-		if (shouldLog) {
-			worker.log(() => 'Reforge optimize request: ' + ReforgeOptimizeRequest.toJsonString(request));
-		}
+		worker.log(() => 'Reforge optimize request: ' + ReforgeOptimizeRequest.toJsonString(request));
 
 		const result = await this.doAsyncRequest(SimRequest.reforgeOptimizeAsync, ReforgeOptimizeRequest.toBinary(request), id, worker, noop, 1, signals);
-		if (shouldLog) {
-			worker.log(() => 'Reforge optimize result: ' + ReforgeOptimizeResult.toJsonString(result.finalReforgeResult!));
-		}
+		worker.log(() => 'Reforge optimize result: ' + ReforgeOptimizeResult.toJsonString(result.finalReforgeResult!));
 		return result.finalReforgeResult!;
 	}
 
@@ -166,8 +164,14 @@ export class WorkerPool {
 		return StatWeightsResult.fromBinary(result);
 	}
 
-	async raidSimAsync(request: RaidSimRequest, onProgress: WorkerProgressCallback, signals: SimSignals): Promise<RaidSimResult> {
-		const worker = this.getLeastBusyWorker();
+	async statWeightTopUpPlan(request: StatWeightsTopUpRequest): Promise<StatWeightsTopUpPlan> {
+		const result = await this.makeApiCall(SimRequest.statWeightTopUpPlan, StatWeightsTopUpRequest.toBinary(request));
+		return StatWeightsTopUpPlan.fromBinary(result);
+	}
+
+	/** Runs on the worker at workerIndex when given and the pool still has it, else on the least busy worker. */
+	async raidSimAsync(request: RaidSimRequest, onProgress: WorkerProgressCallback, signals: SimSignals, workerIndex?: number): Promise<RaidSimResult> {
+		const worker = (workerIndex !== undefined && this.concurrencyPool.getWorkers()[workerIndex]) || this.getLeastBusyWorker();
 		// A bulk run issues one of these per candidate, and the request carries the merged
 		// database, so this must stay lazy.
 		worker.log(() => 'Raid sim request: ' + RaidSimRequest.toJsonString(request));
@@ -187,21 +191,16 @@ export class WorkerPool {
 
 	async bulkSimAsync(request: BulkSimRequest, onProgress: WorkerProgressCallback, signals: SimSignals): Promise<BulkSimResult> {
 		const worker = this.getLeastBusyWorker();
-		// A summary rather than the whole request even in dev: it carries every candidate's
-		// EquipmentSpec plus the merged database, which for a large run is a
-		// multi-hundred-megabyte string no console can usefully show.
-		worker.log(`Bulk sim request: candidates=${request.candidates.length} optimizedCandidates=${request.optimizedCandidates.length}`);
+		// A summary rather than the whole request even in dev: it carries the merged database,
+		// a string no console can usefully show.
+		worker.log(`Bulk sim request: candidates=${request.candidates.length}`);
 		const id = request.requestId;
 
 		const iterations = request.baseRequest?.simOptions?.iterations ?? 3000;
 		const result = await this.doAsyncRequest(SimRequest.bulkSimAsync, BulkSimRequest.toBinary(request), id, worker, onProgress, iterations, signals);
 
 		const bulkSimResult = result.finalBulkSimResult!;
-		worker.log(
-			`Bulk sim result: topResults=${bulkSimResult.topResults.length} optimizedCandidates=${bulkSimResult.optimizedCandidates.length} error=${
-				bulkSimResult.error?.message ?? 'none'
-			}`,
-		);
+		worker.log(`Bulk sim result: topResults=${bulkSimResult.topResults.length} error=${bulkSimResult.error?.message ?? 'none'}`);
 		return bulkSimResult;
 	}
 
@@ -215,9 +214,14 @@ export class WorkerPool {
 		return BulkCandidatesResult.fromBinary(result);
 	}
 
+	/** Each split under its own id when the request has one, as a worker keys its runs by id and may be handed two splits of a sim. */
 	async raidSimRequestSplit(request: RaidSimRequestSplitRequest): Promise<RaidSimRequestSplitResult> {
-		const result = await this.makeApiCall(SimRequest.raidSimRequestSplit, RaidSimRequestSplitRequest.toBinary(request));
-		return RaidSimRequestSplitResult.fromBinary(result);
+		const result = RaidSimRequestSplitResult.fromBinary(
+			await this.makeApiCall(SimRequest.raidSimRequestSplit, RaidSimRequestSplitRequest.toBinary(request)),
+		);
+		const parent = request.request?.requestId;
+		if (parent) result.requests.forEach((split, i) => (split.requestId = `${parent}-${i}`));
+		return result;
 	}
 
 	async raidSimResultCombination(request: RaidSimResultCombinationRequest): Promise<RaidSimResult> {

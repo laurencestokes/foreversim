@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"go/format"
+	"io"
+	"maps"
 	"math"
 	"regexp"
 	"sort"
@@ -37,7 +39,7 @@ type rankLadder struct {
 	Field string
 	Ranks map[int32]int32
 
-	// What each rank's effects are worth, keyed by rank and then by the client's EffectIndex. Set
+	// What each rank's effects are worth, keyed by rank and then by the game files' EffectIndex. Set
 	// only on a ladder the talent tree supplied, where every rank is the same spell and the numbers
 	// sit on the tree's curves rather than on a spell per rank. Nil means the rank's own spell states
 	// its numbers, which is what every "Rank N" family does.
@@ -45,7 +47,7 @@ type rankLadder struct {
 }
 
 // One talent as the tree states it: a single spell, the rank cap the game enforces, and the value
-// each rank gives. The rank spells the legacy Talent table still lists are gone from this client -
+// each rank gives. The rank spells the legacy Talent table still lists are gone from the game files -
 // Anticipation's 12750-12753 have no row in SpellName, SpellEffect or SpellMisc - so the tree is the
 // only place a talent's ranks are described.
 type traitLadder struct {
@@ -61,7 +63,7 @@ func classMaskOf(class dbc.DbcClass) int {
 }
 
 // The Go identifier a family is reached by: "Shadow Word: Pain" -> ShadowWordPain. A "(DND)" suffix is
-// the client's do-not-display marker, not part of the name.
+// the game files' do-not-display marker, not part of the name.
 func fieldNameOf(spellName string) string {
 	spellName = strings.TrimSuffix(spellName, " (DND)")
 	var b strings.Builder
@@ -90,16 +92,147 @@ func fieldNameOf(spellName string) string {
 	return name
 }
 
+// The spells that belong to a Season of Discovery rune and to nothing a Forever character can learn.
+// A spell is one when an "Engrave <slot> - <rune>" spell reaches it and no SkillLineAbility row
+// outside the rune lines 2851 and 2853 teaches it on a trainer (AcquireMethod 0) or on level (2):
+// Shadow Cleave 403835 is reached through Engrave Gloves - Metamorphosis 403938, its enchant's
+// Metamorphosis 403789 and that aura's action bar override, and its only rows are grants. A rune
+// ability a trainer also teaches - Victory Rush 402927, Incinerate 412758 - is Forever's, and so is
+// anything a talent reaches, which keeps Primal Bite 407995.
+//
+// The spell an override on a rune ability replaces is the rune's own when it does nothing itself: a
+// dummy effect and no description. Metamorphosis : Demon Charge 412783 is the one such spell with a
+// level row, on Demonology with no class bit, and it only stands on the action bar for Metamorphosis
+// to swap into Demon Charge 412788.
+func loadRuneOnlySpells(db *sql.DB) (map[int32]bool, error) {
+	fromRune, err := grantClosure(db, `SELECT ID FROM SpellName WHERE Name_lang LIKE 'Engrave % - %'`)
+	if err != nil {
+		return nil, err
+	}
+	fromTalent, err := grantClosure(db, `SELECT SpellID FROM TraitDefinition WHERE SpellID > 0`)
+	if err != nil {
+		return nil, err
+	}
+	trained, err := LoadRows(db, `
+		SELECT DISTINCT Spell FROM SkillLineAbility
+		WHERE AcquireMethod IN (0, ?) AND SkillLine NOT IN (2851, 2853)`,
+		scanSpellID, acquireOnLevel)
+	if err != nil {
+		return nil, err
+	}
+
+	runeOnly := map[int32]bool{}
+	for id := range fromRune {
+		runeOnly[id] = true
+	}
+	for _, id := range trained {
+		delete(runeOnly, id)
+	}
+
+	placeholders, err := LoadRows(db, fmt.Sprintf(`
+		SELECT o.SpellID, s.ID
+		FROM SpellEffect o
+		JOIN Spell s ON s.ID = o.EffectMiscValue_0
+		WHERE o.EffectAura = %d AND COALESCE(s.Description_lang, '') = ''
+		AND NOT EXISTS (SELECT 1 FROM SpellEffect e WHERE e.SpellID = s.ID AND e.Effect != %d)`,
+		dbcenums.A_OVERRIDE_ACTIONBAR_SPELLS, dbcenums.E_DUMMY),
+		func(r *sql.Rows) ([2]int32, error) {
+			var pair [2]int32
+			return pair, r.Scan(&pair[0], &pair[1])
+		})
+	if err != nil {
+		return nil, err
+	}
+	for _, pair := range placeholders {
+		if fromRune[pair[0]] {
+			runeOnly[pair[1]] = true
+		}
+	}
+
+	for id := range fromTalent {
+		delete(runeOnly, id)
+	}
+	return runeOnly, nil
+}
+
+// The seed spells and every spell they reach within six steps: an item enchant (Effect 53 or 54)
+// reaches the spells its SpellItemEnchantment names, an action bar override the ability it puts on the
+// bar, and a trigger its target.
+func grantClosure(db *sql.DB, seedQuery string) (map[int32]bool, error) {
+	ids, err := LoadRows(db, fmt.Sprintf(`
+		WITH RECURSIVE
+		seed(sid) AS (%s),
+		ench(eid, arg) AS (
+			SELECT ID, EffectArg_0 FROM SpellItemEnchantment WHERE EffectArg_0 > 0
+			UNION SELECT ID, EffectArg_1 FROM SpellItemEnchantment WHERE EffectArg_1 > 0
+			UNION SELECT ID, EffectArg_2 FROM SpellItemEnchantment WHERE EffectArg_2 > 0),
+		reach(sid, depth) AS (
+			SELECT sid, 0 FROM seed
+			UNION
+			SELECT ench.arg, r.depth + 1 FROM reach r
+			JOIN SpellEffect se ON se.SpellID = r.sid AND se.Effect IN (%d, %d)
+			JOIN ench ON ench.eid = se.EffectMiscValue_0
+			WHERE r.depth < 6
+			UNION
+			SELECT CAST(se.EffectBasePointsF AS INTEGER), r.depth + 1 FROM reach r
+			JOIN SpellEffect se ON se.SpellID = r.sid AND se.EffectAura = %d AND se.EffectBasePointsF > 0
+			WHERE r.depth < 6
+			UNION
+			SELECT se.EffectTriggerSpell, r.depth + 1 FROM reach r
+			JOIN SpellEffect se ON se.SpellID = r.sid AND se.EffectTriggerSpell > 0
+			WHERE r.depth < 6)
+		SELECT DISTINCT sid FROM reach`,
+		seedQuery, dbcenums.E_ENCHANT_ITEM, dbcenums.E_ENCHANT_ITEM_TEMPORARY, dbcenums.A_OVERRIDE_ACTIONBAR_SPELLS),
+		scanSpellID)
+	if err != nil {
+		return nil, err
+	}
+	set := make(map[int32]bool, len(ids))
+	for _, id := range ids {
+		set[id] = true
+	}
+	return set, nil
+}
+
+func scanSpellID(r *sql.Rows) (int32, error) {
+	var id int32
+	return id, r.Scan(&id)
+}
+
+// A family is a rune's when every spell it could resolve to is.
+func runeOnlyFamily(byRank map[int32][]rankCandidate, runeOnly map[int32]bool) bool {
+	if len(byRank) == 0 {
+		return false
+	}
+	for _, cands := range byRank {
+		for _, c := range cands {
+			if !runeOnly[c.SpellID] {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // Every family a class can learn, from two sources: every spell in one of the class's skill lines
-// whose subtext reads "Rank N", "Shapeshift" or is empty (a single-rank ability like Whirlwind or Cat
-// Form is its own rank 1), and every talent in the class's tree. Nothing hand-maintained.
-func discoverLadders(db *sql.DB, class dbc.DbcClass, treeID int) ([]rankLadder, []string, []string, error) {
+// whose subtext reads "Rank N", "Shapeshift", "Summon" or is empty (a single-rank ability like
+// Whirlwind, Cat Form or Summon Imp is its own rank 1), and every talent in the class's tree. Nothing
+// hand-maintained. A family every spell of which is in runeOnly is a Season of Discovery rune ability
+// and is left out.
+func discoverLadders(db *sql.DB, class dbc.DbcClass, treeID int, runeOnly map[int32]bool) ([]rankLadder, []string, []string, error) {
 	mask := classMaskOf(class)
 
 	exclusive, err := exclusiveSkillLines(db, mask)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	scaling := petScalingSpells[dbc.ClassNameFromDBC(class)]
+	petLines, err := petSkillLines(db, scaling)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	owned := maps.Clone(exclusive)
+	maps.Copy(owned, petLines)
 
 	// The Defense skill line carries the one-class passives that open a counterattack window - Offensive
 	// State (DND) fires the 5 s Overpower aura 1282733 on a melee hit, Defensive State (DND) the Revenge
@@ -117,11 +250,12 @@ func discoverLadders(db *sql.DB, class dbc.DbcClass, treeID int) ([]rankLadder, 
 			FROM SkillLineAbility sla2
 			JOIN SkillLine sl2 ON sl2.ID = sla2.SkillLine AND sl2.CategoryID = 7
 			WHERE (sla2.ClassMask & ?) != 0
-		) OR (sla.SkillLine = ? AND sla.ClassMask = ? AND sla.AcquireMethod = ?))
-		AND (s.NameSubtext_lang LIKE 'Rank %' OR s.NameSubtext_lang IN ('', 'Shapeshift'))
+		) OR (sla.SkillLine = ? AND sla.ClassMask = ? AND sla.AcquireMethod = ?)
+		OR sla.SkillLine IN (`+petSkillLinesQuery+`))
+		AND (s.NameSubtext_lang LIKE 'Rank %' OR s.NameSubtext_lang IN ('', 'Shapeshift', 'Summon'))
 		AND sla.SkillLine NOT IN (2851, 2853)
 		AND NOT EXISTS (SELECT 1 FROM SpellEffect se WHERE se.SpellID = sla.Spell AND se.EffectAura = ?)
-		ORDER BY n.Name_lang, sla.Spell`, dbcenums.ATTR_PASSIVE, mask, dbc.SkillLineDefense, mask, acquireOnLevel, dbcenums.A_MOUNTED)
+		ORDER BY n.Name_lang, sla.Spell`, dbcenums.ATTR_PASSIVE, mask, dbc.SkillLineDefense, mask, acquireOnLevel, scaling, dbcenums.A_MOUNTED)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -178,6 +312,17 @@ func discoverLadders(db *sql.DB, class dbc.DbcClass, treeID int) ([]rankLadder, 
 		return nil, nil, nil, err
 	}
 
+	imbues, err := discoverImbueFamilies(db, exclusive)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	for name, byRank := range imbues {
+		if byName[name] != nil {
+			return nil, nil, nil, fmt.Errorf("%s: both a class ability and a crafted imbue carry the name", name)
+		}
+		byName[name] = byRank
+	}
+
 	traits, traitSkipped, traitPartial, err := discoverTraitLadders(db, treeID)
 	if err != nil {
 		return nil, nil, nil, err
@@ -212,6 +357,12 @@ func discoverLadders(db *sql.DB, class dbc.DbcClass, treeID int) ([]rankLadder, 
 	taken := map[string]string{}
 
 	for _, name := range names {
+		_, talent := traits[name]
+		_, talentSkipped := traitSkipped[name]
+		if !talent && !talentSkipped && runeOnlyFamily(byName[name], runeOnly) {
+			skipped = append(skipped, fmt.Sprintf("%s: Season of Discovery rune ability", name))
+			continue
+		}
 		field := fieldNameOf(name)
 		if field == "" {
 			skipped = append(skipped, fmt.Sprintf("%s: no usable Go identifier", name))
@@ -225,7 +376,7 @@ func discoverLadders(db *sql.DB, class dbc.DbcClass, treeID int) ([]rankLadder, 
 		var ladder map[int32]int32
 		var points map[int32]map[int32]float64
 		var resolveErr error
-		if claimedByClass(byName[name], mask, exclusive) {
+		if claimedByClass(byName[name], mask, owned) {
 			ladder, resolveErr = resolveLadder(db, name, byName[name], mask)
 		}
 
@@ -263,13 +414,68 @@ func discoverLadders(db *sql.DB, class dbc.DbcClass, treeID int) ([]rankLadder, 
 	return ladders, skipped, partial, nil
 }
 
+// A trailing roman numeral on a crafted imbue's name: "Deadly Poison IV", "Occult Poison I".
+var imbueRankNumeral = regexp.MustCompile(` (?:I|II|III|IV|V|VI|VII|VIII|IX|X)$`)
+
+// The weapon imbues a class crafts, by family and rank, each rank the spell its enchant casts off the
+// weapon's hits. Poisons sit in skill line 40, outside the class category, and its rows are recipes:
+// Instant Poison VI 11343 creates item 8928, whose use spell puts enchant 625 on the weapon, and the
+// enchant's combat spell slot casts 11337 - the spell the sim registers. The use spell's effect is
+// E_360 on the trained poisons and E_ENCHANT_ITEM_TEMPORARY on the newer ones. The numeral in the
+// recipe's name is its rank, so the family is the name without it; a recipe with no rank subtext is
+// rank 1. Only lines no other class appears in are read, and a recipe whose chain ends in no combat
+// spell - Blinding Powder is a reagent - is no imbue.
+func discoverImbueFamilies(db *sql.DB, exclusive map[int32]bool) (map[string]map[int32][]rankCandidate, error) {
+	families := map[string]map[int32][]rankCandidate{}
+	for line := range exclusive {
+		rows, err := db.Query(enchantSlotsCTE+fmt.Sprintf(`
+			SELECT DISTINCT n.Name_lang, s.NameSubtext_lang, sla.ClassMask, sla.AcquireMethod, slot.SpellID
+			FROM SkillLineAbility sla
+			JOIN SpellName n ON n.ID = sla.Spell
+			JOIN Spell s ON s.ID = sla.Spell
+			JOIN SpellEffect recipe ON recipe.SpellID = sla.Spell AND recipe.Effect = %d
+			JOIN ItemXItemEffect x ON x.ItemID = recipe.EffectItemType
+			JOIN ItemEffect ie ON ie.ID = x.ItemEffectID
+			JOIN SpellEffect imbue ON imbue.SpellID = ie.SpellID AND imbue.Effect IN (%d, %d)
+			JOIN slots slot ON slot.ID = imbue.EffectMiscValue_0 AND slot.Effect = %d AND slot.SpellID > 0
+			WHERE sla.SkillLine = ?`,
+			dbcenums.E_CREATE_ITEM, dbcenums.E_ENCHANT_ITEM_TEMPORARY, dbcenums.E_360, dbc.ITEM_ENCHANTMENT_COMBAT_SPELL), line)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var name, subtext string
+			c := rankCandidate{SkillLine: line, Rank: 1}
+			if err := rows.Scan(&name, &subtext, &c.ClassMask, &c.AcquireMethod, &c.SpellID); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			if m := rankSubtext.FindStringSubmatch(subtext); m != nil {
+				rank, _ := strconv.Atoi(m[1])
+				c.Rank = int32(rank)
+			}
+			family := imbueRankNumeral.ReplaceAllString(name, "")
+			if families[family] == nil {
+				families[family] = map[int32][]rankCandidate{}
+			}
+			families[family][c.Rank] = append(families[family][c.Rank], c)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		rows.Close()
+	}
+	return families, nil
+}
+
 // A $<spellID><token> in a description: "$12880d" on Enrage, "$12976s1" on Last Stand.
 var descriptionSpellRef = regexp.MustCompile(`\$(?:/\d+;)?(\d{4,7})[a-z]`)
 
 // The spells a rank triggers or reads its tooltip from: an EffectTriggerSpell edge (Intercept's
 // stun 20615, Intimidating Shout's fear 20511), a $<id> token (Enrage's buff 12880, Flurry's
-// 12966, Last Stand's 12976) or an overrides.HandTriggers entry. In id order, without the rank itself and
-// without ids the client has no spell for.
+// 12966, Last Stand's 12976) or an overrides.HandTriggers entry, which drops the $<id> it replaces. In id
+// order, without the rank itself and without ids the game files have no spell for.
 func triggeredSpells(db *sql.DB, spellID int32) ([]int32, error) {
 	seen := map[int32]bool{}
 	for _, id := range handTriggered(spellID) {
@@ -296,6 +502,9 @@ func triggeredSpells(db *sql.DB, spellID int32) ([]int32, error) {
 	for _, m := range descriptionSpellRef.FindAllStringSubmatch(desc, -1) {
 		id, _ := strconv.Atoi(m[1])
 		seen[int32(id)] = true
+	}
+	for _, id := range handReplaced(spellID) {
+		delete(seen, id)
 	}
 	delete(seen, spellID)
 
@@ -379,13 +588,17 @@ func triggeredRows(db *sql.DB, l rankLadder) ([]triggeredRow, error) {
 
 // Every spell a node of the class's Forever tree defines.
 func treeSpellIDs(db *sql.DB, treeID int) (map[int32]bool, error) {
+	unparked, err := unparkedTraitNodes(db)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := db.Query(`
 		SELECT DISTINCT COALESCE(d.SpellID, 0)
 		FROM TraitNode tn
 		JOIN TraitNodeXTraitNodeEntry x ON x.TraitNodeID = tn.ID
 		JOIN TraitNodeEntry e ON e.ID = x.TraitNodeEntryID
 		JOIN TraitDefinition d ON d.ID = e.TraitDefinitionID
-		WHERE tn.TraitTreeID = ?`, treeID)
+		WHERE tn.TraitTreeID = ? AND `+unparked, treeID)
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +616,7 @@ func treeSpellIDs(db *sql.DB, treeID int) (map[int32]bool, error) {
 	return out, rows.Err()
 }
 
-// The names the client's legacy Talent table still carries, tree or no tree.
+// The names the game files' legacy Talent table still carries, tree or no tree.
 func legacyTalentNames(db *sql.DB) (map[string]bool, error) {
 	rows, err := db.Query(`SELECT DISTINCT n.Name_lang FROM Talent t JOIN SpellName n ON n.ID = t.SpellRank_0`)
 	if err != nil {
@@ -435,6 +648,10 @@ func keysOf[V any](m map[string]V) map[string]bool {
 // hold the top rank on some talents and a stale number on others, and 240 of the 640 curves in this
 // build disagree with them.
 func discoverTraitLadders(db *sql.DB, treeID int) (map[string]traitLadder, map[string]string, map[string]string, error) {
+	unparked, err := unparkedTraitNodes(db)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	rows, err := db.Query(`
 		SELECT DISTINCT d.ID, COALESCE(d.SpellID, 0), e.MaxRanks,
 		       COALESCE(NULLIF(sn.Name_lang, ''), d.OverrideName_lang, '')
@@ -443,7 +660,7 @@ func discoverTraitLadders(db *sql.DB, treeID int) (map[string]traitLadder, map[s
 		JOIN TraitNodeEntry e ON e.ID = x.TraitNodeEntryID
 		JOIN TraitDefinition d ON d.ID = e.TraitDefinitionID
 		LEFT JOIN SpellName sn ON sn.ID = d.SpellID
-		WHERE tn.TraitTreeID = ?
+		WHERE tn.TraitTreeID = ? AND `+unparked+`
 		ORDER BY d.ID`, treeID)
 	if err != nil {
 		return nil, nil, nil, err
@@ -477,7 +694,7 @@ func discoverTraitLadders(db *sql.DB, treeID int) (map[string]traitLadder, map[s
 		if d.Name == "" || d.SpellID == 0 {
 			continue
 		}
-		// A node appears once per entry, and the client keeps retired twins around, so a second
+		// A node appears once per entry, and the game files keep retired twins around, so a second
 		// definition on the same spell is the same talent and a second one on another spell is two
 		// talents the generated file could only reach by one name.
 		if first, ok := spellOf[d.Name]; ok {
@@ -490,20 +707,14 @@ func discoverTraitLadders(db *sql.DB, treeID int) (map[string]traitLadder, map[s
 		}
 		spellOf[d.Name] = d.SpellID
 
-		// A one-rank node usually grants an ability rather than describing a ladder - Hemorrhage and
-		// Water Shield are nodes on a spell the game teaches - and the one row it would yield names
-		// the node's spell, which is not the spell the ability's own ranks are keyed on. A one-rank
-		// node on a passive nothing teaches is the talent itself - Raging Blows, Vanguard - and
-		// yields its one row at the spell's base points.
-		oneRankPassive := false
+		// A one-rank node the game teaches grants an ability rather than describing a ladder. Hemorrhage
+		// is a node on a spell the trainer lists, and the one row it would yield names the node's
+		// spell, which is not the spell the ability's own ranks are keyed on. A one-rank node nothing
+		// teaches is the talent itself, whether or not the spell is passive: Raging Blows, Water
+		// Shield, and Berserk, whose spell is active and is not on a skill line. It yields its one
+		// row at the spell's base points.
+		oneRankUntaught := false
 		if d.MaxRanks <= 1 {
-			passive, err := SpellIsPassive(db, d.SpellID)
-			if err != nil {
-				return nil, nil, nil, err
-			}
-			if !passive {
-				continue
-			}
 			taught, err := taughtBySkillLine(db, d.SpellID)
 			if err != nil {
 				return nil, nil, nil, err
@@ -511,7 +722,7 @@ func discoverTraitLadders(db *sql.DB, treeID int) (map[string]traitLadder, map[s
 			if taught {
 				continue
 			}
-			oneRankPassive = true
+			oneRankUntaught = true
 		}
 
 		effects, err := effectIndicesOf(db, d.SpellID)
@@ -519,7 +730,7 @@ func discoverTraitLadders(db *sql.DB, treeID int) (map[string]traitLadder, map[s
 			return nil, nil, nil, err
 		}
 		if len(effects) == 0 {
-			skipped[d.Name] = fmt.Sprintf("the client states no effects for spell %d", d.SpellID)
+			skipped[d.Name] = fmt.Sprintf("the game files state no effects for spell %d", d.SpellID)
 			continue
 		}
 
@@ -545,7 +756,7 @@ func discoverTraitLadders(db *sql.DB, treeID int) (map[string]traitLadder, map[s
 		}
 
 		if len(points) == 0 {
-			if !oneRankPassive {
+			if !oneRankUntaught {
 				skipped[d.Name] = fmt.Sprintf("the talent tree states no per-rank value for spell %d", d.SpellID)
 				continue
 			}
@@ -630,6 +841,42 @@ func curveRanks(curve map[int32]float64, maxRanks int32) (map[int32]float64, boo
 		values[rank] = value
 	}
 	return values, true
+}
+
+// The pet scaling spell that marks a class's own pet skill lines. The warlock's demons learn their
+// abilities on those lines alone, with no class bit and no teacher row on a class line. The hunter's
+// pet abilities are taught on Beast Training and the families are read by discoverPetFamilies, so
+// the hunter has no entry. A line with no trained ability belongs to a pet no trainer or grimoire
+// teaches: the Infernal and Doomguard carry only passives, and the Felguard is a Season of Discovery
+// rune whose one leveled passive, Avoidance 427743, would otherwise reach the class file.
+var petScalingSpells = map[string]string{"Warlock": "Warlock Pet Scaling"}
+
+const petSkillLinesQuery = `
+	SELECT h.SkillLine FROM SkillLineAbility h
+	JOIN SpellName hn ON hn.ID = h.Spell
+	JOIN SkillLine hl ON hl.ID = h.SkillLine AND hl.CategoryID = 7 AND hl.DisplayName_lang LIKE 'Pet - %'
+	WHERE hn.Name_lang = ?
+	AND EXISTS (SELECT 1 FROM SkillLineAbility t WHERE t.SkillLine = h.SkillLine AND t.AcquireMethod = 0)`
+
+// The pet skill lines that carry the scaling spell; none for an empty name.
+func petSkillLines(db *sql.DB, scaling string) (map[int32]bool, error) {
+	lines := map[int32]bool{}
+	if scaling == "" {
+		return lines, nil
+	}
+	rows, err := db.Query(petSkillLinesQuery, scaling)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var line int32
+		if err := rows.Scan(&line); err != nil {
+			return nil, err
+		}
+		lines[line] = true
+	}
+	return lines, rows.Err()
 }
 
 // The skill lines only this class appears in. 11 are shared: "Holy" carries both the paladin and the
@@ -778,11 +1025,24 @@ func resolveLadder(db *sql.DB, name string, byRank map[int32][]rankCandidate, ma
 		}
 
 		// Holy Shock is one name over three spells per rank: a dummy the player casts, plus a damage
-		// and a heal spell the client never exposes. Only the castable one carries a SpellPower row,
+		// and a heal spell never exposed in game. Only the castable one carries a SpellPower row,
 		// and it is the one the sim registers, so that is the tie-break.
 		castable, err := castableOf(db, ids)
 		if err != nil {
 			return nil, err
+		}
+		if castable == 0 && len(chosen) < len(cands) {
+			// Holy Shock's ranks 2-4 put the class bit on the damage and heal spells and none on the
+			// castable one, so the class filter above keeps only the two never exposed. The castable
+			// one is still the rank's when it is the only one of all the rank's spells.
+			all := map[int32]bool{}
+			for _, c := range lowestAcquireMethod(cands) {
+				all[c.SpellID] = true
+			}
+			castable, err = castableOf(db, all)
+			if err != nil {
+				return nil, err
+			}
 		}
 		if castable == 0 {
 			// Judgement of Command is the same dispatcher shape with no mana on either half - the
@@ -790,6 +1050,17 @@ func resolveLadder(db *sql.DB, name string, byRank map[int32][]rankCandidate, ma
 			// E_SCHOOL_DAMAGE can: the dummy is what the seal triggers and what the sim registers,
 			// and the damage spell rides along as a sibling, exactly as Holy Shock does.
 			castable, err = dispatcherOf(db, ids)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if castable == 0 {
+			// Natural Armor is one name over two full ladders of the hunter's, both on class skill
+			// lines: the rank the trainer teaches the hunter, which is an E_LEARN_SPELL aimed at
+			// the pet, and the passive the pet then has. The teaching rank is the one the ladder
+			// wants, and the passive is its triggered spell, as every other Beast Training row
+			// already reads; the passive is only ever reachable through its teacher.
+			castable, err = teacherOf(db, ids)
 			if err != nil {
 				return nil, err
 			}
@@ -830,7 +1101,7 @@ func resolveLadder(db *sql.DB, name string, byRank map[int32][]rankCandidate, ma
 }
 
 // The one spell among these whose first effect is a dummy, when exactly one other is a direct
-// damage effect. That pairing is the client's dispatcher shape: the dummy is the spell the game
+// damage effect. That pairing is the game files' dispatcher shape: the dummy is the spell the game
 // grants and triggers, the damage spell is never exposed. Anything else returns 0 rather than
 // guessing - two talent auras that merely differ somewhere are not a dispatcher.
 func dispatcherOf(db *sql.DB, ids map[int32]bool) (int32, error) {
@@ -864,6 +1135,36 @@ func dispatcherOf(db *sql.DB, ids map[int32]bool) (int32, error) {
 		return 0, nil
 	}
 	return dummy, nil
+}
+
+// The one spell among these whose trigger edges reach every other, or 0 when none does.
+func teacherOf(db *sql.DB, ids map[int32]bool) (int32, error) {
+	var found int32
+	for id := range ids {
+		taught, err := triggeredSpells(db, id)
+		if err != nil {
+			return 0, err
+		}
+		reaches := map[int32]bool{}
+		for _, t := range taught {
+			reaches[t] = true
+		}
+		all := true
+		for other := range ids {
+			if other != id && !reaches[other] {
+				all = false
+				break
+			}
+		}
+		if !all {
+			continue
+		}
+		if found != 0 {
+			return 0, nil
+		}
+		found = id
+	}
+	return found, nil
 }
 
 // The one spell among these that has a mana cost, or 0 when that does not single one out.
@@ -920,9 +1221,33 @@ func overrideReplacements(db *sql.DB, ids map[int32]bool) (map[int32]bool, error
 
 // Every file the generator writes, by the path it is written to, rendered and none written: what
 // happens to them is writeSpellDataFiles' business, and -check's business is that nothing does.
-func renderSpellDataFiles(helper *DBHelper) (map[string][]byte, *storeInputs, error) {
+//
+// A spell data group only does not take keeps the committed inputs' rows, and a class it does not take
+// keeps its committed class file, which is therefore not among the files returned. committed is nil
+// where no inputs are committed yet.
+func renderSpellDataFiles(helper *DBHelper, only SpellDataGroups, committed *storeInputs) (map[string][]byte, *storeInputs, error) {
 	if err := RequireSpellCastTimes(helper); err != nil {
 		return nil, nil, err
+	}
+	version, err := buildVersion(helper)
+	if err != nil {
+		return nil, nil, err
+	}
+	if committed == nil && !only.all() {
+		return nil, nil, fmt.Errorf("%s is missing, so there is nothing to keep the groups not taken from", spellStoreInputsPath)
+	}
+	push, err := hotfixPush(helper)
+	if err != nil {
+		return nil, nil, err
+	}
+	if committed != nil {
+		if later := groupsOnALaterBuild(committed, only, version); len(later) > 0 {
+			return nil, nil, fmt.Errorf("the game files database is %s, and %s already record a later build: "+
+				"extract the later build, or leave those groups out", version, strings.Join(later, ", "))
+		}
+		if err := checkHotfixes(committed.Builds, committed.Hotfixes, only, version, push); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	// Rendered in full before anything is written, so a class that fails validation cannot leave half
@@ -937,51 +1262,55 @@ func renderSpellDataFiles(helper *DBHelper) (map[string][]byte, *storeInputs, er
 	}
 
 	rendered := map[string][]byte{}
+	extra := map[string][]byte{}
 
 	// The store carries every spell the class files are built from, so the discovery runs here and
 	// both consumers read the one result rather than each rediscovering the ladders.
-	var ladderIDs []int32
+	classRoots := map[string][]int32{}
+	runeOnly, err := loadRuneOnlySpells(helper.db)
+	if err != nil {
+		return nil, nil, err
+	}
 	for _, class := range dbc.Classes {
-		pkg := strings.ToLower(dbc.ClassNameFromDBC(class))
-		tree, ok := trees[classMaskOf(class)]
-		if !ok {
-			return nil, nil, fmt.Errorf("%s: the client database holds no talent tree for this class", pkg)
-		}
-		ladders, skipped, partial, err := discoverLadders(helper.db, class, tree)
+		pkg := classGroup(class)
+		out, files, roots, err := discoverClass(helper.db, class, pkg, trees, runeOnly)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%s: %w", pkg, err)
-		}
-		out, err := renderClassFile(helper.db, pkg, ladders, skipped, partial)
-		if err != nil {
-			return nil, nil, fmt.Errorf("%s: %w", pkg, err)
-		}
-		rendered[pkg] = out
-
-		for _, l := range ladders {
-			for _, id := range l.Ranks {
-				ladderIDs = append(ladderIDs, id)
+			// A class the run does not take keeps its committed rows and files. When the new build
+			// breaks its discovery, the class's own port fixes that.
+			if only.Takes(pkg) {
+				return nil, nil, err
 			}
+			fmt.Fprintf(progress, "spelldata: %s is not taken and keeps its committed rows: %v\n", pkg, err)
+			continue
 		}
-
-		// A node the ladders do not describe still grants a spell the sim registers - Hemorrhage is
-		// one - so every spell the tree defines is a root of the store.
-		treeSpells, err := treeSpellIDs(helper.db, tree)
-		if err != nil {
-			return nil, nil, fmt.Errorf("%s: %w", pkg, err)
-		}
-		for id := range treeSpells {
-			if id != 0 {
-				ladderIDs = append(ladderIDs, id)
-			}
+		classRoots[pkg] = roots
+		if only.Takes(pkg) {
+			rendered[pkg] = out
+			maps.Copy(extra, files)
 		}
 	}
 
-	// The client rows the store is built from are captured on the way through and handed back, so
+	// The game files rows the store is built from are captured on the way through and handed back, so
 	// the caller can write them next to the store and the regeneration can be checked without the
 	// database - see spelldata_inputs.go.
-	inputs, err := loadStoreInputs(helper.db, ladderIDs, trees)
+	inputs, err := loadStoreInputs(helper.db, classRoots, trees, version, push)
 	if err != nil {
 		return nil, nil, err
+	}
+	if !only.all() {
+		var notes []string
+		inputs, notes, err = mergeStoreInputs(committed, inputs, only, version)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, note := range notes {
+			fmt.Fprintf(progress, "spelldata: %s\n", note)
+		}
+	}
+	if committed != nil && progress != io.Discard {
+		for _, line := range changeReport(committed, inputs, only, version) {
+			fmt.Fprintf(progress, "spelldata: %s\n", line)
+		}
 	}
 	store, err := renderStore(inputs, namer)
 	if err != nil {
@@ -1004,10 +1333,98 @@ func renderSpellDataFiles(helper *DBHelper) (map[string][]byte, *storeInputs, er
 	for pkg, out := range rendered {
 		files[fmt.Sprintf("sim/%s/spell_data_auto_gen.go", pkg)] = out
 	}
+	for path, out := range extra {
+		files[path] = out
+	}
 	return files, inputs, nil
 }
 
-func renderClassFile(db *sql.DB, pkg string, ladders []rankLadder, skipped, partial []string) ([]byte, error) {
+// One class's file, the hunter's extra files by path, and the roots the class gives the store.
+func discoverClass(db *sql.DB, class dbc.DbcClass, pkg string, trees map[int]int,
+	runeOnly map[int32]bool) (out []byte, files map[string][]byte, roots []int32, err error) {
+	tree, ok := trees[classMaskOf(class)]
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("%s: the game files hold no talent tree for this class", pkg)
+	}
+	ladders, skipped, partial, err := discoverLadders(db, class, tree, runeOnly)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("%s: %w", pkg, err)
+	}
+	triggered, err := triggeredByField(db, ladders)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("%s: %w", pkg, err)
+	}
+	out, err = renderClassFile(pkg, ladders, triggered, skipped, partial)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("%s: %w", pkg, err)
+	}
+	files = map[string][]byte{}
+
+	// The hunter's pet families read the class's ladders, so they are discovered here, and their
+	// passives are roots the ladders do not reach.
+	if pkg == "hunter" {
+		families, familiesSkipped, err := discoverPetFamilies(db, ladders, triggered)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("%s pet families: %w", pkg, err)
+		}
+		petFile, err := renderPetFamiliesFile(families, familiesSkipped)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("%s pet families: %w", pkg, err)
+		}
+		files[fmt.Sprintf("sim/%s/pet_families_auto_gen.go", pkg)] = petFile
+		roots = append(roots, petFamilyRoots(families)...)
+
+		arrows, arrowsSkipped, err := discoverArrows(db)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("%s arrows: %w", pkg, err)
+		}
+		quivers, quiversSkipped, err := discoverQuivers(db)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("%s quivers: %w", pkg, err)
+		}
+		ammoFile, err := renderAmmoFile(arrows, quivers, append(arrowsSkipped, quiversSkipped...))
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("%s ammo: %w", pkg, err)
+		}
+		files[fmt.Sprintf("sim/%s/ammo_auto_gen.go", pkg)] = ammoFile
+	}
+
+	for _, l := range ladders {
+		for _, id := range l.Ranks {
+			roots = append(roots, id)
+		}
+	}
+
+	// A node the ladders do not describe still grants a spell the sim registers - Hemorrhage is
+	// one - so every spell the tree defines is a root of the store.
+	treeSpells, err := treeSpellIDs(db, tree)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("%s: %w", pkg, err)
+	}
+	for id := range treeSpells {
+		if id != 0 {
+			roots = append(roots, id)
+		}
+	}
+	return out, files, roots, nil
+}
+
+// The triggered table of every family that has one, by the family's field.
+func triggeredByField(db *sql.DB, ladders []rankLadder) (map[string][]triggeredRow, error) {
+	triggered := map[string][]triggeredRow{}
+	for _, l := range ladders {
+		rows, err := triggeredRows(db, l)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", l.Name, err)
+		}
+		if len(rows) > 0 {
+			triggered[l.Field] = rows
+		}
+	}
+	return triggered, nil
+}
+
+func renderClassFile(pkg string, ladders []rankLadder, triggered map[string][]triggeredRow, skipped, partial []string) ([]byte, error) {
 	// Named rather than dropped silently, so a family the resolver could not make sense of is visible
 	// here instead of merely absent.
 	var notGenerated strings.Builder
@@ -1026,17 +1443,6 @@ func renderClassFile(db *sql.DB, pkg string, ladders []rankLadder, skipped, part
 			fmt.Fprintf(&notGenerated, "//   %s\n", s)
 		}
 		notGenerated.WriteString("\n")
-	}
-
-	triggered := map[string][]triggeredRow{}
-	for _, l := range ladders {
-		rows, err := triggeredRows(db, l)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", l.Name, err)
-		}
-		if len(rows) > 0 {
-			triggered[l.Field] = rows
-		}
 	}
 
 	return renderLadderClassFile(pkg, ladders, triggered, notGenerated.String())

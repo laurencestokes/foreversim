@@ -55,6 +55,6 @@ func TestApplyZoneAreas(t *testing.T) {
 		t.Error("a single-zone group made Westfall a zone")
 	}
 	if _, present := zones[99999]; present {
-		t.Error("an area the client does not name became a zone")
+		t.Error("an area the game files do not name became a zone")
 	}
 }

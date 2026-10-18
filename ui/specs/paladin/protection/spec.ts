@@ -1,11 +1,11 @@
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { StatCapType } from '@generated/proto/api';
-import { APLRotation } from '@generated/proto/apl';
+import { APLRotation, APLRotation_Type } from '@generated/proto/apl';
 import { PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
-import { masterEpWeights } from '@sim/proto/master_ep_weights';
-import { StatCap, UnitStat } from '@sim/proto/stats';
+import { WeaponSkillGroup } from '@sim/player/weapon_skill_groups';
+import { StatCap, Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
 import * as Presets from './presets';
@@ -24,17 +24,14 @@ export default defineSpec<Spec.SpecProtectionPaladin>({
 	epStats: [
 		Stat.StatStamina,
 		Stat.StatStrength,
-		Stat.StatIntellect,
 		Stat.StatSpellDamage,
 		Stat.StatAgility,
 		Stat.StatAttackPower,
-		Stat.StatMeleeHitRating,
-		Stat.StatMeleeHasteRating,
-		Stat.StatMeleeCritRating,
+		Stat.StatHitRating,
+		Stat.StatHasteRating,
+		Stat.StatCritRating,
 		Stat.StatArmorPenetration,
 		Stat.StatExpertiseRating,
-		Stat.StatSpellHitRating,
-		Stat.StatSpellCritRating,
 		Stat.StatDefenseRating,
 		Stat.StatBlockRating,
 		Stat.StatBlockValue,
@@ -42,7 +39,7 @@ export default defineSpec<Spec.SpecProtectionPaladin>({
 		Stat.StatParryRating,
 		Stat.StatArmor,
 		Stat.StatBonusArmor,
-		Stat.StatExpertiseRating,
+		Stat.StatArmorNoMods,
 	],
 	epPseudoStats: [PseudoStat.PseudoStatMainHandDps],
 	// Reference stat against which to calculate EP. I think all classes use either spell power or attack power.
@@ -54,6 +51,7 @@ export default defineSpec<Spec.SpecProtectionPaladin>({
 			Stat.StatMana,
 			Stat.StatArmor,
 			Stat.StatBonusArmor,
+			Stat.StatArmorNoMods,
 			Stat.StatStamina,
 			Stat.StatStrength,
 			Stat.StatSpellDamage,
@@ -80,10 +78,11 @@ export default defineSpec<Spec.SpecProtectionPaladin>({
 			PseudoStat.PseudoStatExpertisePercent,
 		],
 	),
+	displayWeaponSkillGroups: [WeaponSkillGroup.Melee],
 
 	defaults: {
 		// Default equipped gear.
-		gear: Presets.DEFAULT_GEAR.gear,
+		gear: Presets.GEAR_DEFAULT.gear,
 		softCapBreakpoints: [
 			StatCap.fromPseudoStat(PseudoStat.PseudoStatReducedCritTakenPercent, {
 				breakpoints: [5.6],
@@ -92,26 +91,7 @@ export default defineSpec<Spec.SpecProtectionPaladin>({
 			}),
 		],
 		// Default EP weights for sorting gear in the gear picker.
-		// Values for now are pre-Cata initial WAG
-		// Master's weights (percent stats per 1%), in our ratings.
-		epWeights: masterEpWeights({
-			Strength: 3.23,
-			Agility: 18.57,
-			Intellect: 0.05,
-			SpellPower: 0.38,
-			HolyPower: 0.29,
-			SpellHit: 8.2,
-			SpellCrit: 3.35,
-			AttackPower: 1.0,
-			MeleeCrit: 39.75,
-			Armor: 1.0,
-			Defense: 29.97,
-			BlockValue: 17.72,
-			Dodge: 219.45,
-			Parry: 217.72,
-			BonusArmor: 0.96,
-			MainHandDps: 10.12,
-		}),
+		epWeights: new Stats(),
 		// Default consumes settings.
 		consumables: Presets.DefaultConsumables,
 		// Default talents.
@@ -124,6 +104,8 @@ export default defineSpec<Spec.SpecProtectionPaladin>({
 		partyBuffs: Presets.DefaultPartyBuffs,
 		individualBuffs: Presets.DefaultIndividualBuffs,
 		debuffs: Presets.DefaultDebuffs,
+		rotationType: APLRotation_Type.TypeAPL,
+		aplRotation: Presets.APL_PRESET.rotation.rotation!,
 	},
 
 	// IconInputs to include in the 'Player' section on the settings tab.
@@ -134,7 +116,6 @@ export default defineSpec<Spec.SpecProtectionPaladin>({
 	// Inputs to include in the 'Other' section on the settings tab.
 	otherInputs: {
 		inputs: [
-			OtherInputs.TotemTwisting,
 			OtherInputs.InputDelay,
 			OtherInputs.TankAssignment,
 			OtherInputs.InspirationUptime,
@@ -155,16 +136,14 @@ export default defineSpec<Spec.SpecProtectionPaladin>({
 	presets: {
 		epWeights: [],
 		// Preset talents that the user can quickly select.
-		talents: Presets.TalentPresets,
+		talents: [Presets.DefaultTalents],
 		// Preset rotations that the user can quickly select.
-		rotations: [Presets.APL_P5, Presets.APL_PRESET],
+		rotations: [Presets.APL_PRESET],
 		// Preset gear configurations that the user can quickly select.
-		gear: Presets.GEAR_PRESETS,
+		gear: [Presets.GEAR_DEFAULT],
 	},
 
 	autoRotation: (_player: Player<Spec.SpecProtectionPaladin>): APLRotation => {
-		return Presets.APL_P5.rotation.rotation!;
+		return Presets.APL_PRESET.rotation.rotation!;
 	},
-
-	reforge: {},
 });

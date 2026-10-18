@@ -17,45 +17,29 @@ func _() {
 	_ = x[CallbackOnCastComplete-64]
 	_ = x[CallbackOnApplyEffects-128]
 	_ = x[CallbackOnPeriodicDamageTaken-256]
-	_ = x[CallbackLast-512]
+	_ = x[CallbackOnCastResult-512]
+	_ = x[CallbackLast-1024]
 }
 
-const (
-	_AuraCallback_name_0 = "CallbackEmpty"
-	_AuraCallback_name_1 = "CallbackOnSpellHitDealt"
-	_AuraCallback_name_2 = "CallbackOnSpellHitTaken"
-	_AuraCallback_name_3 = "CallbackOnPeriodicDamageDealt"
-	_AuraCallback_name_4 = "CallbackOnHealDealt"
-	_AuraCallback_name_5 = "CallbackOnPeriodicHealDealt"
-	_AuraCallback_name_6 = "CallbackOnCastComplete"
-	_AuraCallback_name_7 = "CallbackOnApplyEffects"
-	_AuraCallback_name_8 = "CallbackOnPeriodicDamageTaken"
-	_AuraCallback_name_9 = "CallbackLast"
-)
+const _AuraCallback_name = "CallbackEmptyCallbackOnSpellHitDealtCallbackOnSpellHitTakenCallbackOnPeriodicDamageDealtCallbackOnHealDealtCallbackOnPeriodicHealDealtCallbackOnCastCompleteCallbackOnApplyEffectsCallbackOnPeriodicDamageTakenCallbackOnCastResultCallbackLast"
+
+var _AuraCallback_map = map[AuraCallback]string{
+	0:    _AuraCallback_name[0:13],
+	2:    _AuraCallback_name[13:36],
+	4:    _AuraCallback_name[36:59],
+	8:    _AuraCallback_name[59:88],
+	16:   _AuraCallback_name[88:107],
+	32:   _AuraCallback_name[107:134],
+	64:   _AuraCallback_name[134:156],
+	128:  _AuraCallback_name[156:178],
+	256:  _AuraCallback_name[178:207],
+	512:  _AuraCallback_name[207:227],
+	1024: _AuraCallback_name[227:239],
+}
 
 func (i AuraCallback) String() string {
-	switch {
-	case i == 0:
-		return _AuraCallback_name_0
-	case i == 2:
-		return _AuraCallback_name_1
-	case i == 4:
-		return _AuraCallback_name_2
-	case i == 8:
-		return _AuraCallback_name_3
-	case i == 16:
-		return _AuraCallback_name_4
-	case i == 32:
-		return _AuraCallback_name_5
-	case i == 64:
-		return _AuraCallback_name_6
-	case i == 128:
-		return _AuraCallback_name_7
-	case i == 256:
-		return _AuraCallback_name_8
-	case i == 512:
-		return _AuraCallback_name_9
-	default:
-		return "AuraCallback(" + strconv.FormatInt(int64(i), 10) + ")"
+	if str, ok := _AuraCallback_map[i]; ok {
+		return str
 	}
+	return "AuraCallback(" + strconv.FormatInt(int64(i), 10) + ")"
 }

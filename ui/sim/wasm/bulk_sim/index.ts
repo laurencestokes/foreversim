@@ -8,7 +8,6 @@ import {
 	ErrorOutcomeType,
 	ProgressMetrics,
 } from '@generated/proto/api';
-import { EquipmentSpec } from '@generated/proto/common';
 
 import { SimSignals } from '../../sim_signal_manager';
 import { isDevMode } from '../../utils/env';
@@ -16,21 +15,15 @@ import { WorkerPool, WorkerProgressCallback } from '../../workers/worker_pool';
 import { BulkSimCandidateTransport, runSingleBulkSimCandidate } from './batch';
 import { ConcurrentBulkSimStageCarryOver, newBulkSimStageCarryOver } from './carry_over';
 import { BULK_SIM_DEFAULT_TOP_RESULTS } from './constants_auto_gen';
-import { shouldUseLegacyBulkSim } from './estimate';
+import { bulkSimHighStageFloor, shouldUseSingleStageBulkSim } from './estimate';
 import { bulkSimCandidateResultToProto } from './merge';
 import { formatBulkSimStageSummary } from './progress';
-import { optimizeReforgeCandidates } from './reforge';
 import { bulkSimStageConfigs, runConcurrentBulkSimFinalistStage, runConcurrentBulkSimStage, shouldRunBulkSimStage } from './stage';
 import { bulkSimPairedDpsError, selectBulkSimSurvivors, topBulkSimResults } from './statistics';
 import { ConcurrentBulkSimCandidateResult, getBulkSimBaselineGear } from './types';
 
-const makeAndSendBulkSimError = (
-	err: string | ErrorOutcome,
-	onProgress: WorkerProgressCallback,
-	optimizedCandidates: BulkGearCandidate[] = [],
-): BulkSimResult => {
+const makeAndSendBulkSimError = (err: string | ErrorOutcome, onProgress: WorkerProgressCallback): BulkSimResult => {
 	const errRes = BulkSimResult.create();
-	errRes.optimizedCandidates = optimizedCandidates.map(candidate => BulkGearCandidate.clone(candidate));
 	if (typeof err === 'string') {
 		console.error(err);
 		errRes.error = ErrorOutcome.create({ message: err });
@@ -58,7 +51,6 @@ export const runConcurrentBulkSim = async (
 	workerPool: WorkerPool,
 	onProgress: WorkerProgressCallback,
 	signals: SimSignals,
-	onReforgeCandidateOptimized?: (candidate: BulkGearCandidate, optimizedGear: EquipmentSpec) => void | Promise<void>,
 ): Promise<BulkSimResult> => {
 	if (isDevMode()) {
 		console.log(`Running bulk sim using ${workerPool.getNumWorkers()} wasm workers per gear sim.`);
@@ -68,13 +60,6 @@ export const runConcurrentBulkSim = async (
 	if (validationError) return makeAndSendBulkSimError(validationError, onProgress);
 
 	const startedAt = new Date().getTime();
-	if (request.reforgeRequest) {
-		const reforgeResult = await optimizeReforgeCandidates(request, workerPool, onProgress, signals, onReforgeCandidateOptimized);
-		request = reforgeResult.request;
-		if (reforgeResult.aborted) {
-			return makeAndSendBulkSimError(ErrorOutcome.create({ type: ErrorOutcomeType.ErrorOutcomeAborted }), onProgress, request.optimizedCandidates);
-		}
-	}
 	const simmingStartedAt = new Date().getTime();
 	let candidates = request.candidates
 		.filter(candidate => candidate.gear)
@@ -86,7 +71,7 @@ export const runConcurrentBulkSim = async (
 		const baseline = await runSingleBulkSimCandidate(
 			request,
 			{ index: -1, gear: getBulkSimBaselineGear(request) },
-			request.baseRequest!.simOptions!.iterations,
+			bulkSimHighStageFloor(),
 			workerPool,
 			signals,
 			BulkSimCandidateTransport.SplitAcrossWorkers,
@@ -103,7 +88,7 @@ export const runConcurrentBulkSim = async (
 	let latestBaseline: ConcurrentBulkSimCandidateResult | undefined;
 	let latestResults: ConcurrentBulkSimCandidateResult[] = [];
 	let carry: ConcurrentBulkSimStageCarryOver | undefined;
-	const useLegacyBulkSim = shouldUseLegacyBulkSim(request, candidates.length);
+	const singleStage = shouldUseSingleStageBulkSim(candidates.length);
 	// Culling intervals are corrected for how many candidates the run started with, not
 	// for how many are left: the survivors were themselves selected by the same noisy
 	// metric, so recomputing the correction on the shrinking set would weaken it exactly
@@ -113,7 +98,7 @@ export const runConcurrentBulkSim = async (
 	const originalCandidateCount = candidates.length;
 	for (const stageConfig of bulkSimStageConfigs) {
 		if (signals.abort.isTriggered()) return makeAndSendBulkSimError(ErrorOutcome.create({ type: ErrorOutcomeType.ErrorOutcomeAborted }), onProgress);
-		if (useLegacyBulkSim && stageConfig.stage !== BulkSimStage.BulkSimStageHigh) continue;
+		if (singleStage && stageConfig.stage !== BulkSimStage.BulkSimStageHigh) continue;
 		if (!shouldRunBulkSimStage(stageConfig, candidates.length)) continue;
 
 		const stageResult = await runConcurrentBulkSimStage(request, candidates, stageConfig, workerPool, onProgress, signals, carry);
@@ -154,7 +139,7 @@ export const runConcurrentBulkSim = async (
 		latestBaseline = await runSingleBulkSimCandidate(
 			request,
 			{ index: -1, gear: getBulkSimBaselineGear(request) },
-			request.baseRequest!.simOptions!.iterations,
+			bulkSimHighStageFloor(),
 			workerPool,
 			signals,
 			BulkSimCandidateTransport.SplitAcrossWorkers,

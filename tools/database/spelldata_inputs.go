@@ -10,11 +10,11 @@ import (
 	"github.com/wowsims/forever/tools/database/dbc"
 )
 
-// The client rows sim/core/spelldata is built from, captured next to the generated store so that the
-// store can be rebuilt - and checked - without the client database, which is gitignored and comes
-// from a local WoW install.
+// The game files rows sim/core/spelldata is built from, captured next to the generated store so
+// that the store can be rebuilt - and checked - without the game files database, which is
+// gitignored and comes from a local WoW install.
 //
-// Raw client rows, copied as the loaders in spelldata_store.go read them:
+// Raw game files rows, copied as the loaders in spelldata_store.go read them:
 //
 //   - every SpellName row, whole. It is the universe the closure tests an edge against, so cutting it
 //     to the store's own ids would make a spell that ought to be reached look like an id this build
@@ -38,14 +38,14 @@ import (
 // are added while rendering for the same reason - adding one without regenerating renders a row the
 // committed store does not carry, and the check fails.
 
-// Beside the client extraction rather than in it: assets/db_inputs/dbc is gitignored, being tens of
-// megabytes rebuilt by `make db`, and this file has to be committed for the check to run without a
-// database. Gzipped like the extraction's files, and named the same way, since it is read back the
-// same way.
+// Beside the game files extraction rather than in it: assets/db_inputs/dbc is gitignored, being
+// tens of megabytes rebuilt by `make db`, and this file has to be committed for the check to run
+// without a database. Gzipped like the extraction's files, and named the same way, since it is read
+// back the same way.
 const spellStoreInputsPath = "assets/db_inputs/spell_store_inputs.json"
 
 type storeInputs struct {
-	// The client rows, whose fields encode first and under their own names.
+	// The game files rows, whose fields encode first and under their own names.
 	spellTables
 
 	Roots []int32
@@ -57,13 +57,22 @@ type storeInputs struct {
 
 	// The talent nodes of every class tree in the order storeCurves reads them, since the first
 	// definition to price a spell is the one kept, and the points each definition states by the
-	// client's EffectIndex and rank.
+	// game files' EffectIndex and rank.
 	TraitNodes  []traitNode
 	TraitPoints map[int32]map[int32]map[int32]float64
 
 	// Every SpellShapeshiftForm row, whole: renderFormsFile reads it directly rather than through the
 	// store's own ids, since a form names no spell for the closure to reach it by.
 	Forms []formRow
+
+	// Roots by spell data group, whose union is Roots, and the game build and highest hotfix push each
+	// group's rows were taken from. A partial update takes some groups from the database and keeps the
+	// others as they are here (see spelldata_groups.go).
+	SpellDataGroupRoots map[string][]int32
+	Builds              map[string]string
+	Hotfixes            map[string]int32
+
+	owners *rowOwners // ownersOf's answer, worked out on first use; never encoded
 }
 
 // The tables the generator reads, from the captured rows.
@@ -81,7 +90,7 @@ func (in *storeInputs) tables() *spellTables {
 }
 
 // The rows of the store's own ids, and every name in the build. Restricting the rest to those ids is
-// what keeps the file to the size of the store rather than the size of the client.
+// what keeps the file to the size of the store rather than the size of the game files.
 func captureStoreInputs(t *spellTables, roots []int32, ids []int32,
 	nodes []traitNode, points map[int32]map[int32]map[int32]float64) *storeInputs {
 	in := &storeInputs{
@@ -112,6 +121,7 @@ func captureStoreInputs(t *spellTables, roots []int32, ids []int32,
 
 		keepSlice(in.Labels, id, t.Labels)
 		keepSlice(in.Powers, id, t.Powers)
+		keepSlice(in.Reagents, id, t.Reagents)
 		keepSlice(in.Effects, id, t.Effects)
 
 		keepValue(in.EnchantGrants, id, t.EnchantGrants)
@@ -123,7 +133,7 @@ func captureStoreInputs(t *spellTables, roots []int32, ids []int32,
 	return in
 }
 
-// A row is kept only where the client states one: the absence of a SpellLevels row is itself a
+// A row is kept only where the game files state one: the absence of a SpellLevels row is itself a
 // reading - no level scaling - so writing a zero row in its place would change what the store says.
 func keepValue[V any](into map[int32]V, id int32, from map[int32]V) {
 	if v, ok := from[id]; ok {
@@ -157,9 +167,9 @@ func writeStoreInputs(in *storeInputs) error {
 }
 
 // Whether the committed capture is the one the database gives today. Compared as the encoded bytes
-// rather than through the decoded values, since a map is written in key order and a slice the client
-// states as empty decodes as nil - neither of which the rendered store can tell apart, but both of
-// which a comparison of the values would trip over.
+// rather than through the decoded values, since a map is written in key order and a slice the game
+// files state as empty decodes as nil - neither of which the rendered store can tell apart, but
+// both of which a comparison of the values would trip over.
 func storeInputsAreCurrent(fresh *storeInputs) (bool, error) {
 	committed, err := dbc.ReadGzipFile(spellStoreInputsPath)
 	if os.IsNotExist(err) {
@@ -176,8 +186,36 @@ func storeInputsAreCurrent(fresh *storeInputs) (bool, error) {
 	return bytes.Equal(committed, out), nil
 }
 
-// The committed inputs, for a caller with no client database. The path is relative to the repository
-// root, the way every other path the generator reads is.
+// The committed inputs, or nil where none are committed yet.
+func loadCommittedInputs() (*storeInputs, error) {
+	if _, err := os.Stat(spellStoreInputsPath); os.IsNotExist(err) {
+		return nil, nil
+	}
+	return readStoreInputs(spellStoreInputsPath)
+}
+
+// The game build and hotfix push each spell data group of the committed inputs was taken from,
+// decoded alone: the rows are not needed to choose a run's groups or to check its database.
+func readCommittedBuilds() (builds map[string]string, hotfixes map[string]int32, err error) {
+	if _, err := os.Stat(spellStoreInputsPath); os.IsNotExist(err) {
+		return nil, nil, nil
+	}
+	raw, err := dbc.ReadGzipFile(spellStoreInputsPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("reading %s: %w", spellStoreInputsPath, err)
+	}
+	var stamps struct {
+		Builds   map[string]string
+		Hotfixes map[string]int32
+	}
+	if err := json.Unmarshal(raw, &stamps); err != nil {
+		return nil, nil, fmt.Errorf("decoding %s: %w", spellStoreInputsPath, err)
+	}
+	return stamps.Builds, stamps.Hotfixes, nil
+}
+
+// The committed inputs, for a caller with no game files database. The path is relative to the
+// repository root, the way every other path the generator reads is.
 func readStoreInputs(path string) (*storeInputs, error) {
 	raw, err := dbc.ReadGzipFile(path)
 	if err != nil {

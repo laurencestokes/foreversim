@@ -8,9 +8,8 @@ import (
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-// reforgeSoftCap represents a soft cap or threshold expressed in reforge-relative (gap-to-cap)
-// breakpoints. breakpoints/postCapEPs are mutated in place across solver passes as breakpoints
-// are consumed.
+// A soft cap or threshold expressed in reforge-relative (gap-to-cap) breakpoints.
+// breakpoints/postCapEPs are mutated in place across solver passes as breakpoints are consumed.
 type reforgeSoftCap struct {
 	unitStat    stats.UnitStat
 	breakpoints []float64
@@ -19,14 +18,13 @@ type reforgeSoftCap struct {
 }
 
 // ---------------------------------------------------------------------------
-// LP-path cap computation (mirrors the reference solver). These run alongside the legacy
-// buildReforgeHardCaps/buildReforgeSoftCaps/validateReforgeWeights until the MIP path is removed.
+// LP-path cap computation (mirrors the reference solver).
 // ---------------------------------------------------------------------------
 
-// computeReforgeSoftCaps converts each configured soft cap's absolute breakpoints into
-// gap-to-cap deltas. For TypeThreshold caps the breakpoints are reversed (largest gap evaluated
-// first) and every post-cap EP is set to the FIRST configured value, which is interpreted as the
-// residual stat value just after passing a threshold discontinuity.
+// Converts each configured soft cap's absolute breakpoints into gap-to-cap deltas. For
+// TypeThreshold caps the breakpoints are reversed (largest gap evaluated first) and every post-cap
+// EP is set to the FIRST configured value, which is interpreted as the residual stat value just
+// after passing a threshold discontinuity.
 func computeReforgeSoftCaps(baseStats core.UnitStats, configs []*proto.StatCapConfig) []*reforgeSoftCap {
 	result := make([]*reforgeSoftCap, 0, len(configs))
 	for _, config := range configs {
@@ -63,66 +61,40 @@ func computeReforgeSoftCaps(baseStats core.UnitStats, configs []*proto.StatCapCo
 	return result
 }
 
-// isSchoolHitChildOfSpellHit reports whether a child pseudo-stat is one of the per-school spell-hit
-// percentages. A non-zero EP on one of these does NOT suppress the SpellHitRating conversion: a
-// spec can weight both the pure rating and its school percentages, and the two are summed.
-func isSchoolHitChildOfSpellHit(parent stats.Stat, child proto.PseudoStat) bool {
-	if parent != stats.SpellHitRating {
-		return false
-	}
-	switch child {
-	case proto.PseudoStat_PseudoStatSchoolHitPercentArcane,
-		proto.PseudoStat_PseudoStatSchoolHitPercentFire,
-		proto.PseudoStat_PseudoStatSchoolHitPercentFrost,
-		proto.PseudoStat_PseudoStatSchoolHitPercentHoly,
-		proto.PseudoStat_PseudoStatSchoolHitPercentNature,
-		proto.PseudoStat_PseudoStatSchoolHitPercentShadow:
-		return true
-	default:
-		return false
-	}
-}
+var offenseRatings = []stats.Stat{stats.HitRating, stats.CritRating, stats.HasteRating, stats.ExpertiseRating}
 
-// checkWeights routes each pure-rating stat's EP into the percent pseudo-stat that actually carries
-// a cap, so the solver values the stat in the same units the caps are expressed in.
-//
-// When a child already carries EP the parent rating is simply zeroed (it would double count) — the
-// per-school spell-hit children are exempt, since a spec may weight both. Conversions ACCUMULATE
-// onto any existing child EP because several parents can share one child (both DefenseRating and
-// DodgeRating feed DodgePercent).
+// Ratings that share percent children: defense moves dodge, parry and block alongside their own
+// ratings.
+var avoidanceRatings = []stats.Stat{stats.DefenseRating, stats.DodgeRating, stats.ParryRating, stats.BlockRating}
+
+// Moves each weighted rating's EP onto the first of its percent children that carries a cap, as EP
+// per percent, so the solver values the rating in the units its caps use. Without a capped child
+// the rating keeps its EP; a rating without EP is valued through its children.
+// A hit, crit, haste or expertise rating with EP drops its children's weights first. An avoidance
+// rating is zeroed instead when any of its children already carries a weight; defense runs first,
+// so its EP landing on Dodge% zeroes dodge rating.
 func checkWeights(weights core.UnitStats, reforgeCaps core.UnitStats, reforgeSoftCaps []*reforgeSoftCap) core.UnitStats {
 	validated := weights
-	for _, parent := range []stats.Stat{
-		stats.MeleeHitRating,
-		stats.SpellHitRating,
-		stats.MeleeCritRating,
-		stats.SpellCritRating,
-		stats.MeleeHasteRating,
-		stats.SpellHasteRating,
-		stats.DefenseRating,
-		stats.DodgeRating,
-		stats.ParryRating,
-		stats.BlockRating,
-		stats.ExpertiseRating,
-	} {
+	for _, parent := range slices.Concat(offenseRatings, avoidanceRatings) {
+		if validated.Stats[parent] == 0 {
+			continue
+		}
 		children := childPseudoStats(parent)
 		if len(children) == 0 {
 			continue
 		}
 
-		childHasWeight := false
-		for _, child := range children {
-			if isSchoolHitChildOfSpellHit(parent, child) {
+		if slices.Contains(avoidanceRatings, parent) {
+			if slices.ContainsFunc(children, func(child proto.PseudoStat) bool {
+				return getUnitStat(validated, stats.UnitStatFromPseudoStat(child)) != 0
+			}) {
+				validated.Stats[parent] = 0
 				continue
 			}
-			if getUnitStat(validated, stats.UnitStatFromPseudoStat(child)) != 0 {
-				childHasWeight = true
-				break
+		} else {
+			for _, child := range children {
+				validated = setUnitStat(validated, stats.UnitStatFromPseudoStat(child), 0)
 			}
-		}
-		if childHasWeight {
-			validated.Stats[parent] = 0
-			continue
 		}
 
 		for _, child := range children {
@@ -157,80 +129,4 @@ func pseudoStatHasCap(pseudoStat proto.PseudoStat, reforgeCaps core.UnitStats, s
 		}
 	}
 	return false
-}
-
-func statHasCap(stat stats.Stat, reforgeCaps core.UnitStats, softCaps []*reforgeSoftCap) bool {
-	unitStat := stats.UnitStatFromStat(stat)
-	if getUnitStat(reforgeCaps, unitStat) != 0 {
-		return true
-	}
-	for _, softCap := range softCaps {
-		if softCap.unitStat == unitStat {
-			return true
-		}
-	}
-	return false
-}
-
-func pseudoStatIsCapped(pseudoStat proto.PseudoStat, reforgeCaps core.UnitStats, softCaps []*reforgeSoftCap) bool {
-	unitStat := stats.UnitStatFromPseudoStat(pseudoStat)
-	return getUnitStat(reforgeCaps, unitStat) < 0
-}
-
-func statIsCapped(stat stats.Stat, reforgeCaps core.UnitStats, softCaps []*reforgeSoftCap) bool {
-	unitStat := stats.UnitStatFromStat(stat)
-	return getUnitStat(reforgeCaps, unitStat) < 0
-}
-
-// includesStatWithCap reports whether any key in the coefficient map names a stat that has a
-// configured cap.
-func includesStatWithCap(coeffs map[string]float64, reforgeCaps core.UnitStats, softCaps []*reforgeSoftCap) bool {
-	for key := range coeffs {
-		if unitStat, ok := unitStatFromCoeffKey(key); ok {
-			if unitStat.IsPseudoStat() {
-				if pseudoStatHasCap(proto.PseudoStat(unitStat.PseudoStatIdx()), reforgeCaps, softCaps) {
-					return true
-				}
-			} else if statHasCap(stats.Stat(unitStat.StatIdx()), reforgeCaps, softCaps) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// includesCappedStat reports whether any key in the coefficient map names a stat that is already
-// capped.
-func includesCappedStat(coeffs map[string]float64, reforgeCaps core.UnitStats, softCaps []*reforgeSoftCap) bool {
-	for key := range coeffs {
-		if unitStat, ok := unitStatFromCoeffKey(key); ok {
-			if unitStat.IsPseudoStat() {
-				if pseudoStatIsCapped(proto.PseudoStat(unitStat.PseudoStatIdx()), reforgeCaps, softCaps) {
-					return true
-				}
-			} else if statIsCapped(stats.Stat(unitStat.StatIdx()), reforgeCaps, softCaps) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// getCappedStatKeys returns the coefficient keys whose stat has a configured cap (hard or soft).
-func getCappedStatKeys(coeffs map[string]float64, reforgeCaps core.UnitStats, softCaps []*reforgeSoftCap) []string {
-	var keys []string
-	for key := range coeffs {
-		unitStat, ok := unitStatFromCoeffKey(key)
-		if !ok {
-			continue
-		}
-		if unitStat.IsPseudoStat() {
-			if pseudoStatHasCap(proto.PseudoStat(unitStat.PseudoStatIdx()), reforgeCaps, softCaps) {
-				keys = append(keys, key)
-			}
-		} else if statHasCap(stats.Stat(unitStat.StatIdx()), reforgeCaps, softCaps) {
-			keys = append(keys, key)
-		}
-	}
-	return keys
 }

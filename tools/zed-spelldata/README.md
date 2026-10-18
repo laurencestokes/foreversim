@@ -1,8 +1,10 @@
 # WoWSims Spelldata for Zed
 
 The spell hover of `tools/spelldata` in Zed: a spell id in Go, JSON, TypeScript or TSX, a ladder family,
-a name bound to a ladder chain or a `spelldata.SpellConfig` call hovers as the client's row, the value
-the chain reads or the config the resolver builds. The extension only starts the server,
+a name bound to a ladder chain, a `spelldata.SpellConfig` call or a `core.SpellModConfig` literal hovers
+as the game files' row, the value the chain reads, the config the resolver builds or the mod's fields and
+the weapon they require; a code action picks the rank a `Ladder.Each` callback parameter hovers as. The
+extension only starts the server,
 `go -C <worktree root> run ./tools/spelldata -lsp`; everything else is in `tools/spelldata` (see its
 README).
 
@@ -26,9 +28,18 @@ Open the repository root as the worktree - the server is run from there and read
 compiles. The first hover waits for `go run` to compile, a few seconds. `go` has to be on the PATH of
 the shell Zed starts in.
 
-The server logs each hover's trace as a log message: open _debug: open language server logs_ and pick
-`wowsims-spelldata` to read it. To silence it, set the server's initialization option in Zed's
-settings:
+A `Ladder.Each` callback parameter hovers as the highest rank of its ladder. VS Code's hover links the
+other ranks; Zed cannot run those links, so the server offers the ranks as code actions wherever a hover
+reads through the parameter: _editor: toggle code actions_ (`ctrl-.`) lists
+`Hover rank as 19895 Shadow Resistance Aura (Rank 2)` next to gopls' actions. Hover again to read the
+rank picked; the pick lasts until the server restarts.
+
+The server compiles the store in, so after regenerating `sim/core/spelldata` or editing
+`tools/spelldata`, run _editor: restart language server_ (it restarts gopls too).
+
+The server logs each hover's trace as a log message: open _dev: open language server logs_, pick
+`wowsims-spelldata` and _Server Logs_ to read it. To silence the trace, set the server's initialization
+option in Zed's settings:
 
 ```json
 {

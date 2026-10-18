@@ -1,10 +1,8 @@
 import { BulkSettings, DistributionMetrics, ProgressMetrics } from '@generated/proto/api';
+import type { Encounter } from '@generated/proto/common';
 import i18n from '@i18n/config';
-import { BulkSimReforgeCacheProgress } from '@sim/bulk/reforge_cache';
 import { BulkSimProgressConfig, TopGearResult } from '@sim/bulk/types';
 import { bulkSimStageToOptimisationStage, cleanBulkDpsMetrics, getCoreBulkSimTrackingMetrics } from '@sim/bulk/utils';
-import { Gear } from '@sim/proto/gear';
-import { ReforgeOptimizeConfig } from '@sim/sim';
 import type { IndividualSimHost } from '@sim/sim_host';
 
 export interface CoreBulkSimContext {
@@ -12,21 +10,25 @@ export interface CoreBulkSimContext {
 	throwIfBulkAborted: (signal: AbortSignal) => void;
 	runWithBulkAbort: <T>(promise: Promise<T>, signal: AbortSignal) => Promise<T>;
 	setSimProgress: (progress: ProgressMetrics, config: BulkSimProgressConfig) => void;
-	setCacheRestoreProgress?: (progress: BulkSimReforgeCacheProgress) => void;
 	debugOptimisationRound: (message: string, data?: unknown) => void;
+}
+
+export interface CoreBulkSimResult {
+	referenceDpsMetrics: DistributionMetrics;
+	topGearResults: TopGearResult[];
+	/** Iterations per displayed result, from the last stage that ran; 0 when none did. */
+	iterations: number;
+	metrics: Record<string, string | number>;
 }
 
 export async function runCoreBulkSim(
 	context: CoreBulkSimContext,
-	gearSets: Gear[],
 	signal: AbortSignal,
-	reforgeConfig?: ReforgeOptimizeConfig,
-	bulkSettings?: BulkSettings,
-): Promise<{ referenceDpsMetrics: DistributionMetrics; topGearResults: TopGearResult[]; metrics: Record<string, string | number> }> {
+	bulkSettings: BulkSettings,
+	encounter: Encounter,
+): Promise<CoreBulkSimResult> {
 	context.throwIfBulkAborted(signal);
-	context.debugOptimisationRound('core bulk sim started', {
-		gearSets: gearSets.length,
-	});
+	context.debugOptimisationRound('core bulk sim started');
 
 	let currentProgressStage: ProgressMetrics['bulkStage'] | undefined;
 	let currentProgressStageStartedAt = new Date().getTime();
@@ -47,15 +49,12 @@ export async function runCoreBulkSim(
 		});
 	};
 
-	const result = await context.runWithBulkAbort(
-		context.simUI.sim.runBulkSim(gearSets, updateProgress, reforgeConfig, bulkSettings, progress => context.setCacheRestoreProgress?.(progress), signal),
-		signal,
-	);
+	const result = await context.runWithBulkAbort(context.simUI.sim.runBulkSim(updateProgress, bulkSettings, signal, encounter), signal);
 	if (!result || (result && 'type' in result)) {
 		throw new Error(result?.message);
 	}
 	if (!result.baseline?.dpsMetrics) {
-		throw new Error('Bulk sim did not return baseline results.');
+		throw new Error(i18n.t('bulk_tab.notifications.no_baseline_results'));
 	}
 
 	const topGearResults = result.topResults
@@ -70,7 +69,6 @@ export async function runCoreBulkSim(
 
 	context.debugOptimisationRound('core bulk sim complete', {
 		durationSeconds: result.timings?.totalSeconds ?? 0,
-		gearSets: gearSets.length,
 		stageMetrics: result.stageMetrics,
 		topGearResults: topGearResults.map((topResult, index) => ({
 			rank: index + 1,
@@ -82,6 +80,7 @@ export async function runCoreBulkSim(
 	return {
 		referenceDpsMetrics: result.baseline.dpsMetrics,
 		topGearResults,
+		iterations: result.stageMetrics.at(-1)?.iterations ?? 0,
 		metrics: getCoreBulkSimTrackingMetrics(result),
 	};
 }

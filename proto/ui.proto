@@ -15,11 +15,13 @@ message UIDatabase {
 	repeated UIItem items = 1;
 	repeated ItemRandomSuffix random_suffixes = 11;
 	repeated UIEnchant enchants = 2;
-	repeated UIGem gems = 3;
+	reserved 3;
+	reserved "gems";
 	repeated PresetEncounter encounters = 6;
 
 	repeated UIZone zones = 8;
 	repeated UINPC npcs = 9;
+	repeated UIFaction factions = 16;
 
 	// Entities for which we just need a name/icon.
 	repeated IconData item_icons = 4;
@@ -43,6 +45,10 @@ message UINPC {
 	string name = 2;
 	int32 zone_id = 3;
 }
+message UIFaction {
+	int32 id = 1;
+	string name = 2;
+}
 
 // Contains all information about an Item needed by the UI.
 // Generally this will include everything needed by the sim, plus some
@@ -61,8 +67,8 @@ message UIItem {
 
 	repeated double stats = 9;
 	repeated double pseudo_stats = 34; // Indexed by PseudoStat.
-	repeated GemColor gem_sockets = 10;
-	repeated double socketBonus = 11;
+	reserved 10, 11;
+	reserved "gem_sockets", "socketBonus";
 	repeated int32 random_suffix_options = 26;
 	int32 rand_prop_points = 27;
 
@@ -101,6 +107,7 @@ message UIItem {
 	FactionRestriction faction_restriction = 25;
 	map<int32, ScalingItemProperties> scaling_options = 29; // keys are the other ilvl variants that this item could potentially have
 	repeated ItemEffect item_effects = 30;
+	SpellSchool spell_school = 35; // The weapon's damage school; unset means physical.
 }
 
 enum Expansion {
@@ -141,21 +148,6 @@ enum RepLevel {
 	RepLevelExalted 	= 8;
 }
 
-// Use the faction ID for the field index
-enum RepFaction {
-	RepFactionUnknown = 0;
-	RepFactionTheConsortium = 933;
-	RepFactionTheMagHar = 941;
-	RepFactionCenarionExpedition = 942;
-	RepFactionHonorHold = 946;
-	RepFactionThrallmar = 947;
-	RepFactionSporeggar = 970;
-	RepFactionKurenai = 978;
-	RepFactionAshtongueDeathsworn = 1012;
-	RepFactionNetherwing = 1015;
-	RepFactionOgriLa = 1038;
-}
-
 message UIItemSource {
 	oneof source {
 		CraftedSource crafted = 1;
@@ -186,7 +178,7 @@ message SoldBySource {
 	int32 zone_id = 3;
 }
 message RepSource {
-	RepFaction rep_faction_id = 1;
+	int32 rep_faction_id = 1; // Faction.ID in the game files; UIDatabase.factions carries its name.
 	RepLevel rep_level = 2;
 	Faction faction_id = 3;
 }
@@ -213,26 +205,15 @@ message UIEnchant {
 
 	ItemQuality quality = 9;
 	int32 phase = 10;
+	int32 lvl = 17; // The item level of an item that carries the enchant or its spell; 0 when every such item is level 1.
 
 	// Classes that are allowed to use the enchant. Empty indicates no special class restrictions.
 	repeated Class class_allowlist = 11;
 	Profession required_profession = 12;
 	repeated ItemEffect enchant_effects = 14;
+	EnchantProcKind proc_kind = 18;
 }
 
-message UIGem {
-	int32 id = 1;
-	string name = 2;
-	string icon = 3;
-	GemColor color = 4;
-
-	repeated double stats = 5;
-
-	int32 phase = 6;
-	ItemQuality quality = 7;
-	bool unique = 8;
-	Profession required_profession = 9;
-}
 
 message IconData {
 	int32 id = 1;
@@ -259,18 +240,31 @@ enum SourceFilterOption {
 
 enum RaidFilterOption {
 	RaidUnknown = 0;
-	RaidKara = 1;
-	RaidGruul = 2;
-	RaidMag = 3;
-	RaidTK = 4;
-	RaidSSC = 5;
-	RaidMH = 6;
-	RaidBT = 7;
-	RaidZA = 8;
-	RaidSWP = 9;
+	reserved 1 to 9;
+	RaidMC = 10;
+	RaidOny = 11;
+	RaidBWL = 12;
+	RaidZG = 13;
+	RaidAQ20 = 14;
+	RaidAQ40 = 15;
+	RaidNaxx = 16;
 }
 
-// NextIndex: 24
+// The stats one panel works with. Unset in StatFilters means the spec's list for that panel.
+message StatSelection {
+	repeated UIStat stats = 1;
+}
+
+// The viewer's own stat filters, one per panel. Shared builds neither carry nor change them.
+message StatFilters {
+	StatSelection ep = 1;
+	StatSelection character_stats = 2;
+	StatSelection buffs = 3;
+	StatSelection debuffs = 4;
+	StatSelection consumables = 5;
+}
+
+// NextIndex: 27
 message DatabaseFilters {
 	repeated ArmorType armor_types = 1;
 	repeated WeaponType weapon_types = 2;
@@ -280,6 +274,9 @@ message DatabaseFilters {
 	UIItem.FactionRestriction faction_restriction = 19;
 	int32 min_ilvl = 20;
 	int32 max_ilvl = 21;
+	// The consumable pickers hide a consumable below the level set for its ConsumableType (keyed by
+	// ConsumableType; Consumable.lvl). A type with no entry takes Sim.DEFAULT_MIN_CONSUMABLE_LVL.
+	map<int32, int32> min_consumable_lvl = 24;
 
 	double min_mh_weapon_speed = 4;
 	double max_mh_weapon_speed = 5;
@@ -290,12 +287,17 @@ message DatabaseFilters {
 
 	bool one_handed_weapons = 6;
 	bool two_handed_weapons = 7;
-	bool matching_gems_only = 8;
+	reserved 8;
+	reserved "matching_gems_only";
+	// The enchant picker also lists enchants worth nothing to the spec's stat weights.
+	bool show_all_enchants = 25;
+	// The stats each panel shows; see StatFilters.
+	StatFilters stat_filters = 26;
 
 	// Item IDs for favorited items.
 	repeated int32 favorite_items = 11;
-	// Item IDs for favorited gems.
-	repeated int32 favorite_gems = 12;
+	reserved 12;
+	reserved "favorite_gems";
 	// Item IDs for favorited random suffixes.
 	repeated int32 favorite_random_suffixes = 22;
 	// Item IDs for favorited reforges.
@@ -348,11 +350,45 @@ message SavedGearSet {
 	UnitStats bonus_stats_stats = 3;
 }
 
+// How the EP calculation and the stat sweep size their runs.
+enum PrecisionMode {
+	PrecisionModeUnknown = 0;
+	PrecisionModeIterations = 1;
+	PrecisionModeTarget = 2; // Simulates each stat or step until its ± reaches a target.
+}
+
 message SavedStatWeightSettings {
 	repeated Stat excluded_stats = 1;
     repeated PseudoStat excluded_pseudo_stats = 2;
     int32 api_version = 3; // Needed in case the Stat or PseudoStat enum orderings ever change
 
+	PrecisionMode precision_mode = 4;
+	int32 iterations = 5; // The iterations mode's count; 0 runs the global sim iteration count.
+	double target_ci = 6; // The 90% ± of each EP to reach.
+	int32 max_iteration_multiplier = 7; // Caps a stat's iterations at this multiple of the automatic first pass; 0 means no cap.
+}
+
+enum StatSweepMetric {
+	StatSweepMetricUnknown = 0; // Reads as DPS.
+	StatSweepMetricDps = 1;
+	StatSweepMetricHps = 2;
+	StatSweepMetricTps = 3;
+	StatSweepMetricDtps = 4;
+	StatSweepMetricTmi = 5;
+}
+
+// The stat sweep's last setup; an unset range, step or target reads as the default.
+message SavedStatSweepSettings {
+	int32 api_version = 1;
+	repeated UIStat stats = 2;
+	double range = 3;
+	double step = 4;
+	PrecisionMode precision_mode = 5;
+	int32 iterations = 6; // The iterations mode's count; 0 runs the global sim iteration count.
+	double target_ci = 7; // In the units of the metric picked when the run starts.
+	int32 max_iteration_multiplier = 8; // Caps a step's iterations at this multiple of the automatic first pass; 0 means no cap.
+	StatSweepMetric metric = 9; // The plotted metric; a run's Target ± follows the one picked when it starts.
+	bool hide_spread = 10; // Leaves the ± 1 standard deviation band off the chart; unset shows it.
 }
 
 // Local storage data for other settings.
@@ -386,6 +422,30 @@ message SavedRotation {
 
 message SavedEPWeights {
 	UnitStats ep_weights = 1;
+}
+
+// The checked presets are unioned per slot into BulkSettings.enchants.
+message BulkEnchantPreset {
+	string name = 1;
+	repeated BulkEnchantSlotOptions slots = 2;
+	bool checked = 3;
+}
+
+// Local storage data for the bulk sim's enchant presets.
+message BulkEnchantPresets {
+	repeated BulkEnchantPreset presets = 1;
+}
+
+// Local storage data for the saved encounters the bulk sim also runs against. The current encounter always runs first
+// and is not stored here.
+message BulkEncounterSelection {
+	repeated BulkEncounterRef encounters = 1;
+}
+
+// A spec preset encounter or a user-saved one, by name.
+message BulkEncounterRef {
+	string name = 1;
+	bool preset = 2;
 }
 
 // Local storage data for a saved encounter.

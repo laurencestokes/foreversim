@@ -28,13 +28,14 @@ func createCustomBossPreset() {
 			TankIndex: 0,
 
 			Stats: stats.Stats{
+				stats.Health:      1_428_900,
 				stats.Armor:       3731,
 				stats.AttackPower: 320,
 			}.ToProtoArray(),
 
 			SpellSchool:   proto.SpellSchool_SpellSchoolPhysical,
 			SwingSpeed:    2.0,
-			MinBaseDamage: 4192.05,
+			MinBaseDamage: 2601,
 			DamageSpread:  0.413,
 			ParryHaste:    true,
 			CanCrush:      true,
@@ -302,7 +303,6 @@ func (ai *DefaultTankAI) registerMagicSpell() {
 
 			ModifyCast: func(sim *core.Simulation, spell *core.Spell, cast *core.Cast) {
 				meleeDelay := sim.CurrentTime + cast.CastTime
-				spell.Unit.AutoAttacks.StopMeleeUntil(sim, meleeDelay)
 				if ai.Config.HasCleave {
 					cleaveDelay := max(
 						spell.Unit.AutoAttacks.MainhandSwingSpeed()+1,

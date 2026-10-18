@@ -1,14 +1,15 @@
+import type * as IconInputs from '@features/inputs/icon_inputs';
+import type * as InputHelpers from '@features/inputs/input_helpers';
 import type { ReforgeOptimizerOptions } from '@features/reforge/model/reforge_optimizer';
 import { APLRotation, APLRotation_Type as APLRotationType } from '@generated/proto/apl';
 import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
 import { ConsumesSpec, EquipmentSpec, HealingModel, ItemSlot, ItemSwap, Profession, PseudoStat, Race, Spec, Stat } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
-import type * as IconInputs from '@ui-kit/icon_inputs';
-import type * as InputHelpers from '@ui-kit/input_helpers';
 import type { SavedDataConfig } from '@ui-kit/SavedDataPanel/types';
 import type { ReactNode } from 'react';
 
 import { Player, PlayerConfig, registerSpecConfig as registerPlayerConfig } from './player/player';
+import type { WeaponSkillGroup } from './player/weapon_skill_groups';
 import type { PresetBuild, PresetEncounter, PresetEpWeights, PresetGear, PresetItemSwap, PresetRotation, PresetSettings } from './presets/types';
 import type { SpecOptions, SpecRotation } from './proto/spec_types';
 import type { StatMods, StatWrites } from './proto/stats';
@@ -26,8 +27,8 @@ export interface EncounterPickerConfig {
 
 export type InputConfig<ModObject> =
 	| InputHelpers.TypedBooleanPickerConfig<ModObject>
-	| InputHelpers.TypedNumberPickerConfig<ModObject>
-	| InputHelpers.TypedEnumPickerConfig<ModObject>;
+	| InputHelpers.TypedNumberFieldConfig<ModObject>
+	| InputHelpers.TypedChoiceFieldConfig<ModObject>;
 
 export interface InputSection {
 	tooltip?: string;
@@ -68,7 +69,7 @@ export interface OtherDefaults {
 	highHpThreshold?: number;
 	iterationCount?: number;
 	race?: Race;
-	// TBC-only: applied by applyIndividualDefaults after the encounter defaults.
+	// Applied by applyIndividualDefaults after the encounter defaults.
 	healingModel?: HealingModel;
 }
 
@@ -79,16 +80,10 @@ export interface IndividualSimUIConfig<SpecType extends Spec> extends PlayerConf
 	className: string;
 	// Used to generate schemed components. E.g. 'shaman', 'druid', 'raid'
 	cssScheme: string;
-	// Keeps a second page of the same spec (the Smite page of the dps priest) out of the first
-	// page's saved settings: it is added to every localStorage key the page writes.
-	storageKeyPart?: string;
-	// The header's name for such a page, in place of the spec's own.
-	pageTitle?: string;
 
 	knownIssues?: Array<ReactNode>;
 	warnings?: Array<(simUI: IndividualSimHost<SpecType>) => SimWarning>;
 	consumableStats?: Array<Stat>;
-	gemStats?: Array<Stat>;
 	epStats: Array<Stat>;
 	epPseudoStats?: Array<PseudoStat>;
 	epReferenceStat: Stat;
@@ -97,6 +92,8 @@ export interface IndividualSimUIConfig<SpecType extends Spec> extends PlayerConf
 	// Per-spec override for the default EP ratios; must be exactly Player.numEpRatios long.
 	epRatios?: Array<number>;
 	displayStats: Array<UnitStat>;
+	// The Key view of the stats panel shows only these groups' weapon skills; unset shows none there.
+	displayWeaponSkillGroups?: Array<WeaponSkillGroup>;
 	modifyDisplayStats?: (player: Player<SpecType>) => StatMods;
 	overwriteDisplayStats?: (player: Player<SpecType>) => StatWrites;
 
@@ -204,16 +201,33 @@ export interface SpecBehaviors<SpecType extends Spec> {
 	features?: Array<(host: IndividualSimHost<SpecType>) => unknown>;
 }
 
-// A whole spec as data. `ui/app/spec_entry.ts` loads one of these per page.
+// A whole spec as data. `ui/app/spec_entry.tsx` loads one of these per page.
 export interface SpecDefinition<SpecType extends Spec> extends IndividualSimUIConfig<SpecType>, SpecBehaviors<SpecType> {
 	spec: SpecType;
 }
 
-// Identity function; exists purely so `ui/<class>/<spec>/spec.ts` gets the
+// Identity function; exists purely so `ui/specs/<class>/<spec>/spec.ts` gets the
 // config checked against `SpecDefinition` without an `as` cast or a type
 // annotation that would widen the literal spec type.
 export function defineSpec<SpecType extends Spec>(def: SpecDefinition<SpecType>): SpecDefinition<SpecType> {
 	return def;
+}
+
+// Removes dev-only gearsets from the gear presets and from the builds, dropping a
+// build left empty. The default gear stays only when it is a production gearset
+// the spec lists, so a default taken from an unlisted preset is cleared as well.
+// `ui/app/spec_entry.tsx` applies it outside the dev server and the previews.
+export function withoutDevOnlyGear<SpecType extends Spec>(def: SpecDefinition<SpecType>): SpecDefinition<SpecType> {
+	const gear = def.presets.gear.filter(preset => !preset.devOnly);
+	const builds = def.presets.builds
+		?.map(build => (build.gear?.devOnly ? { ...build, gear: undefined } : build))
+		.filter(({ name: _name, phase: _phase, group: _group, ...categories }) => Object.values(categories).some(value => value !== undefined));
+	const productionGear = [...gear, ...(builds ?? []).map(build => build.gear)].map(preset => preset?.gear);
+	return {
+		...def,
+		defaults: { ...def.defaults, gear: productionGear.includes(def.defaults.gear) ? def.defaults.gear : EquipmentSpec.create() },
+		presets: { ...def.presets, gear, builds },
+	};
 }
 
 export function registerSpecConfig<SpecType extends Spec>(spec: SpecType, config: IndividualSimUIConfig<SpecType>): IndividualSimUIConfig<SpecType> {

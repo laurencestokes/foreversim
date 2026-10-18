@@ -2,8 +2,9 @@
 node_modules
 
 ui/**/*_auto_gen.ts
-# Generated from the client database, which CI does not have, so it is committed.
+# Generated from the game files database, which CI does not have, so it is committed.
 !ui/features/settings/model/buffs_debuffs_auto_gen.ts
+!ui/features/settings/model/consumables_auto_gen.ts
 .dirstamp
 
 # IDE folders
@@ -13,6 +14,8 @@ ui/**/*_auto_gen.ts
 # binaries
 dist
 binary_dist
+storybook-static
+*storybook.log
 sim/web/__debug_bin
 /wowsimcli*
 /wowsimforever*
@@ -47,7 +50,7 @@ forever.sln
 # agents
 graphify-out
 .claude
-CLAUDE.md
+CLAUDE.local.md
 tools/db2tool/listfile.csv
 tools/db2tool/TACTKeys.txt
 tools/db2tool/DBDCache
@@ -60,3 +63,8 @@ tools/db2tool/cdncache/
 tools/database/*.db
 
 __pycache__/
+
+# Baselines the tests write on first run and compare against after, local to each checkout.
+sim/common/forever/registered_effects.txt
+tools/database/unsupported_procs.txt
+tools/database/unsupported_consumables.txt

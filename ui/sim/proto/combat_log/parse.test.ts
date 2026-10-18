@@ -28,7 +28,7 @@ import type { CastBeganLog, CastFailedLog, CastPushbackLog, DamageLog, ParsedLog
 const parseLine = async (line: string): Promise<ParsedLog> => (await parseAll(RaidSimResult.create({ logs: line })))[0];
 
 // Lines as sim/core prints them: sim.go:304 stamps the time, unit.go:245 the entity label.
-describe('parseAll on TBC log lines', () => {
+describe('parseAll on sim log lines', () => {
 	it('reads the GCD out of a cast line', async () => {
 		// cast.go:182 - five call sites, all with the GCD clause MoP's sim does not print.
 		const log = (await parseLine(

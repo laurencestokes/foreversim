@@ -1,21 +1,19 @@
 import { ProtoVersion } from '@generated/proto/common';
 import { readMessageOption } from '@protobuf-ts/runtime';
 
-// Forever's content tiers (as master): it launches 4 November 2026 with no raids, Tier 1
-// (Barrow Deeps, Hyjal Summit, Onyxia) opens 9 December 2026, Tiers 2 and 3 follow in 2027.
-// Labels live in common.phases / common.phase_names.
 export enum Phase {
-	Launch = 1,
-	Tier1,
-	Tier2,
-	Tier3,
+	Phase1 = 1,
+	Phase2,
+	Phase3,
+	Phase4,
+	Phase5,
 }
 
-export const CURRENT_PHASE = Phase.Launch;
+export const CURRENT_PHASE = Phase.Phase1;
 
 export enum LaunchStatus {
 	Unlaunched,
-	// Gear, gems, enchants, talents and the gem optimizer work. No simulation, and none planned.
+	// Gear, enchants, talents and the gear optimizer work. No simulation, and none planned.
 	GearPlanner,
 	Alpha,
 	Beta,
@@ -24,23 +22,34 @@ export enum LaunchStatus {
 
 export const CURRENT_API_VERSION: number = readMessageOption(ProtoVersion, 'proto.current_version_number')! as number;
 
-// The upstream buff rewrite: RaidBuffs, PartyBuffs, IndividualBuffs and Debuffs moved to buffs.proto
-// (renumbered, mostly bools), ConsumesSpec was renumbered and WarriorOptions field 6 changed meaning.
-// Settings saved before it carry none of those in a usable form.
-export const BUFFS_REWRITE_API_VERSION = 17;
-
-// Upstream's slimmed buff manifest: RaidBuffs, PartyBuffs, IndividualBuffs and Debuffs renumbered
-// again. Consumables and class options kept their numbers.
-export const BUFFS_RENUMBER_API_VERSION = 18;
-
 // Github pages serves our site under the /forever directory
 export const REPO_NAME = 'forever';
-export const REPO_URL = 'https://github.com/laurencestokes/foreversim';
+export const REPO_URL = `https://github.com/wowsims/${REPO_NAME}`;
 export const REPO_RELEASES_URL = `${REPO_URL}/releases`;
-export const REPO_NEW_ISSUE_URL = `${REPO_URL}/issues/new`;
+// The repository whose CI built this page (see vite.config.mts). Empty for a build made outside
+// GitHub Actions, which then offers no issue links at all.
+export const ISSUES_REPO: string = import.meta.env.VITE_GITHUB_REPOSITORY;
+export const REPO_NEW_ISSUE_URL = `https://github.com/${ISSUES_REPO}/issues/new`;
 export const REPO_CHOOSE_NEW_ISSUE_URL = `${REPO_NEW_ISSUE_URL}/choose`;
 
-export const SOCIALS = [{ key: 'github', href: REPO_URL, className: 'ui-social-link', icon: 'github', tooltip: 'info.github' }] as const;
+export const WOWSIMS_URL = 'https://www.wowsims.com/';
+export const DISCORD_URL = 'https://discord.gg/p3DgvmnDCS';
+export const GITHUB_ORG_URL = 'https://github.com/wowsims/';
+export const ADDON_URL = 'https://www.curseforge.com/wow/addons/wowsimsexporter';
+export const PATREON_URL = 'https://www.patreon.com/wowsims';
+
+export const SOCIALS = [
+	{ key: 'discord', href: DISCORD_URL, className: 'ui-social-link', icon: 'discord', tooltip: 'info.discord' },
+	{ key: 'github', href: REPO_URL, className: 'ui-social-link', icon: 'github', tooltip: 'info.github' },
+	{
+		key: 'patreon',
+		href: PATREON_URL,
+		className: 'ui-social-link',
+		icon: 'patreon',
+		tooltip: 'info.patreon',
+		label: ' Patreon',
+	},
+] as const;
 
 export type Social = (typeof SOCIALS)[number];
 
@@ -51,7 +60,11 @@ export type Social = (typeof SOCIALS)[number];
 // proto <-> player/specs cycle; the evaluation order of that cycle decides
 // whether PlayerSpecs' lookup table is populated.
 export function getSpecSitePath(classString: string, specString: string): string {
-	return `/forever/${classString}/${specString}/`;
+	return getSitePath(`${classString}/${specString}/`);
+}
+
+export function getSitePath(path: string): string {
+	return `${import.meta.env.VITE_SITE_BASE || `/${REPO_NAME}/`}${path}`;
 }
 
 export const LOCAL_STORAGE_PREFIX = '__forever';

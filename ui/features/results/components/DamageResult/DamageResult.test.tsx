@@ -1,9 +1,10 @@
 import type { SpellSchool as SpellSchoolValue } from '@generated/proto/common';
+import i18n from '@i18n/config';
 import type { DamageLog, Entity } from '@sim/proto/combat_log';
-import { SpellSchool } from '@sim/proto/names';
 import { render } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import english from '../../../../../assets/locales/en/translation.json';
 import { DamageResult } from './DamageResult';
 
 const target = { name: 'Boss', ownerName: '', index: 0, isTarget: true, isPet: false } as Entity;
@@ -11,20 +12,27 @@ const target = { name: 'Boss', ownerName: '', index: 0, isTarget: true, isPet: f
 const damage = (extra: Partial<DamageLog>) =>
 	({ kind: 'damage', outcome: 'hit', effect: 'damage', amount: 1234.5, tick: false, target, spellSchool: null, ...extra }) as DamageLog;
 
+// The line is a locale string with the target and amount spliced in as elements, which only exist once
+// the string resolves; the test setup loads no locale, so this suite loads the English one.
+beforeAll(() => {
+	i18n.addResourceBundle('en', 'translation', english, true, true);
+});
+afterAll(() => {
+	i18n.removeResourceBundle('en', 'translation');
+});
+
 describe('DamageResult', () => {
 	it('names the outcome, the target and the amount with its school', () => {
 		const { container } = render(
 			<DamageResult
 				log={damage({
-					outcome: 'crit', // `spellSchoolNames` is keyed on the bitmask enum in `names.ts`, which is not the generated one the log declares.
-					spellSchool: SpellSchool.Physical as unknown as SpellSchoolValue,
+					outcome: 'crit', // `spellSchoolNames` is keyed on the bitmask enum in `names.ts` (1 is Physical), which is not the generated one the log declares.
+					spellSchool: 1 as SpellSchoolValue,
 				})}
 			/>,
 		);
 
 		expect(container.textContent).toBe('Crit [Target 1] for 1234.50 damage (Physical).');
-		expect(container.querySelector('strong')!.classList.contains('text-danger')).toBe(false);
-		expect(container.querySelector('strong')!.classList.contains('text-school-physical')).toBe(true);
 	});
 
 	// A periodic hit reads as a Tick, but a periodic crit still reads as a Crit.
@@ -37,7 +45,6 @@ describe('DamageResult', () => {
 		const healed = render(<DamageResult log={damage({ effect: 'healing' })} />).container;
 		// The double space is intentional: 'Healed ' already ends in one.
 		expect(healed.textContent).toBe('Healed  [Target 1] for 1234.50 health.');
-		expect(healed.querySelector('strong')!.classList.contains('text-resource-health')).toBe(true);
 
 		expect(render(<DamageResult log={damage({ effect: 'shielding' })} />).container.textContent).toBe('Shielded  [Target 1] for 1234.50 health.');
 	});

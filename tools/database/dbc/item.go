@@ -10,44 +10,42 @@ import (
 const UPGRADE_SYSTEM_ACTIVE = false
 
 type Item struct {
-	Id                     int
-	Name                   string
-	InventoryType          int
-	ItemDelay              int
-	OverallQuality         ItemQuality
-	DmgVariance            float64
-	ItemLevel              int
-	ItemClass              int
-	ItemSubClass           int
-	StatAlloc              []float64
-	BonusStat              []int
-	ArmorValue             int
-	FireResistance         int
-	NatureResistance       int
-	FrostResistance        int
-	ShadowResistance       int
-	ArcaneResistance       int
-	SocketEnchantmentId    int
-	Flags0                 ItemStaticFlags0
-	Flags1                 ItemStaticFlags1
-	Flags2                 ItemStaticFlags2
-	Flags3                 ItemStaticFlags3
-	FDID                   int
-	ItemSetName            string
-	ItemSetId              int
-	ClassMask              int
-	RaceMask               int
-	QualityModifier        float64
-	RandomSuffixOptions    []int32
-	StatPercentageOfSocket []float64
-	BonusAmountCalculated  []float64
-	Sockets                []int
-	SocketModifier         []float64 // Todo: Figure out if this is socket modifier in disguise or something else - I call it that for now.
-	NameDescription        string    // Contains information for i.E. Thunderforging. Normal = Thunderforged, HC = Heroic Thunderforged
-	UpgradeID              int
-	UpgradePath            []int
-	LimitCategory          int
-	Bonding                int
+	Id                    int
+	Name                  string
+	InventoryType         int
+	ItemDelay             int
+	OverallQuality        ItemQuality
+	DmgVariance           float64
+	ItemLevel             int
+	ItemClass             int
+	ItemSubClass          int
+	StatAlloc             []float64
+	BonusStat             []int
+	ArmorValue            int
+	FireResistance        int
+	NatureResistance      int
+	FrostResistance       int
+	ShadowResistance      int
+	ArcaneResistance      int
+	Flags0                ItemStaticFlags0
+	Flags1                ItemStaticFlags1
+	Flags2                ItemStaticFlags2
+	Flags3                ItemStaticFlags3
+	Flags4                ItemStaticFlags4
+	FDID                  int
+	ItemSetName           string
+	ItemSetId             int
+	ClassMask             int
+	RaceMask              int
+	QualityModifier       float64
+	DamageType            int // ItemSparse.DamageType, the weapon's school in the game files' order.
+	RandomSuffixOptions   []int32
+	BonusAmountCalculated []float64
+	NameDescription       string // Contains information for i.E. Thunderforging. Normal = Thunderforged, HC = Heroic Thunderforged
+	UpgradeID             int
+	UpgradePath           []int
+	LimitCategory         int
+	Bonding               int
 }
 
 func (item *Item) ToUIItem() *proto.UIItem {
@@ -70,14 +68,16 @@ func (item *Item) ToScaledUIItem(itemLevel int) *proto.UIItem {
 		HandType:            handType,
 		WeaponType:          weaponType,
 		WeaponSpeed:         float64(item.ItemDelay) / 1000,
-		GemSockets:          item.GetGemSlots(),
-		SocketBonus:         NullFloat(item.GetGemBonus().ToProtoArray()),
 		NameDescription:     item.NameDescription,
 		LimitCategory:       int32(item.LimitCategory),
 		QualityModifier:     item.GetWeaponQualityModifier(),
 	}
 
 	item.ParseItemFlags(uiItem)
+
+	if item.ItemClass == ITEM_CLASS_WEAPON {
+		uiItem.SpellSchool = item.GetSpellSchool()
+	}
 
 	if item.ItemClass == ITEM_CLASS_ARMOR {
 		uiItem.ArmorType = MapArmorSubclassToArmorType[item.ItemSubClass]
@@ -95,6 +95,15 @@ func (item *Item) ToScaledUIItem(itemLevel int) *proto.UIItem {
 		Stats:           item.GetStats(item.ItemLevel).ToProtoMap(),
 		RandPropPoints:  item.GetRandPropPoints(item.ItemLevel),
 		Ilvl:            int32(item.ItemLevel),
+	}
+	if item.ItemClass == ITEM_CLASS_WEAPON {
+		// Equipped damage is rounded; a form that swings at its own speed needs the table cell itself.
+		scalingProperties[0].UnroundedDps, _ = dbcInstance.WeaponDPS(item, item.ItemLevel)
+		if item.hasReducedCasterDpsSuffix() {
+			dps, _ := dbcInstance.ReducedCasterWeaponDPS(item, item.ItemLevel)
+			low, high := item.WeaponDamage(dps)
+			scalingProperties[0].ReducedCasterWeaponDamage = &proto.ReducedCasterWeaponDamage{WeaponDamageMin: low, WeaponDamageMax: high, UnroundedDps: dps}
+		}
 	}
 
 	uiItem.ScalingOptions = scalingProperties
@@ -162,7 +171,39 @@ func (item *Item) GetStats(itemLevel int) *stats.Stats {
 		stats[proto.Stat_StatBlockValue] += blockValue
 	}
 
+	item.addCasterSpellPower(stats, itemLevel)
+
 	return stats
+}
+
+// Caster weapons carry spell power that no stat slot states, worked out from the first column of the
+// item level budget with the allocations of the "of Magic" and "of Healing" bonus lists: 20000 spell
+// power, or on a healing weapon 37600 healing (1.88 times the spell power) and a third of that as spell
+// damage, each rounded down. It adds to the weapon's own stats; the rule reproduces the in-game tooltip
+// of every weapon with one of the two flags.
+const (
+	casterSpellPowerAllocation   = 20000
+	casterHealingPowerAllocation = 37600
+)
+
+func (item *Item) addCasterSpellPower(stats *stats.Stats, itemLevel int) {
+	if !item.Flags4.Has(CASTER_SPELL_POWER) && !item.Flags4.Has(CASTER_HEALING_POWER) {
+		return
+	}
+	budget := int(GetDBC().RandomPropertiesByIlvl[itemLevel][item.OverallQuality.ToProto()][0])
+	add := func(mod int, value int) {
+		mapped, _ := MapBonusStatIndexToStats(mod)
+		for _, stat := range mapped {
+			stats[stat] += float64(value)
+		}
+	}
+	if item.Flags4.Has(CASTER_HEALING_POWER) {
+		healing := casterHealingPowerAllocation * budget / 10000
+		add(ITEM_MOD_SPELL_HEALING_DONE, healing)
+		add(ITEM_MOD_SPELL_DAMAGE_DONE, healing/3)
+		return
+	}
+	add(ITEM_MOD_SPELL_POWER, casterSpellPowerAllocation*budget/10000)
 }
 
 // GetWeaponQualityModifier returns the per-item damage offset for weapons.
@@ -185,7 +226,7 @@ func (item *Item) GetRandPropPoints(itemLevel int) int32 {
 func (item *Item) GetScaledStat(index int, itemLevel int) float64 {
 	//Todo check if overflow array
 
-	// This client ships no precomputed StatModifier_bonusAmount, so the allocation
+	// The game files ship no precomputed StatModifier_bonusAmount, so the allocation
 	// budget is the only source: 99.8% of stat slots carry a non-zero StatAlloc.
 	slotType := item.GetRandomSuffixType()
 	itemBudget := 0.0
@@ -198,72 +239,25 @@ func (item *Item) GetScaledStat(index int, itemLevel int) float64 {
 		if item.StatAlloc[index] > 0 && itemBudget > 0 {
 			rawValue := math.Round(item.StatAlloc[index] * itemBudget * 0.0001)
 
-			//Todo: Figure out if this does anything in MoP
-			//Not used right now in Cata
-			//socket_penalty := math.RoundNearby item.StatPercentageOfSocket[index] * SocketCost(itemLevel)
-			return rawValue - item.SocketModifier[index] // Todo: Could this be a calculated socket penalty?
+			return rawValue
 		}
 	}
 	return 0
 }
 
-func (item *Item) GetGemSlots() []proto.GemColor {
-	sockets := []proto.GemColor{}
-	for _, socketType := range item.Sockets {
-		if socketType == 0 {
-			continue
-		}
-		var gemType = MapSocketTypeToGemColor[socketType]
-		sockets = append(sockets, gemType)
-	}
-	return sockets
-}
-
-func (item *Item) GetGemBonus() stats.Stats {
-	stats := stats.Stats{}
-	if item.SocketEnchantmentId == 0 {
-		return stats
-	}
-	bonus := GetDBC().ItemStatEffects[item.SocketEnchantmentId]
-
-	for i, effectStat := range bonus.EffectArg {
-		if effectStat == 0 {
-			continue
-		}
-		if !bonus.EffectIsAura {
-			mapped, success := MapBonusStatIndexToStats(effectStat)
-			if !success {
-				return stats
-			}
-			value := bonus.EffectPointsMin[i]
-			for _, stat := range mapped {
-				stats[stat] = float64(value)
-			}
-		} else {
-			// This socket bonus in an Aura, need to loop over the raw SpellEffect data
-			// effectStat is the SpellID
-			effectAuras := GetDBC().SpellEffects[effectStat]
-			for _, effectAura := range effectAuras {
-				stat := ConvertEffectAuraToStatIndex(effectAura.EffectAura, effectAura.EffectMiscValues[0])
-				if stat > 0 {
-					stats[stat] = float64(effectAura.EffectBasePoints)
-				}
-			}
+// Whether one of the item's random suffixes reduces caster DPS, so the item needs the damage it deals with it.
+func (item *Item) hasReducedCasterDpsSuffix() bool {
+	for _, id := range item.RandomSuffixOptions {
+		if dbcInstance.RandomSuffix[int(id)].ReducedCasterDps {
+			return true
 		}
 	}
-	return stats
+	return false
 }
 
 func (item *Item) WeaponDmgMin(itemLevel int) float64 {
-	if itemLevel == 0 {
-		itemLevel = item.ItemLevel
-	}
-	total := item.WeaponDps(itemLevel)*(float64(item.ItemDelay)/1000.0)*(1-item.DmgVariance/2) +
-		(item.QualityModifier * (float64(item.ItemDelay) / 1000.0))
-	if total < 0 {
-		total = 1
-	}
-	return math.Floor(total)
+	low, _ := item.WeaponDamage(item.WeaponDps(itemLevel))
+	return low
 }
 func (item *Item) GetBlockValue(itemLevel int) float64 {
 	weaponType, _, _ := item.GetWeaponTypes()
@@ -276,15 +270,8 @@ func (item *Item) GetBlockValue(itemLevel int) float64 {
 }
 
 func (item *Item) WeaponDmgMax(itemLevel int) float64 {
-	if itemLevel == 0 {
-		itemLevel = item.ItemLevel
-	}
-	total := item.WeaponDps(itemLevel)*(float64(item.ItemDelay)/1000.0)*(1+item.DmgVariance/2) +
-		(item.QualityModifier * (float64(item.ItemDelay) / 1000.0))
-	if total < 0 {
-		total = 1
-	}
-	return math.Floor(total + 0.5)
+	_, high := item.WeaponDamage(item.WeaponDps(itemLevel))
+	return high
 }
 
 func (item *Item) ApproximateScaleCoeff(currIlvl int, newIlvl int) float64 {
@@ -296,51 +283,56 @@ func (item *Item) ApproximateScaleCoeff(currIlvl int, newIlvl int) float64 {
 	return 1.0 / math.Pow(1.15, diff/15.0)
 }
 
+// GetArmorValue computes base armor from the item level tables, since the game files carry no armor
+// value on the item: ItemArmorShield by quality for a shield, otherwise ItemArmorTotal for the armor
+// type, scaled by ItemArmorQuality and the slot's ArmorLocation modifier. A robe takes the chest row.
 func (item *Item) GetArmorValue(itemLevel int) int {
-	// TBC Stores ArmorValue in the Resistance_0 item column
-	return item.ArmorValue
+	if item.ItemClass != ITEM_CLASS_ARMOR || item.OverallQuality > 6 {
+		return 0
+	}
+	ilvl := item.ItemLevel
+	if itemLevel > 0 {
+		ilvl = itemLevel
+	}
 
-	// if item.Id == 0 || item.OverallQuality > 5 {
-	// 	return 0
-	// }
-	// ilvl := 0
-	// if itemLevel > 0 {
-	// 	ilvl = itemLevel
-	// } else {
-	// 	ilvl = item.ItemLevel
-	// }
+	if item.ItemSubClass == ITEM_SUBCLASS_ARMOR_SHIELD {
+		shield, ok := GetDBC().ItemArmorShield[ilvl]
+		if !ok {
+			return 0
+		}
+		return int(math.Floor(shield.Quality[item.OverallQuality] + 0.5))
+	}
 
-	// if item.ItemClass == ITEM_CLASS_ARMOR && item.ItemSubClass == ITEM_SUBCLASS_ARMOR_SHIELD {
-	// 	return item.ArmorValue
-	// }
+	var totalArmor float64
+	total := GetDBC().ItemArmorTotal[ilvl]
+	switch item.ItemSubClass {
+	case ITEM_SUBCLASS_ARMOR_CLOTH:
+		totalArmor = total.Cloth
+	case ITEM_SUBCLASS_ARMOR_LEATHER:
+		totalArmor = total.Leather
+	case ITEM_SUBCLASS_ARMOR_MAIL:
+		totalArmor = total.Mail
+	case ITEM_SUBCLASS_ARMOR_PLATE:
+		totalArmor = total.Plate
+	default:
+		return 0
+	}
 
-	// if item.ItemSubClass == ITEM_SUBCLASS_ARMOR_MISC || item.ItemSubClass > ITEM_SUBCLASS_ARMOR_PLATE {
-	// 	return 0
-	// }
-	// total_armor := 0.0
-	// quality := 0.0
-	// //	3688.5300292969 * 1.37000000477 * 0.15999999642
-	// armorModifier := GetDBC().ArmorLocation[item.InventoryType] //	0.15999999642 	3688.5300292969 	1.37000000477
-	// if item.InventoryType == INVTYPE_ROBE {
-	// 	armorModifier = GetDBC().ArmorLocation[INVTYPE_CHEST]
-	// }
-	// switch item.InventoryType {
-	// case INVTYPE_HEAD, INVTYPE_SHOULDERS, INVTYPE_CHEST, INVTYPE_WAIST, INVTYPE_LEGS, INVTYPE_FEET, INVTYPE_WRISTS, INVTYPE_HANDS, INVTYPE_CLOAK, INVTYPE_ROBE:
-	// 	switch item.ItemSubClass {
-	// 	case ITEM_SUBCLASS_ARMOR_CLOTH:
-	// 		total_armor = GetDBC().ItemArmorTotal[ilvl].Cloth
-	// 	case ITEM_SUBCLASS_ARMOR_LEATHER:
-	// 		total_armor = GetDBC().ItemArmorTotal[ilvl].Leather
-	// 	case ITEM_SUBCLASS_ARMOR_MAIL:
-	// 		total_armor = GetDBC().ItemArmorTotal[ilvl].Mail
-	// 	case ITEM_SUBCLASS_ARMOR_PLATE:
-	// 		total_armor = GetDBC().ItemArmorTotal[ilvl].Plate
-	// 	}
-	// 	quality = GetDBC().ItemArmorQuality[ilvl].Quality[item.OverallQuality]
-	// default:
-	// 	return 0
-	// }
-	// return int(math.Floor(total_armor*quality*armorModifier.Modifier[item.ItemSubClass-1] + 0.5))
+	switch item.InventoryType {
+	case INVTYPE_HEAD, INVTYPE_SHOULDERS, INVTYPE_CHEST, INVTYPE_WAIST, INVTYPE_LEGS, INVTYPE_FEET, INVTYPE_WRISTS, INVTYPE_HANDS, INVTYPE_CLOAK, INVTYPE_ROBE:
+	default:
+		return 0
+	}
+	slot := item.InventoryType
+	if slot == INVTYPE_ROBE {
+		slot = INVTYPE_CHEST
+	}
+	quality, ok := GetDBC().ItemArmorQuality[ilvl]
+	if !ok {
+		return 0
+	}
+	location := GetDBC().ArmorLocation[slot]
+	return int(math.Floor(totalArmor*quality.Quality[item.OverallQuality]*location.Modifier[item.ItemSubClass-1] + 0.5))
 }
 
 func (item *Item) GetWeaponTypes() (proto.WeaponType, proto.HandType, proto.RangedWeaponType) {
@@ -455,4 +447,22 @@ func (item *Item) GetRandomSuffixType() int {
 	default:
 		return -1
 	}
+}
+
+// ItemSparse.DamageType counts the schools in the game files' order, which the proto enum does not share.
+var damageTypeSchools = [...]proto.SpellSchool{
+	proto.SpellSchool_SpellSchoolPhysical,
+	proto.SpellSchool_SpellSchoolHoly,
+	proto.SpellSchool_SpellSchoolFire,
+	proto.SpellSchool_SpellSchoolNature,
+	proto.SpellSchool_SpellSchoolFrost,
+	proto.SpellSchool_SpellSchoolShadow,
+	proto.SpellSchool_SpellSchoolArcane,
+}
+
+func (item *Item) GetSpellSchool() proto.SpellSchool {
+	if item.DamageType < 0 || item.DamageType >= len(damageTypeSchools) {
+		return proto.SpellSchool_SpellSchoolPhysical
+	}
+	return damageTypeSchools[item.DamageType]
 }

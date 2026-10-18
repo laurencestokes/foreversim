@@ -1,128 +1,175 @@
 ---
 name: wowsims-bulk-sim
-description: 'Use when working on WoWSims TBC Bulk Sim: local/server bulk sim, browser WASM concurrent bulk sim, BulkSimRequest/BulkSimResult protos, candidate generation, staged simulation, the finalist tie-breaker stage, deterministic seeds, IndexedDB gem-optimizer caching, tie-group result display, progress, or abort behavior.'
-argument-hint: 'Describe the TBC Bulk Sim candidate flow, staging/finalist behavior, cache behavior, or validation task.'
+description: 'Use for any WoWSims Forever bulk sim ("Batch" tab) work, whether it runs natively, on the server or in the browser: candidate generation from BulkSettings and the enchant presets, the low/medium/high and finalist stages, survivor culling, content-derived seeds, paired errors and tie groups in the results, progress, abort, combination counts, and the item database a bulk request carries to the workers. Also use it when a change to the sim request or its SimDatabase could reach a batch run. The gear optimizer (EP, stat caps, HiGHS) is `wowsims-reforge-optimizer`; React and store work outside the bulk feature is `wowsims-ui`.'
+argument-hint: 'Describe the bulk sim flow, stage or result behaviour, or validation task.'
 ---
 
-# WoWSims TBC Bulk Sim Guide
+# WoWSims Forever bulk sim
 
-## Scope
+The bulk sim ranks gear sets built from the worn gear plus the items and enchants the user selects. One Go
+implementation (`sim/core/bulk`) generates the candidates and runs the stages; the browser runs a TypeScript
+mirror of the stage loop because the WASM sim cannot run `bulkSimAsync`.
 
-- Bulk candidate generation and staged simulation flow (low/medium/high + finalist).
-- Bulk gem-optimizer pre-pass integration and cache behavior ("reforge" naming is inherited from MoP; TBC has no reforging — the optimizer chooses gems/socket bonuses only).
-- Deterministic content-derived seeding and statistical result display.
-- Progress, abort semantics, and local vs WASM orchestration.
+## Where things live
 
-## Architecture
+- Protos: `proto/api.proto` (`BulkSimRequest`, `BulkSettings`, `BulkGearCandidate`, `BulkSimResult`,
+  `BulkGearResult`, `BulkSimStageMetrics`, `BulkCombinationCountRequest`, `BulkCandidatesRequest`). `BulkSimStage`
+  runs Low, Medium, High, Finalist, Complete; Error ends a failed run.
+- Candidate generator, `sim/core/bulk`: `generator.go` (selected items, grouped slot pairs, combination table),
+  `weapons.go` (main-hand/off-hand combos, imbue adjustment), `enchants.go` (enchant variants), `slots.go` (bulk
+  slots), `item_keys.go` and `item_rules.go` (dedupe, equip rules), `candidates.go` (the `BulkCombinationCount`,
+  `BulkCandidates` and `EnsureBulkSimCandidatesGenerated` entry points).
+- Stage runner, `sim/core/bulk`: `bulk_sim.go` (`BulkSimAsync`, constants), `stage.go` (stage configs, adaptive
+  passes, finalist stage), `statistics.go` (target iterations, culling, paired errors, `BulkSimZ95`), `batch.go`,
+  `carry_over.go`, `merge.go`, `progress.go`, `estimate.go`.
+- Server: `sim/web/bulk.go` generates the candidates when the request carries none, then hands over to
+  `bulk.BulkSimAsync`; `sim/web/main.go` wires `/bulkSimAsync`, `/bulkCombinationCount` and `/bulkCandidates`.
+  `sim/wasm/main.go` exports only `bulkCombinationCount` and `bulkCandidates`.
+- Request building: `Sim.runBulkSim`, `getBulkCombinationCount` and `getBulkCandidates` in `ui/sim/sim.ts`;
+  `ui/sim/bulk/gear_database.ts` (the request's SimDatabase); `ui/sim/bulk/utils.ts` (`dedupeGearSets`, stage
+  helpers).
+- Browser stage loop: `ui/sim/wasm/bulk_sim/` (`index`, `stage`, `batch`, `merge`, `statistics`, `progress`,
+  `carry_over`, `estimate`, `types`), a line-for-line mirror of `sim/core/bulk`.
+- Feature: `ui/features/bulk/model/run.ts` (`runBulkBatch`, cancel, combination refresh), `core_sim.ts`,
+  `tie_chains.ts`, `settings.ts`; components under `ui/features/bulk/components/`; the tab is
+  `ui/app/tabs/BulkTabBody.tsx`. `ui/sim/settings/bulk_settings.ts` stores the settings and the enchant presets.
+- Enchant presets: `ui/features/enchant-presets/` (model, `EnchantPresets` tiles and dialog).
+- Generated, never hand-edited: `ui/sim/bulk/constants_auto_gen.ts` (slot maps) and
+  `ui/sim/wasm/bulk_sim/constants_auto_gen.ts` (tuning constants, stage ladder, `BULK_SIM_Z95`), written by
+  `make go-to-ts` through `tools/database/gen_bulksim_constants.ts.go` from the exported consts in `sim/core/bulk`.
 
-- Shared messages: proto/api.proto (BulkSimRequest, BulkSimResult, BulkGearResult, ReforgeOptimizeRequest). BulkSimStage order: Reforge, Low, Medium, High, Finalist, Complete (Complete last).
-- Core staged runner: sim/core/bulk/bulk_sim.go; per-stage logic + finalist stage: sim/core/bulk/stage.go; paired statistics: sim/core/bulk/statistics.go.
-- Local/server optimizer pre-pass wrapper: sim/web/bulk.go; endpoint wiring: sim/web/main.go.
-- Frontend orchestration, content seed, cache partitioning: ui/core/sim.ts (runBulkSim).
-- Bulk utilities and cache helpers: ui/core/components/individual_sim_ui/bulk/utils.ts.
-- Results display (tie groups, ±CI, change icons): ui/core/components/individual_sim_ui/bulk_tab.tsx + bulk/bulk_sim_results_renderer.tsx + ui/core/components/gear_change_icon.tsx (gem markers + Wowhead cover link; no reforge glyph in TBC).
-- Generic cache storage: ui/core/reforge_cache.ts (sync hashString from ui/core/utils.ts; values are plain `equipmentSpec:`-prefixed proto JSON; age-index-ranged prune).
-- Browser WASM path: ui/core/wasm/bulk_sim/ (index, stage, batch, merge, statistics, progress, carry_over, estimate, types) — a deliberate line-for-line mirror of sim/core/bulk.
-- Generated constants (never hand-edit; `go run ./tools/database/gen_db -gen=go-to-ts`): ui/core/components/individual_sim_ui/bulk/constants_auto_gen.ts (slot maps) and ui/core/wasm/bulk_sim/constants_auto_gen.ts (tuning constants + stage ladder), emitted by tools/database/gen_bulksim_constants.ts.go from the exported consts in sim/core/bulk.
+## Native and browser paths
 
-## TBC-Specific Differences From MoP
+`Sim.runBulkSim` picks the path by `isWasm()`:
 
-- No reforging: the optimizer is gem/socket-bonus only; EquippedItem has no reforge field; no reforge glyph anywhere in the UI.
-- No Titan's Grip / dual-wield-2H capability; a two-hander never occupies the off-hand.
-- The Ranged slot is a real bulk slot that iterates like any non-weapon slot (bulkSimNonWeaponOrder is built by filtering, not slicing).
-- No required-set-bonus combination matcher (matchingCombinations == rawCombinations).
-- Single locale (en); no fr translation file.
+- **Native or server:** the request goes out with no candidates; Go builds them in process and runs every stage.
+  Nothing is emitted while the candidates are built, which can take minutes, so `sim/web/bulk.go` registers the
+  abort signal before generating.
+- **Browser (WASM workers):** the page asks the workers for the candidates (`getBulkCandidates`), dedupes them
+  against the baseline (`dedupeGearSets`, keyed by `getGearIdentityKey`) and runs the stage loop in
+  `ui/sim/wasm/bulk_sim`, one `raidSimAsync` per candidate segment. The WASM worker cannot run `bulkSimAsync`.
 
-## Determinism and Statistics
+Because both paths run the same algorithm, a change to staging, culling, statistics, carry-over or progress in
+`sim/core/bulk` needs the same change in `ui/sim/wasm/bulk_sim`, and a new tuning constant goes through
+`make go-to-ts` rather than being copied by hand.
 
-- Content-derived seed: runBulkSim hashes baseline gear + BulkSettings + cache-relevant optimizer config into simOptions.randomSeed (utils hashString; per-part digests combined). Same setup → bit-identical results; any change → fresh sample. An explicit fixed RNG seed takes precedence; lastUsedRngSeed is updated to the seed actually used.
-- Candidates share seed sequences; comparisons between candidates use PAIRED errors (bulkSimPairedDpsError over AllValues), far tighter than per-result stdev.
-- Finalist stage (runBulkSimFinalistStage / runConcurrentBulkSimFinalistStage): after the high stage, the top `topResults` candidates + baseline get lockstep extra iterations until every adjacent pair separates under a paired z-test at Z95 (bulkSimZ95 / Z_95), or the budget (BulkSimFinalistMaxExtraIterationMultiplier × high-stage iterations) is spent. Its returned results ARE the refined, DPS-sorted display set.
-- Shipped per top result: paired_error_to_next_result and paired_error_to_baseline (computed before AllValues are stripped; 0 = could not pair).
-- FE display: adjacent results inside the paired tie threshold render in one labeled tie group (unpaired zTest fallback when paired data is absent); each row shows a ±95% CI (stDevToConf95 — the unpaired per-row error, a different quantity from the pairwise grouping test).
-- The single significance threshold lives in ui/core/utils.ts (Z_95, zTest) and sim/core/bulk/statistics.go (bulkSimZ95); keep them equal.
+Both paths build each candidate's request from the base request: the candidate's equipment, imbues adjusted to
+its weapons, `saveAllValues` on.
 
-## Core Invariants
+## The request database
 
-- Baseline gear source is base_request.raid.parties[0].players[0].equipment.
-- Candidate identity remains stable through BulkGearCandidate.index.
-- With reforge_request enabled:
-    - Cache hits go to optimized_candidates.
-    - Work-to-optimize goes to candidates.
-- Before staged sim starts:
-    - Merge cache hits with newly optimized candidates.
-    - Clear request.ReforgeRequest.
-- Dedup for sim input must exclude baseline-equivalent gear and duplicate optimized gear.
-- Keep full optimized candidate outputs for cache writing so every input key can be persisted.
-- Spec lookup goes through core.PlayerProtoToSpecSafe; eligible-slot logic through core.EligibleSlotsForItem / core.ItemTypeToSlotsMap (single source, shared with item swap); entry-point validation via newGeneratorFromRequest.
+Only `with_db` builds load every item (`sim/core/database_load.go`). The server binary (`go build ./sim/web`) and
+the WASM build do not use the tag, so they know only the items in the request's `SimDatabase`, while
+`go test -tags with_db` sees every item. A green Go test therefore does not prove the request carries what it
+needs: the generator fails with "selected bulk item … is missing from the database" for an item the request did
+not ship, and core code reading an item the player does not wear gets nil.
 
-## Settings Boundaries
+- The bulk database is built from the baseline gear, `BulkSettings.items` (a selected spec's own enchant and
+  suffix included) and the enchant pool (`makeBulkItemDatabaseFromSpecs`), on both paths, never from the
+  candidates. An id a candidate can carry reaches the workers only through `BulkSettings`.
+- It is merged into the player's database (`Database.mergeSimDatabases`), never assigned over it. The player's
+  database already holds the items party buffs read (`addPartyBuffItems` in `ui/sim/proto/buff_items.ts`, e.g. the
+  party Darkspear's item); replacing it drops them silently. Any code path that rebuilds `player.database` either
+  merges into it or calls `addPartyBuffItems` afterwards, as `runSim` with `options.gear` does.
 
-- BulkSettings controls bulk-tab constraints.
-- ReforgeSettings controls Suggest Gems constraints.
-- Never merge or alias these domains in request shaping or serialization.
+## Candidates
 
-## Local/Server Optimizer Flow
+- The baseline is `base_request.raid.parties[0].players[0].equipment`; `BulkGearCandidate.index` is a candidate's
+  stable identity through every stage.
+- `rawCombinations` is the mixed-radix index space of the combination table; `combinations` is the runnable count
+  the UI shows. There is no set-bonus filter, so the two are equal for `BulkCombinationCount`.
+- Slot eligibility goes through `core.EligibleSlotsForItem` (shared with item swap), spec lookup through
+  `core.PlayerProtoToSpecSafe`, request validation through `newGeneratorFromRequest`.
+- Hand swap (`initSelectedItems`): with no weapon selected, the worn weapons stay in the hands they are worn in.
+  Once any weapon is selected, a dual-wielder's worn weapons join the hand-weapon pool and every allowed
+  main-hand/off-hand order is a candidate.
+- Game rules the generator encodes: no reforging, gems or sockets (an `ItemSpec` is id, random suffix and
+  enchant); no Titan's Grip, so a two-hander never shares the hands with an off-hand; the Ranged slot iterates like
+  any non-weapon slot.
+- A ring enchant needs Enchanting. For a player without it, `slotSpec` strips both ring slots' enchants, the
+  baseline's and a selected ring's own, so no two candidates differ only by a ring enchant.
+- The combination table resolves each choice's item once per physical slot, and a candidate's item specs share
+  one backing array; keep per-candidate allocations out of that loop.
 
-- Candidate generation runs unless request is fully cache-restored.
-- Optimizer progress emits BulkSimStageReforge before low/medium/high stages.
-- Per-candidate optimizer failure falls back to original candidate gear.
-- Abort returns partial optimized candidates that already completed.
+## Enchant presets
 
-## Frontend/WASM Flow
+The bulk sim crosses enchants through its checked enchant presets. `enchantPresetPool` turns them into
+`BulkSettings.enchants` on every request (Finger 1 stands for both rings; Main Hand enchants go to both hands);
+the pool is derived, never stored, and sorted so preset order does not change the seed. The presets live in the
+bulk slice (`enchantPresets`, storage key `bulk-enchant-presets.v1`); checking a preset, or saving or deleting a
+checked one, bumps the slice's `settings` counter so the combination count refreshes.
 
-- WASM optimizer path is frontend-orchestrated with per-gear optimizer calls.
-- Cache entries store optimized output gear; cache key is input-identity hash (sync, from utils hashString).
-- Incremental cache writes are batched (setGearMany); the final write only covers keys not already written incrementally.
-- Results tab: rows build into a DocumentFragment and attach once; changed items render the shared gear-change icon (gem markers + Wowhead cover link) instead of a border; a slot-change renders the item plainly. Starting a new run returns to the Setup tab.
+The gear optimizer's "Use enchant presets" option reads the same presets. That is the only thing `BulkSettings`
+and `ReforgeSettings` share; keep the two apart in request shaping and serialization. The fit rule
+(`core.EnchantAppliesToItem`, `core.FittingEnchantRow`) is shared with the optimizer too.
 
-## Candidate Counting and Filtering
+## Stages and statistics
 
-- rawCombinations is the mixed-radix candidate index space.
-- combinations is the filtered runnable count.
-- User-visible progress/counts should reflect filtered candidate totals.
+- Every candidate runs the same seed sequence, so comparisons use paired errors over `AllValues`
+  (`bulkSimPairedDpsError`), far tighter than per-result stdev.
+- Iterations come from the stage configs (minimums raised by the error target), not from `SimOptions.iterations`.
+  Below `BulkSimMinCombinations` candidates, or when it would sim fewer iterations, the run goes straight to the
+  high stage.
+- Low and medium stages cull to survivors. Culling intervals use the run's original candidate count, iteration
+  targets the current stage's count. A stage that misses its target error gets up to `BulkSimMaxAdaptivePasses`
+  extra segments with offset seeds, merged into the existing metrics, and the carry-over lets the next stage sim
+  only the iteration delta for the survivors.
+- Finalist stage (`runBulkSimFinalistStage` / `runConcurrentBulkSimFinalistStage`): the top `topResults` and the
+  baseline get lockstep extra iterations until every adjacent pair separates at `BulkSimZ95`, or
+  `BulkSimFinalistMaxExtraIterationMultiplier` × the iterations so far is spent. Its results are the displayed set.
+- Each top result ships `paired_error_to_next_result` and `paired_error_to_baseline`, computed before `AllValues`
+  are stripped (0 = could not pair). Strip `AllValues` by detaching the slice before cloning
+  (`bulkSimCandidateResultToProto`), never by cloning megabytes and discarding them.
+- `BulkSimZ95` in `sim/core/bulk/statistics.go` is the single significance threshold; `Z_95` and `zTest` in
+  `ui/sim/utils/math.ts` read the generated `BULK_SIM_Z95`.
 
-## Performance Guardrails
+## Seed and results display
 
-- Avoid per-candidate allocations in hot loops.
-- Prefer preallocated imperative loops in candidate/cache helpers.
-- Keep optimizer candidate-cache lookup path read-friendly and hash reuse-aware.
-- Progress emission is throttled (BulkSimProgressThrottle Go-side, 100ms mirror in wasm progress emitter).
-- When stripping AllValues for proto output, detach the slice before cloning (see bulkSimCandidateResultToProto) — never clone megabytes just to discard them.
+- `runBulkSim` hashes the baseline gear and `BulkSettings` (each serialized and hashed, the digests combined) into
+  `simOptions.randomSeed`: the same setup reproduces bit-identical results, any change draws a fresh sample. A
+  fixed RNG seed takes precedence, and `lastUsedRngSeed` records the seed actually used.
+- `buildTieChains` groups adjacent rows the paired test cannot separate, using the backend rank for "next result"
+  and falling back to an unpaired `zTest` where no paired error exists. Each row's ± is `stDevToConf95`, the
+  unpaired error of its own mean, a different quantity from the grouping test.
+- A slot holding the same item with another enchant renders `GearChangeIcon`; a new item renders plainly;
+  unchanged slots stay empty. Starting a run clears the results and returns to the Setup pane; a finished run
+  opens Results.
+- The batch tab's Encounters group lists the spec's preset encounters and the user's saved encounters
+  (`ui/features/bulk/model/encounters.ts`). `bulkEncounterRuns` decides what a batch runs, for `runBulkBatch` and the
+  combination count alike: the current encounter, then every checked row the group's list (`bulkEncounterList`)
+  neither leaves out (equal to the current encounter) nor flags (equal to an earlier checked row). Each run replaces
+  the whole encounter on the request copy only (the encounter override of `Sim.runBulkSim`). Every encounter shares the
+  one content seed, and `results` holds one entry per finished encounter, the current one first.
+- The Encounters group and Compare encounters are power tools (`showPowerTools` in the UI slice). With power tools off
+  the group is hidden, the combination count shows no encounter multiplier, and `runBulkBatch` runs the current
+  encounter alone; `bulkEncounterRuns` holds that rule for both. The checked encounters stay stored and count again
+  once power tools are back on. Results already on screen stay as they are.
+- With two or more finished encounters and power tools on, the encounter list offers Compare encounters: a table
+  (`compareMatrix` in `ui/features/bulk/model/compare.ts`) with the current gear's row, then every set's, and a column
+  per encounter by fight length, health-based ones last. Each cell is the set's gain over the current gear (in % of the
+  current gear's DPS), tinted on a diverging scale (`gainTint`, five steps either way, each a fifth of the table's
+  largest gain or loss), with the encounter's best outlined and a dashed gap where the encounter did not rank the set;
+  its tooltip gives the rank, DPS, fight-to-fight spread and gain. A set keeps one "S<N>" number across all
+  encounters, by gear identity. Under its number a set lists the items it changes (`changedItemLabels`); rings,
+  trinkets or a dual wielder's weapons that only change places count as unchanged, as in the result rows
+  (`ui/features/bulk/model/swappable_slots.ts`).
+- The Setup/Results tab strip spans the batch tab, and each pane has its own columns. Setup holds the settings
+  sidebar. Results holds the ranking and, for a run with more than one finished encounter, an encounter list
+  (`BulkEncounterResults`, a vertical, neutral-tone `ToggleGroup`); picking a row shows that encounter's ranking.
+  With one result there is no list and the ranking takes the full width.
+- Progress is throttled (`BulkSimProgressThrottle` in Go, 100 ms in the browser emitter). Every stage, the
+  finalist included, reports through the shared stage-metrics builder.
 
-## Logging Expectations
-
-- Candidate generation logs started and completed with duration and counts.
-- Optimizer stage logs one started event and one completion summary.
-- Every stage (finalist included) reports metrics through the shared stage-metrics builder, so observed error and concurrency are always populated.
-
-## Validation Commands
+## Validation
 
 ```bash
-make proto
+make proto      # after a proto change
+make go-to-ts   # after changing an exported constant or slot map in sim/core/bulk
+go test -tags with_db -count=1 ./sim/core/bulk ./sim/web
+npx vitest run ui/features/bulk ui/sim/bulk ui/sim/proto/buff_items.test.ts ui/features/enchant-presets
 npm run type-check
-go test -count=1 ./sim/core/bulk ./sim/web
 ```
 
-For optimizer-integration changes:
-
-```bash
-go test -count=1 ./sim/core/reforge_optimizer ./sim/web
-```
-
-Reproducibility check: run the same BulkSimRequest twice through BulkSimAsync with the same seed — results must be bit-identical.
-
-## Fast Search Aids
-
-```bash
-rg -n "BulkSimReforge|reforge_request|optimized_candidates|BulkSimStageReforge|Finalist" proto sim ui
-rg -n "bulkSimAsync|/bulkSimAsync" sim/web
-rg -n "pairedErrorToNextResult|bulkSimPairedDpsError|Z_95|bulkSimZ95" sim ui
-```
-
-## Common Pitfalls
-
-- Conflating BulkSettings and ReforgeSettings.
-- Porting MoP-only assumptions directly into TBC request/proto shapes (reforging, Titan's Grip, required set bonuses, fr locale).
-- Writing cache metadata without optimized gear payload.
-- Dropping partial optimized candidates on abort paths.
+Reproducibility: run the same `BulkSimRequest` twice through `BulkSimAsync` with the same seed; the results must
+be bit-identical. For a request-database change, run a batch against the dev server, which has no `with_db`, not
+only the Go tests.

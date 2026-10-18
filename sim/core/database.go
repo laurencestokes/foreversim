@@ -2,9 +2,9 @@ package core
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"sync"
-	"time"
 
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
@@ -14,9 +14,8 @@ import (
 var WITH_DB = false
 
 var itemsByID = map[int32]Item{}
-var gemsByID = map[int32]Gem{}
 var randomSuffixesByID = map[int32]RandomSuffix{}
-var enchantsByEffectID = map[int32]Enchant{}
+var enchantRowsByEffectID = map[int32][]Enchant{} // Every row with distinct slot rules per effect id, in load order.
 var itemEffectRandPropPointsByIlvl = map[int32]ItemEffectRandPropPoints{}
 var consumablesByID = map[int32]Consumable{}
 var spellEffectsById = map[int32]*proto.SpellEffect{}
@@ -63,14 +62,9 @@ func addToDatabase(newDB *proto.SimDatabase) {
 	}
 
 	for _, v := range newDB.Enchants {
-		if _, ok := enchantsByEffectID[v.EffectId]; !ok {
-			enchantsByEffectID[v.EffectId] = EnchantFromProto(v)
-		}
-	}
-
-	for _, v := range newDB.Gems {
-		if _, ok := gemsByID[v.Id]; !ok {
-			gemsByID[v.Id] = GemFromProto(v)
+		enchant := EnchantFromProto(v)
+		if !slices.ContainsFunc(enchantRowsByEffectID[v.EffectId], enchant.sameSlotRules) {
+			enchantRowsByEffectID[v.EffectId] = append(enchantRowsByEffectID[v.EffectId], enchant)
 		}
 	}
 
@@ -96,7 +90,7 @@ type ItemEffectRandPropPoints struct {
 	RandPropPoints int32
 }
 
-// ItemEffectRandPropPointsFromProto converts a protobuf ItemEffectRandPropPoints to a Go ItemEffectRandPropPoints
+// Converts a protobuf ItemEffectRandPropPoints to a Go ItemEffectRandPropPoints
 func ItemEffectRandPropPointsFromProto(ieRpp *proto.ItemEffectRandPropPoints) ItemEffectRandPropPoints {
 	return ItemEffectRandPropPoints{
 		Ilvl:           ieRpp.GetIlvl(),
@@ -104,7 +98,7 @@ func ItemEffectRandPropPointsFromProto(ieRpp *proto.ItemEffectRandPropPoints) It
 	}
 }
 
-// ItemEffectRandPropPointsToProto converts a Go ItemEffectRandPropPoints to a protobuf ItemEffectRandPropPoints
+// Converts a Go ItemEffectRandPropPoints to a protobuf ItemEffectRandPropPoints
 func ItemEffectRandPropPointsToProto(ieRpp ItemEffectRandPropPoints) *proto.ItemEffectRandPropPoints {
 	return &proto.ItemEffectRandPropPoints{
 		Ilvl:           ieRpp.Ilvl,
@@ -113,30 +107,60 @@ func ItemEffectRandPropPointsToProto(ieRpp ItemEffectRandPropPoints) *proto.Item
 }
 
 type Consumable struct {
-	Id                       int32
-	Type                     proto.ConsumableType
-	Stats                    stats.Stats
-	BuffsMainStat            bool
-	Name                     string
-	BuffDuration             time.Duration
-	CooldownDuration         time.Duration
-	CategoryCooldownDuration time.Duration
-	CategoryId               int32
-	EffectIds                []int32
+	Id                 int32
+	Type               proto.ConsumableType
+	Stats              stats.Stats
+	BuffsMainStat      bool
+	Name               string
+	ItemEffects        []*proto.ItemEffect
+	RequiredProfession proto.Profession
+	ReqProfRank        int32
+	// The category the first on-use shares: the item row's, or where it states none, its spell's.
+	CategoryId int32
+	// The enchant a temporary enchant puts on a weapon, nil on consumables that enchant nothing, and
+	// the weapon subclasses and inventory types it takes, where a zero mask takes any.
+	TemporaryEnchant        *Enchant
+	WeaponSubclassMask      int32
+	WeaponInventoryTypeMask int32
+	// The exclusive group, of which only the first consumable the spec names applies; empty on
+	// consumables that stack with everything.
+	GroupKey string
+}
+
+// The item's on-use rows.
+func (consumable Consumable) OnUseEffects() []*proto.ItemEffect {
+	return FilterSlice(consumable.ItemEffects, func(effect *proto.ItemEffect) bool { return effect.GetOnUse() != nil })
+}
+
+// The first on-use row, the one a consumable's builder runs.
+func (consumable Consumable) OnUse() *proto.ItemEffect {
+	onUses := consumable.OnUseEffects()
+	if len(onUses) == 0 {
+		panic(fmt.Sprintf("consumable %d (%s) states no on-use row", consumable.Id, consumable.Name))
+	}
+	return onUses[0]
 }
 
 func ConsumableFromProto(consumable *proto.Consumable) Consumable {
+	var temporaryEnchant *Enchant
+	if consumable.TemporaryEnchant != nil {
+		enchant := EnchantFromProto(consumable.TemporaryEnchant)
+		temporaryEnchant = &enchant
+	}
 	return Consumable{
-		Id:                       consumable.Id,
-		Type:                     consumable.Type,
-		Stats:                    stats.FromProtoArray(consumable.Stats),
-		BuffsMainStat:            consumable.BuffsMainStat,
-		Name:                     consumable.Name,
-		BuffDuration:             time.Second * time.Duration(consumable.BuffDuration),
-		CooldownDuration:         time.Second * time.Duration(consumable.CooldownDuration),
-		CategoryCooldownDuration: time.Second * time.Duration(consumable.CategoryCooldownDuration),
-		CategoryId:               consumable.CategoryId,
-		EffectIds:                consumable.EffectIds,
+		Id:                      consumable.Id,
+		Type:                    consumable.Type,
+		Stats:                   stats.FromProtoArray(consumable.Stats),
+		BuffsMainStat:           consumable.BuffsMainStat,
+		Name:                    consumable.Name,
+		ItemEffects:             consumable.ItemEffects,
+		RequiredProfession:      consumable.RequiredProfession,
+		ReqProfRank:             consumable.ReqProfRank,
+		CategoryId:              consumable.CategoryId,
+		TemporaryEnchant:        temporaryEnchant,
+		WeaponSubclassMask:      consumable.WeaponSubclassMask,
+		WeaponInventoryTypeMask: consumable.WeaponInventoryTypeMask,
+		GroupKey:                consumable.GroupKey,
 	}
 }
 
@@ -150,8 +174,10 @@ type Item struct {
 	RangedWeaponType proto.RangedWeaponType
 	WeaponDamageMin  float64
 	WeaponDamageMax  float64
+	UnroundedDPS     float64
 	SwingSpeed       float64
-	QualityModifier  float64 // Per-item offset to weapon "average damage"; negative for caster weapons.
+	QualityModifier  float64           // Per-item offset to weapon "average damage"; negative for caster weapons.
+	SpellSchool      proto.SpellSchool // The weapon's damage school; unset means physical.
 
 	Name          string
 	Stats         stats.Stats // Stats applied to wearer
@@ -164,23 +190,25 @@ type Item struct {
 
 	ClassAllowlist []proto.Class
 
-	GemSockets  []proto.GemColor
-	SocketBonus stats.Stats
-
 	// Modified for each instance of the item.
 	RandomSuffix RandomSuffix
-	Gems         []Gem
 	Enchant      Enchant
-	// Debug relabel of this weapon's type; see NewItem. WeaponType above already reflects
-	// the override (that's what all engine logic should read). This is kept only so the
-	// override survives a round trip back through ToItemSpecProto.
-	WeaponTypeOverride proto.WeaponType
 
 	//Internal use
-	TempEnchant    int32
-	ScalingOptions map[int32]*proto.ScalingItemProperties
-	RandPropPoints int32
-	ItemEffects    []*proto.ItemEffect
+	TempEnchant             int32
+	TempEnchantWeaponDamage float64
+	WeaponImbue             int32        // The Effect 360 imbue (poison, firestone, class imbue), beside the Effect 54 TempEnchant.
+	TempEnchantStats        *stats.Stats // The stats the TempEnchant and the WeaponImbue put on the item, counted with its enchant's.
+	TempEnchantPseudoStats  []float64    // The TempEnchant's pseudo stats, whose haste registerEquipSpeedAuras applies.
+	WeaponImbuePseudoStats  []float64    // The WeaponImbue's pseudo stats, whose haste registerEquipSpeedAuras applies.
+	ScalingOptions          map[int32]*proto.ScalingItemProperties
+	RandPropPoints          int32
+	ItemEffects             []*proto.ItemEffect
+}
+
+// Matches either slot: the Effect 54 TempEnchant or the Effect 360 WeaponImbue.
+func (item *Item) HasTempEnchant(effectID int32) bool {
+	return item.TempEnchant == effectID || item.WeaponImbue == effectID
 }
 
 func ItemFromProto(pData *proto.SimItem) Item {
@@ -194,8 +222,7 @@ func ItemFromProto(pData *proto.SimItem) Item {
 		RangedWeaponType: pData.RangedWeaponType,
 		SwingSpeed:       pData.WeaponSpeed,
 		QualityModifier:  pData.QualityModifier,
-		GemSockets:       pData.GemSockets,
-		SocketBonus:      stats.FromProtoArray(pData.SocketBonus),
+		SpellSchool:      pData.SpellSchool,
 		PseudoStats:      pData.PseudoStats,
 		Unique:           pData.Unique,
 		LimitCategory:    pData.LimitCategory,
@@ -216,27 +243,26 @@ func (item *Item) ToItemSpecProto() *proto.ItemSpec {
 		Id:           item.ID,
 		RandomSuffix: item.RandomSuffix.ID,
 		Enchant:      item.Enchant.EffectID,
-		Gems:         MapSlice(item.Gems, func(gem Gem) int32 { return gem.ID }),
-		MetaGemDisabled: slices.ContainsFunc(item.Gems, func(gem Gem) bool {
-			return gem.Disabled && gem.Color == proto.GemColor_GemColorMeta
-		}),
-		WeaponTypeOverride: item.WeaponTypeOverride,
 	}
 
 	return itemSpec
 }
 
 type RandomSuffix struct {
-	ID    int32
-	Name  string
-	Stats stats.Stats
+	ID               int32
+	Name             string
+	Stats            stats.Stats // Allocations per 10000 of the item's random property points.
+	PseudoStats      []float64   // Indexed by proto.PseudoStat; flat, through stats.FromPseudoStatsProto.
+	ReducedCasterDps bool        // A weapon with the suffix deals its scaling options' ReducedCasterWeaponDamage.
 }
 
 func RandomSuffixFromProto(pData *proto.ItemRandomSuffix) RandomSuffix {
 	return RandomSuffix{
-		ID:    pData.Id,
-		Name:  pData.Name,
-		Stats: stats.FromProtoArray(pData.Stats),
+		ID:               pData.Id,
+		Name:             pData.Name,
+		Stats:            stats.FromProtoArray(pData.Stats),
+		PseudoStats:      pData.PseudoStats,
+		ReducedCasterDps: pData.ReducedCasterDps,
 	}
 }
 
@@ -250,6 +276,7 @@ type Enchant struct {
 	Type           proto.ItemType // Only needed for unit tests
 	EnchantType    proto.EnchantType
 	ExtraTypes     []proto.ItemType
+	ProcKind       proto.EnchantProcKind
 }
 
 func EnchantFromProto(pData *proto.SimEnchant) Enchant {
@@ -263,37 +290,14 @@ func EnchantFromProto(pData *proto.SimEnchant) Enchant {
 		Type:           pData.Type,
 		EnchantType:    pData.EnchantType,
 		ExtraTypes:     append([]proto.ItemType(nil), pData.ExtraTypes...),
-	}
-}
-
-type Gem struct {
-	ID    int32
-	Name  string
-	Stats stats.Stats
-	Color proto.GemColor
-	// Set per equipped instance, not from the DB: a meta gem whose requirements are not met stays
-	// socketed (so the item's socket bonus still applies) but grants no stats and no effect.
-	Disabled bool
-}
-
-func GemFromProto(pData *proto.SimGem) Gem {
-	return Gem{
-		ID:    pData.Id,
-		Name:  pData.Name,
-		Stats: stats.FromProtoArray(pData.Stats),
-		Color: pData.Color,
+		ProcKind:       pData.ProcKind,
 	}
 }
 
 type ItemSpec struct {
-	ID              int32
-	RandomSuffix    int32
-	Enchant         int32
-	Gems            []int32
-	MetaGemDisabled bool
-	// Debug relabel of the weapon's type; see NewItem. Unset/WeaponTypeUnknown means
-	// use the item's own type.
-	WeaponTypeOverride proto.WeaponType
+	ID           int32
+	RandomSuffix int32
+	Enchant      int32
 }
 
 type Equipment [NumItemSlots]Item
@@ -417,7 +421,7 @@ func (equipment *Equipment) EquipEnchant(enchant Enchant) {
 }
 
 func (equipment *Equipment) containsEnchantInSlot(effectID int32, slot proto.ItemSlot) bool {
-	return (equipment[slot].Enchant.EffectID == effectID) || (equipment[slot].TempEnchant == effectID)
+	return (equipment[slot].Enchant.EffectID == effectID) || equipment[slot].HasTempEnchant(effectID)
 }
 
 func (equipment *Equipment) containsEnchantInSlots(effectID int32, possibleSlots []proto.ItemSlot) bool {
@@ -432,27 +436,97 @@ func (equipment *Equipment) containsItemInSlots(itemID int32, possibleSlots []pr
 	})
 }
 
-func (equipment *Equipment) containsGemInSlot(itemID int32, slot proto.ItemSlot) bool {
-	return slices.ContainsFunc(equipment[slot].Gems, func(gem Gem) bool {
-		return gem.ID == itemID
-	})
-}
-
 func GetEnchantByEffectID(effectID int32) *Enchant {
 	dbMu.RLock()
-	enchant, ok := enchantsByEffectID[effectID]
+	rows := enchantRowsByEffectID[effectID]
 	dbMu.RUnlock()
-	if !ok {
+	if len(rows) == 0 {
 		return nil
 	}
+	enchant := rows[0]
 	return &enchant
 }
 
-func GetGemByID(id int32) (Gem, bool) {
+// Every row under effectID, as AddToDatabase stores them.
+func GetEnchantRowsByEffectID(effectID int32) []Enchant {
 	dbMu.RLock()
-	gem, ok := gemsByID[id]
-	dbMu.RUnlock()
-	return gem, ok
+	defer dbMu.RUnlock()
+	return slices.Clone(enchantRowsByEffectID[effectID])
+}
+
+// The first row under effectID that fits item, for the stats an enchant gives that item.
+func FittingEnchantRow(effectID int32, item Item) (Enchant, bool) {
+	dbMu.RLock()
+	defer dbMu.RUnlock()
+	return fittingEnchantRow(effectID, item)
+}
+
+// The game files carry several rows under some effect ids (1897 is both 2H Lesser Impact and
+// Superior Striking), differing in the items they fit. Takes no lock: it runs under the read
+// lock in FittingEnchantRow and NewItem.
+func fittingEnchantRow(effectID int32, item Item) (Enchant, bool) {
+	for _, row := range enchantRowsByEffectID[effectID] {
+		if enchantRowAppliesToItem(row, item) {
+			return row, true
+		}
+	}
+	return Enchant{}, false
+}
+
+// A static enchant gives only stats, pseudo-stats or weapon damage and has no temporary effect.
+func (enchant Enchant) IsStatic() bool {
+	if enchant.ProcKind != proto.EnchantProcKind_EnchantProcKindNone {
+		return false
+	}
+	return enchant.Stats != (stats.Stats{}) || enchant.WeaponDamage != 0 || slices.ContainsFunc(enchant.PseudoStats, func(v float64) bool { return v != 0 })
+}
+
+func EnchantAppliesToItem(effectID int32, item Item) bool {
+	_, ok := FittingEnchantRow(effectID, item)
+	return ok
+}
+
+// Takes no lock: it runs under the read lock through fittingEnchantRow.
+func enchantRowAppliesToItem(enchant Enchant, item Item) bool {
+	if enchant.EnchantType == proto.EnchantType_EnchantTypeTwoHand && item.HandType != proto.HandType_HandTypeTwoHand {
+		return false
+	}
+	if enchant.EnchantType == proto.EnchantType_EnchantTypeStaff && item.WeaponType != proto.WeaponType_WeaponTypeStaff {
+		return false
+	}
+	if (enchant.EnchantType == proto.EnchantType_EnchantTypeShield) != (item.WeaponType == proto.WeaponType_WeaponTypeShield) {
+		return false
+	}
+	if (enchant.EnchantType == proto.EnchantType_EnchantTypeOffHand) != (item.WeaponType == proto.WeaponType_WeaponTypeOffHand) {
+		return false
+	}
+	if enchant.Type == proto.ItemType_ItemTypeRanged {
+		if item.RangedWeaponType != proto.RangedWeaponType_RangedWeaponTypeBow && item.RangedWeaponType != proto.RangedWeaponType_RangedWeaponTypeCrossbow && item.RangedWeaponType != proto.RangedWeaponType_RangedWeaponTypeGun {
+			return false
+		}
+	} else if item.RangedWeaponType != proto.RangedWeaponType_RangedWeaponTypeUnknown && item.RangedWeaponType != proto.RangedWeaponType_RangedWeaponTypeWand {
+		return false
+	}
+	return CheckSliceOverlap(eligibleEnchantSlots(enchant), EligibleSlotsForItem(&item))
+}
+
+func eligibleEnchantSlots(enchant Enchant) []proto.ItemSlot {
+	types := append([]proto.ItemType{enchant.Type}, enchant.ExtraTypes...)
+	slots := make([]proto.ItemSlot, 0, len(types)*2)
+	for _, itemType := range types {
+		if typeSlots, ok := ItemTypeToSlotsMap[itemType]; ok {
+			slots = append(slots, typeSlots...)
+			continue
+		}
+		if itemType == proto.ItemType_ItemTypeWeapon {
+			slots = append(slots, proto.ItemSlot_ItemSlotMainHand, proto.ItemSlot_ItemSlotOffHand)
+		}
+	}
+	return slots
+}
+
+func (enchant Enchant) sameSlotRules(other Enchant) bool {
+	return enchant.Type == other.Type && enchant.EnchantType == other.EnchantType && slices.Equal(enchant.ExtraTypes, other.ExtraTypes)
 }
 
 func GetConsumableByID(id int32) Consumable {
@@ -487,19 +561,16 @@ func (equipment *Equipment) ToEquipmentSpecProto() *proto.EquipmentSpec {
 	}
 }
 
-// Structs used for looking up items/gems/enchants
+// Structs used for looking up items/enchants
 type EquipmentSpec [NumItemSlots]ItemSpec
 
 func ProtoToEquipmentSpec(es *proto.EquipmentSpec) EquipmentSpec {
 	var coreEquip EquipmentSpec
 	for i, item := range es.Items {
 		coreEquip[i] = ItemSpec{
-			ID:                 item.Id,
-			RandomSuffix:       item.RandomSuffix,
-			Enchant:            item.Enchant,
-			Gems:               item.Gems,
-			MetaGemDisabled:    item.MetaGemDisabled,
-			WeaponTypeOverride: item.WeaponTypeOverride,
+			ID:           item.Id,
+			RandomSuffix: item.RandomSuffix,
+			Enchant:      item.Enchant,
 		}
 	}
 	return coreEquip
@@ -524,22 +595,8 @@ func NewItem(itemSpec ItemSpec) Item {
 
 	item.WeaponDamageMax = scalingOptions.WeaponDamageMax
 	item.WeaponDamageMin = scalingOptions.WeaponDamageMin
+	item.UnroundedDPS = scalingOptions.UnroundedDps
 	item.RandPropPoints = scalingOptions.RandPropPoints
-
-	// Debug relabel of the weapon's type: stats, damage and effects are untouched, only the
-	// type tag that type-keyed effects (racials, talents, ability requirements) key on
-	// changes. Hand type is not touched, so a two-hander relabelled Sword stays two-handed.
-	// Off-hand items and shields are excluded on both ends since they aren't "weapon type"
-	// specializations in the usual sense and would confuse dual-wield/hand-type logic.
-	if itemSpec.WeaponTypeOverride != proto.WeaponType_WeaponTypeUnknown &&
-		item.Type == proto.ItemType_ItemTypeWeapon &&
-		item.WeaponType != proto.WeaponType_WeaponTypeOffHand &&
-		item.WeaponType != proto.WeaponType_WeaponTypeShield &&
-		itemSpec.WeaponTypeOverride != proto.WeaponType_WeaponTypeOffHand &&
-		itemSpec.WeaponTypeOverride != proto.WeaponType_WeaponTypeShield {
-		item.WeaponTypeOverride = itemSpec.WeaponTypeOverride
-		item.WeaponType = itemSpec.WeaponTypeOverride
-	}
 
 	if itemSpec.RandomSuffix != 0 {
 		if randomSuffix, ok := randomSuffixesByID[itemSpec.RandomSuffix]; ok {
@@ -547,36 +604,26 @@ func NewItem(itemSpec ItemSpec) Item {
 		} else {
 			panic(fmt.Sprintf("No random suffix with id: %d", itemSpec.RandomSuffix))
 		}
+		if reduced := scalingOptions.ReducedCasterWeaponDamage; item.RandomSuffix.ReducedCasterDps && reduced != nil {
+			item.WeaponDamageMin = reduced.WeaponDamageMin
+			item.WeaponDamageMax = reduced.WeaponDamageMax
+			item.UnroundedDPS = reduced.UnroundedDps
+		}
 	}
 
 	if itemSpec.Enchant != 0 {
-		if enchant, ok := enchantsByEffectID[itemSpec.Enchant]; ok {
+		if rows := enchantRowsByEffectID[itemSpec.Enchant]; len(rows) == 1 {
+			item.Enchant = rows[0]
+		} else if enchant, ok := fittingEnchantRow(itemSpec.Enchant, item); ok {
 			item.Enchant = enchant
+		} else if len(rows) > 0 {
+			item.Enchant = rows[0]
 		}
 		// else {
 		// 	panic(fmt.Sprintf("No enchant with id: %d", itemSpec.Enchant))
 		// }
 	}
 
-	if len(itemSpec.Gems) > 0 {
-		// Need to do this to account for possible extra gem sockets.
-		numGems := len(item.GemSockets)
-		if len(itemSpec.Gems) > numGems {
-			numGems = len(itemSpec.Gems)
-		}
-
-		item.Gems = make([]Gem, numGems)
-		for gemIdx, gemID := range itemSpec.Gems {
-			if gem, ok := gemsByID[gemID]; ok {
-				gem.Disabled = itemSpec.MetaGemDisabled && gem.Color == proto.GemColor_GemColorMeta
-				item.Gems[gemIdx] = gem
-			} else {
-				if gemID != 0 {
-					panic(fmt.Sprintf("When parsing item %d, socket %d had gem with id: %d\nThis gem is not in the database.", itemSpec.ID, gemIdx, gemID))
-				}
-			}
-		}
-	}
 	return item
 }
 
@@ -619,7 +666,6 @@ func (equipment Equipment) inArea(areaTypes []proto.AreaType) Equipment {
 type ItemStringSpec struct {
 	Name    string
 	Enchant string
-	Gems    []string
 }
 
 func EquipmentSpecFromJsonString(jsonString string) *proto.EquipmentSpec {
@@ -647,13 +693,13 @@ func (equipment *Equipment) Stats(spec proto.Spec) stats.Stats {
 
 	for _, item := range equipment {
 		equipStats = equipStats.Add(ItemEquipmentBaseStats(item))
-		equipStats = equipStats.Add(ItemEquipmentGemAndEnchantStats(item))
+		equipStats = equipStats.Add(ItemEquipmentEnchantStats(item))
 	}
 
-	return UnifyGearHitAndCrit(equipStats)
+	return equipStats
 }
 
-// Returns the base stats on the equipment. That is all stats without Gems / Enchants
+// Returns the base stats on the equipment. That is all stats without Enchants
 func ItemEquipmentBaseStats(item Item) stats.Stats {
 	equipStats := stats.Stats{}
 
@@ -664,14 +710,18 @@ func ItemEquipmentBaseStats(item Item) stats.Stats {
 	equipStats = equipStats.Add(item.Stats)
 	equipStats = equipStats.Add(stats.FromPseudoStatsProto(item.PseudoStats))
 
-	// Forever's random suffixes are flat enchantments, as in Classic: "of the Monkey" is the same
-	// +Agility/+Stamina on every item that rolls it, not a share of the item's stat budget.
-	equipStats = equipStats.Add(item.RandomSuffix.Stats)
+	// The game rounds each suffix stat to the nearest point: 4106 Intellect allocation on a ring of 16
+	// random property points is 6.57, shown and applied as 7. Multiplying before dividing keeps an exact
+	// half exact (47500 at 6 points is 28.5, shown as 29).
+	for stat, allocation := range item.RandomSuffix.Stats {
+		equipStats[stat] += math.Round(allocation * float64(item.RandPropPoints) / 10000)
+	}
+	equipStats = equipStats.Add(stats.FromPseudoStatsProto(item.RandomSuffix.PseudoStats))
 
 	return equipStats
 }
 
-func ItemEquipmentGemAndEnchantStats(item Item) stats.Stats {
+func ItemEquipmentEnchantStats(item Item) stats.Stats {
 	if item.ID == 0 {
 		return stats.Stats{}
 	}
@@ -679,29 +729,8 @@ func ItemEquipmentGemAndEnchantStats(item Item) stats.Stats {
 	equipStats := stats.Stats{}
 	equipStats = equipStats.Add(item.Enchant.Stats)
 	equipStats = equipStats.Add(stats.FromPseudoStatsProto(item.Enchant.PseudoStats))
-
-	for _, gem := range item.Gems {
-		// A disabled meta gem keeps its color below so the socket bonus still matches.
-		if gem.Disabled {
-			continue
-		}
-
-		equipStats = equipStats.Add(gem.Stats)
-	}
-
-	// Check socket bonus
-	if len(item.GemSockets) > 0 && len(item.Gems) >= len(item.GemSockets) {
-		allMatch := true
-		for gemIndex, socketColor := range item.GemSockets {
-			if !ColorIntersects(socketColor, item.Gems[gemIndex].Color) {
-				allMatch = false
-				break
-			}
-		}
-
-		if allMatch {
-			equipStats = equipStats.Add(item.SocketBonus)
-		}
+	if item.TempEnchantStats != nil {
+		equipStats = equipStats.Add(*item.TempEnchantStats)
 	}
 
 	return equipStats
@@ -752,8 +781,10 @@ func ItemTypeToSlot(it proto.ItemType) proto.ItemSlot {
 	return 255
 }
 
-// See getEligibleItemSlots in proto_utils/utils.ts.
+// gen_db -gen=go-to-ts writes this to the UI as ITEM_TYPE_TO_SLOTS, read by getEligibleItemSlots in
+// ui/sim/proto/items.ts.
 var ItemTypeToSlotsMap = map[proto.ItemType][]proto.ItemSlot{
+	proto.ItemType_ItemTypeUnknown:  {},
 	proto.ItemType_ItemTypeHead:     {proto.ItemSlot_ItemSlotHead},
 	proto.ItemType_ItemTypeNeck:     {proto.ItemSlot_ItemSlotNeck},
 	proto.ItemType_ItemTypeShoulder: {proto.ItemSlot_ItemSlotShoulder},
@@ -770,7 +801,7 @@ var ItemTypeToSlotsMap = map[proto.ItemType][]proto.ItemSlot{
 	// ItemType_ItemTypeWeapon is excluded intentionally - the slot cannot be decided based on type alone for weapons.
 }
 
-// EligibleSlotsForItem returns the item slots an item can occupy.
+// The item slots an item can occupy.
 func EligibleSlotsForItem(item *Item) []proto.ItemSlot {
 	if item == nil {
 		return nil
@@ -791,78 +822,4 @@ func EligibleSlotsForItem(item *Item) []proto.ItemSlot {
 	}
 
 	return nil
-}
-
-// GemEligibleForSocket reports whether a gem may be placed in a socket of the given color
-// (a meta socket takes only meta gems, and a meta gem fits nowhere else).
-func GemEligibleForSocket(gemColor proto.GemColor, socketColor proto.GemColor) bool {
-	if socketColor == proto.GemColor_GemColorMeta {
-		return gemColor == proto.GemColor_GemColorMeta
-	}
-	return gemColor != proto.GemColor_GemColorMeta
-}
-
-// GemMatchesSocket reports whether a gem's color counts as a match for the socket's color (for
-// the purpose of earning the item's socket bonus).
-func GemMatchesSocket(gemColor proto.GemColor, socketColor proto.GemColor) bool {
-	if gemColor == socketColor {
-		return true
-	}
-	switch socketColor {
-	case proto.GemColor_GemColorBlue:
-		return gemColor == proto.GemColor_GemColorPurple || gemColor == proto.GemColor_GemColorGreen || gemColor == proto.GemColor_GemColorPrismatic
-	case proto.GemColor_GemColorRed:
-		return gemColor == proto.GemColor_GemColorPurple || gemColor == proto.GemColor_GemColorOrange || gemColor == proto.GemColor_GemColorPrismatic
-	case proto.GemColor_GemColorYellow:
-		return gemColor == proto.GemColor_GemColorOrange || gemColor == proto.GemColor_GemColorGreen || gemColor == proto.GemColor_GemColorPrismatic
-	case proto.GemColor_GemColorPrismatic:
-		return gemColor == proto.GemColor_GemColorRed || gemColor == proto.GemColor_GemColorOrange || gemColor == proto.GemColor_GemColorYellow || gemColor == proto.GemColor_GemColorGreen || gemColor == proto.GemColor_GemColorBlue || gemColor == proto.GemColor_GemColorPurple
-	default:
-		return false
-	}
-}
-
-func ColorIntersects(g proto.GemColor, o proto.GemColor) bool {
-	if g == o {
-		return true
-	}
-	if g == proto.GemColor_GemColorPrismatic || o == proto.GemColor_GemColorPrismatic {
-		return true
-	}
-	if g == proto.GemColor_GemColorMeta {
-		return o == proto.GemColor_GemColorMeta
-	}
-	if g == proto.GemColor_GemColorRed {
-		return o == proto.GemColor_GemColorOrange || o == proto.GemColor_GemColorPurple
-	}
-	if g == proto.GemColor_GemColorBlue {
-		return o == proto.GemColor_GemColorGreen || o == proto.GemColor_GemColorPurple
-	}
-	if g == proto.GemColor_GemColorYellow {
-		return o == proto.GemColor_GemColorGreen || o == proto.GemColor_GemColorOrange
-	}
-	if g == proto.GemColor_GemColorOrange {
-		return o == proto.GemColor_GemColorYellow || o == proto.GemColor_GemColorRed
-	}
-	if g == proto.GemColor_GemColorGreen {
-		return o == proto.GemColor_GemColorYellow || o == proto.GemColor_GemColorBlue
-	}
-	if g == proto.GemColor_GemColorPurple {
-		return o == proto.GemColor_GemColorBlue || o == proto.GemColor_GemColorRed
-	}
-
-	return false // dunno what else could be.
-}
-
-// ItemsWithSockets returns the loaded items that carry at least one gem socket. Tests use
-// it to skip when the database has none, which is the case while Forever keeps item stats
-// encrypted until an item is discovered in game.
-func ItemsWithSockets() []Item {
-	var out []Item
-	for _, item := range itemsByID {
-		if len(item.GemSockets) > 0 {
-			out = append(out, item)
-		}
-	}
-	return out
 }

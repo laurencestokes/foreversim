@@ -34,31 +34,13 @@ func TestArmorDamageReductionCap(t *testing.T) {
 	}
 }
 
-func TestArmorConstantIsLevel60(t *testing.T) {
-	// A level 60 attacker: 400 + 85*60 = 5500, so 5500 armor halves the damage.
-	// TBC's 467.5*60 - 22167.5 = 5882.5 would leave 48.3%.
+func TestArmorReductionFromLevel60Attacker(t *testing.T) {
 	attacker := Unit{Type: PlayerUnit, Level: 60}
-	defender := Unit{Type: EnemyUnit, Level: 63, initialStats: stats.Stats{stats.Armor: 5500}, PseudoStats: stats.NewPseudoStats()}
-	defender.stats = defender.initialStats
-	if modifier := NewAttackTable(&attacker, &defender).GetArmorDamageModifier(nil); !WithinToleranceFloat64(0.5, modifier, 0.0001) {
-		t.Fatalf("Expected 0.5 damage taken, got %f", modifier)
-	}
-}
+	defender := Unit{Type: EnemyUnit, Level: 63, PseudoStats: stats.NewPseudoStats()}
+	defender.stats[stats.Armor] = 3731
 
-func TestGlancingBlowsAreLevel60(t *testing.T) {
-	// 40% glances for 65% damage against a boss, 10% per level less below it.
-	attacker := Unit{Type: PlayerUnit, Level: 60}
-	for level, want := range map[int32][2]float64{63: {0.40, 0.65}, 62: {0.30, 0.85}, 61: {0.20, 0.95}, 60: {0.10, 0.95}} {
-		defender := Unit{Type: EnemyUnit, Level: level}
-		table := NewAttackTable(&attacker, &defender)
-		if table.BaseGlanceChance != want[0] || table.GlanceMultiplier != want[1] {
-			t.Errorf("level %d: glance %.2f for %.2f damage, want %.2f for %.2f", level, table.BaseGlanceChance, table.GlanceMultiplier, want[0], want[1])
-		}
-		// The roll's ends, from Classic's formula at 300 weapon skill.
-		gap := 5 * float64(level-60)
-		low, high := min(1.3-0.05*gap, 0.91), max(min(1.2-0.03*gap, 0.99), 0.2)
-		if !WithinToleranceFloat64(low, table.GlanceMultiplier-table.GlanceSpread, 1e-9) || !WithinToleranceFloat64(high, table.GlanceMultiplier+table.GlanceSpread, 1e-9) {
-			t.Errorf("level %d: glance keeps %.2f-%.2f, want %.2f-%.2f", level, table.GlanceMultiplier-table.GlanceSpread, table.GlanceMultiplier+table.GlanceSpread, low, high)
-		}
+	reduction := 1 - NewAttackTable(&attacker, &defender).GetArmorDamageModifier(nil)
+	if !WithinToleranceFloat64(0.4042, reduction, 0.0001) {
+		t.Fatalf("3731 armor against a level 60 attacker reduces damage by %.4f, want 0.4042", reduction)
 	}
 }

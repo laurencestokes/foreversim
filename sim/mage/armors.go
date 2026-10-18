@@ -2,54 +2,81 @@ package mage
 
 import (
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-// The chosen armor is up for the whole fight. Forever has no Molten Armor, so that option, like None,
-// applies nothing; Frost Armor picks the top rank of the line, Ice Armor.
+// The Chilled procs on Frost and Ice Armor slow the attacker, which does nothing in the sim. One
+// armor is up at a time.
 func (mage *Mage) registerArmorSpells() {
-	var armorRank *spelldata.Spell
-	var buff stats.Stats
-	var label string
-	castingRegen := 0.0
+	// Frost Warding raises Frost and Ice Armor's armor and resistance.
+	warding := 1 + spellData.FrostWarding.EffectAt(1).FractionAt(mage.Talents.FrostWarding)
+	// Arcane Shielding's effect 2 raises Mage Armor's resistances (effect 1), so that effect is
+	// scaled here; the casting regen (effect 2) is parsed.
+	shielding := 1 + spellData.ArcaneShielding.EffectAt(2).FractionAt(mage.Talents.ArcaneShielding)
 
-	switch mage.Options.DefaultMageArmor {
-	case proto.MageArmor_MageArmorFrostArmor:
-		armorRank = spellData.IceArmor.Highest()
-		label = "Ice Armor"
-		buff = stats.Stats{
-			stats.Armor:           armorRank.Effect(dbcenums.A_MOD_RESISTANCE, 1).Average(core.CharacterLevel),
-			stats.FrostResistance: armorRank.Effect(dbcenums.A_MOD_RESISTANCE, 16).Average(core.CharacterLevel),
-		}
-	case proto.MageArmor_MageArmorMageArmor:
-		armorRank = spellData.MageArmor.Highest()
-		label = "Mage Armor"
-		resist := armorRank.Effect(dbcenums.A_MOD_RESISTANCE, 126).Average(core.CharacterLevel)
-		buff = stats.Stats{
-			stats.ArcaneResistance: resist,
-			stats.FireResistance:   resist,
-			stats.FrostResistance:  resist,
-			stats.NatureResistance: resist,
-			stats.ShadowResistance: resist,
-		}
-		castingRegen = armorRank.Effect(dbcenums.A_MOD_MANA_REGEN_INTERRUPT, 0).Average(core.CharacterLevel) / 100
-	default:
+	// Only the highest rank is registered: the mage casts the rank configured here, not every rank
+	// spellData.FrostArmor lists.
+	frostArmorRank := spellData.FrostArmor.Highest()
+	mage.registerArmor(frostArmorRank, MageSpellFrostArmor, stats.Stats{
+		stats.Armor: warding * frostArmorRank.EffectN(1).BaseValue(),
+	})
+
+	// Only the highest rank is registered: the mage casts the rank configured here, not every rank
+	// spellData.IceArmor lists.
+	iceArmorRank := spellData.IceArmor.Highest()
+	iceArmor := mage.registerArmor(iceArmorRank, MageSpellIceArmor, stats.Stats{
+		stats.Armor:           warding * iceArmorRank.EffectN(1).BaseValue(),
+		stats.FrostResistance: warding * iceArmorRank.EffectN(3).BaseValue(),
+	})
+
+	// Only the highest rank is registered: the mage casts the rank configured here, not every rank
+	// spellData.MageArmor lists.
+	mageArmorRank := spellData.MageArmor.Highest()
+	resist := shielding * mageArmorRank.EffectN(1).BaseValue()
+	mageArmor := mage.registerArmor(mageArmorRank, MageSpellMageArmor, stats.Stats{
+		stats.ArcaneResistance: resist,
+		stats.FireResistance:   resist,
+		stats.FrostResistance:  resist,
+		stats.NatureResistance: resist,
+		stats.ShadowResistance: resist,
+	})
+	spelldata.ParseEffects(&mage.Character, mageArmor, mageArmorRank, spelldata.Effects(2))
+
+	if mage.Options == nil {
 		return
 	}
 
-	core.MakePermanent(mage.RegisterAura(core.Aura{
-		Label:    label,
-		ActionID: core.ActionID{SpellID: armorRank.ID},
-		OnGain: func(_ *core.Aura, _ *core.Simulation) {
-			mage.PseudoStats.SpiritRegenRateCasting += castingRegen
-			mage.UpdateManaRegenRates()
-		},
-		OnExpire: func(_ *core.Aura, _ *core.Simulation) {
-			mage.PseudoStats.SpiritRegenRateCasting -= castingRegen
-			mage.UpdateManaRegenRates()
-		},
-	}).AttachStatsBuff(buff))
+	defaultArmor := map[proto.MageArmor]*core.Aura{
+		proto.MageArmor_MageArmorFrostArmor: iceArmor,
+		proto.MageArmor_MageArmorMageArmor:  mageArmor,
+	}[mage.Options.DefaultMageArmor]
+
+	if defaultArmor != nil {
+		defaultArmor.BuildPhase = core.CharacterBuildPhaseBuffs
+		defaultArmor.ApplyOnReset(func(aura *core.Aura, sim *core.Simulation) {
+			aura.Activate(sim)
+		})
+	}
+}
+
+func (mage *Mage) registerArmor(rank *spelldata.Spell, classMask int64, bonus stats.Stats) *core.Aura {
+	aura := mage.RegisterAura(spelldata.AuraConfig(rank, spelldata.RankLabel(rank, &mage.Unit))).AttachStatsBuff(bonus)
+	aura.NewExclusiveEffect("Mage Armor", true, core.ExclusiveEffect{})
+
+	config := spelldata.SpellConfig(&mage.Unit, rank, spelldata.Flags(core.SpellFlagAPL|core.SpellFlagHelpful))
+	config.ClassSpellMask = classMask
+	config.RelatedSelfBuff = aura
+
+	config.ExtraCastCondition = func(_ *core.Simulation, _ *core.Unit) bool {
+		return !aura.IsActive()
+	}
+
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
+		aura.Activate(sim)
+	}
+
+	mage.RegisterSpell(config)
+	return aura
 }

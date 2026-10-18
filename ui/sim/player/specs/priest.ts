@@ -1,6 +1,7 @@
 import { Class, Spec } from '@generated/proto/common';
 
-import { getSpecSitePath, LaunchStatus, Phase } from '../../constants/other';
+import { CURRENT_PHASE, getSpecSitePath, LaunchStatus } from '../../constants/other';
+import { isSpecDualWieldCapable } from '../classes/capabilities';
 import { IconSize } from '../player_class';
 import { PlayerSpec, SimStatus } from '../player_spec';
 
@@ -8,17 +9,17 @@ export class DpsPriest extends PlayerSpec<Spec.SpecDpsPriest> {
 	static specIndex = 0;
 	static specID = Spec.SpecDpsPriest as Spec.SpecDpsPriest;
 	static classID = Class.ClassPriest as Class.ClassPriest;
-	static friendlyName = 'Shadow';
+	static friendlyName = 'DPS';
 	static simLink = getSpecSitePath('priest', 'dps');
 
 	static isTankSpec = false;
 	static isHealingSpec = false;
 	static isRangedDpsSpec = true;
 	static isMeleeDpsSpec = false;
-	static canDualWield = false;
+	static canDualWield = isSpecDualWieldCapable(DpsPriest.specID);
 
 	static launch: SimStatus = {
-		phase: Phase.Launch,
+		phase: CURRENT_PHASE,
 		status: LaunchStatus.Alpha,
 	};
 
@@ -57,11 +58,11 @@ export class HealerPriest extends PlayerSpec<Spec.SpecHealerPriest> {
 	static isHealingSpec = true;
 	static isRangedDpsSpec = false;
 	static isMeleeDpsSpec = false;
-	static canDualWield = false;
+	static canDualWield = isSpecDualWieldCapable(HealerPriest.specID);
 
 	static launch: SimStatus = {
-		phase: Phase.Launch,
-		status: LaunchStatus.GearPlanner,
+		phase: CURRENT_PHASE,
+		status: LaunchStatus.Unlaunched,
 	};
 
 	readonly specIndex = HealerPriest.specIndex;

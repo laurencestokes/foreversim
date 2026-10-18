@@ -11,16 +11,6 @@ func init() {
 	addMovementAI()
 	addDynamicAddsAI()
 	addCustomBossAI()
-	addForeverRaids()
-	// Magtheridon, Serpentshrine and Mount Hyjal are TBC raids Forever does not have: their
-	// packages stay (upstream's, they keep merging) but are not registered.
-}
-
-func AddSingleTargetBossEncounter(presetTarget *core.PresetTarget) {
-	core.AddPresetTarget(presetTarget)
-	core.AddPresetEncounter(presetTarget.Config.Name, []string{
-		presetTarget.Path(),
-	})
 }
 
 func AddDefaultPresetEncounter() {
@@ -34,14 +24,14 @@ func AddDefaultPresetEncounter() {
 			TankIndex: 0,
 
 			Stats: stats.Stats{
-				stats.Health:      6_070_400,
+				stats.Health:      1_428_900,
 				stats.Armor:       3731,
 				stats.AttackPower: 320,
 			}.ToProtoArray(),
 
 			SpellSchool:      proto.SpellSchool_SpellSchoolPhysical,
 			SwingSpeed:       2,
-			MinBaseDamage:    4192.05,
+			MinBaseDamage:    2601,
 			DamageSpread:     0.5,
 			SuppressDodge:    false,
 			ParryHaste:       true,

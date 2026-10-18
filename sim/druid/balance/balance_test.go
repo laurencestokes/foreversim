@@ -3,9 +3,8 @@ package balance
 import (
 	"testing"
 
-	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
-	_ "github.com/wowsims/forever/sim/common" // imported to get caster sets included.
+	_ "github.com/wowsims/forever/sim/common" // imported to get caster sets included. (we use spellfire here)
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
 )
@@ -28,11 +27,12 @@ func TestBalance(t *testing.T) {
 					},
 				},
 			}},
-			// Naked: the generated item database does not carry the Forever gear our sim tests
-			// with yet, and gives the rest TBC-shaped stats.
-			GearSet:  core.GearSetCombo{Label: "Naked", GearSet: &proto.EquipmentSpec{}},
+			GearSet: core.GetGearSet("../../../ui/specs/druid/balance/gear_sets", "p1"),
+			OtherGearSets: []core.GearSetCombo{
+				core.GetGearSet("../../../ui/specs/druid/balance/gear_sets", "prebis"),
+			},
 			Talents:  DefaultTalents,
-			Rotation: core.GetAplRotation("../../../ui/specs/druid/balance/apls", "launch"),
+			Rotation: core.GetAplRotation("../../../ui/specs/druid/balance/apls", "default"),
 			ItemFilter: core.ItemFilter{
 				WeaponTypes:       DefaultWeaponTypes,
 				ArmorType:         DefaultArmorType,
@@ -42,8 +42,7 @@ func TestBalance(t *testing.T) {
 	}))
 }
 
-// Our Forever sim's Balance build, 40/0/11.
-const DefaultTalents = "5532220115001351--505302"
+const DefaultTalents = "5532220115501351--505"
 
 const DefaultArmorType = proto.ArmorType_ArmorTypeLeather
 
@@ -56,29 +55,4 @@ var DefaultWeaponTypes = []proto.WeaponType{
 
 var DefaultRangedWeaponTypes = []proto.RangedWeaponType{
 	proto.RangedWeaponType_RangedWeaponTypeIdol,
-}
-
-// The arena entry for this spec. Without ARENA_OUT set it only checks every build's damage against the spell manifest; see sim/arenalib.
-func TestArena(t *testing.T) {
-	arenalib.Run(t, arenaSpec)
-}
-
-// The race tier lists for this spec; skipped unless RACE_ARENA_OUT is set. See sim/arenalib/race_arena.go.
-func TestRaceArena(t *testing.T) {
-	arenalib.RunRaceArena(t, arenaSpec)
-}
-
-var arenaSpec = arenalib.Spec{
-	Dir:   "balance_druid",
-	UI:    "druid/balance",
-	Class: proto.Class_ClassDruid,
-	Race:  proto.Race_RaceNightElf,
-	SpecOptions: &proto.Player_BalanceDruid{BalanceDruid: &proto.BalanceDruid{
-		Options: &proto.BalanceDruid_Options{ClassOptions: &proto.DruidOptions{}},
-	}},
-	Role: arenalib.Caster,
-	// The page's automatic rotation is its Launch one, whatever the talents.
-	RaceBuilds: map[string]arenalib.RaceBuild{
-		"Moonkin 38/0/13": {Rotation: "launch"},
-	},
 }

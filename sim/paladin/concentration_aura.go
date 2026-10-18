@@ -11,6 +11,6 @@ import (
 // yards. Players may only have one Aura on them per Paladin at any one time.
 func (paladin *Paladin) registerConcentrationAura() {
 	rank := spellData.ConcentrationAura.Highest()
-	aura := buffs.ConcentrationAura(&paladin.Character, true, auraRank(rank))
+	aura := buffs.NewSpellDataConcentrationAuraRank(&paladin.Character, auraRank(rank))
 	paladin.registerAuraSpell(rank, aura, SpellMaskConcentrationAura)
 }

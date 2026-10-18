@@ -10,7 +10,7 @@ import (
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// The client's on-use rows: ItemEffect's spell, cooldown and category.
+// The items' on-use spells, on cooldowns and categories of the test's own.
 func renatakisOnUse() *proto.ItemEffect { return testOnUse(24532, 180000, 1141, 10000) } // Renataki's Charm of Trickery 19954
 func grileksOnUse() *proto.ItemEffect   { return testOnUse(24571, 180000, 1141, 10000) } // Gri'lek's Charm of Might 19951
 func robeOnUse() *proto.ItemEffect      { return testOnUse(18385, 300000, 0, 0) }        // Robe of the Archmage 14152
@@ -100,14 +100,16 @@ func gainedFrom(caster *testCaster, itemID int32) (float64, int32) {
 	return 0, 0
 }
 
-// Renataki's Charm of Trickery 19954 casts 24532, E_ENERGIZE 60 into energy (misc 3), on a 3 min
-// cooldown in category 1141, which Infernal Lasso 219345 shares.
+// Renataki's Charm of Trickery 19954 casts 24532, E_ENERGIZE into energy (misc 3). The test's on-use
+// runs on a 3 min cooldown in category 1141, which the test's lasso shares.
 func TestOnUseEnergizeRestoresARoguesEnergy(t *testing.T) {
 	const charmID, lassoID int32 = 991301, 991302
 	sim, rogue := newBarSim(t, testRogue(),
 		testTrinket{charmID, NewSpellDataEnergizeOnUse, renatakisOnUse()},
 		testTrinket{lassoID, NewSpellDataDamageOnUse, lassoOnUse()})
 	charm, lasso := onUseSpell(t, rogue, charmID), onUseSpell(t, rogue, lassoID)
+	gain := spelldata.MustFind(24532).ProcEnergizeEffect().Average()
+	needAmount(t, "24532's energy", gain)
 
 	mcd := rogue.GetInitialMajorCooldown(charm.ActionID)
 	if !mcd.Type.Matches(core.CooldownTypeDPS) {
@@ -117,16 +119,19 @@ func TestOnUseEnergizeRestoresARoguesEnergy(t *testing.T) {
 		t.Errorf("the charm would be used on a full bar")
 	}
 
-	rogue.SpendEnergy(sim, rogue.CurrentEnergy()-20, rogue.EnergyRefundMetrics)
-	if !mcd.ShouldActivate(sim, &rogue.Character) {
-		t.Errorf("the charm would not be used with 80 energy missing")
+	const first = 20.0
+	rogue.SpendEnergy(sim, rogue.CurrentEnergy()-first, rogue.EnergyRefundMetrics)
+	if got, fits := mcd.ShouldActivate(sim, &rogue.Character), rogue.MaximumEnergy()-first >= gain; got != fits {
+		t.Errorf("with %v energy missing, using the charm for %v is %v, want %v",
+			rogue.MaximumEnergy()-first, gain, got, fits)
 	}
 	if !charm.Cast(sim, &rogue.Unit) {
 		t.Fatalf("the charm could not be used")
 	}
 	start := sim.CurrentTime
-	if got := rogue.CurrentEnergy(); got != 80 {
-		t.Errorf("energy after the charm is %v, want 20 + 60", got)
+	firstGain := min(first+gain, rogue.MaximumEnergy()) - first
+	if got := rogue.CurrentEnergy(); got != first+firstGain {
+		t.Errorf("energy after the charm is %v, want %v + %v", got, first, firstGain)
 	}
 	if offCooldown(sim, lasso) {
 		t.Errorf("the lasso could be used while category 1141's cooldown runs")
@@ -144,18 +149,21 @@ func TestOnUseEnergizeRestoresARoguesEnergy(t *testing.T) {
 	}
 
 	stepPast(t, sim, start+3*time.Minute)
-	rogue.SpendEnergy(sim, rogue.CurrentEnergy()-70, rogue.EnergyRefundMetrics)
+	const second = 70.0
+	rogue.SpendEnergy(sim, rogue.CurrentEnergy()-second, rogue.EnergyRefundMetrics)
 	charm.Cast(sim, &rogue.Unit)
-	if got := rogue.CurrentEnergy(); got != rogue.MaximumEnergy() {
-		t.Errorf("energy after a second use from 70 is %v, want the %v maximum", got, rogue.MaximumEnergy())
+	secondGain := min(second+gain, rogue.MaximumEnergy()) - second
+	if got := rogue.CurrentEnergy(); got != second+secondGain {
+		t.Errorf("energy after a second use from %v is %v, want %v, capped at the %v maximum",
+			second, got, second+secondGain, rogue.MaximumEnergy())
 	}
-	if gained, events := gainedFrom(rogue, charmID); gained != 90 || events != 2 {
-		t.Errorf("the charm's metrics read %v energy over %d uses, want 60 + 30 over 2", gained, events)
+	if gained, events := gainedFrom(rogue, charmID); gained != firstGain+secondGain || events != 2 {
+		t.Errorf("the charm's metrics read %v energy over %d uses, want %v + %v over 2", gained, events, firstGain, secondGain)
 	}
 }
 
-// Gri'lek's Charm of Might 19951 casts 24571, E_ENERGIZE 300 into rage (misc 1): the client states
-// rage in tenths, and the tooltip reads 30.
+// Gri'lek's Charm of Might 19951 casts 24571, E_ENERGIZE into rage (misc 1): the game files state
+// rage in tenths, and the tooltip reads a tenth of the row's amount.
 func TestOnUseEnergizeGivesAWarriorTheTooltipsRage(t *testing.T) {
 	const charmID int32 = 991303
 	sim, warrior := newBarSim(t, testWarrior(), testTrinket{charmID, NewSpellDataEnergizeOnUse, grileksOnUse()})
@@ -164,14 +172,16 @@ func TestOnUseEnergizeGivesAWarriorTheTooltipsRage(t *testing.T) {
 	if got := warrior.GetInitialMajorCooldown(charm.ActionID); !got.Type.Matches(core.CooldownTypeDPS) {
 		t.Errorf("the charm is a major cooldown of type %v, want a DPS one", got.Type)
 	}
+	want := spelldata.MustFind(24571).ProcEnergizeEffect().Average() / 10
+	needAmount(t, "24571's rage", want)
 	charm.Cast(sim, &warrior.Unit)
-	if got := warrior.CurrentRage(); got != 30 {
-		t.Errorf("rage after the charm is %v, want 30", got)
+	if got := warrior.CurrentRage(); got != want {
+		t.Errorf("rage after the charm is %v, want %v, a tenth of the row's amount", got, want)
 	}
 }
 
-// Warmth of Forgiveness 23027 casts 28760, E_ENERGIZE 500 mana; Robe of the Archmage 14152 casts
-// 18385, the same 500 rolled over a 0.5 spread.
+// Warmth of Forgiveness 23027 casts 28760, E_ENERGIZE mana; Robe of the Archmage 14152 casts 18385,
+// a mana gain rolled over a spread.
 func TestOnUseEnergizeRestoresAManaUsersMana(t *testing.T) {
 	const warmthID, robeID int32 = 991304, 991305
 	sim, mage := newBarSim(t, testMage(),
@@ -191,37 +201,41 @@ func TestOnUseEnergizeRestoresAManaUsersMana(t *testing.T) {
 		}
 	}
 
+	want := spelldata.MustFind(28760).ProcEnergizeEffect().Average()
+	needAmount(t, "28760's mana", want)
 	mage.SpendMana(sim, 2000, spent)
 	before := mage.CurrentMana()
 	warmth.Cast(sim, &mage.Unit)
-	if got := mage.CurrentMana() - before; got != 500 {
-		t.Errorf("Warmth of Forgiveness restored %v, want 500", got)
+	if got := mage.CurrentMana() - before; got != want {
+		t.Errorf("Warmth of Forgiveness restored %v, want %v", got, want)
 	}
 
 	effect := spelldata.MustFind(18385).ProcEnergizeEffect()
 	before = mage.CurrentMana()
 	robe.Cast(sim, &mage.Unit)
-	if got, low, high := mage.CurrentMana()-before, effect.Min(mage.Level), effect.Max(mage.Level); got < low || got > high || low != 375 || high != 625 {
-		t.Errorf("the robe restored %v, want 375 to 625 (row reads %v to %v)", got, low, high)
+	if got, low, high := mage.CurrentMana()-before, effect.Min(), effect.Max(); got < low || got > high {
+		t.Errorf("the robe restored %v, want %v to %v", got, low, high)
 	}
 }
 
-// Earthen Sigil 20525 casts 24884, A_PERIODIC_ENERGIZE 40 mana every 1 s for 10 s.
+// Earthen Sigil 20525 casts 24884, A_PERIODIC_ENERGIZE mana every period for the row's duration.
 func TestOnUseEnergizeRestoresManaOverTime(t *testing.T) {
 	const sigilID int32 = 991306
 	sim, mage := newBarSim(t, testMage(), testTrinket{sigilID, NewSpellDataEnergizeOnUse, sigilOnUse()})
 	sigil := onUseSpell(t, mage, sigilID)
+	row := spelldata.MustFind(24884)
+	per, _, ticks := ticksOf(t, row)
 
 	mage.SpendMana(sim, 2000, mage.NewManaMetrics(core.ActionID{OtherID: proto.OtherAction_OtherActionManaRegen, Tag: 99}))
 	sigil.Cast(sim, &mage.Unit)
 	start := sim.CurrentTime
-	stepPast(t, sim, start+10*time.Second)
+	stepPast(t, sim, start+row.Duration())
 
 	if sigil.SelfHot().IsActive() {
-		t.Errorf("the gain over time is still up after its 10 s")
+		t.Errorf("the gain over time is still up after its %v", row.Duration())
 	}
-	if gained, ticks := gainedFrom(mage, sigilID); gained != 400 || ticks != 10 {
-		t.Errorf("the sigil restored %v over %d ticks, want 400 over 10", gained, ticks)
+	if gained, events := gainedFrom(mage, sigilID); gained != per*float64(ticks) || events != int32(ticks) {
+		t.Errorf("the sigil restored %v over %d ticks, want %v over %d", gained, events, per*float64(ticks), ticks)
 	}
 }
 

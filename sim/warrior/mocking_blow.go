@@ -2,50 +2,23 @@ package warrior
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+var mockingBlowRank = spellData.MockingBlow.Highest()
+var mockingBlowBaseDamage = mockingBlowRank.DamageEffect().Average()
+
 func (warrior *Warrior) registerMockingBlow() {
-	mockingBlowRank := spellData.MockingBlow.Highest()
-	mockingBlowBaseDamage := mockingBlowRank.DamageEffect().Average(core.CharacterLevel)
+	// TODO: Test the threat multiplier in-game
+	config := spelldata.SpellConfig(&warrior.Unit, mockingBlowRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
 
-	warrior.MockingBlow = warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: mockingBlowRank.ID},
-		SpellSchool:    mockingBlowRank.SpellSchool(),
-		DefenseType:    mockingBlowRank.DefenseTypeCore(),
-		ProcMask:       core.ProcMaskMeleeMHSpecial,
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL,
-		ClassSpellMask: SpellMaskMockingBlow,
-		MaxRange:       float64(mockingBlowRank.MaxRange),
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		result := spell.CalcAndDealDamage(sim, target, mockingBlowBaseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
 
-		RageCost: core.RageCostOptions{
-			Cost:   int32(mockingBlowRank.Cost()),
-			Refund: mockingBlowRank.MissRefund(),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: mockingBlowRank.GCD(),
-			},
-			IgnoreHaste: true,
-			CD: core.Cooldown{
-				Timer:    warrior.NewTimer(),
-				Duration: cooldownOf(mockingBlowRank),
-			},
-		},
+		if !result.Landed() {
+			spell.IssueRefund(sim)
+		}
+	}
 
-		DamageMultiplier: 1,
-		// TODO: Test in-game
-		ThreatMultiplier: 1,
-
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return warrior.StanceMatches(BattleStance)
-		},
-
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			result := spell.CalcAndDealDamage(sim, target, mockingBlowBaseDamage, spell.OutcomeMeleeSpecialHitAndCrit)
-
-			if !result.Landed() {
-				spell.IssueRefund(sim)
-			}
-		},
-	})
+	warrior.MockingBlow = warrior.RegisterSpell(config)
 }

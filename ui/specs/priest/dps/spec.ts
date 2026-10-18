@@ -1,12 +1,14 @@
+import * as BuffDebuffInputs from '@features/settings/model/buffs_debuffs';
 import * as OtherInputs from '@features/settings/model/other_inputs';
 import { APLRotation } from '@generated/proto/apl';
 import { ItemSlot, PseudoStat, Spec, Stat } from '@generated/proto/common';
 import { PlayerClasses } from '@sim/player/classes';
 import { Player } from '@sim/player/player';
-import { masterEpWeights } from '@sim/proto/master_ep_weights';
-import { DEFAULT_HYBRID_CASTER_GEM_STATS, Stats, UnitStat } from '@sim/proto/stats';
+import { WeaponSkillGroup } from '@sim/player/weapon_skill_groups';
+import { Stats, UnitStat } from '@sim/proto/stats';
 import { defineSpec } from '@sim/spec_config';
 
+import * as PriestSharedInputs from '../shared/inputs';
 import * as PriestInputs from './inputs';
 import * as Presets from './presets';
 
@@ -27,14 +29,15 @@ export default defineSpec<Spec.SpecDpsPriest>({
 		Stat.StatSpellDamage,
 		Stat.StatShadowDamage,
 		Stat.StatHolyDamage,
-		Stat.StatSpellHitRating,
-		Stat.StatSpellCritRating,
-		Stat.StatSpellHasteRating,
+		Stat.StatSpellPiercing,
+		Stat.StatHitRating,
+		Stat.StatCritRating,
+		Stat.StatHasteRating,
 		Stat.StatMana,
 		Stat.StatMP5,
 		Stat.StatSpirit,
 	],
-	epPseudoStats: [PseudoStat.PseudoStatSchoolHitPercentShadow],
+	epPseudoStats: [PseudoStat.PseudoStatSchoolHitPercentShadow, PseudoStat.PseudoStatSchoolHitPercentHoly],
 	// Reference stat against which to calculate EP. I think all classes use either spell power or attack power.
 	epReferenceStat: Stat.StatSpellDamage,
 	// Which stats to display in the Character Stats section, at the bottom of the left-hand sidebar.
@@ -50,43 +53,30 @@ export default defineSpec<Spec.SpecDpsPriest>({
 			Stat.StatSpellDamage,
 			Stat.StatShadowDamage,
 			Stat.StatHolyDamage,
-			Stat.StatArcaneResistance,
-			Stat.StatFireResistance,
-			Stat.StatFrostResistance,
-			Stat.StatNatureResistance,
-			Stat.StatShadowResistance,
+			Stat.StatSpellPiercing,
 		],
 		[
 			PseudoStat.PseudoStatSpellHitPercent,
 			PseudoStat.PseudoStatSpellCritPercent,
 			PseudoStat.PseudoStatSpellHastePercent,
 			PseudoStat.PseudoStatSchoolHitPercentShadow,
+			PseudoStat.PseudoStatSchoolHitPercentHoly,
 		],
 	),
-	gemStats: DEFAULT_HYBRID_CASTER_GEM_STATS,
+	displayWeaponSkillGroups: [WeaponSkillGroup.Wands],
 
 	defaults: {
 		// Default equipped gear.
-		gear: Presets.DEFAULT_GEAR.gear,
+		gear: Presets.ShadowTestingGear.gear,
 		// Default EP weights for sorting gear in the gear picker.
-		// Master's weights (percent stats per 1%), in our ratings.
-		epWeights: masterEpWeights({
-			Intellect: 0.16,
-			Spirit: 0.01,
-			SpellPower: 1,
-			ShadowPower: 1,
-			SpellHit: 5.51,
-			SpellCrit: 5.99,
-			SpellHaste: 1.65,
-			FireResistance: 0.5,
-		}),
+		epWeights: new Stats(),
 		statCaps: (() => {
-			return new Stats().withPseudoStat(PseudoStat.PseudoStatSchoolHitPercentShadow, 16);
+			return new Stats().withPseudoStat(PseudoStat.PseudoStatSchoolHitPercentShadow, 17).withPseudoStat(PseudoStat.PseudoStatSchoolHitPercentHoly, 17);
 		})(),
 		// Default consumes settings.
-		consumables: Presets.ShadowConsumables,
+		consumables: Presets.DefaultConsumables,
 		// Default talents.
-		talents: Presets.TalentsP1Shadow.data,
+		talents: Presets.StandardTalents.data,
 		// Default spec-specific settings.
 		specOptions: Presets.DefaultOptions,
 		// Default raid/party buffs settings.
@@ -98,14 +88,14 @@ export default defineSpec<Spec.SpecDpsPriest>({
 
 		debuffs: Presets.DefaultDebuffs,
 
-		other: Presets.ShadowOtherDefaults,
+		other: Presets.OtherDefaults,
 	},
 
 	// IconInputs to include in the 'Player' section on the settings tab.
-	playerIconInputs: [PriestInputs.ShadowformInput(), PriestInputs.ShadowfiendInput()],
+	playerIconInputs: [PriestSharedInputs.ArmorInput(), PriestInputs.ShadowformInput()],
 	// Buff and Debuff inputs to include/exclude, overriding the EP-based defaults.
 	includeBuffDebuffInputs: [],
-	excludeBuffDebuffInputs: [],
+	excludeBuffDebuffInputs: [BuffDebuffInputs.AtieshDruid, BuffDebuffInputs.AtieshMage, BuffDebuffInputs.AtieshWarlock],
 	// Inputs to include in the 'Other' section on the settings tab.
 	otherInputs: {
 		inputs: [OtherInputs.InputDelay, OtherInputs.ChannelClipDelay, OtherInputs.TankAssignment, OtherInputs.DistanceFromTarget],
@@ -117,16 +107,23 @@ export default defineSpec<Spec.SpecDpsPriest>({
 	},
 
 	presets: {
-		epWeights: [],
+		epWeights: [Presets.ShadowEpWeights, Presets.SmiteEpWeights],
 		// Preset talents that the user can quickly select.
-		talents: [Presets.TalentsP1Shadow, Presets.ShadowTalents],
-		rotations: [Presets.ROTATION_PRESET_SHADOW],
+		talents: [Presets.StandardTalents, Presets.SmiteTalents],
+		rotations: [Presets.ROTATION_PRESET_DEFAULT, Presets.ROTATION_SMITE_DEFAULT],
 		// Preset gear configurations that the user can quickly select.
-		gear: Presets.GEAR_PRESETS,
+		gear: [Presets.ShadowTestingGear, Presets.SmiteTestingGear],
+		// Preset builds that the user can quickly select.
+		builds: [Presets.ShadowTestingBuild, Presets.SmiteTestingBuild],
 	},
 
-	autoRotation: (player: Player<Spec.SpecDpsPriest>): APLRotation => {
-		return player.getTalents().shadowform ? Presets.ROTATION_PRESET_SHADOW.rotation.rotation! : Presets.ROTATION_PRESET_SMITE.rotation.rotation!;
+	autoRotation: (priest: Player<Spec.SpecDpsPriest>): APLRotation => {
+		const [disc, , shadow] = priest.getTalentTreePoints();
+
+		if (disc > shadow) {
+			return Presets.ROTATION_SMITE_DEFAULT.rotation.rotation!;
+		}
+		return Presets.ROTATION_PRESET_DEFAULT.rotation.rotation!;
 	},
 
 	reforge: {},

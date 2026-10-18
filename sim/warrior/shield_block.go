@@ -2,64 +2,38 @@ package warrior
 
 import (
 	"github.com/wowsims/forever/sim/core"
-	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
-	"github.com/wowsims/forever/sim/core/stats"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
+var shieldBlockRank = spellData.ShieldBlock.Highest()
+
 func (warrior *Warrior) registerShieldBlock() {
-	shieldBlockRank := spellData.ShieldBlock.Highest()
+	aura := warrior.RegisterAura(spelldata.AuraConfig(shieldBlockRank))
+	spelldata.ParseEffects(&warrior.Character, aura, shieldBlockRank)
 
-	actionId := core.ActionID{SpellID: shieldBlockRank.ID}
-
-	aura := warrior.RegisterAura(core.Aura{
-		Label:     "Shield Block",
-		ActionID:  actionId,
-		Duration:  shieldBlockRank.Duration(),
-		MaxStacks: int32(shieldBlockRank.ProcCharges),
-	}).AttachStatBuff(stats.BlockPercent, shieldBlockRank.Effect(dbcenums.A_MOD_BLOCK_PERCENT, 0).BaseValue())
-	aura.AttachProcTrigger(core.ProcTrigger{
-		Name:               "Shield Block - Consume",
-		TriggerImmediately: true,
-		Outcome:            core.OutcomeBlock,
-		Callback:           core.CallbackOnSpellHitTaken,
-		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+	// The row states the melee and ranged hits the listener hears and the two charges the aura
+	// starts with. The block that spends a charge is an outcome no proc mask states, and a full
+	// block deals no damage, so both of those are the caller's.
+	trigger := spelldata.ProcTrigger(&warrior.Character, shieldBlockRank,
+		func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
 			aura.RemoveStack(sim)
-		},
-	})
+		})
+	trigger.Outcome = core.OutcomeBlock
+	trigger.RequireDamageDealt = false
+	trigger.TriggerImmediately = true
+	aura.AttachProcTrigger(trigger)
 
-	warrior.RegisterSpell(core.SpellConfig{
-		ActionID:       actionId,
-		SpellSchool:    core.SpellSchoolPhysical,
-		ClassSpellMask: SpellMaskShieldBlock,
-		Flags:          core.SpellFlagAPL | core.SpellFlagHelpful,
+	config := spelldata.SpellConfig(&warrior.Unit, shieldBlockRank, spelldata.Flags(core.SpellFlagAPL))
 
-		RageCost: core.RageCostOptions{
-			Cost: int32(shieldBlockRank.Cost()),
-		},
+	config.ApplyEffects = func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
+		aura.Activate(sim)
+		aura.SetStacks(sim, aura.MaxStacks)
+	}
 
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				NonEmpty: true,
-			},
-			IgnoreHaste: true,
-			CD: core.Cooldown{
-				Timer:    warrior.NewTimer(),
-				Duration: cooldownOf(shieldBlockRank),
-			},
-		},
+	config.RelatedSelfBuff = aura
 
-		ExtraCastCondition: func(sim *core.Simulation, target *core.Unit) bool {
-			return warrior.PseudoStats.CanBlock && warrior.StanceMatches(DefensiveStance)
-		},
-
-		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, spell *core.Spell) {
-			aura.Activate(sim)
-			aura.SetStacks(sim, aura.MaxStacks)
-		},
-
-		RelatedSelfBuff: aura,
-	})
+	warrior.RegisterSpell(config)
 
 	warrior.deactivateWithoutShield(aura)
 }

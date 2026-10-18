@@ -2,37 +2,21 @@ package hunter
 
 import (
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-func (hunter *Hunter) registerWingClipSpell() {
-	rank := spellData.WingClip.Highest()
-	// Effect 1 is the snare; the damage is effect 2.
-	baseDamage := rank.EffectN(2).Average(core.CharacterLevel)
+var wingClipRank = spellData.WingClip.Highest()
 
-	hunter.WingClip = hunter.RegisterSpell(core.SpellConfig{
-		ActionID:       core.ActionID{SpellID: rank.ID},
-		SpellSchool:    rank.SpellSchool(),
-		DefenseType:    rank.DefenseTypeCore(),
-		ClassSpellMask: HunterSpellWingClip,
-		ProcMask:       core.ProcMaskMeleeMHSpecial,
-		Flags:          core.SpellFlagMeleeMetrics | core.SpellFlagAPL | core.SpellFlagBinary,
-		MaxRange:       float64(rank.MaxRange),
+// Effect 1 is the snare, which a boss ignores; effect 2 is the flat hit. As a main-hand special it can
+// proc Windfury Totem and other on-hit effects.
+var wingClipHit = wingClipRank.EffectN(2)
 
-		ManaCost: core.ManaCostOptions{
-			FlatCost: int32(rank.Cost()),
-		},
-		Cast: core.CastConfig{
-			DefaultCast: core.Cast{
-				GCD: rank.GCD(),
-			},
-			IgnoreHaste: true,
-		},
+func (hunter *Hunter) registerWingClip() {
+	config := spelldata.SpellConfig(&hunter.Unit, wingClipRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
 
-		DamageMultiplier: 1,
-		ThreatMultiplier: 1,
+	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		spell.CalcAndDealDamage(sim, target, wingClipHit.Roll(sim), spell.OutcomeMeleeSpecialHitAndCrit)
+	}
 
-		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-			spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
-		},
-	})
+	hunter.RegisterSpell(config)
 }

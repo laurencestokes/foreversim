@@ -1,100 +1,31 @@
-# ForeverSim
+# WoW Forever Simulator
 
-An unofficial DPS, tank and healing simulator for World of Warcraft®: Forever, the Classic+ relaunch
-announced at BlizzCon 2026. Not affiliated with Blizzard or the WoWSims team.
+Welcome to the WoW Forever simulator! If you have questions or are thinking about contributing, [join our discord](https://discord.gg/jJMPr9JWwx) to chat!
 
-**Live site:** https://laurencestokes.github.io/foreversim/forever/
+The primary goal of this project is to provide a framework that makes it easy to build a DPS sim for any class/spec, with a polished UI and accurate results. Each community will have ownership / responsibility over their portion of the sim, to ensure accuracy and that their community is represented.
 
-## Where it comes from
+This project is licensed with MIT license. We request that anyone using this software in their own project to make sure there is a user visible link back to the original project.
 
-This repository is built on:
+[Live sims can be found here.](https://wowsims.com/forever)
 
-- [wowsims/forever](https://github.com/wowsims/forever), the official WoWSims Forever sim, whose engine
-  this is, and
-- [ElliotWood/Forever](https://github.com/ElliotWood/Forever), which layers Forever's rule changes, data
-  tooling, documentation and product pages on top of it.
+[Support our devs via Patreon.](https://www.patreon.com/wowsims)
 
-Both are MIT licensed, as is this repository (see [LICENSE](LICENSE)). WoWSims asks that anyone using the
-software keeps a user-visible link back to the original project; the site's landing page does.
+## Downloading Sim
 
-What this repository adds so far:
+Links for latest Sim build:
 
-- **Forever racials** from the beta client's own data (build 1.60.1.70009): the reworked racials, the
-  Skyborne, Forever's race and class pairings, and Eureka! for warriors, rogues, warlocks, mages and priests (the 16 Oct rework is Elliot's). Every value
-  is listed with its spell id in [docs/forever_rules.md](docs/forever_rules.md#racials).
-- **Race analysis** tests that take each race's DPS apart, piece by piece, on identical gear
-  ([results](docs/race-analysis/)).
-- No analytics, and nothing a visitor drops on the site leaves their browser.
+- [Windows Sim](https://github.com/wowsims/forever/releases/latest/download/wowsimforever-windows.exe.zip)
+- [MacOS Sim](https://github.com/wowsims/forever/releases/latest/download/wowsimforever-amd64-darwin.zip)
+- [Linux Sim](https://github.com/wowsims/forever/releases/latest/download/wowsimforever-amd64-linux.zip)
 
-## Running it locally
+Then unzip the downloaded file, then open the unzipped file to open the sim in your browser!
 
-The simplest way is Docker. From the repository folder:
+Alternatively, you can choose from a specific relase on the [Releases](https://github.com/wowsims/forever/releases) page and click the suitable link under "Assets"
 
-```sh
-docker build --target prod -t foreversim:local .
-docker run -d --name foreversim -p 8080:8080 foreversim:local
-```
+## Documentation
 
-Then open http://localhost:8080/forever/. Stop it with `docker rm -f foreversim`, and rebuild the image
-after any change. For a development setup with live reload, see [docs/installation.md](docs/installation.md)
-and [docs/commands.md](docs/commands.md).
-
-## Debug: weapon type override
-
-Every equipped main-hand or off-hand weapon has a "Weapon type (debug override)" selector in its gear
-picker. Choosing a type (say, a sword relabelled as an axe) changes only what the weapon counts as for
-effects that key on weapon type: racials (none since the 16 Oct beta build, which made every racial weapon-agnostic),
-talents such as the rogue's Hack and Slash, and ability requirements such as Backstab and Mutilate
-needing a dagger. Its stats, procs and every other effect are unchanged. An overridden weapon shows an
-"as <type>" badge in the gear list. It exists to compare races fairly on otherwise identical gear; it
-has no in-game equivalent.
-
-## The race analysis tests
-
-Opt-in Go tests, skipped unless their variable is set. With Go, protoc and the generated protos in place
-(`make proto`):
-
-```sh
-RACE_BREAKDOWN=1 go test --tags=with_db ./sim/warrior/dps/ -run TestRaceBreakdown -v
-RACE_BREAKDOWN=1 go test --tags=with_db ./sim/warlock/ -run TestRaceBreakdown -v
-RACE_BREAKDOWN=1 go test --tags=with_db ./sim/rogue/ -run TestRaceBreakdown -v
-```
-
-`RACE_BREAKDOWN_OUT` writes the table to a file. See `core.RacialBreakdown` in
-[sim/core/racial_breakdown.go](sim/core/racial_breakdown.go) for how each column is measured.
-
-## The race tier list
-
-The [race tier list](https://laurencestokes.github.io/foreversim/forever/race_arena/) ranks every race
-on each DPS spec's community builds, S to D, with the method and caveats at the top of the page. The page
-only renders `ui/app/race_arena/results.json`; to regenerate it (about a quarter of an hour on 16 threads):
-
-```sh
-RACE_ARENA_OUT=race-arena-out go test --tags=with_db -count=1 -timeout 120m -run TestRaceArena $(go list ./sim/... | grep -v /sim/web)
-go run ./tools/race_arena race-arena-out ui/app/race_arena/results.json
-```
-
-Without `RACE_ARENA_OUT` every `TestRaceArena` skips. `RACE_ARENA_ITERATIONS` overrides the 50,000
-iterations for a quick check, and `RACE_ARENA_COMMIT` names the commit when git cannot (a container over a
-worktree). The manual **Build Race Arena** workflow does the same run and commits the file. See
-[sim/arenalib/race_arena.go](sim/arenalib/race_arena.go) for the method.
-
-## Keeping up with upstream
-
-Upstream changes are merged by hand, on a branch, after review and a test run:
-
-```sh
-git remote add elliot https://github.com/ElliotWood/Forever.git
-git fetch elliot
-git merge elliot/master
-```
-
-wowsims/forever, the engine's original home, is no longer public (it has returned 404 since late
-September 2026); Elliot's fork is the upstream until it comes back. Engine fixes that belong upstream
-are offered to [ElliotWood/Forever](https://github.com/ElliotWood/Forever) as pull requests of their own.
-
-## Deploying
-
-Every push to `master` runs the tests, builds the site and publishes it to this repository's GitHub Pages
-(`.github/workflows/deploy.yml`). Pages must be set to deploy from GitHub Actions
-(Settings > Pages > Source).
+- [Installation Guide](docs/installation.md)
+- [Development Commands](docs/commands.md)
+- [Adding a New Sim](docs/adding_sim.md)
+- [Consumables](docs/consumables.md)
+- [Internationalization](docs/i18n_guide.md)

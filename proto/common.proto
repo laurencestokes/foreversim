@@ -16,20 +16,11 @@ extend google.protobuf.MessageOptions {
 }
 
 message ProtoVersion {
-	// This should be incremented by 1 whenever proto files are changed in a
-	// way that will break any saved browser data or old sim links. If you
-	// are incrementing this value, then it is assumed that you are also
-	// implementing the required conversion code within the
-	// updateProtoVersion() method of any affected classes in the UI (or
-	// adding this method if it does not exist yet). Likewise, any affected
-	// protos need to define an api_version field so that the UI code knows
-	// to up-convert these protos to the new format whenever api_version is
-	// missing (0) or lower than current_version_number.
-	// 17: upstream #39 renumbered RaidBuffs/PartyBuffs/IndividualBuffs/Debuffs (now buffs.proto)
-	// and ConsumesSpec; links older than 17 get the spec default buffs and consumables.
-	// 18: upstream's slimmed buff manifest renumbered RaidBuffs/PartyBuffs/IndividualBuffs/Debuffs
-	// again; links older than 18 get the spec default buffs and debuffs.
-	option (current_version_number) = 18;
+	// The version the UI stamps every api_version field with. The sim is not
+	// deployed anywhere, so no saved browser data or sim link predates this
+	// number and nothing converts one: a breaking proto change simply breaks
+	// whatever a browser still holds.
+	option (current_version_number) = 2;
 
 	// The actual field value is only used within unit tests.
 	int32 saved_version_number = 1;
@@ -39,15 +30,36 @@ message ScalingItemProperties {
     int32 rand_prop_points = 1;
     double weapon_damage_min = 2;
     double weapon_damage_max = 3;
+    double unrounded_dps = 8;
     map<int32, double> stats = 4; // for compactness
 	int32 ilvl = 6;
+	// The damage the weapon deals with a random suffix that reduces caster DPS; unset on items with no such suffix option.
+	ReducedCasterWeaponDamage reduced_caster_weapon_damage = 9;
 
 	// Stats that only apply while the encounter is in that kind of area.
 	repeated AreaStats area_stats = 7;
 }
 
+message ReducedCasterWeaponDamage {
+	double weapon_damage_min = 1;
+	double weapon_damage_max = 2;
+	double unrounded_dps = 3;
+}
+
 message AreaStats {
 	AreaType area_type = 1;
+	map<int32, double> stats = 2; // keys are the numeric values of Stat
+}
+
+// Stats that only apply against a target of one of these mob types.
+message MobTypeStats {
+	repeated MobType mob_types = 1;
+	map<int32, double> stats = 2; // keys are the numeric values of Stat
+}
+
+// Stats that only apply while the encounter is in one of these zones, by AreaTable id.
+message ZoneStats {
+	repeated int32 zone_ids = 1;
 	map<int32, double> stats = 2; // keys are the numeric values of Stat
 }
 
@@ -132,7 +144,8 @@ enum Profession {
 	Engineering = 4;
 	Herbalism = 5;
 	Inscription = 6;
-	Jewelcrafting = 7;
+	reserved 7;
+	reserved "Jewelcrafting";
 	Leatherworking = 8;
 	Mining = 9;
 	Skinning = 10;
@@ -178,7 +191,7 @@ enum Profession {
 // the Go Stats array to be larger than the size of the Stat enum proto, but the
 // shared indices between the two must exactly match.
 //
-// NextIndex: 41;
+// NextIndex: 38;
 enum Stat {
 	// Primary attributes ("main stat")
 	StatStrength = 0;
@@ -197,48 +210,54 @@ enum Stat {
 	StatShadowDamage = 11;
 
 	// Caster Secondaries
-	StatSpellHitRating = 12;
-	StatSpellCritRating = 13;
-	StatSpellHasteRating = 14;
-	// Forever renames this stat: "Rune of Perfection" states "Spell Piercing increased".
-	// The number stays 15 so saved data and old sim links keep resolving.
-	StatSpellPiercing = 15;
-	StatSpirit = 16;
+	// The game files' name for spell penetration: "Rune of Perfection" states
+	// "Spell Piercing increased".
+	StatSpellPiercing = 12;
+	StatSpirit = 13;
 
 	// Physical Secondaries
-	StatAttackPower = 17;
-	StatRangedAttackPower = 18;
-	StatFeralAttackPower = 19;
-	StatMeleeHitRating = 20;
-	StatMeleeCritRating = 21;
-	StatMeleeHasteRating = 22;
-	StatArmorPenetration = 23;
-	StatExpertiseRating = 24;
+	StatAttackPower = 14;
+	StatRangedAttackPower = 15;
+	StatFeralAttackPower = 16;
+
+	// Shared Secondaries: one rating each converts into the melee, ranged
+	// and spell percentages alike.
+	StatHitRating = 17;
+	StatCritRating = 18;
+	StatHasteRating = 19;
+
+	// Physical Secondaries
+	StatArmorPenetration = 20;
+	StatExpertiseRating = 21;
 
 	// Tank Secondaries
-	StatDefenseRating = 25;
-	StatBlockRating = 26;
-	StatBlockValue = 27;
-	StatDodgeRating = 28;
-	StatParryRating = 29;
-	StatArmor = 30;
-	StatBonusArmor = 31;
+	StatDefenseRating = 22;
+	StatBlockRating = 23;
+	StatBlockValue = 24;
+	StatDodgeRating = 25;
+	StatParryRating = 26;
+	StatArmor = 27;
+	StatBonusArmor = 28;
 
 	// Composite stats that are built up from the above gear stats + buffs.
 	// These still belong in the Stat enum because they can be present on
 	// some enchants and because the base values need to be stored for NPCs.
-	StatHealth = 32;
-	StatMana = 33;
-	StatMP5 = 34;
+	StatHealth = 29;
+	StatMana = 30;
+	StatMP5 = 31;
 
 	// Resistances
-	StatArcaneResistance = 35;
-	StatFireResistance = 36;
-	StatFrostResistance = 37;
-	StatNatureResistance = 38;
-	StatShadowResistance = 39;
+	StatArcaneResistance = 32;
+	StatFireResistance = 33;
+	StatFrostResistance = 34;
+	StatNatureResistance = 35;
+	StatShadowResistance = 36;
 
-	StatPhysicalDamage = 40;
+	StatPhysicalDamage = 37;
+
+	// Armor that neither the percent armor modifiers nor the scaling of armor
+	// from items touch, which A_MOD_ARMOR_NO_MODS states. It adds to Armor.
+	StatArmorNoMods = 38;
 
 	// DO NOT add new stats here without discussing it first; new stats come
 	// with a performance penalty.
@@ -264,7 +283,7 @@ enum Stat {
 // between the UI and backend. It's also OK to include things here which aren't
 // in the PseudoStats struct.
 //
-// NextIndex: 27;
+// NextIndex: 42;
 enum PseudoStat {
 	PseudoStatMainHandDps = 0;
 	PseudoStatOffHandDps = 1;
@@ -304,6 +323,23 @@ enum PseudoStat {
 	// (talents, the Hyjal flask); ExpertiseRating covers the few rating-denominated ones
 	// (the tier 1 4P bonuses) and converts into this at 10 rating per percent.
 	PseudoStatExpertisePercent = 27;
+
+	// Character sheet values per attack; the sim never reads them back.
+	PseudoStatOffHandHitPercent = 28;
+	PseudoStatOffHandCritPercent = 29;
+	PseudoStatMainHandHitRating = 30;
+	PseudoStatMainHandCritRating = 31;
+	PseudoStatOffHandHitRating = 32;
+	PseudoStatOffHandCritRating = 33;
+	PseudoStatRangedHitRating = 34;
+	PseudoStatRangedCritRating = 35;
+	PseudoStatMeleeCritSuppressionPercent = 36;
+	PseudoStatRangedCritSuppressionPercent = 37;
+	// The main-hand auto attack's table against the current target, 0 before the attack tables exist.
+	PseudoStatMainHandMissPercent = 38; // The miss hit has to cover.
+	PseudoStatMainHandDodgePercent = 39;
+	PseudoStatMainHandParryPercent = 40; // The target's parry against attacks from in front, not the character's own.
+	PseudoStatMainHandGlancePercent = 41;
 }
 
 message UnitStats {
@@ -382,6 +418,30 @@ enum RangedWeaponType {
 	RangedWeaponTypeSigil = 9;
 }
 
+enum WeaponSkill {
+	WeaponSkillUnknown = 0;
+	WeaponSkillAxes = 1;
+	WeaponSkillTwoHandedAxes = 2;
+	WeaponSkillMaces = 3;
+	WeaponSkillTwoHandedMaces = 4;
+	WeaponSkillSwords = 5;
+	WeaponSkillTwoHandedSwords = 6;
+	WeaponSkillPolearms = 7;
+	WeaponSkillStaves = 8;
+	WeaponSkillDaggers = 9;
+	WeaponSkillFistWeapons = 10;
+	WeaponSkillBows = 11;
+	WeaponSkillCrossbows = 12;
+	WeaponSkillGuns = 13;
+	WeaponSkillThrown = 14;
+	WeaponSkillWands = 15;
+}
+
+message WeaponSkillValue {
+	WeaponSkill skill = 1;
+	int32 value = 2; // The full skill, level-based part included (300 is the maximum at level 60).
+}
+
 // All slots on the gear menu where a single item can be worn.
 enum ItemSlot {
 	ItemSlotHead = 0;
@@ -414,18 +474,6 @@ enum ItemQuality {
 	ItemQualityHeirloom = 7;
 }
 
-enum GemColor {
-	GemColorUnknown = 0;
-	GemColorMeta = 1;
-	GemColorRed = 2;
-	GemColorBlue = 3;
-	GemColorYellow = 4;
-	GemColorGreen = 5;
-	GemColorOrange = 6;
-	GemColorPurple = 7;
-	GemColorPrismatic = 8;
-}
-
 enum SpellSchool {
 	SpellSchoolPhysical = 0;
 	SpellSchoolArcane = 1;
@@ -443,35 +491,34 @@ enum TristateEffect {
 }
 
 message ConsumesSpec {
-	int32 pot_id = 1;
+	reserved 1;
+	reserved "pot_id";
 	int32 flask_id = 2;
-	int32 battle_elixir_id = 3;
-	int32 guardian_elixir_id = 4;
 	int32 food_id = 5;
 	int32 conjured_id = 6;
 	int32 explosive_id = 7;
-	bool goblinSapper = 8;
-	bool bogling_root = 9;
 	int32 mhImbue_id = 10;
 	int32 ohImbue_id = 11;
-	bool scroll_agi = 12;
-	bool scroll_str = 13;
-	bool scroll_int = 14;
-	bool scroll_spi = 15;
-	bool scroll_arm = 16;
 	// Contains all available potions
 	repeated int32 potions = 17;
 	// Contains all available conjured items
 	repeated int32 conjured_items = 18;
-	// Classic buffs that stack beside the battle and guardian elixirs (master's Consumes categories).
-	int32 strength_buff_id = 19;
-	int32 attack_power_buff_id = 20;
-	int32 zanza_id = 21;
-	int32 alcohol_id = 22;
-	int32 school_elixir_id = 23;
-	int32 defense_elixir_id = 24;
-	bool dragonbreath_chili = 25;
-	int32 spell_power_elixir_id = 26;
+	// Item ids of the consumables the character uses besides the one-per-kind fields above.
+	repeated int32 extra_ids = 19;
+	// Item ids of the elixirs the character uses, any number of them.
+	repeated int32 elixir_ids = 21;
+	// The poison, firestone, spellstone or Scroll of Imbue on each hand, beside its stone or oil above.
+	int32 mh_weapon_imbue_id = 22;
+	int32 oh_weapon_imbue_id = 23;
+	// The same four picks for the item swap set's weapons.
+	int32 swap_mh_imbue_id = 24;
+	int32 swap_oh_imbue_id = 25;
+	int32 swap_mh_weapon_imbue_id = 26;
+	int32 swap_oh_weapon_imbue_id = 27;
+	// The potion each APL potion placeholder casts, one per PotionClass.
+	int32 resource_pot_id = 28;
+	int32 defensive_pot_id = 29;
+	int32 offensive_pot_id = 30;
 }
 
 enum MobType {
@@ -486,7 +533,19 @@ enum MobType {
 	MobTypeUndead = 8;
 }
 
-// The client's terrain area groups (SpellCastingRequirements.RequiredAreasID).
+// The groups of creatures item effects deal extra damage to. None of them is a creature type or a
+// creature family in the game files, whose CreatureFamily table holds the hunter and warlock pet families.
+enum CreatureFamily {
+	CreatureFamilyUnknown = 0;
+	CreatureFamilyNaga = 1;
+	CreatureFamilySatyr = 2;
+	CreatureFamilyAquatic = 3;
+	CreatureFamilyEarthElemental = 4;
+	CreatureFamilyFireElemental = 5;
+	CreatureFamilyMountainGiant = 6;
+}
+
+// The game files' terrain area groups (SpellCastingRequirements.RequiredAreasID).
 enum AreaType {
 	AreaTypeUnknown = 0;
 	AreaTypeForestGrassland = 1;
@@ -526,6 +585,7 @@ message Target {
 
         int32 level = 4;
         MobType mob_type = 3;
+        CreatureFamily creature_family = 20;
         repeated double stats = 5;
 
         // Auto attack parameters.
@@ -609,20 +669,16 @@ message ItemRandomSuffix {
 	int32 id = 1;
 	string name = 2;
 	repeated double stats = 3;
+	repeated double pseudo_stats = 4; // Indexed by PseudoStat; flat, not scaled by the item's random property points.
+	bool reduced_caster_dps = 5; // A weapon with the suffix deals the reduced_caster_weapon_damage of its scaling options.
 }
 
 message ItemSpec {
 	int32 id = 1;
 	int32 random_suffix = 2;
 	int32 enchant = 3;
-	repeated int32 gems = 4;
-	// Set by the UI when the socketed meta gem's requirements are not met. The gem stays in its
-	// socket so the item's socket bonus still applies, but contributes no stats and no effect.
-	bool meta_gem_disabled = 5;
-	// Debug relabel of a weapon's type (e.g. sword displayed/treated as axe) for comparing
-	// type-keyed effects like racials; stats and procs are unchanged. Unset/WeaponTypeUnknown
-	// means use the item's own type.
-	WeaponType weapon_type_override = 6;
+	reserved 4, 5;
+	reserved "gems", "meta_gem_disabled";
 }
 
 
@@ -637,18 +693,27 @@ enum ConsumableType {
 	ConsumableTypeFood = 3;
 	ConsumableTypeScroll = 4;
 	ConsumableTypeExplosive = 5;
-	ConsumableTypeBattleElixir = 6;
-	ConsumableTypeGuardianElixir = 7;
-	ConsumableTypeImbue = 8;
-	ConsumableTypeOther = 9;
-	ConsumableTypeHerb = 10;
-	ConsumableTypeStrengthBuff = 11;
-	ConsumableTypeAttackPowerBuff = 12;
-	ConsumableTypeZanza = 13;
-	ConsumableTypeAlcohol = 14;
-	ConsumableTypeSchoolElixir = 15;
-	ConsumableTypeDefenseElixir = 16;
-	ConsumableTypeSpellPowerElixir = 17;
+	// A sharpening stone, weightstone, oil or shield coating: its spell casts the temporary enchant Effect 54.
+	ConsumableTypeImbue = 6;
+	ConsumableTypeOther = 7;
+	ConsumableTypeHerb = 8;
+	ConsumableTypeBandage = 9;
+	ConsumableTypeDevice = 10;
+	// An Elixir-subclass item that shares no potion, conjured, food or drink category.
+	ConsumableTypeElixir = 11;
+	// A healthstone, mana gem, rune or tea: its on-use shares conjured category 1153.
+	ConsumableTypeConjured = 12;
+	// A poison, firestone, spellstone or Scroll of Imbue: its spell casts the imbue Effect 360, which a
+	// weapon carries beside an Effect 54 stone or oil.
+	ConsumableTypeWeaponImbue = 13;
+}
+
+// What a potion does, which picks the APL placeholder it fills. A potion can be of several classes.
+enum PotionClass {
+	PotionClassUnknown = 0;
+	PotionClassResource = 1; // Restores mana, rage or energy, or buffs only mana regen.
+	PotionClassDefensive = 2; // Heals, absorbs, or buffs armor, avoidance, health or a resistance.
+	PotionClassOffensive = 3; // Buffs anything else, such as spell power or attack power.
 }
 
 
@@ -663,6 +728,15 @@ enum EnchantType {
 	EnchantTypeKit = 3;
 	EnchantTypeStaff = 4;
 	EnchantTypeOffHand = 5;
+}
+
+// Whether an enchant's effect is temporary, and what it does when it fires. A temporary effect
+// (a proc) cannot be valued by EP, so the optimizer leaves a slot that can take one the sim
+// implements to the sim (a Survival proc only for a tank, unless an enchant preset lists it).
+enum EnchantProcKind {
+	EnchantProcKindNone = 0;
+	EnchantProcKindCombat = 1; // Any proc that is not survival only: damage, a stat buff, a debuff, a resource restore.
+	EnchantProcKindSurvival = 2; // Every effect of the proc absorbs, heals or adds armor.
 }
 
 message UnitReference {
@@ -704,11 +778,16 @@ enum OtherAction {
 	OtherActionRefund = 8; // Refund of a resource like Energy or Rage, when the ability didn't land.
 	OtherActionDamageTaken = 9; // Indicates damage taken; used for rage gen.
 	OtherActionHealingModel = 12; // Indicates healing received from healing model.
-	OtherActionPotion = 17; // Used by APL to generically refer to either the prepull or combat potion.
+	reserved 17;
+	reserved "OtherActionPotion";
 	OtherActionMove = 20; // Used by movement to be able to show it in timeline
 	OtherActionPrepull = 21; // Indicated prepull specific action
 	OtherActionEncounterStart = 22; // Indicated resources gained or lost at the start of an encounter
 	OtherActionItemSwap = 23; // Used by APL to show current swap set
+	// Used by APL to refer to the potion the consumes pick for each PotionClass.
+	OtherActionResourcePotion = 24;
+	OtherActionDefensivePotion = 25;
+	OtherActionOffensivePotion = 26;
 }
 
 message ActionID {

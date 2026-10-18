@@ -1,7 +1,6 @@
 package core
 
 import (
-	"math"
 	"time"
 
 	"github.com/wowsims/forever/sim/core/proto"
@@ -11,11 +10,18 @@ import (
 func applyRaceEffects(agent Agent) {
 	character := agent.GetCharacter()
 
-	// Blizzard beta development notes, 16 Oct build (us.forums.blizzard.com/en/wow/t/2360696 post 6).
 	switch character.Race {
 	case proto.Race_RaceDwarf:
-		// Earth Fury replaced Mace Specialization: 2% increased critical damage and healing.
-		character.PseudoStats.CritDamageMultiplier *= 1.02
+		// Earth Fury 1259719 holds while any weapon slot holds a mace, one- or two-handed, and follows
+		// item swaps.
+		earthFuryActive := false
+		character.NewEquipGate(EquipRequirement{SubclassMask: WeaponSubclassMask(proto.WeaponType_WeaponTypeMace)}, func(_ *Simulation, level float64) {
+			if (level > 0) == earthFuryActive {
+				return
+			}
+			earthFuryActive = level > 0
+			character.PseudoStats.CritDamageMultiplier *= Ternary(earthFuryActive, 1.02, 1/1.02)
+		}).SetLevel(nil, 1)
 		applyCreatureTypeSlaying(character, proto.MobType_MobTypeBeast)
 
 		actionID := ActionID{SpellID: 20594}
@@ -54,8 +60,7 @@ func applyRaceEffects(agent Agent) {
 		applyEureka(character)
 	case proto.Race_RaceHuman:
 		character.MultiplyStat(stats.Spirit, 1.05)
-		// Ruthless replaced Sword Specialization: 2% critical strike chance, any weapon.
-		character.AddStats(stats.Stats{stats.PhysicalCritPercent: 2, stats.SpellCritPercent: 2})
+		character.AddStats(stats.Stats{stats.PhysicalCritPercent: 2, stats.SpellCritPercent: 2}) // Ruthless 20597
 	case proto.Race_RaceNightElf:
 		character.PseudoStats.BaseDodgeChance += 0.01
 		character.PseudoStats.MovementSpeedMultiplier *= 1.02
@@ -77,8 +82,7 @@ func applyRaceEffects(agent Agent) {
 				},
 			})
 	case proto.Race_RaceOrc:
-		// Savage replaced Axe Specialization: 1% critical strike chance, any weapon.
-		character.AddStats(stats.Stats{stats.PhysicalCritPercent: 1, stats.SpellCritPercent: 1})
+		character.AddStats(stats.Stats{stats.PhysicalCritPercent: 1, stats.SpellCritPercent: 1}) // Savage 20574
 
 		bloodFuryID := ActionID{SpellID: 20572}
 
@@ -161,8 +165,7 @@ func applyRaceEffects(agent Agent) {
 		})
 	case proto.Race_RaceTauren:
 		character.MultiplyStat(stats.Health, 1.05)
-		// Endurance: 2% increased critical damage and healing (was 1% hit).
-		character.PseudoStats.CritDamageMultiplier *= 1.02
+		character.PseudoStats.CritDamageMultiplier *= 1.02 // Endurance 20550
 	case proto.Race_RaceTroll:
 		applyCreatureTypeSlaying(character, proto.MobType_MobTypeBeast)
 
@@ -204,7 +207,7 @@ func applyRaceEffects(agent Agent) {
 		energizedAura := character.RegisterAura(Aura{
 			Label:    "Energized",
 			ActionID: ActionID{SpellID: 1270842},
-			Duration: time.Second * 15,
+			Duration: time.Second * 30, // SpellMisc 1270842 DurationIndex 9, 30000 ms
 			OnGain: func(aura *Aura, sim *Simulation) {
 				if aura.Unit.HasManaBar() {
 					aura.Unit.MultiplyManaRegenSpeed(sim, 2)
@@ -217,14 +220,13 @@ func applyRaceEffects(agent Agent) {
 			},
 		})
 
-		// Client 1.60.1.70058: Read Ley Line has a 2 sec cast (SpellMisc CastingTimeIndex).
 		character.RegisterSpell(SpellConfig{
 			ActionID: ActionID{SpellID: 1259705},
 			Flags:    SpellFlagAPL | SpellFlagNoOnCastComplete,
 			Cast: CastConfig{
 				DefaultCast: Cast{
-					GCD: GCDDefault,
-					CastTime: time.Second * 2,
+					GCD:      GCDDefault,
+					CastTime: DurationFromMillis(2000.0),
 				},
 				CD: Cooldown{
 					Timer:    character.NewTimer(),
@@ -252,14 +254,13 @@ func applyRaceEffects(agent Agent) {
 			},
 		})
 
-		// Client 1.60.1.70058: Skysight has a 0.5 sec cast (SpellMisc CastingTimeIndex).
 		character.RegisterSpell(SpellConfig{
 			ActionID: ActionID{SpellID: 1259686},
 			Flags:    SpellFlagAPL | SpellFlagNoOnCastComplete,
 			Cast: CastConfig{
 				DefaultCast: Cast{
-					GCD: GCDDefault,
-					CastTime: time.Millisecond * 500,
+					GCD:      GCDDefault,
+					CastTime: DurationFromMillis(500.0),
 				},
 				CD: Cooldown{
 					Timer:    character.NewTimer(),
@@ -278,21 +279,14 @@ func applyRaceEffects(agent Agent) {
 func applySkyborneSharedRacials(character *Character) {
 	applyCreatureTypeSlaying(character, proto.MobType_MobTypeElemental)
 
-	// Wind Blessed: 3% haste (was 1%).
-	character.PseudoStats.AttackSpeedMultiplier *= 1.03
+	character.PseudoStats.AttackSpeedMultiplier *= 1.03 // Wind Blessed 1259710
 	character.PseudoStats.CastSpeedMultiplier *= 1.03
 }
 
-// Beast Slaying (troll 20557), Big Game Hunter (dwarf 1259721) and Elemental Insight (Skyborne
-// 1259707) are one A_MOD_DAMAGE_DONE_VERSUS 5 each in client 1.60.1.70009, with no crit damage
-// effect; the hunter's Humanoid/Monster Slaying carry that as a second aura (547), these don't.
 func applyCreatureTypeSlaying(character *Character, mobType proto.MobType) {
 	character.Env.RegisterPostFinalizeEffect(func() {
-		for _, at := range character.AttackTables {
-			if at.Defender.MobType == mobType {
-				at.DamageDealtMultiplier *= 1.05
-			}
-		}
+		character.MultiplyDamageVersus(1.05, mobType)
+		character.MultiplyCritDamageVersus(1.05, mobType)
 	})
 }
 
@@ -307,113 +301,83 @@ func applyExpansiveMind(character *Character) {
 	}
 }
 
-// Eureka! names the spells it changes with each class's spell family mask. Build 70170 masks, as
-// effect 0 (SPELLMOD_COST), effect 1 (SPELLMOD_DAMAGE) and effect 2 (SPELLMOD_DOT) state them; core
-// cannot import spelldata, so they are mirrored here. 70170 made it "non-periodic damaging abilities":
-// the DoTs (Rend, Rupture, Garrote, Corruption, Shadow Word: Pain, Devouring Plague...) and the utility
-// spells (Sunder Armor, Life Tap...) take no bonus. SPELLMOD_DAMAGE is the direct
-// part only: 70094 named Rend, Corruption and Immolate in both effects 1 and 2, which only adds up if
-// effect 1 skips their ticks. So Immolate, Fireball, Pyroblast and Holy Fire get +10% on the hit and
-// none on the DoT, while Drain Life/Drain Soul and Mind Flay keep theirs through effect 2.
+// One class's Eureka! row: the class mask and the fraction of its idx0 SPELLMOD_COST, idx1
+// SPELLMOD_DAMAGE and idx2 SPELLMOD_DOT, zero where the row states no SPELLMOD_DOT, and the row's
+// duration and cooldown.
+type EurekaMods struct {
+	CostFlags, DamageFlags, ChannelFlags ClassFlags
+	Cost, Damage, Channel                float64
+	Duration, Cooldown                   time.Duration
+}
+
+var eurekaMods func(spellID int32) EurekaMods
+
+// The rows sit in the spell store, which imports core, so sim/core/buffs registers their reader from
+// its init.
+func RegisterEurekaMods(read func(spellID int32) EurekaMods) {
+	eurekaMods = read
+}
+
+// Eureka! scopes its mods to each class's abilities by the game files' class masks, for as long as
+// the buff is up: idx0 of each row names the spells whose cost it lowers, idx1 the ones whose direct
+// damage it raises, and idx2, on the warlock and priest rows only, the channels whose ticks it raises.
+// Other periodic damage takes no bonus. A tick takes the bonus when Eureka! is up as it lands, so a
+// channel started before the buff gains it and one running past its end loses it.
+// TODO: Ingame test needed: whether a channel still running when the buff runs out keeps the bonus to
+// its end.
 func applyEureka(character *Character) {
 	var spellID int32
 	var resourceType proto.ResourceType
-	var costMask, directMask, dotMask [4]uint32
-	// -10% cost and +10% damage on all five class variants.
-	const costReduction, damageBonus = 0.1, 0.1
+	procMask := ProcMaskSpecial
 
 	switch character.Class {
 	case proto.Class_ClassRogue:
 		spellID, resourceType = 1259812, proto.ResourceType_ResourceTypeEnergy
-		costMask = [4]uint32{100794910, 2097408}
-		directMask = costMask
 	case proto.Class_ClassWarrior:
 		spellID, resourceType = 1259813, proto.ResourceType_ResourceTypeRage
-		costMask = [4]uint32{1784679630, 5, 1}
-		directMask = costMask
 	case proto.Class_ClassMage:
 		spellID, resourceType = 1259817, proto.ResourceType_ResourceTypeMana
-		costMask = [4]uint32{549591799, 4096}
-		directMask = [4]uint32{551688947, 4096, 0, 8}
 	case proto.Class_ClassWarlock:
 		spellID, resourceType = 1259821, proto.ResourceType_ResourceTypeMana
-		costMask = [4]uint32{541165, 8650880}
-		directMask, dotMask = [4]uint32{524773, 8388736}, [4]uint32{16392, 262144}
 	case proto.Class_ClassPriest:
 		spellID, resourceType = 1259823, proto.ResourceType_ResourceTypeMana
-		costMask = [4]uint32{150224528, 8388614}
-		directMask, dotMask = [4]uint32{150224528, 8486918}, [4]uint32{10485760, 98304}
+		procMask |= ProcMaskSpellHealing
 	default:
 		return
 	}
 
-	family := ClassSpellFamilies[character.Class]
-	names := func(spell *Spell, mask [4]uint32) bool {
-		return ClassFlags{Family: family, Mask: mask}.Matches(ClientClassFlags(spell.ActionID.SpellID))
+	if eurekaMods == nil {
+		panic(`no Eureka! rows are registered: import _ "github.com/wowsims/forever/sim/core/buffs"`)
 	}
-	// Direct hits scale with the direct mask, DoT ticks with the DoT mask; ticks read
-	// DamageMultiplier too, so a direct-only spell's DoTs are scaled back out.
-	scaleDamage := func(spell *Spell, f float64) {
-		direct, periodic := names(spell, directMask), names(spell, dotMask)
-		if direct {
-			spell.DamageMultiplier *= f
-		}
-		if direct == periodic {
-			return
-		}
-		if direct {
-			f = 1 / f
-		}
-		for _, dot := range append(DotArray{spell.aoeDot}, spell.dots...) {
-			if dot != nil {
-				dot.PeriodicDamageMultiplier *= f
-			}
-		}
-	}
-
+	mods := eurekaMods(spellID)
 	actionID := ActionID{SpellID: spellID}
-	const anyClassSpell = math.MaxInt64
-
-	costMod := character.AddDynamicMod(SpellModConfig{
-		Kind:         SpellMod_Custom,
-		ClassMask:    anyClassSpell,
-		ResourceType: resourceType,
-		ApplyCustom: func(_ *SpellMod, spell *Spell) {
-			if names(spell, costMask) {
-				spell.Cost.PercentModifier *= 1 - costReduction
-			}
-		},
-		RemoveCustom: func(_ *SpellMod, spell *Spell) {
-			if names(spell, costMask) {
-				spell.Cost.PercentModifier /= 1 - costReduction
-			}
-		},
-	})
-	damageMod := character.AddDynamicMod(SpellModConfig{
-		Kind:      SpellMod_Custom,
-		ClassMask: anyClassSpell,
-		ApplyCustom: func(_ *SpellMod, spell *Spell) {
-			scaleDamage(spell, 1+damageBonus)
-		},
-		RemoveCustom: func(_ *SpellMod, spell *Spell) {
-			scaleDamage(spell, 1/(1+damageBonus))
-		},
-	})
 
 	aura := character.RegisterAura(Aura{
-		// 16 Oct build: an 8 s buff with no charges (was 15 s / 3 charges).
 		Label:    "Eureka!",
 		ActionID: actionID,
-		Duration: time.Second * 8,
-		OnGain: func(_ *Aura, _ *Simulation) {
-			costMod.Activate()
-			damageMod.Activate()
-		},
-		OnExpire: func(_ *Aura, _ *Simulation) {
-			costMod.Deactivate()
-			damageMod.Deactivate()
-		},
+		Duration: mods.Duration,
+	}).AttachSpellMod(SpellModConfig{
+		Kind:         SpellMod_PowerCost_Pct,
+		ClassFlags:   mods.CostFlags,
+		ProcMask:     procMask,
+		ResourceType: resourceType,
+		FloatValue:   mods.Cost,
+	}).AttachSpellMod(SpellModConfig{
+		Kind:       SpellMod_DirectDamageDone_Pct,
+		ClassFlags: mods.DamageFlags,
+		ProcMask:   procMask,
+		FloatValue: mods.Damage,
 	})
+	// A SPELLMOD_DOT row that names no spells reaches none, where a mod with no class flags reaches all.
+	if !mods.ChannelFlags.IsZero() {
+		aura.AttachSpellMod(SpellModConfig{
+			Kind:       SpellMod_DotDamageDone_Pct,
+			ClassFlags: mods.ChannelFlags,
+			ProcMask:   procMask,
+			SpellFlag:  SpellFlagChanneled,
+			FloatValue: mods.Channel,
+		})
+	}
 
 	spell := character.RegisterSpell(SpellConfig{
 		ActionID: actionID,
@@ -421,7 +385,7 @@ func applyEureka(character *Character) {
 		Cast: CastConfig{
 			CD: Cooldown{
 				Timer:    character.NewTimer(),
-				Duration: time.Minute * 2,
+				Duration: mods.Cooldown,
 			},
 		},
 		ApplyEffects: func(sim *Simulation, _ *Unit, _ *Spell) {
@@ -438,7 +402,6 @@ func applyEureka(character *Character) {
 }
 
 func applyTouchOfTheGrave(character *Character) {
-	// 16 Oct build: 30% for casters, 20% for paladins, rogues and warriors, 25 sec internal cooldown.
 	auraID, procChance := int32(1260201), 0.3
 	switch character.Class {
 	case proto.Class_ClassWarrior, proto.Class_ClassPaladin, proto.Class_ClassRogue:
@@ -453,7 +416,7 @@ func applyTouchOfTheGrave(character *Character) {
 		SpellSchool: SpellSchoolShadow,
 		DefenseType: DefenseTypeMagic,
 		ProcMask:    ProcMaskEmpty,
-		Flags:       SpellFlagProc | SpellFlagPassiveSpell | SpellFlagIgnoreAttackerModifiers | SpellFlagNoSpellMods,
+		Flags:       SpellFlagProc | SpellFlagPassiveSpell | SpellFlagIgnoreModifiers | SpellFlagNoSpellMods,
 
 		DamageMultiplier: 1,
 		ThreatMultiplier: 1,
@@ -474,6 +437,9 @@ func applyTouchOfTheGrave(character *Character) {
 		Outcome:    OutcomeLanded,
 		ProcChance: procChance,
 		ICD:        time.Second * 25,
+
+		RequireDamageComponent: true,
+
 		Handler: func(sim *Simulation, spell *Spell, result *SpellResult) {
 			drain.Cast(sim, result.Target)
 		},

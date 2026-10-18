@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/tools"
@@ -29,14 +30,32 @@ func EnchantToDBKey(enchant *proto.UIEnchant) EnchantDBKey {
 	}
 }
 
+// Whether an enchant in db.json survives the global filters: a Season of Discovery item, or a
+// deny-list, template, test or QA name drops it.
+func KeepEnchant(enchant *proto.UIEnchant) bool {
+	// Every Season of Discovery enchant carrier lies in the range; items use ItemDenyList instead because kept items also sit inside it.
+	if enchant.ItemId >= sodItemIDMin && enchant.ItemId <= sodItemIDMax {
+		return false
+	}
+	for _, pattern := range DenyListNameRegexes {
+		if pattern.MatchString(enchant.Name) {
+			return false
+		}
+	}
+	if strings.Contains(enchant.Name, "Template") {
+		return false
+	}
+	return !strings.HasPrefix(enchant.Name, "QA") && !strings.HasPrefix(enchant.Name, "Test") && !strings.HasPrefix(enchant.Name, "TEST")
+}
+
 type WowDatabase struct {
 	Items          map[int32]*proto.UIItem
 	RandomSuffixes map[int32]*proto.ItemRandomSuffix
 	Enchants       map[EnchantDBKey]*proto.UIEnchant
-	Gems           map[int32]*proto.UIGem
 
-	Zones map[int32]*proto.UIZone
-	Npcs  map[int32]*proto.UINPC
+	Zones    map[int32]*proto.UIZone
+	Npcs     map[int32]*proto.UINPC
+	Factions map[int32]*proto.UIFaction
 
 	ItemIcons                map[int32]*proto.IconData
 	SpellIcons               map[int32]*proto.IconData
@@ -53,9 +72,9 @@ func NewWowDatabase() *WowDatabase {
 		Items:          make(map[int32]*proto.UIItem),
 		RandomSuffixes: make(map[int32]*proto.ItemRandomSuffix),
 		Enchants:       make(map[EnchantDBKey]*proto.UIEnchant),
-		Gems:           make(map[int32]*proto.UIGem),
 		Zones:          make(map[int32]*proto.UIZone),
 		Npcs:           make(map[int32]*proto.UINPC),
+		Factions:       make(map[int32]*proto.UIFaction),
 
 		ItemIcons:                make(map[int32]*proto.IconData),
 		SpellIcons:               make(map[int32]*proto.IconData),
@@ -71,9 +90,9 @@ func (db *WowDatabase) Clone() *WowDatabase {
 		Items:          maps.Clone(db.Items),
 		RandomSuffixes: maps.Clone(db.RandomSuffixes),
 		Enchants:       maps.Clone(db.Enchants),
-		Gems:           maps.Clone(db.Gems),
 		Zones:          maps.Clone(db.Zones),
 		Npcs:           maps.Clone(db.Npcs),
+		Factions:       maps.Clone(db.Factions),
 
 		ItemIcons:                maps.Clone(db.ItemIcons),
 		SpellIcons:               maps.Clone(db.SpellIcons),
@@ -99,10 +118,6 @@ func (db *WowDatabase) MergeItem(src *proto.UIItem) {
 		if src.PseudoStats != nil {
 			dst.PseudoStats = src.PseudoStats
 			src.PseudoStats = nil
-		}
-		if src.SocketBonus != nil {
-			dst.SocketBonus = src.SocketBonus
-			src.SocketBonus = nil
 		}
 		googleProto.Merge(dst, src)
 	} else {
@@ -134,24 +149,6 @@ func (db *WowDatabase) MergeEnchant(src *proto.UIEnchant) {
 	}
 }
 
-func (db *WowDatabase) MergeGems(arr []*proto.UIGem) {
-	for _, gem := range arr {
-		db.MergeGem(gem)
-	}
-}
-func (db *WowDatabase) MergeGem(src *proto.UIGem) {
-	if dst, ok := db.Gems[src.Id]; ok {
-		// googleproto.Merge concatenates lists, but we want replacement, so do them manually.
-		if src.Stats != nil {
-			dst.Stats = src.Stats
-			src.Stats = nil
-		}
-		googleProto.Merge(dst, src)
-	} else {
-		db.Gems[src.Id] = src
-	}
-}
-
 func (db *WowDatabase) MergeZones(arr []*proto.UIZone) {
 	for _, zone := range arr {
 		db.MergeZone(zone)
@@ -179,11 +176,23 @@ func (db *WowDatabase) MergeNpc(src *proto.UINPC) {
 	}
 }
 
+func (db *WowDatabase) MergeFaction(src *proto.UIFaction) {
+	if dst, ok := db.Factions[src.Id]; ok {
+		googleProto.Merge(dst, src)
+	} else {
+		db.Factions[src.Id] = src
+	}
+}
+
 func (db *WowDatabase) MergeConsumable(src *proto.Consumable) {
 	if dst, ok := db.Consumables[src.Id]; ok {
 		if src.Stats != nil {
 			dst.Stats = src.Stats
 			src.Stats = nil
+		}
+		if src.PseudoStats != nil {
+			dst.PseudoStats = src.PseudoStats
+			src.PseudoStats = nil
 		}
 		googleProto.Merge(dst, src)
 	} else {
@@ -270,10 +279,10 @@ func (db *WowDatabase) ToUIProto() *proto.UIDatabase {
 		Items:                    mapToSlice(db.Items),
 		RandomSuffixes:           mapToSlice(db.RandomSuffixes),
 		Enchants:                 enchants,
-		Gems:                     mapToSlice(db.Gems),
 		Encounters:               db.Encounters,
 		Zones:                    mapToSlice(db.Zones),
 		Npcs:                     mapToSlice(db.Npcs),
+		Factions:                 mapToSlice(db.Factions),
 		ItemIcons:                mapToSlice(db.ItemIcons),
 		SpellIcons:               mapToSlice(db.SpellIcons),
 		ItemEffectRandPropPoints: mapToSliceByIlvl(db.ItemEffectRandPropPoints),
@@ -311,9 +320,9 @@ func ReadDatabaseFromJson(jsonStr string) *WowDatabase {
 		Items:                    sliceToMap(dbProto.Items),
 		RandomSuffixes:           sliceToMap(dbProto.RandomSuffixes),
 		Enchants:                 enchants,
-		Gems:                     sliceToMap(dbProto.Gems),
 		Zones:                    sliceToMap(dbProto.Zones),
 		Npcs:                     sliceToMap(dbProto.Npcs),
+		Factions:                 sliceToMap(dbProto.Factions),
 		ItemIcons:                sliceToMap(dbProto.ItemIcons),
 		SpellIcons:               sliceToMap(dbProto.SpellIcons),
 		ItemEffectRandPropPoints: iLvlKeyedSliceToMap(dbProto.ItemEffectRandPropPoints),
@@ -374,11 +383,11 @@ func (db *WowDatabase) toJsonBytes() []byte {
 	buffer.WriteString(",\n")
 	tools.WriteProtoArrayToBuffer(uidb.Enchants, buffer, "enchants")
 	buffer.WriteString(",\n")
-	tools.WriteProtoArrayToBuffer(uidb.Gems, buffer, "gems")
-	buffer.WriteString(",\n")
 	tools.WriteProtoArrayToBuffer(uidb.Zones, buffer, "zones")
 	buffer.WriteString(",\n")
 	tools.WriteProtoArrayToBuffer(uidb.Npcs, buffer, "npcs")
+	buffer.WriteString(",\n")
+	tools.WriteProtoArrayToBuffer(uidb.Factions, buffer, "factions")
 	buffer.WriteString(",\n")
 	tools.WriteProtoArrayToBuffer(uidb.ItemEffectRandPropPoints, buffer, "itemEffectRandPropPoints")
 	buffer.WriteString(",\n")

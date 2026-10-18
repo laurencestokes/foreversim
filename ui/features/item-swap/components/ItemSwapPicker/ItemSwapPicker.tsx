@@ -1,32 +1,64 @@
+import { ConnectedBooleanPicker } from '@features/inputs/components/ConnectedBooleanPicker';
+import type { BooleanPickerConfig } from '@features/inputs/configs';
 import type { ItemSlot, Spec } from '@generated/proto/common';
 import i18n from '@i18n/config';
 import { useSimHost } from '@sim/context/SimHostContext';
 import { usePlayerStore } from '@sim/hooks/usePlayerStore';
 import type { Player } from '@sim/player/player';
-import { BooleanPicker } from '@ui-kit/BooleanPicker';
-import type { BooleanPickerConfig } from '@ui-kit/BooleanPicker/types';
+import { Box } from '@ui-kit/Box';
 import { Button } from '@ui-kit/Button';
-import { FieldLabel, HelpText } from '@ui-kit/FormControl';
+import { Field } from '@ui-kit/Field';
+import { HelpText } from '@ui-kit/FormControl';
 import { Icon } from '@ui-kit/Icon';
-import { PickerGroup } from '@ui-kit/PickerGroup';
+import { IconRow } from '@ui-kit/IconRow';
 import { LocaleHtml, Tooltip, tooltipAnchorProps } from '@ui-kit/Tooltip';
-import { useId, useMemo } from 'react';
+import { type ReactNode, useId, useMemo } from 'react';
 
 import { swapWithGear } from '../../model/swap_with_gear';
 import { ItemSwapIcon } from '../ItemSwapIcon';
 
+export interface ItemSwapPickerViewProps {
+	note?: string;
+	onSwap: () => void;
+	/** One icon per swap slot. */
+	children: ReactNode;
+}
+
+export const ItemSwapPickerView = ({ note, onSwap, children }: ItemSwapPickerViewProps) => {
+	const swapId = useId();
+	const swapTooltip = i18n.t('settings_tab.other.item_swap.tooltip');
+
+	return (
+		<>
+			<Field
+				layout="split"
+				role="group"
+				label={i18n.t('settings_tab.other.item_swap.label')}
+				className="flex-wrap gap-2"
+				testId="input-item-swap-container">
+				<Button variant="unstyled" data-testid="gear-swap-icon" aria-label={swapTooltip} {...tooltipAnchorProps(swapId)} onClick={onSwap}>
+					<Icon name="arrows-rotate" className="me-1" />
+				</Button>
+				<Tooltip id={swapId} content={swapTooltip} />
+				<IconRow className="items-center justify-end [&_.ui-item-picker-icon-wrapper]:[--icon-size:--spacing(14)]" testId="item-swap-icon-grid">
+					{children}
+				</IconRow>
+			</Field>
+			{note && <HelpText as="p">{note}</HelpText>}
+		</>
+	);
+};
+
 export interface ItemSwapPickerProps {
 	itemSlots: ReadonlyArray<ItemSlot>;
 	note?: string;
+	/** Rows for the swap set beside its gear, such as the swap weapons' consumable pickers. */
+	children?: ReactNode;
 }
 
-export const ItemSwapPicker = <SpecType extends Spec>({ itemSlots, note }: ItemSwapPickerProps) => {
+export const ItemSwapPicker = <SpecType extends Spec>({ itemSlots, note, children }: ItemSwapPickerProps) => {
 	const host = useSimHost();
 	const player = host.player as Player<SpecType>;
-	const swapId = useId();
-	const labelId = useId();
-	const swapTooltip = i18n.t('settings_tab.other.item_swap.tooltip');
-
 	const enabled = usePlayerStore('itemSwapEnabled');
 
 	const enableConfig = useMemo(
@@ -44,35 +76,19 @@ export const ItemSwapPicker = <SpecType extends Spec>({ itemSlots, note }: ItemS
 	);
 
 	return (
-		<div className="grid gap-3" data-testid="item-swap-picker-root">
-			<BooleanPicker modObject={player} config={enableConfig} />
-			{enabled && (
-				<div className="ui-field flex-wrap gap-3" data-testid="input-item-swap-container" data-input-root="" data-layout="split">
-					<FieldLabel as="span" id={labelId}>
-						{i18n.t('settings_tab.other.item_swap.label')}
-					</FieldLabel>
-					<Button
-						variant="unstyled"
-						data-testid="gear-swap-icon"
-						aria-label={swapTooltip}
-						{...tooltipAnchorProps(swapId)}
-						onClick={() => swapWithGear(player, itemSlots)}>
-						<Icon name="arrows-rotate" className="me-1" />
-					</Button>
-					<Tooltip id={swapId} content={swapTooltip} />
-					<PickerGroup
-						variant="icons"
-						className="items-center justify-end"
-						style={{ gridTemplateColumns: `repeat(${itemSlots.length}, 4rem)` }}
-						role="group"
-						aria-labelledby={labelId}>
+		<div className="grid gap-2" data-testid="item-swap-picker-root">
+			<ConnectedBooleanPicker modObject={player} config={enableConfig} />
+			{/* Hidden, never unmounted, while item swap is off: the swap consumable pickers in the rows zero their fields as they hide, which an unmounted picker never does. */}
+			<Box className="grid gap-2" testId="item-swap-box" hidden={!enabled}>
+				{enabled && (
+					<ItemSwapPickerView note={note} onSwap={() => swapWithGear(player, itemSlots)}>
 						{itemSlots.map(itemSlot => (
 							<ItemSwapIcon key={itemSlot} slot={itemSlot} />
 						))}
-					</PickerGroup>
-				</div>
-			)}
-			{note && enabled && <HelpText as="p">{note}</HelpText>}
+					</ItemSwapPickerView>
+				)}
+				{children}
+			</Box>
 		</div>
 	);
 };

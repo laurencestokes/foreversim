@@ -3,10 +3,11 @@ package priest
 import (
 	"testing"
 
-	"github.com/wowsims/forever/sim/arenalib"
 	"github.com/wowsims/forever/sim/common"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/sim/core/simsignals"
+	"github.com/wowsims/forever/sim/core/stats"
 )
 
 func init() {
@@ -14,122 +15,137 @@ func init() {
 	common.RegisterAllEffects()
 }
 
-// The community builds the rankings page runs on our Forever sim: Shadow 15/0/36 and Smite 31/17/3.
-var ShadowTalents = "0253000311--550022501201302251"
-var SmiteTalents = "515030031305001031-00505023002-003"
+// The Shadow Testing build's gear, talents and rotation, which the UI's Shadow Testing gear set,
+// Standard talents and Default rotation read too.
+var shadowTestingBuild = core.GetTestBuildFromJSON(proto.Class_ClassPriest, "../../ui/specs/priest/dps/builds", "testing",
+	core.ItemFilter{}, nil, nil)
+
+// The UI's defaults: Flask of Supreme Power, Major Spellblasting Potion, Nightfin Soup, Demonic Rune,
+// Brilliant Wizard Oil and Ez-Thro Dynamite II.
+var defaultConsumables = &proto.ConsumesSpec{
+	FlaskId:        13512,
+	OffensivePotId: 250937,
+	FoodId:         13931,
+	ConjuredId:     12662,
+	MhImbueId:      20749,
+	ExplosiveId:    18588,
+}
 
 func TestShadowPriest(t *testing.T) {
 	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator([]core.CharacterSuiteConfig{
-		priestSuite("shadow", ShadowTalents, true),
-	}))
-}
+		{
+			Class:      proto.Class_ClassPriest,
+			Race:       proto.Race_RaceTroll,
+			OtherRaces: []proto.Race{proto.Race_RaceUndead, proto.Race_RaceDwarf, proto.Race_RaceNightElf},
 
-func TestSmitePriest(t *testing.T) {
-	core.RunTestSuite(t, t.Name(), core.FullCharacterTestSuiteGenerator([]core.CharacterSuiteConfig{
-		priestSuite("smite", SmiteTalents, false),
-	}))
-}
-
-func priestSuite(apl string, talents string, preShadowform bool) core.CharacterSuiteConfig {
-	return core.CharacterSuiteConfig{
-		Class:      proto.Class_ClassPriest,
-		Race:       proto.Race_RaceTroll,
-		OtherRaces: []proto.Race{proto.Race_RaceUndead, proto.Race_RaceNightElf},
-
-		SpecOptions: core.SpecOptionsCombo{
-			Label: "Default",
-			SpecOptions: &proto.Player_DpsPriest{
-				DpsPriest: &proto.DpsPriest{
-					Options: &proto.DpsPriest_Options{
-						ClassOptions: &proto.PriestOptions{
-							Armor: proto.PriestOptions_InnerFire,
-							// Off by default in the UI; on here so the pet stays covered.
-							UseShadowfiend: true,
-							// Begin the sim already in Shadowform so the opener does not spend a
-							// GCD casting it.
-							PreShadowform: preShadowform,
+			SpecOptions: core.SpecOptionsCombo{
+				Label: "Shadow",
+				SpecOptions: &proto.Player_DpsPriest{
+					DpsPriest: &proto.DpsPriest{
+						Options: &proto.DpsPriest_Options{
+							ClassOptions: &proto.PriestOptions{
+								// Begin the sim already in Shadowform so the opener
+								// doesn't spend a GCD casting it.
+								PreShadowform: true,
+								Armor:         proto.PriestOptions_InnerFire,
+							},
 						},
 					},
 				},
 			},
-		},
 
-		// Naked: the generated item database does not carry the pre-raid set our Forever sim tests
-		// with yet, and gives the rest TBC-shaped stats.
-		GearSet:  core.GearSetCombo{Label: "Naked", GearSet: &proto.EquipmentSpec{}},
-		Talents:  talents,
-		Rotation: core.GetAplRotation("../../ui/specs/priest/dps/apls", apl),
+			GearSet:     shadowTestingBuild.GearSet,
+			Talents:     shadowTestingBuild.Talents,
+			Consumables: defaultConsumables,
+			Profession1: proto.Profession_Enchanting,
+			Profession2: proto.Profession_Tailoring,
 
-		ItemFilter: core.ItemFilter{
-			WeaponTypes: []proto.WeaponType{
-				proto.WeaponType_WeaponTypeDagger,
-				proto.WeaponType_WeaponTypeStaff,
-				proto.WeaponType_WeaponTypeMace,
-				proto.WeaponType_WeaponTypeOffHand,
+			Rotation: core.RotationCombo{Label: "default", Rotation: shadowTestingBuild.Rotation.Rotation},
+
+			ItemFilter: core.ItemFilter{
+				WeaponTypes: []proto.WeaponType{
+					proto.WeaponType_WeaponTypeDagger,
+					proto.WeaponType_WeaponTypeStaff,
+					proto.WeaponType_WeaponTypeMace,
+					proto.WeaponType_WeaponTypeOffHand,
+				},
+				ArmorType: proto.ArmorType_ArmorTypeCloth,
+				RangedWeaponTypes: []proto.RangedWeaponType{
+					proto.RangedWeaponType_RangedWeaponTypeWand,
+				},
+				// Blacklist melee enchants that appear on cloth-relevant slots but
+				// are never used by casters.
+				EnchantBlacklist: []int32{2673, 3225, 3273},
 			},
-			ArmorType: proto.ArmorType_ArmorTypeCloth,
-			RangedWeaponTypes: []proto.RangedWeaponType{
-				proto.RangedWeaponType_RangedWeaponTypeWand,
-			},
-			// Blacklist melee enchants that appear on cloth-relevant slots but are never used by
-			// casters.
-			EnchantBlacklist: []int32{2673, 3225, 3273},
 		},
+	}))
+}
+
+// The priest's own Prayer of Fortitude bids in the raid buff's category. Alone, the cast adds the
+// row's stamina for the row's mana; Arcane Brilliance lifts the priest's mana pool above the cost. With the raid buff up, the cast is turned away, and the priest's
+// copy, put up anyway as another priest's cast would, adds nothing.
+func TestPrayerOfFortitudeCountsOnceWithTheRaidBuff(t *testing.T) {
+	rank := spellData.PrayerOfFortitude.Highest()
+	rowStamina := rank.EffectN(1).BaseValue()
+
+	newSim := func(t *testing.T, raidBuffs *proto.RaidBuffs) (*core.Simulation, *Priest, *core.Spell) {
+		t.Helper()
+		player := &proto.Player{
+			Name:      "Prayer",
+			Race:      proto.Race_RaceTroll,
+			Class:     proto.Class_ClassPriest,
+			Equipment: shadowTestingBuild.GearSet.GearSet,
+			Spec: &proto.Player_DpsPriest{
+				DpsPriest: &proto.DpsPriest{
+					Options: &proto.DpsPriest_Options{ClassOptions: &proto.PriestOptions{}},
+				},
+			},
+			Rotation: &proto.APLRotation{},
+		}
+		sim := core.NewSim(&proto.RaidSimRequest{
+			Raid:       core.SinglePlayerRaidProto(player, &proto.PartyBuffs{}, raidBuffs, &proto.Debuffs{}),
+			Encounter:  core.MakeSingleTargetEncounter(0),
+			SimOptions: &proto.SimOptions{RandomSeed: 1},
+		}, simsignals.CreateSignals())
+		sim.Reset()
+
+		priest := sim.Raid.Parties[0].Players[0].(*Priest)
+		spell := priest.GetSpell(core.ActionID{SpellID: rank.ID})
+		if spell == nil {
+			t.Fatalf("the priest has no %s %d", rank.Name, rank.ID)
+		}
+		return sim, priest, spell
 	}
-}
 
-// Both priests share ui/specs/priest/dps, so each takes its own talents, gear and rotation out
-// of it. The site's options, which leave Inner Fire and Shadowfiend off.
-func TestArenaShadow(t *testing.T) {
-	arenalib.Run(t, arenaShadow)
-}
+	t.Run("alone the cast adds the row's stamina for the row's mana", func(t *testing.T) {
+		sim, priest, spell := newSim(t, &proto.RaidBuffs{ArcaneBrilliance: true})
+		stamina, mana := priest.GetStats()[stats.Stamina], priest.CurrentMana()
 
-func TestArenaSmite(t *testing.T) {
-	arenalib.Run(t, arenaSmite)
-}
+		if !spell.Cast(sim, &priest.Unit) {
+			t.Fatal("the priest could not cast Prayer of Fortitude with nothing in its category")
+		}
+		if got := priest.GetStats()[stats.Stamina] - stamina; got != rowStamina {
+			t.Errorf("the cast added %v stamina, want the game files' %v", got, rowStamina)
+		}
+		if got := mana - priest.CurrentMana(); got != rank.Cost() {
+			t.Errorf("the cast spent %v mana, want the game files' %v", got, rank.Cost())
+		}
+	})
 
-// The race tier lists for both priests; skipped unless RACE_ARENA_OUT is set. See
-// sim/arenalib/race_arena.go.
-func TestRaceArenaShadow(t *testing.T) {
-	arenalib.RunRaceArena(t, arenaShadow)
-}
+	t.Run("the raid buff holds the category", func(t *testing.T) {
+		sim, priest, spell := newSim(t, &proto.RaidBuffs{PrayerOfFortitude: true})
+		stamina := priest.GetStats()[stats.Stamina]
 
-func TestRaceArenaSmite(t *testing.T) {
-	arenalib.RunRaceArena(t, arenaSmite)
+		if spell.Cast(sim, &priest.Unit) {
+			t.Error("the priest cast Prayer of Fortitude while the raid buff holds its category")
+		}
+		own := priest.GetAura("Prayer of Fortitude (Player)")
+		if own == nil {
+			t.Fatal("the priest carries no aura labelled \"Prayer of Fortitude (Player)\"")
+		}
+		own.Activate(sim)
+		if got := priest.GetStats()[stats.Stamina]; got != stamina {
+			t.Errorf("stamina is %v with both copies up, want the raid buff's %v counted once", got, stamina)
+		}
+	})
 }
-
-var arenaShadow = arenalib.Spec{
-	Dir:         "shadow_priest",
-	UI:          "priest/dps",
-	Class:       proto.Class_ClassPriest,
-	Race:        proto.Race_RaceUndead,
-	SpecOptions: arenaPriestOptions,
-	Role:        arenalib.Caster,
-	// Mind Flay is 20 yd in the client (SpellRange 3).
-	DistanceFromTarget: 20,
-	Talents:            "Shadow",
-	GearSets:           []string{"launch", "p0.bis", "p1.bis"},
-	Rotations:          []string{"shadow"},
-}
-
-var arenaSmite = arenalib.Spec{
-	Dir:                "smite_priest",
-	UI:                 "priest/dps",
-	Class:              proto.Class_ClassPriest,
-	Race:               proto.Race_RaceUndead,
-	SpecOptions:        arenaPriestOptions,
-	Role:               arenalib.Caster,
-	DistanceFromTarget: 30,
-	Talents:            "Smite",
-	GearSets:           []string{"smite_launch"},
-	Rotations:          []string{"smite", "smite_lowrank", "smite_lowrank_mindblast"},
-	// The page's default gear is the Shadow set; Smite has its own. The low-rank rotation is a
-	// build arena comparison, not the page's.
-	RaceBuilds: map[string]arenalib.RaceBuild{
-		"Smite 31/17/3": {Gear: "smite_launch", Rotation: "smite"},
-	},
-}
-
-var arenaPriestOptions = &proto.Player_DpsPriest{DpsPriest: &proto.DpsPriest{Options: &proto.DpsPriest_Options{
-	ClassOptions: &proto.PriestOptions{},
-}}}

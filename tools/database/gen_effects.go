@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"go/format"
+	"io"
+	"iter"
+	"maps"
 	"os"
 	"regexp"
 	"slices"
@@ -13,13 +16,31 @@ import (
 	"text/template"
 
 	_ "github.com/wowsims/forever/sim/common"
+	"github.com/wowsims/forever/sim/common/shared"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/tools/database/dbc"
+	"github.com/wowsims/forever/tools/database/overrides"
 	"github.com/wowsims/forever/tools/tooltip"
 )
+
+// Sets the minimum itemlevel that should be considered for this expansions
+const MIN_EFFECT_ILVL = 40
+
+// Whether the item's effects are generated: it is at or above MIN_EFFECT_ILVL, or EffectFloorExemptions
+// names it.
+func aboveEffectFloor(parsed *proto.UIItem) bool {
+	_, exempt := EffectFloorExemptions[parsed.Id]
+	return exempt || parsed.ScalingOptions[0].Ilvl >= MIN_EFFECT_ILVL
+}
+
+// Whether the item's effect is written by hand: registered as an item effect, or applied by core where
+// it reads the item, as Alchemist's Stone's bonus to the potions its wearer drinks.
+func implementedByHand(itemID int32) bool {
+	return core.HasItemEffect(itemID) || slices.Contains(core.AlchStoneItemIDs, itemID)
+}
 
 // Enchantment IDs at or below this are not generated.
 const MIN_ENCHANT_EFFECT_ID = 0
@@ -35,6 +56,8 @@ type ProcInfo struct {
 	MaxCumulativeStacks int32
 	RequireDamageDealt  bool
 	ClassSpellsOnly     bool
+	// See core.ProcTrigger.
+	RequireDamageComponent bool
 	// The listener's Can Proc From Procs attribute: it also hears hits from proc spells.
 	CanProcFromProcs bool
 	// A "Chance on hit" item effect or a combat enchant, cast by the game off every eligible
@@ -76,7 +99,7 @@ type Entry struct {
 	// Set for effects an ignore list deliberately excludes. These emit a comment only, so that
 	// skipping them is visible in the generated file rather than silent.
 	Skipped bool
-	// Set when the proc is resolved from the client's own rows at run time, which is every proc
+	// Set when the proc is resolved from the game files' own rows at run time, which is every proc
 	// but the two shapes that need more than the rows state: a window that accumulates a second
 	// aura, and an effect a hand-written constructor already covers.
 	Proc *ProcRouting
@@ -101,7 +124,9 @@ type ProcRouting struct {
 	// A "Chance on hit" item effect or a combat enchant, cast by the game off every eligible weapon
 	// hit whatever the row's proc flags say.
 	IsWeaponProc bool
-	Shape        ProcShape
+	// A weapon's own procs-per-minute rate, stated on its item effect; zero where the rows state one.
+	ItemPPM float64
+	Shape   ProcShape
 	// Empty when the rows state enough to build the listener.
 	Unsupported []string
 	// What the rows resolve to, for the reader of the generated file.
@@ -129,6 +154,10 @@ const (
 	ShapeAura
 	// An equip spell's auras, kept up for as long as the item is worn rather than applied by a proc.
 	ShapeEquip
+	// Grants the wearer extra attacks: main-hand swings under the granting spell's name.
+	ShapeExtraAttack
+	// An on-use aura on the wearer that casts area damage on every enemy each period.
+	ShapePeriodicDamage
 )
 
 var procShapes = [...]struct {
@@ -138,15 +167,17 @@ var procShapes = [...]struct {
 	unsupported      func(*spelldata.Spell) []string
 	alwaysNamesBuff  bool
 }{
-	ShapeStats:    {"NewSpellDataProc", "NewSimpleStatActive", "", nil, false},
-	ShapeDamage:   {"NewSpellDataDamageProc", "NewSpellDataDamageOnUse", "Damage", damageUnsupported, true},
-	ShapeHeal:     {"NewSpellDataHealProc", "NewSpellDataHealOnUse", "Heals", healUnsupported, true},
-	ShapeAbsorb:   {"NewSpellDataAbsorbProc", "NewSpellDataAbsorbOnUse", "Absorbs", absorbUnsupported, true},
-	ShapeSpeed:    {"NewSpellDataProc", "NewSpellDataSpeedOnUse", "Speed", nil, false},
-	ShapeEnergize: {"NewSpellDataProc", "NewSpellDataEnergizeOnUse", "Resources", nil, false},
-	ShapeDebuff:   {"NewSpellDataDebuffProc", "NewSimpleStatActive", "", debuffUnsupported, false},
-	ShapeAura:     {"NewSpellDataAuraProc", "NewSpellDataAuraOnUse", "Auras", procAuraUnsupported, false},
-	ShapeEquip:    {"NewSpellDataEquipAura", "NewSimpleStatActive", "", nil, false},
+	ShapeStats:          {"NewSpellDataProc", "NewSimpleStatActive", "", nil, false},
+	ShapeDamage:         {"NewSpellDataDamageProc", "NewSpellDataDamageOnUse", "Damage", damageUnsupported, true},
+	ShapeHeal:           {"NewSpellDataHealProc", "NewSpellDataHealOnUse", "Heals", healUnsupported, true},
+	ShapeAbsorb:         {"NewSpellDataAbsorbProc", "NewSpellDataAbsorbOnUse", "Absorbs", absorbUnsupported, true},
+	ShapeSpeed:          {"NewSpellDataProc", "NewSpellDataSpeedOnUse", "Speed", nil, false},
+	ShapeEnergize:       {"NewSpellDataProc", "NewSpellDataEnergizeOnUse", "Resources", nil, false},
+	ShapeDebuff:         {"NewSpellDataDebuffProc", "NewSimpleStatActive", "", debuffUnsupported, false},
+	ShapeAura:           {"NewSpellDataAuraProc", "NewSpellDataAuraOnUse", "Auras", procAuraUnsupported, false},
+	ShapeEquip:          {"NewSpellDataEquipAura", "NewSimpleStatActive", "", nil, false},
+	ShapeExtraAttack:    {"NewSpellDataExtraAttackProc", "NewSimpleStatActive", "", extraAttackUnsupported, false},
+	ShapePeriodicDamage: {"NewSpellDataProc", "NewSpellDataPeriodicDamageOnUse", "Damage", nil, false},
 }
 
 func (r *ProcRouting) Supported() bool {
@@ -159,22 +190,27 @@ func (r *ProcRouting) Reason() string {
 }
 
 // The rows behind an item effect, by the two ids the sim will look up: the spell carrying the proc
-// and the spell it applies.
-func routeProc(triggerSpellID int, buffSpellID int, isWeaponProc bool) *ProcRouting {
-	routing := &ProcRouting{TriggerSpellID: triggerSpellID, IsWeaponProc: isWeaponProc}
+// and the spell it applies. A weapon's own procs-per-minute rate, stated on its item effect, answers
+// a trigger whose row states none.
+func routeProc(triggerSpellID int, buffSpellID int, isWeaponProc bool, itemPPM float64) *ProcRouting {
+	routing := &ProcRouting{TriggerSpellID: triggerSpellID, IsWeaponProc: isWeaponProc, ItemPPM: itemPPM}
 	if buffSpellID != triggerSpellID {
 		routing.BuffSpellID = buffSpellID
 	}
 
 	trigger := spelldata.Find(int32(triggerSpellID))
-	routing.Unsupported = spelldata.ItemProcUnsupported(trigger, isWeaponProc)
-	routing.Summary = procSummary(triggerSpellID, trigger, buffSpellID)
+	routing.Unsupported = spelldata.ItemProcUnsupportedWithRate(trigger, isWeaponProc, itemPPM)
+	routing.Summary = routing.summarize(buffSpellID)
 
 	return routing
 }
 
-// A proc that grants no stats: it casts or applies spellID, which the client hangs below the trigger
-// or states on it, and whose row says what the sim cannot model.
+func (r *ProcRouting) summarize(buffSpellID int) string {
+	return procSummary(r.TriggerSpellID, spelldata.Find(int32(r.TriggerSpellID)), buffSpellID, r.ItemPPM)
+}
+
+// A proc that grants no stats: it casts or applies spellID, which the game files hang below the
+// trigger or state on it, and whose row says what the sim cannot model.
 func (r *ProcRouting) as(shape ProcShape, spellID int32) {
 	r.Shape = shape
 	r.BuffSpellID = int(spellID)
@@ -182,12 +218,15 @@ func (r *ProcRouting) as(shape ProcShape, spellID int32) {
 		r.BuffSpellID = 0
 	}
 	r.Unsupported = append(r.Unsupported, procShapes[shape].unsupported(spelldata.Find(spellID))...)
-	r.Summary = procSummary(r.TriggerSpellID, spelldata.Find(int32(r.TriggerSpellID)), int(spellID))
+	r.Summary = r.summarize(int(spellID))
 }
 
 func pickNoStatShape(spellID int, debuffID int32) (ProcShape, int32) {
 	if damage := dbc.ResolveDamageEffect(spellID); damage != nil {
 		return ShapeDamage, int32(damage.SpellID)
+	}
+	if dot := dbc.ResolveTriggered(spellID, dealsPeriodicDamage); dot != 0 {
+		return ShapeDamage, dot
 	}
 	if heal := dbc.ResolveTriggered(spellID, heals); heal != 0 {
 		return ShapeHeal, heal
@@ -195,20 +234,45 @@ func pickNoStatShape(spellID int, debuffID int32) (ProcShape, int32) {
 	if absorb := dbc.ResolveTriggered(spellID, absorbs); absorb != 0 {
 		return ShapeAbsorb, absorb
 	}
+	if spelldata.Find(int32(spellID)).ExtraAttacksEffect() != spelldata.NilEffect {
+		return ShapeExtraAttack, int32(spellID)
+	}
 	if spelldata.Find(debuffID).DebuffsTheTarget() {
 		return ShapeDebuff, debuffID
 	}
 	return ShapeStats, 0
 }
 
+func extraAttackUnsupported(row *spelldata.Spell) []string {
+	var unsupported []string
+	effect := row.ExtraAttacksEffect()
+	if effect.Target[0] != dbcenums.TARGET_UNIT_CASTER {
+		unsupported = append(unsupported, "the extra attacks are not the wearer's")
+	}
+	if effect.BasePoints < 1 {
+		unsupported = append(unsupported, "states no attack count")
+	}
+	return unsupported
+}
+
+// A row dealing damage over time alone has to tick on an enemy: Blood Talon's Rend 13318 bleeds the
+// target every 3 s for 30 s.
 func damageUnsupported(damage *spelldata.Spell) []string {
+	periodic := damage.PeriodicDamageEffect()
 	switch {
 	case damage == spelldata.Nil:
 		return []string{"the damage spell has no row in the store"}
-	case damage.DamageEffect() == spelldata.NilEffect:
+	case damage.DamageEffect() != spelldata.NilEffect:
+		return nil
+	case periodic == spelldata.NilEffect:
 		return []string{"the damage spell's row states no damage"}
 	}
-	return nil
+
+	var unsupported []string
+	if !periodic.HitsAnEnemy() {
+		unsupported = append(unsupported, fmt.Sprintf("the damage lands on implicit target %d, not an enemy", periodic.Target[0]))
+	}
+	return append(unsupported, tickUnsupported("damage", damage, periodic)...)
 }
 
 func debuffUnsupported(debuff *spelldata.Spell) []string {
@@ -223,16 +287,22 @@ func procAuraUnsupported(buff *spelldata.Spell) []string {
 }
 
 func healUnsupported(heal *spelldata.Spell) []string {
+	return healTargetUnsupported(heal)
+}
+
+// The same, where the heal may also land on one of the targets named, which reach the wearer: an
+// on-use heal cast on a friendly target is cast on the wearer, the one friendly unit the sim has.
+func healTargetUnsupported(heal *spelldata.Spell, wearer ...dbcenums.ImplicitTarget) []string {
 	effect := heal.ProcHealEffect()
-	unsupported := wearerTarget("heal", effect)
+	unsupported := wearerTarget("heal", effect, wearer...)
 	if effect.Aura == dbcenums.A_PERIODIC_HEAL {
 		unsupported = append(unsupported, tickUnsupported("heal", heal, effect)...)
 	}
 	return unsupported
 }
 
-func wearerTarget(what string, effect *spelldata.Effect) []string {
-	if effect.Target[0] == dbcenums.TARGET_UNIT_CASTER {
+func wearerTarget(what string, effect *spelldata.Effect, wearer ...dbcenums.ImplicitTarget) []string {
+	if effect.Target[0] == dbcenums.TARGET_UNIT_CASTER || slices.Contains(wearer, effect.Target[0]) {
 		return nil
 	}
 	return []string{fmt.Sprintf("the %s lands on implicit target %d, not the wearer", what, effect.Target[0])}
@@ -247,9 +317,7 @@ func tickUnsupported(what string, s *spelldata.Spell, effect *spelldata.Effect) 
 
 func energizeUnsupported(s *spelldata.Spell, effect *spelldata.Effect) []string {
 	unsupported := wearerTarget("gain", effect)
-	switch dbcenums.PowerType(effect.Misc) {
-	case dbcenums.POWER_MANA, dbcenums.POWER_RAGE, dbcenums.POWER_ENERGY:
-	default:
+	if !shared.EnergizesABar(dbcenums.PowerType(effect.Misc)) {
 		unsupported = append(unsupported, fmt.Sprintf("the gain fills power type %d, not mana, rage or energy", effect.Misc))
 	}
 	if effect.Aura == dbcenums.A_PERIODIC_ENERGIZE {
@@ -267,32 +335,20 @@ func absorbUnsupported(absorb *spelldata.Spell) []string {
 	if absorb.DurationMs == 0 {
 		unsupported = append(unsupported, "the absorb states no duration")
 	}
-	for _, id := range absorbLinkedDamage(absorb) {
-		unsupported = append(unsupported, fmt.Sprintf("the damage of %d (%s) the absorb's row names is not simulated", id, spelldata.Find(id).Name))
+	breakDamage, breaks := shared.AbsorbBreakDamage(absorb)
+	if breaks {
+		unsupported = append(unsupported, damageUnsupported(spelldata.Find(breakDamage))...)
+	}
+	for _, id := range shared.AbsorbLinkedDamage(absorb) {
+		if !breaks || id != breakDamage {
+			unsupported = append(unsupported, fmt.Sprintf("the damage of %d (%s) the absorb's row names is not simulated", id, spelldata.Find(id).Name))
+		}
 	}
 	return unsupported
 }
 
-// The spells dealing damage that an absorb's row triggers or its tooltip references, which the shield
-// alone does not deal: Adaptive Combat Assistant's 1291097 names 1291099, Nature damage when the
-// shield breaks early. Registering the shield without it would model half the item.
-func absorbLinkedDamage(absorb *spelldata.Spell) []int32 {
-	linked := slices.Clone(absorb.RefIDs)
-	for _, e := range absorb.Effects {
-		if e.TriggerID != 0 {
-			linked = append(linked, e.TriggerID)
-		}
-	}
-
-	var damage []int32
-	for _, id := range linked {
-		s := spelldata.Find(id)
-		if id != absorb.ID && s != spelldata.Nil && !slices.Contains(damage, id) &&
-			(s.DamageEffect() != spelldata.NilEffect || s.PeriodicDamageEffect() != spelldata.NilEffect) {
-			damage = append(damage, id)
-		}
-	}
-	return damage
+func dealsPeriodicDamage(s *spelldata.Spell) bool {
+	return s.PeriodicDamageEffect() != spelldata.NilEffect
 }
 
 func heals(s *spelldata.Spell) bool {
@@ -304,7 +360,7 @@ func absorbs(s *spelldata.Spell) bool {
 }
 
 // The buff the proc applies has to last for something: an aura of no duration is one the sim
-// refuses to activate, and the client states it on either row.
+// refuses to activate, and the game files state it on either row.
 func (r *ProcRouting) requireABuffDuration() {
 	trigger := spelldata.Find(int32(r.TriggerSpellID))
 	buff := trigger
@@ -324,14 +380,18 @@ func (r *ProcRouting) requireABuffDuration() {
 
 // What the rows resolve to, as the sim's own constants, so the generated file states the reading
 // rather than leaving it to be looked up.
-func procSummary(triggerSpellID int, trigger *spelldata.Spell, buffSpellID int) string {
+func procSummary(triggerSpellID int, trigger *spelldata.Spell, buffSpellID int, itemPPM float64) string {
 	if trigger == spelldata.Nil {
 		return fmt.Sprintf("trigger %d is not in the store", triggerSpellID)
 	}
 
+	rate := procRateSummary(trigger)
+	if itemPPM > 0 {
+		rate = fmt.Sprintf("%v ppm on the item", itemPPM)
+	}
 	decoded := core.DecodeProcTypeMask(trigger.ProcFlags, trigger.ProcHint)
 	summary := fmt.Sprintf("trigger %d (%s, %s, %s)", trigger.ID,
-		procRateSummary(trigger), asCoreCallback(decoded.Callback), asCoreProcMask(decoded.ProcMask))
+		rate, asCoreCallback(decoded.Callback), asCoreProcMask(decoded.ProcMask))
 
 	if int(trigger.ID) != buffSpellID {
 		summary += fmt.Sprintf(" -> buff %d", buffSpellID)
@@ -422,7 +482,7 @@ func GenerateEffectsFile(groups []*Group, outFile string, templateString string)
 	}
 
 	hasStacking := false
-	// A registration resolved from the client's rows names no core constant, so a file whose live
+	// A registration resolved from the game files' rows names no core constant, so a file whose live
 	// entries are all of that shape must not import core: gen_db links the sim, and an unused import
 	// in a file it just wrote breaks the build the next run needs.
 	usesCore := false
@@ -502,11 +562,338 @@ func jsString(s string) string {
 
 const missingEffectsFileName = "ui/sim/constants/missing_effects_auto_gen.ts"
 
-func GenerateMissingEffectsFile() error {
+// A proc rate on gear that the game files do not state and nobody has measured on Forever.
+type UnvalidatedRate struct {
+	ID     int32 // The item id, the enchant effect id or the set id.
+	Pieces int32 // The set bonus's piece count; 0 on an item or an enchant.
+	Name   string
+	Kind   overrides.RateKind
+	Origin string // "vanilla", "tbc" or "unknown".
+}
+
+type UnvalidatedRates struct {
+	Items      []UnvalidatedRate
+	Enchants   []UnvalidatedRate
+	SetBonuses []UnvalidatedRate
+}
+
+// A rate the sim keeps as a literal in code, outside the override tables, which the notices still
+// have to name. Gear is "item", "enchant" or "set bonus".
+type literalRate struct {
+	Gear   string
+	ID     int32
+	Pieces int32
+	Kind   overrides.RateKind
+	Origin string
+	Reason string
+}
+
+var literalRates = []literalRate{
+	{
+		Gear:   "item",
+		ID:     272432,
+		Kind:   overrides.RatePPM,
+		Origin: "unknown",
+		Reason: "Totem of the Storm: half of Maelstrom Weapon's rate per minute, which the shaman talent " +
+			"code keeps as its own literal; the item cannot carry it without the talent reading it from the item",
+	},
+	{
+		Gear:   "set bonus",
+		ID:     184,
+		Pieces: 5,
+		Kind:   overrides.RatePPM,
+		Origin: "unknown",
+		Reason: "Shadowcraft Armor: the energy proc's row states 100% on every melee hit with no rate per minute, " +
+			"so the sim keeps 1 per minute as a literal",
+	},
+	{
+		Gear:   "set bonus",
+		ID:     512,
+		Pieces: 4,
+		Kind:   overrides.RatePPM,
+		Origin: "unknown",
+		Reason: "Darkmantle Armor: the energy proc's row states 100% on every melee hit with no rate per minute, " +
+			"so the sim keeps 1 per minute as a literal",
+	},
+}
+
+// The origin a rate's Source names, or "" for one measured on Forever, which needs no notice.
+func rateOrigin(source string) string {
+	switch {
+	case strings.HasPrefix(source, "wcl:"), strings.HasPrefix(source, "issue #"), strings.HasPrefix(source, "combat log, "):
+		return ""
+	case source == "vanilla-carryover":
+		return "vanilla"
+	case source == "tbc-carryover":
+		return "tbc"
+	}
+	return "unknown"
+}
+
+// The hand-kept rates the notices weigh, and the gear casting each spell a spell rate sits on.
+type rateInputs struct {
+	WeaponProcs   []overrides.WeaponProc
+	Spells        []overrides.Override
+	EnchantProcs  []overrides.EnchantProc
+	Literals      []literalRate
+	SpellItems    map[int32][]int32    // The items casting each spell, by spell id.
+	SpellEnchants map[int32][]int32    // The enchant effect ids casting each spell, by spell id.
+	SpellSets     map[int32][][2]int32 // The set id and piece count of each set bonus granting the spell, by spell id.
+}
+
+// A spell override's rate kind, or 0 for an override that is not a rate.
+func spellRateKind(o overrides.Override) overrides.RateKind {
+	switch o.Field {
+	case overrides.PPM:
+		return overrides.RatePPM
+	case overrides.ProcChancePct:
+		return overrides.RateChance
+	}
+	return 0
+}
+
+// The shipped tables, with the items, enchants and set bonuses the game files have casting each rated spell.
+func shippedRateInputs(instance *dbc.DBC) rateInputs {
+	in := rateInputs{
+		WeaponProcs:   overrides.WeaponProcs,
+		Spells:        overrides.Spells,
+		EnchantProcs:  overrides.EnchantProcs,
+		Literals:      literalRates,
+		SpellItems:    map[int32][]int32{},
+		SpellEnchants: map[int32][]int32{},
+		SpellSets:     map[int32][][2]int32{},
+	}
+	for _, o := range overrides.Spells {
+		if spellRateKind(o) == 0 {
+			continue
+		}
+		for itemID, effects := range instance.ItemEffectsByParentID {
+			if slices.ContainsFunc(effects, func(e dbc.ItemEffect) bool { return e.SpellID == int(o.SpellID) }) {
+				in.SpellItems[o.SpellID] = append(in.SpellItems[o.SpellID], int32(itemID))
+			}
+		}
+		for effectID, enchant := range instance.EnchantsByEffectId {
+			if slices.Contains(enchant.EffectArgs, int(o.SpellID)) {
+				in.SpellEnchants[o.SpellID] = append(in.SpellEnchants[o.SpellID], int32(effectID))
+			}
+		}
+		for setID, spells := range instance.ItemSetSpells {
+			for _, spell := range spells {
+				if spell.SpellID == int(o.SpellID) {
+					in.SpellSets[o.SpellID] = append(in.SpellSets[o.SpellID], [2]int32{int32(setID), int32(spell.Threshold)})
+				}
+			}
+		}
+	}
+	return in
+}
+
+// Every hand-kept proc rate reaching an item, an enchant or a set bonus in the database whose Source
+// is not a measurement on Forever, once per piece of gear and in id order: the weapon rates, the
+// spell rates through the items, enchants and set bonuses that cast the spell, the enchant rates, and the rates
+// still kept as literals in code. Two rates of different kind or origin on one piece is an error.
+func unvalidatedRates(in rateInputs, db *WowDatabase) (UnvalidatedRates, error) {
+	items := map[int32]UnvalidatedRate{}
+	enchants := map[int32]UnvalidatedRate{}
+	setBonuses := map[[2]int32]UnvalidatedRate{}
+	var conflict error
+	check := func(listed UnvalidatedRate, ok bool, rate UnvalidatedRate) {
+		if ok && (listed.Kind != rate.Kind || listed.Origin != rate.Origin) && conflict == nil {
+			conflict = fmt.Errorf("%s (%d) carries two rates, a %s %s one and a %s %s one",
+				rate.Name, rate.ID, listed.Origin, listed.Kind, rate.Origin, rate.Kind)
+		}
+	}
+	put := func(list map[int32]UnvalidatedRate, rate UnvalidatedRate) {
+		listed, ok := list[rate.ID]
+		check(listed, ok, rate)
+		list[rate.ID] = rate
+	}
+	putSetBonus := func(rate UnvalidatedRate) {
+		key := [2]int32{rate.ID, rate.Pieces}
+		listed, ok := setBonuses[key]
+		check(listed, ok, rate)
+		setBonuses[key] = rate
+	}
+	enchantByEffectID := map[int32]*proto.UIEnchant{}
+	for _, enchant := range db.Enchants {
+		enchantByEffectID[enchant.EffectId] = enchant
+	}
+	setNames := setNamesOf(db)
+
+	for _, proc := range in.WeaponProcs {
+		item, ok := db.Items[proc.ItemID]
+		if origin := rateOrigin(proc.Source); origin != "" && ok {
+			put(items, UnvalidatedRate{ID: item.Id, Name: item.Name, Kind: overrides.RatePPM, Origin: origin})
+		}
+	}
+
+	for _, o := range in.Spells {
+		kind, origin := spellRateKind(o), rateOrigin(o.Source)
+		if kind == 0 || origin == "" {
+			continue
+		}
+		for _, itemID := range in.SpellItems[o.SpellID] {
+			if item, ok := db.Items[itemID]; ok {
+				put(items, UnvalidatedRate{ID: itemID, Name: item.Name, Kind: kind, Origin: origin})
+			}
+		}
+		for _, effectID := range in.SpellEnchants[o.SpellID] {
+			if enchant, ok := enchantByEffectID[effectID]; ok {
+				put(enchants, UnvalidatedRate{ID: effectID, Name: enchant.Name, Kind: kind, Origin: origin})
+			}
+		}
+		for _, bonus := range in.SpellSets[o.SpellID] {
+			if name, ok := setNames[bonus[0]]; ok {
+				putSetBonus(UnvalidatedRate{ID: bonus[0], Pieces: bonus[1], Name: name, Kind: kind, Origin: origin})
+			}
+		}
+	}
+
+	for _, proc := range in.EnchantProcs {
+		enchant, ok := enchantByEffectID[proc.EnchantID]
+		if origin := rateOrigin(proc.Source); origin != "" && ok {
+			put(enchants, UnvalidatedRate{ID: proc.EnchantID, Name: enchant.Name, Kind: proc.Kind, Origin: origin})
+		}
+	}
+
+	for _, literal := range in.Literals {
+		rate := UnvalidatedRate{ID: literal.ID, Pieces: literal.Pieces, Kind: literal.Kind, Origin: literal.Origin}
+		switch literal.Gear {
+		case "item":
+			if item, ok := db.Items[literal.ID]; ok {
+				rate.Name = item.Name
+				put(items, rate)
+			}
+		case "enchant":
+			if enchant, ok := enchantByEffectID[literal.ID]; ok {
+				rate.Name = enchant.Name
+				put(enchants, rate)
+			}
+		case "set bonus":
+			if name, ok := setNames[literal.ID]; ok {
+				rate.Name = name
+				putSetBonus(rate)
+			}
+		}
+	}
+
+	byID := func(list []UnvalidatedRate) []UnvalidatedRate {
+		sort.Slice(list, func(i, j int) bool {
+			return list[i].ID < list[j].ID || list[i].ID == list[j].ID && list[i].Pieces < list[j].Pieces
+		})
+		return list
+	}
+	return UnvalidatedRates{
+		Items:      byID(slices.Collect(maps.Values(items))),
+		Enchants:   byID(slices.Collect(maps.Values(enchants))),
+		SetBonuses: byID(slices.Collect(maps.Values(setBonuses))),
+	}, conflict
+}
+
+// A set bonus the game files grant at a piece count the sim registers no effect for.
+type MissingSetBonus struct {
+	ID       int32 // The set id.
+	Pieces   int32
+	Name     string
+	Spells   []int32
+	Tooltips []string // One per spell.
+}
+
+// Every set bonus of a set with items in the database whose piece count no registered set covers,
+// in set id and piece count order. A set registered with ID 0 is matched by name.
+func missingSetBonuses(registered []*core.ItemSet, setSpells map[int][]dbc.ItemSetSpell, db *WowDatabase, tooltipOf func(spellID int) string) []MissingSetBonus {
+	var missing []MissingSetBonus
+	for setID, name := range setNamesOf(db) {
+		implemented := map[int32]bool{}
+		for _, set := range registered {
+			if set.ID == setID || set.ID == 0 && (set.Name == name || set.AlternativeName == name) {
+				for pieces := range set.Bonuses {
+					implemented[pieces] = true
+				}
+			}
+		}
+		byPieces := map[int32]*MissingSetBonus{}
+		for _, row := range setSpells[int(setID)] {
+			pieces := int32(row.Threshold)
+			if implemented[pieces] {
+				continue
+			}
+			bonus, ok := byPieces[pieces]
+			if !ok {
+				bonus = &MissingSetBonus{ID: setID, Pieces: pieces, Name: name}
+				byPieces[pieces] = bonus
+			}
+			bonus.Spells = append(bonus.Spells, int32(row.SpellID))
+			bonus.Tooltips = append(bonus.Tooltips, tooltipOf(row.SpellID))
+		}
+		for _, bonus := range byPieces {
+			missing = append(missing, *bonus)
+		}
+	}
+
+	sort.Slice(missing, func(i, j int) bool {
+		return missing[i].ID < missing[j].ID || missing[i].ID == missing[j].ID && missing[i].Pieces < missing[j].Pieces
+	})
+	return missing
+}
+
+// The name of every set with an item in the database, by set id.
+func setNamesOf(db *WowDatabase) map[int32]string {
+	names := map[int32]string{}
+	for _, item := range db.Items {
+		if item.SetId != 0 {
+			names[item.SetId] = item.SetName
+		}
+	}
+	return names
+}
+
+// A list in set id order, cut into one run per set.
+func groupBySet[T any](list []T, setID func(T) int32) [][]T {
+	var sets [][]T
+	for _, entry := range list {
+		if len(sets) == 0 || setID(sets[len(sets)-1][0]) != setID(entry) {
+			sets = append(sets, nil)
+		}
+		sets[len(sets)-1] = append(sets[len(sets)-1], entry)
+	}
+	return sets
+}
+
+// The spell's tooltip as the missing-effects list shows it, or its name where the tooltip does not render.
+func setBonusTooltip(instance *dbc.DBC, spellID int) string {
+	spell := instance.Spells[spellID]
+	if rendered, _ := tooltip.ParseTooltip(spell.Description, tooltip.DBCTooltipDataProvider{DBC: instance}, int64(spellID)); rendered != nil {
+		if text := rendered.String(); text != "" {
+			return text
+		}
+	}
+	return spell.NameLang
+}
+
+func GenerateMissingEffectsFile(instance *dbc.DBC, db *WowDatabase) error {
 	if _, err := os.Stat(missingEffectsFileName); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("unable to check file %s: %w", missingEffectsFileName, err)
 	}
 
+	rates, err := unvalidatedRates(shippedRateInputs(instance), db)
+	if err != nil {
+		return err
+	}
+	setBonuses := missingSetBonuses(core.ItemSets(), instance.ItemSetSpells, db, func(spellID int) string {
+		return setBonusTooltip(instance, spellID)
+	})
+
+	f, err := os.Create(missingEffectsFileName)
+	if err != nil {
+		return fmt.Errorf("failed to create file %s: %w", missingEffectsFileName, err)
+	}
+	defer f.Close()
+
+	return renderMissingEffects(f, rates, setBonuses)
+}
+
+func renderMissingEffects(w io.Writer, rates UnvalidatedRates, setBonuses []MissingSetBonus) error {
 	funcMap := map[string]any{
 		"asCoreCallback": asCoreCallback,
 		"asCoreProcMask": asCoreProcMask,
@@ -515,13 +902,17 @@ func GenerateMissingEffectsFile() error {
 		"jsString":       jsString,
 	}
 	tmpl := template.Must(template.New("missingEffects").Funcs(funcMap).Parse(TmplStrMissingEffects))
-	f, err := os.Create(missingEffectsFileName)
-	if err != nil {
-		return fmt.Errorf("failed to create file %s: %w", missingEffectsFileName, err)
+	sets := groupBySet(rates.SetBonuses, func(r UnvalidatedRate) int32 { return r.ID })
+	missingSets := groupBySet(setBonuses, func(b MissingSetBonus) int32 { return b.ID })
+	data := map[string]any{
+		"ItemEffects":               missingEffectsMap["ItemEffects"],
+		"EnchantEffects":            missingEffectsMap["EnchantEffects"],
+		"MissingSetBonuses":         missingSets,
+		"UnvalidatedRateItems":      rates.Items,
+		"UnvalidatedRateEnchants":   rates.Enchants,
+		"UnvalidatedRateSetBonuses": sets,
 	}
-	defer f.Close()
-
-	if err := tmpl.Execute(f, missingEffectsMap); err != nil {
+	if err := tmpl.Execute(w, data); err != nil {
 		return fmt.Errorf("failed to execute template: %w", err)
 	}
 
@@ -546,6 +937,7 @@ func GenerateEnchantEffects(instance *dbc.DBC, db *WowDatabase) {
 
 		TryParseEnchantEffect(parsed, slots, groupMapProc, instance, enchantSpellEffects)
 		storeUnmappedSpeedEnchant(instance, enchant, parsed, enchantSpellEffects)
+		storeWeaponScopedEnchant(instance, enchant, parsed, enchantSpellEffects, groupMapProc)
 	}
 
 	var procGroups []*Group
@@ -569,11 +961,7 @@ func storeUnmappedSpeedEnchant(instance *dbc.DBC, enchant dbc.Enchant, parsed *p
 		return
 	}
 
-	for idx, effect := range enchant.Effects {
-		if effect != dbc.ITEM_ENCHANTMENT_EQUIP_SPELL || idx >= len(enchant.EffectArgs) {
-			continue
-		}
-		spellID := enchant.EffectArgs[idx]
+	for spellID := range enchantEquipSpellIDs(enchant) {
 		for _, spellEffect := range instance.SpellEffectsInOrder(spellID) {
 			if spellEffect.EffectType == dbcenums.E_APPLY_AURA && slices.Contains(speedAuras, spellEffect.EffectAura) {
 				StoreMissingEffect("EnchantEffects", parsed.Name, Variant{
@@ -585,6 +973,76 @@ func storeUnmappedSpeedEnchant(instance *dbc.DBC, enchant dbc.Enchant, parsed *p
 			}
 		}
 	}
+}
+
+// An equip spell whose weapon requirement dbc.EquipSpellFolds leaves to run time reaches no enchant
+// field, so the enchant registers the spell's auras as an equip aura, kept up while the enchant is
+// worn. One the rows cannot build, and one whose enchant already registers a proc, is listed as
+// missing its effect unless it is implemented by hand.
+func storeWeaponScopedEnchant(instance *dbc.DBC, enchant dbc.Enchant, parsed *proto.UIEnchant, enchantSpellEffects map[int]*dbc.SpellEffect, groupMapProc map[string]Group) {
+	grant, ok := enchantSpellEffects[int(parsed.EffectId)]
+	if !ok || core.HasEnchantEffect(parsed.EffectId) {
+		return
+	}
+
+	for spellID := range enchantEquipSpellIDs(enchant) {
+		if dbc.EquipSpellFolds(spellID) {
+			continue
+		}
+
+		rendered := renderSpellTooltip(instance, grant.SpellID)
+		equip := spelldata.Find(int32(spellID))
+		row := spelldata.EquipAuraRow(equip)
+		if !appliesAnItemAura(row) {
+			StoreMissingEffect("EnchantEffects", parsed.Name, Variant{
+				ID:      int(parsed.EffectId),
+				Name:    rendered + " (a weapon-scoped equip spell whose auras no equip aura builds)",
+				SpellID: spellID,
+			})
+			return
+		}
+
+		routing := equipAuraRouting(instance, equip, row)
+		if enchantRegisters(groupMapProc, parsed.EffectId) {
+			routing.Unsupported = append(routing.Unsupported, "another slot of the enchant registers")
+		}
+
+		variant := &Variant{ID: int(parsed.EffectId), Name: parsed.Name, SpellID: grant.SpellID}
+		if !appendEquipEntry(groupMapProc, "Enchants", rendered, variant, routing) {
+			StoreMissingEffect("EnchantEffects", parsed.Name, Variant{ID: int(parsed.EffectId), Name: rendered, SpellID: spellID})
+		}
+		return
+	}
+}
+
+func enchantEquipSpellIDs(enchant dbc.Enchant) iter.Seq[int] {
+	return func(yield func(int) bool) {
+		for idx, effect := range enchant.Effects {
+			if effect == dbc.ITEM_ENCHANTMENT_EQUIP_SPELL && idx < len(enchant.EffectArgs) && !yield(enchant.EffectArgs[idx]) {
+				return
+			}
+		}
+	}
+}
+
+// Files an equip aura's entry under the group, and answers whether it registers.
+func appendEquipEntry(groupMapProc map[string]Group, group string, rendered string, variant *Variant, routing *ProcRouting) bool {
+	grp := groupMapProc[group]
+	grp.Name = group
+	grp.Entries = append(grp.Entries, &Entry{
+		Tooltip:   strings.Split(rendered, "\n"),
+		Variants:  []*Variant{variant},
+		Proc:      routing,
+		Supported: routing.Supported(),
+	})
+	groupMapProc[group] = grp
+	return routing.Supported()
+}
+
+func enchantRegisters(groupMapProc map[string]Group, effectID int32) bool {
+	return slices.ContainsFunc(groupMapProc["Enchants"].Entries, func(entry *Entry) bool {
+		return entry.Supported && entry.Variants[0].ID == int(effectID)
+	})
 }
 
 // The E_ENCHANT_ITEM effect that grants each enchant, by enchant ID. Only that effect names an
@@ -700,10 +1158,6 @@ func GenerateItemEffects(instance *dbc.DBC, db *WowDatabase, itemSources map[int
 	for _, parsed := range db.Items {
 		parsed.ItemEffects = dbc.MergeItemEffectsForAllStates(parsed)
 
-		// core.NewItemEffect takes one effect per item and panics on a second, so only an
-		// item's first generated effect is written; the rest are listed as missing. Skullflame
-		// Shield carries two client effects (18815, 18816) that both resolve to 18817.
-		generated := false
 		for _, itemEffect := range parsed.ItemEffects {
 			if !ItemEffectIsSupported(instance, int(itemEffect.BuffId)) {
 				// Commented into the generated file rather than dropped. These are deliberately
@@ -718,35 +1172,25 @@ func GenerateItemEffects(instance *dbc.DBC, db *WowDatabase, itemSources map[int
 				continue
 			}
 
-			if generated {
-				ParseTooltipForMissingEffect(parsed, itemEffect, instance, groupMapProc, "Procs")
-				continue
-			}
 			switch TryParseOnUseEffect(parsed, itemEffect, instance, groupMapOnUse) {
-			case EffectParseResultSuccess:
-				generated = true
-				continue
-			case EffectParseResultRefused:
+			case EffectParseResultSuccess, EffectParseResultRefused:
 				continue
 			}
 
 			switch TryParseEquipAuraEffect(parsed, itemEffect, instance, groupMapProc) {
-			case EffectParseResultSuccess:
-				generated = true
-				continue
-			case EffectParseResultRefused:
+			case EffectParseResultSuccess, EffectParseResultRefused:
 				continue
 			}
 
 			switch TryParseProcEffect(parsed, itemEffect, instance, groupMapProc) {
-			case EffectParseResultSuccess:
-				generated = true
-			case EffectParseResultRefused:
+			case EffectParseResultSuccess, EffectParseResultRefused:
 			default:
 				ParseTooltipForMissingEffect(parsed, itemEffect, instance, groupMapProc, "Procs")
 			}
 		}
 	}
+
+	refuseEquipBesideAnotherEffect(groupMapOnUse, groupMapProc)
 
 	// Sorting done in GenerateEffectsFile
 	var onUseGroups []*Group
@@ -828,6 +1272,32 @@ func GenerateItemEffects(instance *dbc.DBC, db *WowDatabase, itemSources map[int
 	GenerateEffectsFile(procGroups, "sim/common/forever/stat_bonus_procs_auto_gen.go", TmplStrProc)
 }
 
+// An item registers one effect, and the sim drops every registration after the first, so an equip aura
+// beside another of the item's effects that registers would drop it or be dropped: Sulfuras' damage
+// shield beside its Fireball proc. The equip aura is refused and listed as missing; the other stays.
+func refuseEquipBesideAnotherEffect(groupMapOnUse map[string]Group, groupMapProc map[string]Group) {
+	registered := map[int]int{}
+	for _, groupMap := range []map[string]Group{groupMapOnUse, groupMapProc} {
+		for _, grp := range groupMap {
+			for _, entry := range grp.Entries {
+				if entry.Supported && !entry.Skipped {
+					registered[entry.Variants[0].ID]++
+				}
+			}
+		}
+	}
+
+	for _, entry := range groupMapProc["Equip"].Entries {
+		variant := entry.Variants[0]
+		if !entry.Supported || registered[variant.ID] < 2 {
+			continue
+		}
+		entry.Proc.Unsupported = append(entry.Proc.Unsupported, "another effect of the item registers")
+		entry.Supported = false
+		StoreMissingEffect("ItemEffects", variant.Name, Variant{ID: variant.ID, Name: strings.Join(entry.Tooltip, "\n"), SpellID: variant.SpellID})
+	}
+}
+
 func GenerateItemEffectRandomPropPoints(instance *dbc.DBC, db *WowDatabase) {
 	for id, allocMap := range instance.RandomPropertiesByIlvl {
 		ilvl := int32(id)
@@ -868,9 +1338,9 @@ func BuildItemDifficultyPostfix(itemSources map[int][]*proto.DropSource, itemId 
 }
 
 func TryParseProcEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC, groupMapProc map[string]Group) EffectParseResult {
-	if itemEffect.GetProc() != nil {
+	if itemEffect.GetProc() != nil && aboveEffectFloor(parsed) {
 		// Effect was already manually implemented
-		if core.HasItemEffect(parsed.Id) {
+		if implementedByHand(parsed.Id) {
 			return EffectParseResultSuccess
 		}
 
@@ -914,7 +1384,7 @@ func TryParseProcEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, inst
 			// An effect that resolves no stats may still deal flat damage, heal or shield the wearer,
 			// debuff the enemy it lands on, or apply auras the stat path cannot state, each a shape of
 			// its own rather than a reason to refuse: there is no buff, so the proc casts the spell the
-			// client hangs below its trigger, read from that spell's own row.
+			// game files hang below its trigger, read from that spell's own row.
 			if !grantsStats {
 				shape, spellID := pickNoStatShape(int(itemEffect.BuffId), itemEffect.BuffId)
 				if shape == ShapeStats && appliesAnItemAura(spelldata.Find(itemEffect.BuffId)) {
@@ -957,7 +1427,7 @@ func TryParseProcEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, inst
 	}
 
 	// check if the item has any kind of proc as we only support stat proc parsing right now
-	if effects, ok := instance.ItemEffectsByParentID[int(parsed.Id)]; ok {
+	if effects, ok := instance.ItemEffectsByParentID[int(parsed.Id)]; ok && aboveEffectFloor(parsed) {
 		for _, effect := range effects {
 			if SpellHasTriggerEffect(effect.SpellID, instance) {
 				return EffectParseResultUnsupported
@@ -968,7 +1438,7 @@ func TryParseProcEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, inst
 	return EffectParseResultInvalid
 }
 
-// The rows an item effect names: the client's ItemEffect row carries the spell with the proc on it,
+// The rows an item effect names: the game files' ItemEffect row carries the spell with the proc on it,
 // and the shipped entry carries the spell that applies the stats.
 func routeItemProc(parsed *proto.UIItem, itemEffect *proto.ItemEffect) *ProcRouting {
 	effect := dbc.GetItemEffectForBuffID(int(parsed.Id), int(itemEffect.BuffId))
@@ -976,13 +1446,14 @@ func routeItemProc(parsed *proto.UIItem, itemEffect *proto.ItemEffect) *ProcRout
 		return nil
 	}
 
-	return routeProc(effect.SpellID, int(itemEffect.BuffId), effect.TriggerType == dbc.ITEM_SPELLTRIGGER_CHANCE_ON_HIT)
+	return routeProc(effect.SpellID, int(itemEffect.BuffId), effect.TriggerType == dbc.ITEM_SPELLTRIGGER_CHANCE_ON_HIT,
+		itemEffect.GetProc().GetPpm())
 }
 
 // An equip spell with no stats that applies an aura the stat path cannot state, read from the row it
 // keeps up. One the rows cannot build is refused in an entry of its own, with the reasons.
 func TryParseEquipAuraEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC, groupMapProc map[string]Group) EffectParseResult {
-	if core.HasItemEffect(parsed.Id) || len(dbc.EffectStats(itemEffect)) > 0 {
+	if !aboveEffectFloor(parsed) || implementedByHand(parsed.Id) || len(dbc.EffectStats(itemEffect)) > 0 {
 		return EffectParseResultInvalid
 	}
 
@@ -993,12 +1464,26 @@ func TryParseEquipAuraEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect,
 
 	equip := spelldata.Find(itemEffect.BuffId)
 	row := spelldata.EquipAuraRow(equip)
-	if !appliesAnItemAura(row) {
+	if row.FirstAura(equipAuraKinds...) == spelldata.NilEffect {
 		return EffectParseResultInvalid
 	}
 
+	routing := equipAuraRouting(instance, equip, row)
+
+	rendered := itemEffectTooltip(parsed, itemEffect, instance)
+	variant := &Variant{ID: int(parsed.Id), Name: parsed.Name, SpellID: int(itemEffect.BuffId)}
+	if appendEquipEntry(groupMapProc, "Equip", rendered, variant, routing) {
+		return EffectParseResultSuccess
+	}
+
+	StoreMissingEffect("ItemEffects", parsed.Name, Variant{ID: int(parsed.Id), Name: rendered, SpellID: int(itemEffect.BuffId)})
+	return EffectParseResultRefused
+}
+
+// The equip aura shape for an item's or an enchant's equip spell, read from the row it keeps up.
+func equipAuraRouting(instance *dbc.DBC, equip *spelldata.Spell, row *spelldata.Spell) *ProcRouting {
 	routing := &ProcRouting{
-		TriggerSpellID: int(itemEffect.BuffId),
+		TriggerSpellID: int(equip.ID),
 		Shape:          ShapeEquip,
 		Unsupported:    spelldata.ItemAuraUnsupported(row, true),
 		Summary:        fmt.Sprintf("equip: %d", equip.ID),
@@ -1007,40 +1492,21 @@ func TryParseEquipAuraEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect,
 		routing.Summary += fmt.Sprintf(" keeps %d up", row.ID)
 	}
 	routing.Summary += fmt.Sprintf(" (%s)", spellEffectKinds(instance, int(row.ID)))
-
-	rendered := itemEffectTooltip(parsed, itemEffect, instance)
-	entry := &Entry{
-		Tooltip:   strings.Split(rendered, "\n"),
-		Variants:  []*Variant{{ID: int(parsed.Id), Name: parsed.Name, SpellID: int(itemEffect.BuffId)}},
-		Proc:      routing,
-		Supported: routing.Supported(),
-	}
-
-	grp := groupMapProc["Equip"]
-	grp.Name = "Equip"
-	grp.Entries = append(grp.Entries, entry)
-	groupMapProc["Equip"] = grp
-
-	if entry.Supported {
-		return EffectParseResultSuccess
-	}
-
-	StoreMissingEffect("ItemEffects", parsed.Name, Variant{ID: int(parsed.Id), Name: rendered, SpellID: int(itemEffect.BuffId)})
-	return EffectParseResultRefused
+	return routing
 }
 
 func TryParseOnUseEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC, groupMap map[string]Group) EffectParseResult {
 	// Effect was already manually implemented
-	if core.HasItemEffect(parsed.Id) {
+	if implementedByHand(parsed.Id) {
 		return EffectParseResultSuccess
 	}
 
-	if itemEffect.GetOnUse() != nil {
+	if itemEffect.GetOnUse() != nil && aboveEffectFloor(parsed) {
 		if itemEffect.GetOnUse().CooldownMs < 0 && itemEffect.GetOnUse().CategoryCooldownMs < 0 {
 			return EffectParseResultUnsupported
 		}
 
-		if len(dbc.EffectStats(itemEffect)) == 0 {
+		if len(dbc.EffectStats(itemEffect)) == 0 || shieldsWithItsStats(parsed, itemEffect, instance) {
 			return parseOnUseSpell(parsed, itemEffect, instance, groupMap)
 		}
 
@@ -1070,8 +1536,8 @@ func TryParseOnUseEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, ins
 			return EffectParseResultSuccess
 		}
 
-		if trigger := buffProcTrigger(itemEffect.BuffId); trigger != 0 {
-			entry.NotSimulated = fmt.Sprintf("the proc the buff carries, %d (%s)", trigger, spellEffectKinds(instance, int(trigger)))
+		if notSimulated := statOnUseLeftOut(itemEffect.BuffId, instance); notSimulated != "" {
+			entry.NotSimulated = notSimulated
 			StoreMissingEffect("ItemEffects", parsed.Name, Variant{
 				ID:      int(parsed.Id),
 				Name:    itemEffectTooltip(parsed, itemEffect, instance),
@@ -1085,10 +1551,41 @@ func TryParseOnUseEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, ins
 	return EffectParseResultInvalid
 }
 
-// The spell an A_PROC_TRIGGER_SPELL on the buff casts, or 0. The flat on-use grants the buff's stats
-// and nothing it procs: Aegis of Preservation 23780's heal on every hit taken, 23781.
-func buffProcTrigger(buffID int32) int32 {
-	return spelldata.Find(buffID).FirstAura(dbcenums.A_PROC_TRIGGER_SPELL).TriggerID
+// What the flat on-use leaves out of its buff, which grants the buff's stats and nothing else: the proc
+// an A_PROC_TRIGGER_SPELL casts (Aegis of Preservation 23780's heal on every hit taken, 23781), and an
+// absorb or a damage shield that no shape carries with the stats.
+func statOnUseLeftOut(buffID int32, instance *dbc.DBC) string {
+	buff := spelldata.Find(buffID)
+	var left []string
+	if trigger := buff.FirstAura(dbcenums.A_PROC_TRIGGER_SPELL).TriggerID; trigger != 0 {
+		left = append(left, fmt.Sprintf("the proc the buff carries, %d (%s)", trigger, spellEffectKinds(instance, int(trigger))))
+	}
+	for _, aura := range []dbcenums.EffectAuraType{dbcenums.A_SCHOOL_ABSORB, dbcenums.A_DAMAGE_SHIELD} {
+		if e := buff.FirstAura(aura); e != spelldata.NilEffect {
+			left = append(left, fmt.Sprintf("the buff's %v %v", aura, e.BasePoints))
+		}
+	}
+	return strings.Join(left, "; ")
+}
+
+// Whether a stat on-use's buff also states a shield that a shape can carry with its stats: a damage
+// shield the item aura shape attaches (Heart of the Scale's 17275 deals 20 Fire to melee attackers
+// beside its Fire resistance), or an absorb the absorb shape holds the stats on (Blazing Emblem's 13744
+// absorbs 465 Fire beside its 33 Fire resistance).
+func shieldsWithItsStats(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC) bool {
+	if itemEffect.StackingAura != nil {
+		return false
+	}
+	buff := spelldata.Find(itemEffect.BuffId)
+	shape := ShapeAura
+	switch {
+	case buff.AbsorbEffect() != spelldata.NilEffect:
+		shape = ShapeAbsorb
+	case buff.FirstAura(dbcenums.A_DAMAGE_SHIELD) == spelldata.NilEffect:
+		return false
+	}
+	routing := routeOnUse(parsed, itemEffect, instance)
+	return routing.Shape == shape && routing.Supported()
 }
 
 // An on-use with no stats to grant, resolved from the spell it casts. One the sim cannot build from
@@ -1128,13 +1625,17 @@ func parseOnUseSpell(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instanc
 // used on, a heal, an absorb, mana, rage or energy for the wearer, or a buff raising the wearer's
 // speeds. What else the row does - a root, a stun - is left out, and the summary names it.
 func routeOnUse(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC) *ProcRouting {
-	spellID := int(itemEffect.BuffId)
+	return routeOnUseSpell(int(parsed.Id), itemEffect.BuffId, instance)
+}
+
+func routeOnUseSpell(itemID int, buffID int32, instance *dbc.DBC) *ProcRouting {
+	spellID := int(buffID)
 	routing := &ProcRouting{TriggerSpellID: spellID}
-	s := spelldata.Find(itemEffect.BuffId)
+	s := spelldata.Find(buffID)
 	direct, periodic, heal, absorb, energize := s.DamageEffect(), s.PeriodicDamageEffect(), s.ProcHealEffect(), s.AbsorbEffect(), s.ProcEnergizeEffect()
 
 	switch {
-	case !castsOnUse(parsed, spellID, instance):
+	case !castsOnUse(itemID, spellID, instance):
 		routing.Unsupported = append(routing.Unsupported, fmt.Sprintf("the item's on-use row does not cast %d itself", spellID))
 	case s == spelldata.Nil:
 		routing.Unsupported = append(routing.Unsupported, "the spell has no row in the store")
@@ -1155,10 +1656,10 @@ func routeOnUse(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *db
 	case heal != spelldata.NilEffect:
 		routing.Shape = ShapeHeal
 		routing.Summary = onUseSummary(s, heal)
-		routing.Unsupported = append(routing.Unsupported, healUnsupported(s)...)
+		routing.Unsupported = append(routing.Unsupported, healTargetUnsupported(s, dbcenums.TARGET_UNIT_TARGET_ALLY)...)
 	case absorb != spelldata.NilEffect:
 		routing.Shape = ShapeAbsorb
-		routing.Summary = onUseSummary(s, absorb)
+		routing.Summary = onUseSummary(s, append([]*spelldata.Effect{absorb}, statsBesideTheAbsorb(instance, s)...)...)
 		routing.Unsupported = append(routing.Unsupported, absorbUnsupported(s)...)
 	case energize != spelldata.NilEffect:
 		routing.Shape = ShapeEnergize
@@ -1170,10 +1671,19 @@ func routeOnUse(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *db
 		if s.DurationMs <= 0 {
 			routing.Unsupported = append(routing.Unsupported, "the speed buff states no duration")
 		}
-	case appliesAnItemAura(s):
+	case s.FirstAura(onUseAuraKinds...) != spelldata.NilEffect:
 		routing.Shape = ShapeAura
-		routing.Summary = onUseSummary(s, allEffects(s)...)
+		routing.Summary = onUseSummary(s, itemAuraModelled(s)...)
 		routing.Unsupported = append(routing.Unsupported, procAuraUnsupported(s)...)
+		if s.ProcCharges > 0 && !shared.SpendsItsCharges(s) {
+			routing.Unsupported = append(routing.Unsupported, fmt.Sprintf("the buff drops after ProcCharges %d, which the aura does not spend", s.ProcCharges))
+		}
+	case triggersDamagePeriodically(s):
+		periodic := s.FirstAura(dbcenums.A_PERIODIC_TRIGGER_SPELL)
+		routing.Shape = ShapePeriodicDamage
+		routing.Summary = fmt.Sprintf("%s; every %v for %v: %d (%s)", onUseSummary(s, periodic),
+			periodic.Period(), s.Duration(), periodic.TriggerID, spellEffectKinds(instance, int(periodic.TriggerID)))
+		routing.Unsupported = append(routing.Unsupported, periodicDamageUnsupported(s, periodic)...)
 	default:
 		routing.Unsupported = append(routing.Unsupported,
 			fmt.Sprintf("%d deals no damage and heals no one (%s)", spellID, spellEffectKinds(instance, spellID)))
@@ -1182,10 +1692,44 @@ func routeOnUse(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *db
 	return routing
 }
 
+// Whether the row's A_PERIODIC_TRIGGER_SPELL casts a row that deals damage: Thunderbrew's Boot Flask's
+// 12257 casts 12278, 75 Fire to the enemies in front of the wearer, every 1 s for 5 s.
+func triggersDamagePeriodically(s *spelldata.Spell) bool {
+	periodic := s.FirstAura(dbcenums.A_PERIODIC_TRIGGER_SPELL)
+	return periodic != spelldata.NilEffect && spelldata.Find(periodic.TriggerID).DamageEffect() != spelldata.NilEffect
+}
+
+// The aura ticks on the wearer, and the row it casts deals an amount to every enemy in an area or cone,
+// which the shape casts at the current target: a single-target row would leave it unclear which enemy
+// a tick picks.
+func periodicDamageUnsupported(s *spelldata.Spell, periodic *spelldata.Effect) []string {
+	unsupported := append(wearerTarget("periodic aura", periodic), tickUnsupported("damage", s, periodic)...)
+	damage := spelldata.Find(periodic.TriggerID).DamageEffect()
+	if damage.Type != dbcenums.E_SCHOOL_DAMAGE {
+		unsupported = append(unsupported, fmt.Sprintf("the triggered damage is %v rather than an amount", damage.Type))
+	}
+	if !damage.HitsAnArea() {
+		unsupported = append(unsupported, fmt.Sprintf("the triggered damage lands on implicit target %d, not every enemy in an area", damage.Target[0]))
+	}
+	return unsupported
+}
+
+// The row's effects whose amounts the item's effect entry carries as stats, which the absorb on-use
+// grants for as long as its shield holds.
+func statsBesideTheAbsorb(instance *dbc.DBC, s *spelldata.Spell) []*spelldata.Effect {
+	var effects []*spelldata.Effect
+	for _, se := range instance.SpellEffectsInOrder(int(s.ID)) {
+		if se.GrantsStats() && se.EffectAura != dbcenums.A_PERIODIC_TRIGGER_SPELL {
+			effects = append(effects, s.EffectAtIndex(uint8(se.EffectIndex)))
+		}
+	}
+	return effects
+}
+
 // Whether the item's own on-use row names the spell, rather than a spell that reaches it through a
 // trigger: the sim casts the spell the effect names.
-func castsOnUse(parsed *proto.UIItem, spellID int, instance *dbc.DBC) bool {
-	return slices.ContainsFunc(instance.ItemEffectsByParentID[int(parsed.Id)], func(e dbc.ItemEffect) bool {
+func castsOnUse(itemID int, spellID int, instance *dbc.DBC) bool {
+	return slices.ContainsFunc(instance.ItemEffectsByParentID[itemID], func(e dbc.ItemEffect) bool {
 		return e.TriggerType == dbc.ITEM_SPELLTRIGGER_ON_USE && e.SpellID == spellID
 	})
 }
@@ -1238,26 +1782,58 @@ func (r *ProcRouting) ProcConstructor() string {
 	return procShapes[r.Shape].procConstructor
 }
 
-// The auras the item aura shape is emitted for: the damage, healing, cost, armor and stat multipliers
-// and the flat damage taken, none of which an item states as a stat.
+// The auras the item aura shape is emitted for: the damage, healing, cost, armor, health, stat and threat
+// multipliers, the flat damage taken, the hit, crit, block, dodge and parry percents, and skill points, none
+// of which an item states as a stat. The percents reach the item stats only through an equip spell that
+// folds; an on-use or a weapon-scoped equip spell applies them as an aura.
 var itemAuraKinds = []dbcenums.EffectAuraType{
+	dbcenums.A_MOD_THREAT,
 	dbcenums.A_MOD_DAMAGE_PERCENT_DONE,
 	dbcenums.A_MOD_DAMAGE_PERCENT_TAKEN,
 	dbcenums.A_MOD_HEALING_DONE_PERCENT,
 	dbcenums.A_MOD_POWER_COST_SCHOOL_PCT,
 	dbcenums.A_MOD_DAMAGE_TAKEN,
 	dbcenums.A_MOD_BASE_RESISTANCE_PCT,
+	dbcenums.A_MOD_INCREASE_HEALTH_PERCENT,
 	dbcenums.A_MOD_PERCENT_STAT,
+	dbcenums.A_MOD_TOTAL_STAT_PERCENTAGE,
+	dbcenums.A_MOD_HIT_CHANCE,
+	dbcenums.A_MOD_WEAPON_CRIT_PERCENT,
+	dbcenums.A_MOD_SPELL_HIT_CHANCE,
+	dbcenums.A_MOD_SPELL_CRIT_CHANCE,
+	dbcenums.A_MOD_CRIT_PCT,
+	dbcenums.A_MOD_BLOCK_PERCENT,
+	dbcenums.A_MOD_DODGE_PERCENT,
+	dbcenums.A_MOD_PARRY_PERCENT,
+	dbcenums.A_MOD_SKILL,
 }
+
+// The auras an item's equip spell is emitted as an aura for, beside itemAuraKinds: a damage shield kept
+// up while the item is worn. A proc's or an enchant's damage shield row is left out: its proc flags state
+// when the shield deals damage, which the proc shapes would read as when it is applied.
+var equipAuraKinds = append(slices.Clone(itemAuraKinds), dbcenums.A_DAMAGE_SHIELD)
+
+// The auras an on-use alone is emitted as an aura for, beside equipAuraKinds: the spell modifiers, which
+// many equip spells state too (class necks, relics, PvP gloves) where the item aura shape is not wanted,
+// and the attack speed an on-use slows an enemy by.
+var onUseAuraKinds = append(slices.Clone(equipAuraKinds),
+	dbcenums.A_ADD_FLAT_MODIFIER,
+	dbcenums.A_ADD_PCT_MODIFIER,
+	dbcenums.A_MOD_MELEE_RANGED_HASTE_2,
+)
 
 func appliesAnItemAura(s *spelldata.Spell) bool {
 	return s.FirstAura(itemAuraKinds...) != spelldata.NilEffect
 }
 
-func allEffects(s *spelldata.Spell) []*spelldata.Effect {
-	effects := make([]*spelldata.Effect, len(s.Effects))
-	for i := range s.Effects {
-		effects[i] = &s.Effects[i]
+// The effects the item aura shape attaches: the ones it parses on each unit and the damage shields on the
+// wearer. A movement speed change is left out.
+func itemAuraModelled(s *spelldata.Spell) []*spelldata.Effect {
+	effects := spelldata.ItemAuraDamageShields(s)
+	for _, target := range []spelldata.AuraTarget{spelldata.AuraOnWearer, spelldata.AuraOnPet, spelldata.AuraOnEnemy} {
+		for _, i := range spelldata.ItemAuraParsedOn(s, target) {
+			effects = append(effects, s.EffectN(int(i)))
+		}
 	}
 	return effects
 }
@@ -1374,7 +1950,7 @@ func routeEnchantSlot(slot dbc.EnchantProcSlot, instance *dbc.DBC) *ProcRouting 
 		buffSpellID = int(effect.BuffId)
 	}
 
-	routing := routeProc(slot.SpellID, buffSpellID, slot.IsCombatSpell)
+	routing := routeProc(slot.SpellID, buffSpellID, slot.IsCombatSpell, 0)
 	trigger := spelldata.Find(int32(slot.SpellID))
 	if !slot.IsCombatSpell {
 		routing.Unsupported = spelldata.EnchantAuraUnsupported(trigger)
@@ -1409,8 +1985,8 @@ func routeEnchantSlot(slot dbc.EnchantProcSlot, instance *dbc.DBC) *ProcRouting 
 	return routing
 }
 
-// The client's CreatureType ids, which TargetCreatureType names as 1 << (id - 1). The damage proc does
-// not read the restriction.
+// The game files' CreatureType ids, which TargetCreatureType names as 1 << (id - 1). The damage
+// proc does not read the restriction.
 var creatureTypes = []string{1: "beasts", 2: "dragonkin", 3: "demons", 4: "elementals", 5: "giants",
 	6: "undead", 7: "humanoids", 8: "critters", 9: "mechanicals"}
 
@@ -1451,19 +2027,26 @@ var cooldownWordingMatcher = regexp.MustCompile(`(?i)more often than`)
 
 func ParseTooltipForMissingEffect(parsed *proto.UIItem, itemEffect *proto.ItemEffect, instance *dbc.DBC, groupMap map[string]Group, groupMapName string) {
 	// Effect was already manually implemented
-	if core.HasItemEffect(parsed.Id) {
+	if implementedByHand(parsed.Id) {
 		return
 	}
 
 	renderedTooltip, rendered := renderItemEffectTooltip(parsed, itemEffect, instance)
-
-	grp, exists := groupMap[groupMapName]
-	if !exists {
-		grp = Group{Name: groupMapName}
+	if !rendered {
+		return
 	}
 
-	if rendered {
-		entry := Entry{
+	// An item below the floor takes no entry in the generated file: the variant grouping merges
+	// entries by item name, and a Supported: false entry can comment out a live registration
+	// of the same name above the floor. It is still reported as missing its effect, since the
+	// gear picker has no floor.
+	if aboveEffectFloor(parsed) {
+		grp, exists := groupMap[groupMapName]
+		if !exists {
+			grp = Group{Name: groupMapName}
+		}
+
+		grp.Entries = append(grp.Entries, &Entry{
 			Tooltip:   strings.Split(renderedTooltip, "\n"),
 			Supported: false,
 			Variants: []*Variant{
@@ -1473,28 +2056,24 @@ func ParseTooltipForMissingEffect(parsed *proto.UIItem, itemEffect *proto.ItemEf
 					SpellID: int(itemEffect.BuffId),
 				},
 			},
-		}
-
-		grp.Entries = append(grp.Entries, &entry)
+		})
 		groupMap[groupMapName] = grp
-
-		// Flavour auras carry no mechanic worth implementing and only add noise to the
-		// report. Suppressing the report only, never the group entry: those
-		// Supported: false entries take part in the variant grouping that decides whether
-		// a whole variant set is emitted live or commented, so dropping one can flip a
-		// real registration.
-		if _, ignored := IgnoreMissingEffectBySpellID[int(itemEffect.BuffId)]; ignored {
-			return
-		}
-
-		if len(dbc.EffectStats(itemEffect)) == 0 || !entry.Supported {
-			StoreMissingEffect("ItemEffects", parsed.Name, Variant{
-				ID:      int(parsed.Id),
-				Name:    renderedTooltip,
-				SpellID: int(itemEffect.BuffId),
-			})
-		}
 	}
+
+	// Flavour auras carry no mechanic worth implementing and only add noise to the
+	// report. Suppressing the report only, never the group entry: those
+	// Supported: false entries take part in the variant grouping that decides whether
+	// a whole variant set is emitted live or commented, so dropping one can flip a
+	// real registration.
+	if _, ignored := IgnoreMissingEffectBySpellID[int(itemEffect.BuffId)]; ignored {
+		return
+	}
+
+	StoreMissingEffect("ItemEffects", parsed.Name, Variant{
+		ID:      int(parsed.Id),
+		Name:    renderedTooltip,
+		SpellID: int(itemEffect.BuffId),
+	})
 }
 
 // A critical strike named as the trigger. The first clause reads the wording that puts something
@@ -1502,16 +2081,21 @@ func ParseTooltipForMissingEffect(parsed *proto.UIItem, itemEffect *proto.ItemEf
 // after it may not open "by", "for" or "chance" - those three are how a tooltip states a magnitude
 // instead. The second reads the trigger stated from the caster's side, "your critical strikes",
 // where the plural is what separates it from the magnitudes: those all read "critical strike
-// chance", "critical strike damage" or "critical strike rating", in the singular.
-var critMatcher = regexp.MustCompile(`critical ([^\s]+|damage,?)( chance)? [^fbc]|[Yy]our [a-z ]{0,20}critical strikes`)
+// chance", "critical strike damage" or "critical strike rating", in the singular. Some tooltips
+// capitalize the term ("Your Critical Strikes with direct damage spells").
+var critMatcher = regexp.MustCompile(`critical ([^\s]+|damage,?)( chance)? [^fbc]|[Yy]our [a-z ]{0,20}[Cc]ritical [Ss]trikes`)
 var pureHealMatcher = regexp.MustCompile(`healing spells`)
+
+// A trigger clause restricted to spells with a damage component: "your damaging spells", "damage
+// spells", "Your next 5 damage or healing spells", "abilities that deal damage".
+var damageTriggerMatcher = regexp.MustCompile(`(?i)\bdamaging\b|\bdamage (or healing )?spells?\b|\bdeals? damage\b`)
 var hasHealMatcher = regexp.MustCompile(`heal(ing)?[^,]`)
 var hasGenericMatcher = regexp.MustCompile(`a spell`)
 
 // A trigger condition stated as an attack outcome. Deliberately matches the condition clause rather
 // than the words themselves: "increases your dodge rating" is a stat on hundreds of items, while
 // "when one of your spells is resisted" is a trigger. "After a block" is the third clause the
-// client uses, on the Battlegear of Wrath parry (23548); "after you dodge" is not in here because
+// game files use, on the Battlegear of Wrath parry (23548); "after you dodge" is not in here because
 // the only rows wording it that way are Counterattack's, where it gates the button rather than a
 // proc. A miss is not in here either: the one row naming one, 456394, means its own attack missing
 // rather than an attack on it.
@@ -1588,7 +2172,7 @@ var castTriggerMatcher = regexp.MustCompile(`(?i)you cast|on spell ?cast|spellca
 // "Your casts of Greater Heal", "Your Shadow Bolt has", "When you cast Flash of Light". The capital
 // is what carries the meaning - an unrestricted trigger reads "your spell critical strikes" or
 // "each time you cast a spell", with nothing capitalized to name.
-// The client writes a conditional list where the item shows one name - Eternal Power's "Your casts
+// The game files write a conditional list where the item shows one name - Eternal Power's "Your casts
 // of $?s2060[Greater Heal]..." - so the "casts of" clause reads the possessive alone and leaves what
 // follows to the tooltip renderer. The other two clauses need the capital: "when you cast a spell"
 // and "your melee attacks have" name no ability.
@@ -1617,7 +2201,10 @@ func procTooltipHints(tooltip string) core.ProcHint {
 		hints |= core.ProcHintHeals
 	}
 
-	if pureHealMatcher.MatchString(tooltip) {
+	// "damage or healing spells" names healing spells without being restricted to them.
+	if damageTriggerMatcher.MatchString(tooltip) {
+		hints |= core.ProcHintDamage
+	} else if pureHealMatcher.MatchString(tooltip) {
 		hints |= core.ProcHintPureHeal
 	}
 
@@ -1647,7 +2234,14 @@ func buildStackProcInfo(itemEffect *proto.ItemEffect, instance *dbc.DBC, tooltip
 		return nil
 	}
 
-	info, supported := BuildSpellProcInfo(&container, tooltip, proto.ItemType_ItemTypeUnknown)
+	// The container's own tooltip is what states what adds a stack, and the store row carries its
+	// reading along with any hint an override supplies.
+	hint := procTooltipHints(tooltip)
+	if row := spelldata.Find(container.ID); row != spelldata.Nil {
+		hint = row.ProcHint
+	}
+
+	info, supported := buildSpellProcInfo(&container, tooltip, proto.ItemType_ItemTypeUnknown, hint)
 	if !supported {
 		return nil
 	}
@@ -1687,6 +2281,10 @@ func BuildProcInfo(parsed *proto.UIItem, itemEffectID int, instance *dbc.DBC, to
 }
 
 func BuildSpellProcInfo(procSpell *dbc.Spell, tooltip string, itemType proto.ItemType) (ProcInfo, bool) {
+	return buildSpellProcInfo(procSpell, tooltip, itemType, procTooltipHints(tooltip))
+}
+
+func buildSpellProcInfo(procSpell *dbc.Spell, tooltip string, itemType proto.ItemType, hint core.ProcHint) (ProcInfo, bool) {
 	var info = ProcInfo{
 		RequireDamageDealt:  true,
 		MaxCumulativeStacks: procSpell.MaxCumulativeStacks,
@@ -1721,7 +2319,7 @@ func BuildSpellProcInfo(procSpell *dbc.Spell, tooltip string, itemType proto.Ite
 		return info, false
 	}
 
-	// An outcome the client does not record. ProcTypeMask has no dodge, parry, block or resist bit -
+	// An outcome the game files do not record. ProcTypeMask has no dodge, parry, block or resist bit -
 	// TrinityCore keeps those in a HitMask of its own - so a tooltip stating one as the trigger
 	// condition is the only evidence there is. Eye of Magtheridon fires on a resisted spell, and
 	// without this it generates as a 100%-per-cast buff. Crit is deliberately not in here: it is the
@@ -1751,12 +2349,13 @@ func BuildSpellProcInfo(procSpell *dbc.Spell, tooltip string, itemType proto.Ite
 	if !onHitProc && len(procSpell.ProcTypeMask) > 0 {
 		decoded := core.DecodeProcTypeMask(
 			[2]uint32{uint32(procSpell.ProcTypeMask[0]), uint32(procSpell.ProcTypeMask[1])},
-			procTooltipHints(tooltip),
+			hint,
 		)
 
 		info.Callback |= decoded.Callback
 		info.ProcMask |= decoded.ProcMask
 		info.RequireDamageDealt = decoded.RequireDamageDealt
+		info.RequireDamageComponent = decoded.RequireDamageComponent
 		info.Outcome = decoded.Outcome
 		requiresOutcome = false
 	}

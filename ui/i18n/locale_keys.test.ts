@@ -48,7 +48,7 @@ describe('locale keys', () => {
 	});
 
 	it('asks for a non-trivial number of keys, so a broken scan cannot pass', () => {
-		// The ported tree asks for ~1060 distinct keys; the floor only guards against a scan
+		// The tree asks for ~1060 distinct keys; the floor only guards against a scan
 		// that silently stops finding files.
 		expect(requests().length).toBeGreaterThan(500);
 	});

@@ -31,16 +31,10 @@ func BulkCombinationCount(request *proto.BulkCombinationCountRequest) *proto.Bul
 	matchingCombinations := rawCombinations
 
 	return &proto.BulkCombinationCountResult{
-		RawCombinations:  int32(rawCombinations),
-		Combinations:     int32(matchingCombinations),
-		Iterations:       estimateIterationsForCountRequest(request.GetBulkSettings(), matchingCombinations),
-		UseLegacyBulkSim: shouldUseLegacyBulkSim(request.GetBulkSettings(), request.GetBulkSettings().GetIterationsPerCombo(), matchingCombinations),
+		RawCombinations: int32(rawCombinations),
+		Combinations:    int32(matchingCombinations),
+		Iterations:      float64(estimateBulkSimIterations(matchingCombinations)),
 	}
-}
-
-func estimateIterationsForCountRequest(settings *proto.BulkSettings, candidateCount int) float64 {
-	iterations, _ := estimateBulkSimIterations(settings, settings.GetIterationsPerCombo(), candidateCount)
-	return float64(iterations)
 }
 
 func BulkCandidates(request *proto.BulkCandidatesRequest) *proto.BulkCandidatesResult {
@@ -64,10 +58,7 @@ func BulkCandidates(request *proto.BulkCandidatesRequest) *proto.BulkCandidatesR
 	}
 
 	rawCombinations := generator.rawCombinationsCount()
-	candidates, err := generator.buildCandidates()
-	if err != nil {
-		return &proto.BulkCandidatesResult{Error: &proto.ErrorOutcome{Message: err.Error()}}
-	}
+	candidates := generator.buildCandidates()
 
 	return &proto.BulkCandidatesResult{
 		Candidates:      candidates,
@@ -76,9 +67,9 @@ func BulkCandidates(request *proto.BulkCandidatesRequest) *proto.BulkCandidatesR
 	}
 }
 
-// newGeneratorFromRequest validates the shared preconditions of every bulk entry point (player
-// present, equipment present), registers the request's database items, and builds the candidate
-// generator. Callers map the returned error into their own result type.
+// Validates the shared preconditions of every bulk entry point (player present, equipment
+// present), registers the request's database items, and builds the candidate generator. Callers
+// map the returned error into their own result type.
 func newGeneratorFromRequest(request *proto.BulkSimRequest) (*bulkSimCandidateGenerator, error) {
 	player, playerErr := getPlayer(request)
 	if playerErr != nil {
@@ -106,11 +97,7 @@ func EnsureBulkSimCandidatesGenerated(request *proto.BulkSimRequest) error {
 	if buildErr != nil {
 		return buildErr
 	}
-	candidates, buildErr := generator.buildCandidates()
-	if buildErr != nil {
-		return buildErr
-	}
-	request.Candidates = candidates
+	request.Candidates = generator.buildCandidates()
 	return nil
 }
 
