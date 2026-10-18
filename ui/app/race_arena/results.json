@@ -1,6 +1,6 @@
 {
-	"commit": "9870deebf903b39b4f8796b98c6522f8788d7b85",
-	"generated": "2026-10-18T12:53:12Z",
+	"commit": "00d985949f672b9c1c086121713673cee6628015",
+	"generated": "2026-10-18T15:26:39Z",
 	"iterations": 50000,
 	"fight": {
 		"seconds": 180,
@@ -29,8 +29,8 @@
 		}
 	],
 	"noise": {
-		"maxError": 0.032,
-		"maxDifference": 0.092
+		"maxError": 0.033,
+		"maxDifference": 0.093
 	},
 	"lists": [
 		{
@@ -679,6 +679,13 @@
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 1026.7,
+					"behind": 3.27,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Troll",
 					"dps": 1025.9,
 					"behind": 3.35,
@@ -691,13 +698,6 @@
 					"behind": 3.49,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 1017.4,
-					"behind": 4.15,
-					"tier": "D",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -747,6 +747,13 @@
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 1026.7,
+					"behind": 9.91,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Troll",
 					"dps": 1025.9,
 					"behind": 9.98,
@@ -759,13 +766,6 @@
 					"behind": 10.11,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 1017.4,
-					"behind": 10.73,
-					"tier": "D",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -780,58 +780,58 @@
 			"target": "Beast",
 			"races": [
 				{
+					"race": "Dwarf",
+					"dps": 1102.6,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
+				},
+				{
 					"race": "Troll",
 					"dps": 1101.5,
-					"behind": 0,
+					"behind": 0.1,
 					"tier": "S",
 					"racials": "Berserking + Beast Slaying"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 1092.3,
-					"behind": 0.84,
-					"tier": "A",
-					"racials": "Big Game Hunter"
-				},
-				{
 					"race": "High Order Skyborne",
 					"dps": 1061.5,
-					"behind": 3.63,
+					"behind": 3.73,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Windshaper Skyborne",
 					"dps": 1061.5,
-					"behind": 3.63,
+					"behind": 3.73,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Human",
 					"dps": 1040.7,
-					"behind": 5.52,
+					"behind": 5.61,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
 					"race": "Night Elf",
 					"dps": 1036.5,
-					"behind": 5.9,
+					"behind": 5.99,
 					"tier": "D",
 					"racials": "Elune's Light"
 				},
 				{
 					"race": "Orc",
 					"dps": 1032.9,
-					"behind": 6.22,
+					"behind": 6.32,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Tauren",
 					"dps": 1024.4,
-					"behind": 7,
+					"behind": 7.09,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
 				}
@@ -883,18 +883,18 @@
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 968.5,
+					"behind": 1.77,
+					"tier": "C",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Tauren",
 					"dps": 966.9,
 					"behind": 1.94,
 					"tier": "C",
 					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 960.2,
-					"behind": 2.62,
-					"tier": "D",
-					"racials": "base stats only"
 				},
 				{
 					"race": "Troll",
@@ -951,18 +951,18 @@
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 968.5,
+					"behind": 8.4,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Tauren",
 					"dps": 966.9,
 					"behind": 8.55,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 960.2,
-					"behind": 9.18,
-					"tier": "D",
-					"racials": "base stats only"
 				},
 				{
 					"race": "Troll",
@@ -985,57 +985,57 @@
 			"races": [
 				{
 					"race": "Dwarf",
-					"dps": 1029.5,
+					"dps": 1038.7,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Big Game Hunter"
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
 				},
 				{
 					"race": "Troll",
 					"dps": 1027.6,
-					"behind": 0.19,
-					"tier": "S",
+					"behind": 1.07,
+					"tier": "B",
 					"racials": "Berserking + Beast Slaying"
 				},
 				{
 					"race": "High Order Skyborne",
 					"dps": 986,
-					"behind": 4.23,
+					"behind": 5.07,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Windshaper Skyborne",
 					"dps": 986,
-					"behind": 4.23,
+					"behind": 5.07,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Human",
 					"dps": 982.8,
-					"behind": 4.54,
+					"behind": 5.38,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
 					"race": "Night Elf",
 					"dps": 977.9,
-					"behind": 5.01,
+					"behind": 5.85,
 					"tier": "D",
 					"racials": "Elune's Light"
 				},
 				{
 					"race": "Orc",
 					"dps": 975.2,
-					"behind": 5.27,
+					"behind": 6.11,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Tauren",
 					"dps": 966.9,
-					"behind": 6.08,
+					"behind": 6.91,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
 				}
@@ -1094,18 +1094,18 @@
 					"racials": "Berserking"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 1078.4,
+					"behind": 1.64,
+					"tier": "C",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Tauren",
 					"dps": 1077.1,
 					"behind": 1.76,
 					"tier": "C",
 					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 1073.9,
-					"behind": 2.05,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -1162,18 +1162,18 @@
 					"racials": "Berserking"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 1078.4,
+					"behind": 5.16,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Tauren",
 					"dps": 1077.1,
 					"behind": 5.27,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 1073.9,
-					"behind": 5.56,
-					"tier": "D",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -1188,18 +1188,18 @@
 			"target": "Beast",
 			"races": [
 				{
+					"race": "Dwarf",
+					"dps": 1122.5,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
+				},
+				{
 					"race": "Troll",
 					"dps": 1122.4,
 					"behind": 0,
 					"tier": "S",
 					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 1117.4,
-					"behind": 0.44,
-					"tier": "S",
-					"racials": "Big Game Hunter"
 				},
 				{
 					"race": "Human",
@@ -1225,7 +1225,7 @@
 				{
 					"race": "Night Elf",
 					"dps": 1092.1,
-					"behind": 2.7,
+					"behind": 2.71,
 					"tier": "D",
 					"racials": "Elune's Light"
 				},
@@ -1291,6 +1291,13 @@
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 731.3,
+					"behind": 1.57,
+					"tier": "C",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Troll",
 					"dps": 730.9,
 					"behind": 1.62,
@@ -1303,13 +1310,6 @@
 					"behind": 1.77,
 					"tier": "C",
 					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 724.9,
-					"behind": 2.42,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -1359,6 +1359,13 @@
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 731.3,
+					"behind": 7.76,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Troll",
 					"dps": 730.9,
 					"behind": 7.82,
@@ -1371,13 +1378,6 @@
 					"behind": 7.96,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 724.9,
-					"behind": 8.56,
-					"tier": "D",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -1392,58 +1392,58 @@
 			"target": "Beast",
 			"races": [
 				{
+					"race": "Dwarf",
+					"dps": 784.5,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
+				},
+				{
 					"race": "Troll",
 					"dps": 784,
-					"behind": 0,
+					"behind": 0.07,
 					"tier": "S",
 					"racials": "Berserking + Beast Slaying"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 777.5,
-					"behind": 0.82,
-					"tier": "A",
-					"racials": "Big Game Hunter"
-				},
-				{
 					"race": "Human",
 					"dps": 742.9,
-					"behind": 5.24,
+					"behind": 5.31,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
 					"race": "High Order Skyborne",
 					"dps": 739.1,
-					"behind": 5.72,
+					"behind": 5.79,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Windshaper Skyborne",
 					"dps": 739.1,
-					"behind": 5.72,
+					"behind": 5.79,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Night Elf",
 					"dps": 738.6,
-					"behind": 5.79,
+					"behind": 5.86,
 					"tier": "D",
 					"racials": "Elune's Light"
 				},
 				{
 					"race": "Orc",
 					"dps": 736.7,
-					"behind": 6.03,
+					"behind": 6.1,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Tauren",
 					"dps": 729.7,
-					"behind": 6.92,
+					"behind": 6.99,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
 				}
@@ -1502,18 +1502,18 @@
 					"racials": "Berserking"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 936.8,
+					"behind": 1.71,
+					"tier": "C",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Tauren",
 					"dps": 935.7,
 					"behind": 1.83,
 					"tier": "C",
 					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 933.4,
-					"behind": 2.07,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -1570,18 +1570,18 @@
 					"racials": "Berserking"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 936.8,
+					"behind": 4.41,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Tauren",
 					"dps": 935.7,
 					"behind": 4.53,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 933.4,
-					"behind": 4.77,
-					"tier": "D",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -1604,10 +1604,10 @@
 				},
 				{
 					"race": "Dwarf",
-					"dps": 966.5,
-					"behind": 0.52,
-					"tier": "A",
-					"racials": "Big Game Hunter"
+					"dps": 970.3,
+					"behind": 0.13,
+					"tier": "S",
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
 				},
 				{
 					"race": "Human",
@@ -1706,18 +1706,18 @@
 					"racials": "Berserking"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 659.7,
+					"behind": 1.39,
+					"tier": "B",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Tauren",
 					"dps": 657.8,
 					"behind": 1.68,
 					"tier": "C",
 					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 654,
-					"behind": 2.25,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -1774,18 +1774,18 @@
 					"racials": "Berserking"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 659.7,
+					"behind": 7.68,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Tauren",
 					"dps": 657.8,
 					"behind": 7.95,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 654,
-					"behind": 8.49,
-					"tier": "D",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -1808,10 +1808,10 @@
 				},
 				{
 					"race": "Dwarf",
-					"dps": 701.4,
-					"behind": 0.92,
-					"tier": "A",
-					"racials": "Big Game Hunter"
+					"dps": 707.8,
+					"behind": 0.03,
+					"tier": "S",
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
 				},
 				{
 					"race": "Human",
@@ -1903,6 +1903,13 @@
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 877.2,
+					"behind": 1.58,
+					"tier": "C",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Tauren",
 					"dps": 876.7,
 					"behind": 1.64,
@@ -1915,13 +1922,6 @@
 					"behind": 1.67,
 					"tier": "C",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 872.4,
-					"behind": 2.13,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -1971,6 +1971,13 @@
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 877.2,
+					"behind": 5.17,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Tauren",
 					"dps": 876.7,
 					"behind": 5.22,
@@ -1983,13 +1990,6 @@
 					"behind": 5.25,
 					"tier": "D",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 872.4,
-					"behind": 5.7,
-					"tier": "D",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -2004,58 +2004,58 @@
 			"target": "Beast",
 			"races": [
 				{
+					"race": "Dwarf",
+					"dps": 916.6,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
+				},
+				{
 					"race": "Troll",
 					"dps": 915.6,
-					"behind": 0,
+					"behind": 0.11,
 					"tier": "S",
 					"racials": "Berserking + Beast Slaying"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 911.2,
-					"behind": 0.48,
-					"tier": "S",
-					"racials": "Big Game Hunter"
-				},
-				{
 					"race": "Human",
 					"dps": 891.3,
-					"behind": 2.65,
+					"behind": 2.75,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
 					"race": "High Order Skyborne",
 					"dps": 885.2,
-					"behind": 3.32,
+					"behind": 3.42,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Windshaper Skyborne",
 					"dps": 885.2,
-					"behind": 3.32,
+					"behind": 3.42,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Night Elf",
 					"dps": 884.8,
-					"behind": 3.37,
+					"behind": 3.47,
 					"tier": "D",
 					"racials": "Elune's Light"
 				},
 				{
 					"race": "Orc",
 					"dps": 884.6,
-					"behind": 3.39,
+					"behind": 3.49,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Tauren",
 					"dps": 876.7,
-					"behind": 4.25,
+					"behind": 4.35,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
 				}
@@ -2565,18 +2565,18 @@
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 825.7,
+					"behind": 0.92,
+					"tier": "A",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Undead",
 					"dps": 825.4,
 					"behind": 0.96,
 					"tier": "A",
 					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 819,
-					"behind": 1.73,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -2598,18 +2598,18 @@
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 825.7,
+					"behind": 0.92,
+					"tier": "A",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Undead",
 					"dps": 825.4,
 					"behind": 0.96,
 					"tier": "A",
 					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 819,
-					"behind": 1.73,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -2625,22 +2625,22 @@
 			"races": [
 				{
 					"race": "Dwarf",
-					"dps": 875.9,
+					"dps": 883.3,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Big Game Hunter"
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
 				},
 				{
 					"race": "Human",
 					"dps": 833.4,
-					"behind": 4.85,
+					"behind": 5.65,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
 					"race": "Undead",
 					"dps": 825.4,
-					"behind": 5.76,
+					"behind": 6.56,
 					"tier": "D",
 					"racials": "Touch of the Grave"
 				}
@@ -2672,10 +2672,10 @@
 				},
 				{
 					"race": "Dwarf",
-					"dps": 782.7,
-					"behind": 1.55,
-					"tier": "C",
-					"racials": "Earth Fury (+2% crit damage with a mace)"
+					"dps": 786.6,
+					"behind": 1.06,
+					"tier": "B",
+					"racials": "Earth Fury (+2% crit damage)"
 				}
 			]
 		},
@@ -2705,10 +2705,10 @@
 				},
 				{
 					"race": "Dwarf",
-					"dps": 782.7,
-					"behind": 1.55,
-					"tier": "C",
-					"racials": "Earth Fury (+2% crit damage with a mace)"
+					"dps": 786.6,
+					"behind": 1.06,
+					"tier": "B",
+					"racials": "Earth Fury (+2% crit damage)"
 				}
 			]
 		},
@@ -2724,22 +2724,22 @@
 			"races": [
 				{
 					"race": "Dwarf",
-					"dps": 832.9,
+					"dps": 837.2,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage with a mace) + Big Game Hunter"
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
 				},
 				{
 					"race": "Human",
 					"dps": 795,
-					"behind": 4.55,
+					"behind": 5.04,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
 					"race": "Undead",
 					"dps": 789.2,
-					"behind": 5.25,
+					"behind": 5.73,
 					"tier": "D",
 					"racials": "Touch of the Grave"
 				}
@@ -2763,6 +2763,13 @@
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 828.2,
+					"behind": 0.6,
+					"tier": "A",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Undead",
 					"dps": 825.3,
 					"behind": 0.95,
@@ -2789,13 +2796,6 @@
 					"behind": 1.05,
 					"tier": "B",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 820.3,
-					"behind": 1.55,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -2817,6 +2817,13 @@
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 828.2,
+					"behind": 0.6,
+					"tier": "A",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Undead",
 					"dps": 825.3,
 					"behind": 0.95,
@@ -2843,13 +2850,6 @@
 					"behind": 1.05,
 					"tier": "B",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 820.3,
-					"behind": 1.55,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -2863,45 +2863,45 @@
 			"consumables": "Preset consumables",
 			"target": "Beast",
 			"races": [
+				{
+					"race": "Dwarf",
+					"dps": 890.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
+				},
 				{
 					"race": "Troll",
 					"dps": 886.6,
-					"behind": 0,
+					"behind": 0.47,
 					"tier": "S",
 					"racials": "Berserking + Beast Slaying"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 882.1,
-					"behind": 0.51,
-					"tier": "A",
-					"racials": "Big Game Hunter"
-				},
-				{
 					"race": "Human",
 					"dps": 833.2,
-					"behind": 6.02,
+					"behind": 6.46,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
 					"race": "Undead",
 					"dps": 825.3,
-					"behind": 6.91,
+					"behind": 7.35,
 					"tier": "D",
 					"racials": "Touch of the Grave"
 				},
 				{
 					"race": "Night Elf",
 					"dps": 824.7,
-					"behind": 6.97,
+					"behind": 7.41,
 					"tier": "D",
 					"racials": "Elune's Light"
 				},
 				{
 					"race": "Gnome",
 					"dps": 824.7,
-					"behind": 6.98,
+					"behind": 7.42,
 					"tier": "D",
 					"racials": "Eureka! + Expansive Mind"
 				}
@@ -2939,6 +2939,13 @@
 					"racials": "Eureka! + Expansive Mind"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 460.8,
+					"behind": 1.1,
+					"tier": "B",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Night Elf",
 					"dps": 458.7,
 					"behind": 1.56,
@@ -2951,13 +2958,6 @@
 					"behind": 1.64,
 					"tier": "C",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 458.2,
-					"behind": 1.65,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -2993,6 +2993,13 @@
 					"racials": "Eureka! + Expansive Mind"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 460.8,
+					"behind": 1.1,
+					"tier": "B",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Night Elf",
 					"dps": 458.7,
 					"behind": 1.56,
@@ -3005,13 +3012,6 @@
 					"behind": 1.64,
 					"tier": "C",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 458.2,
-					"behind": 1.65,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -3026,44 +3026,44 @@
 			"target": "Beast",
 			"races": [
 				{
-					"race": "Troll",
-					"dps": 485.3,
+					"race": "Dwarf",
+					"dps": 488,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 485.2,
-					"behind": 0.01,
-					"tier": "S",
-					"racials": "Big Game Hunter"
+					"race": "Troll",
+					"dps": 485.3,
+					"behind": 0.57,
+					"tier": "A",
+					"racials": "Berserking + Beast Slaying"
 				},
 				{
 					"race": "Human",
 					"dps": 465.9,
-					"behind": 3.98,
+					"behind": 4.53,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
 					"race": "Undead",
 					"dps": 465.1,
-					"behind": 4.15,
+					"behind": 4.69,
 					"tier": "D",
 					"racials": "Touch of the Grave"
 				},
 				{
 					"race": "Gnome",
 					"dps": 463.7,
-					"behind": 4.44,
+					"behind": 4.98,
 					"tier": "D",
 					"racials": "Eureka! + Expansive Mind"
 				},
 				{
 					"race": "Night Elf",
 					"dps": 458.7,
-					"behind": 5.48,
+					"behind": 6.02,
 					"tier": "D",
 					"racials": "Elune's Light"
 				}
@@ -3129,18 +3129,18 @@
 					"racials": "Elune's Light"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 628.5,
+					"behind": 0.97,
+					"tier": "A",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Troll",
 					"dps": 626.4,
 					"behind": 1.31,
 					"tier": "B",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 621.9,
-					"behind": 2.01,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -3204,18 +3204,18 @@
 					"racials": "Elune's Light"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 628.5,
+					"behind": 8,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Troll",
 					"dps": 626.4,
 					"behind": 8.31,
 					"tier": "D",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 621.9,
-					"behind": 8.96,
-					"tier": "D",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -3230,65 +3230,65 @@
 			"target": "Beast",
 			"races": [
 				{
+					"race": "Dwarf",
+					"dps": 676.6,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
+				},
+				{
 					"race": "Troll",
 					"dps": 674.2,
-					"behind": 0,
+					"behind": 0.35,
 					"tier": "S",
 					"racials": "Berserking + Beast Slaying"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 669.3,
-					"behind": 0.72,
-					"tier": "A",
-					"racials": "Big Game Hunter"
-				},
-				{
 					"race": "High Order Skyborne",
 					"dps": 634.7,
-					"behind": 5.86,
+					"behind": 6.19,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Windshaper Skyborne",
 					"dps": 634.7,
-					"behind": 5.86,
+					"behind": 6.19,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Human",
 					"dps": 634,
-					"behind": 5.97,
+					"behind": 6.3,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit)"
 				},
 				{
 					"race": "Gnome",
 					"dps": 633.7,
-					"behind": 6.01,
+					"behind": 6.34,
 					"tier": "D",
 					"racials": "Eureka! + Expansive Mind"
 				},
 				{
 					"race": "Undead",
 					"dps": 632.5,
-					"behind": 6.19,
+					"behind": 6.52,
 					"tier": "D",
 					"racials": "Touch of the Grave"
 				},
 				{
 					"race": "Orc",
 					"dps": 631,
-					"behind": 6.41,
+					"behind": 6.73,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Night Elf",
 					"dps": 629.9,
-					"behind": 6.58,
+					"behind": 6.9,
 					"tier": "D",
 					"racials": "Elune's Light"
 				}
@@ -3347,6 +3347,13 @@
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 669.4,
+					"behind": 0.74,
+					"tier": "A",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Night Elf",
 					"dps": 668.5,
 					"behind": 0.87,
@@ -3359,13 +3366,6 @@
 					"behind": 1.22,
 					"tier": "B",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 661.4,
-					"behind": 1.92,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -3422,6 +3422,13 @@
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 669.4,
+					"behind": 8.11,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Night Elf",
 					"dps": 668.5,
 					"behind": 8.23,
@@ -3434,13 +3441,6 @@
 					"behind": 8.56,
 					"tier": "D",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 661.4,
-					"behind": 9.21,
-					"tier": "D",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -3455,65 +3455,65 @@
 			"target": "Beast",
 			"races": [
 				{
+					"race": "Dwarf",
+					"dps": 723.2,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
+				},
+				{
 					"race": "Troll",
 					"dps": 719.6,
-					"behind": 0,
+					"behind": 0.5,
 					"tier": "S",
 					"racials": "Berserking + Beast Slaying"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 714.4,
-					"behind": 0.72,
-					"tier": "A",
-					"racials": "Big Game Hunter"
-				},
-				{
 					"race": "High Order Skyborne",
 					"dps": 674.3,
-					"behind": 6.28,
+					"behind": 6.75,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Windshaper Skyborne",
 					"dps": 674.3,
-					"behind": 6.28,
+					"behind": 6.75,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Gnome",
 					"dps": 673,
-					"behind": 6.47,
+					"behind": 6.94,
 					"tier": "D",
 					"racials": "Eureka! + Expansive Mind"
 				},
 				{
 					"race": "Human",
 					"dps": 672.9,
-					"behind": 6.48,
+					"behind": 6.95,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit)"
 				},
 				{
 					"race": "Undead",
 					"dps": 671.7,
-					"behind": 6.65,
+					"behind": 7.12,
 					"tier": "D",
 					"racials": "Touch of the Grave"
 				},
 				{
 					"race": "Orc",
 					"dps": 670.8,
-					"behind": 6.77,
+					"behind": 7.24,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Night Elf",
 					"dps": 668.5,
-					"behind": 7.1,
+					"behind": 7.56,
 					"tier": "D",
 					"racials": "Elune's Light"
 				}
@@ -3583,7 +3583,7 @@
 					"dps": 705.4,
 					"behind": 0.95,
 					"tier": "A",
-					"racials": "Earth Fury (+2% crit damage with a mace)"
+					"racials": "Earth Fury (+2% crit damage)"
 				},
 				{
 					"race": "Troll",
@@ -3658,7 +3658,7 @@
 					"dps": 705.4,
 					"behind": 8.05,
 					"tier": "D",
-					"racials": "Earth Fury (+2% crit damage with a mace)"
+					"racials": "Earth Fury (+2% crit damage)"
 				},
 				{
 					"race": "Troll",
@@ -3684,7 +3684,7 @@
 					"dps": 760,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage with a mace) + Big Game Hunter"
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
 				},
 				{
 					"race": "Troll",
@@ -3797,6 +3797,13 @@
 					"racials": "Touch of the Grave"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 703.2,
+					"behind": 0.65,
+					"tier": "A",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Night Elf",
 					"dps": 702.9,
 					"behind": 0.69,
@@ -3809,13 +3816,6 @@
 					"behind": 1.22,
 					"tier": "B",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 694.2,
-					"behind": 1.92,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -3872,6 +3872,13 @@
 					"racials": "Touch of the Grave"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 703.2,
+					"behind": 8.23,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Night Elf",
 					"dps": 702.9,
 					"behind": 8.27,
@@ -3884,13 +3891,6 @@
 					"behind": 8.75,
 					"tier": "D",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 694.2,
-					"behind": 9.4,
-					"tier": "D",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -3905,65 +3905,65 @@
 			"target": "Beast",
 			"races": [
 				{
-					"race": "Troll",
-					"dps": 756.9,
+					"race": "Dwarf",
+					"dps": 761.4,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 751.5,
-					"behind": 0.72,
+					"race": "Troll",
+					"dps": 756.9,
+					"behind": 0.58,
 					"tier": "A",
-					"racials": "Big Game Hunter"
+					"racials": "Berserking + Beast Slaying"
 				},
 				{
 					"race": "High Order Skyborne",
 					"dps": 707.8,
-					"behind": 6.49,
+					"behind": 7.03,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Windshaper Skyborne",
 					"dps": 707.8,
-					"behind": 6.49,
+					"behind": 7.03,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Gnome",
 					"dps": 706.9,
-					"behind": 6.61,
+					"behind": 7.15,
 					"tier": "D",
 					"racials": "Eureka! + Expansive Mind"
 				},
 				{
 					"race": "Human",
 					"dps": 706.3,
-					"behind": 6.69,
+					"behind": 7.23,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit)"
 				},
 				{
 					"race": "Orc",
 					"dps": 704.6,
-					"behind": 6.92,
+					"behind": 7.46,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Undead",
 					"dps": 704.4,
-					"behind": 6.94,
+					"behind": 7.49,
 					"tier": "D",
 					"racials": "Touch of the Grave"
 				},
 				{
 					"race": "Night Elf",
 					"dps": 702.9,
-					"behind": 7.14,
+					"behind": 7.68,
 					"tier": "D",
 					"racials": "Elune's Light"
 				}
@@ -4033,7 +4033,7 @@
 					"dps": 668.4,
 					"behind": 0.77,
 					"tier": "A",
-					"racials": "Earth Fury (+2% crit damage with a mace)"
+					"racials": "Earth Fury (+2% crit damage)"
 				},
 				{
 					"race": "Troll",
@@ -4108,7 +4108,7 @@
 					"dps": 668.4,
 					"behind": 7.66,
 					"tier": "D",
-					"racials": "Earth Fury (+2% crit damage with a mace)"
+					"racials": "Earth Fury (+2% crit damage)"
 				},
 				{
 					"race": "Troll",
@@ -4134,7 +4134,7 @@
 					"dps": 720,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage with a mace) + Big Game Hunter"
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
 				},
 				{
 					"race": "Troll",
@@ -4254,18 +4254,18 @@
 					"racials": "Elune's Light"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 646,
+					"behind": 0.66,
+					"tier": "A",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Troll",
 					"dps": 642.5,
 					"behind": 1.2,
 					"tier": "B",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 638.5,
-					"behind": 1.81,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -4329,18 +4329,18 @@
 					"racials": "Elune's Light"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 646,
+					"behind": 7.83,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Troll",
 					"dps": 642.5,
 					"behind": 8.34,
 					"tier": "D",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 638.5,
-					"behind": 8.91,
-					"tier": "D",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -4355,65 +4355,65 @@
 			"target": "Beast",
 			"races": [
 				{
-					"race": "Troll",
-					"dps": 693.4,
+					"race": "Dwarf",
+					"dps": 697.3,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 689.1,
-					"behind": 0.63,
+					"race": "Troll",
+					"dps": 693.4,
+					"behind": 0.56,
 					"tier": "A",
-					"racials": "Big Game Hunter"
+					"racials": "Berserking + Beast Slaying"
 				},
 				{
 					"race": "Human",
 					"dps": 650.3,
-					"behind": 6.22,
+					"behind": 6.75,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit)"
 				},
 				{
 					"race": "High Order Skyborne",
 					"dps": 649.5,
-					"behind": 6.34,
+					"behind": 6.86,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Windshaper Skyborne",
 					"dps": 649.5,
-					"behind": 6.34,
+					"behind": 6.86,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Gnome",
 					"dps": 649.3,
-					"behind": 6.37,
+					"behind": 6.89,
 					"tier": "D",
 					"racials": "Eureka! + Expansive Mind"
 				},
 				{
 					"race": "Undead",
 					"dps": 648.1,
-					"behind": 6.53,
+					"behind": 7.06,
 					"tier": "D",
 					"racials": "Touch of the Grave"
 				},
 				{
 					"race": "Orc",
 					"dps": 647.9,
-					"behind": 6.56,
+					"behind": 7.08,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Night Elf",
 					"dps": 646.2,
-					"behind": 6.81,
+					"behind": 7.33,
 					"tier": "D",
 					"racials": "Elune's Light"
 				}
@@ -4437,6 +4437,13 @@
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 625,
+					"behind": 0.76,
+					"tier": "A",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Tauren",
 					"dps": 624.7,
 					"behind": 0.82,
@@ -4456,13 +4463,6 @@
 					"behind": 1.68,
 					"tier": "C",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 616.5,
-					"behind": 2.12,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -4484,6 +4484,13 @@
 					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 625,
+					"behind": 8.67,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Tauren",
 					"dps": 624.7,
 					"behind": 8.72,
@@ -4503,13 +4510,6 @@
 					"behind": 9.51,
 					"tier": "D",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 616.5,
-					"behind": 9.92,
-					"tier": "D",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -4524,37 +4524,37 @@
 			"target": "Beast",
 			"races": [
 				{
-					"race": "Troll",
-					"dps": 672.8,
+					"race": "Dwarf",
+					"dps": 679.2,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 669.8,
-					"behind": 0.45,
-					"tier": "S",
-					"racials": "Big Game Hunter"
+					"race": "Troll",
+					"dps": 672.8,
+					"behind": 0.95,
+					"tier": "A",
+					"racials": "Berserking + Beast Slaying"
 				},
 				{
 					"race": "Windshaper Skyborne",
 					"dps": 629.8,
-					"behind": 6.38,
+					"behind": 7.27,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Tauren",
 					"dps": 624.7,
-					"behind": 7.15,
+					"behind": 8.03,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
 				},
 				{
 					"race": "Orc",
 					"dps": 624.1,
-					"behind": 7.24,
+					"behind": 8.12,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				}
@@ -4592,18 +4592,18 @@
 					"racials": "Endurance (+2% crit damage)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 697.6,
+					"behind": 0.81,
+					"tier": "A",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Troll",
 					"dps": 694,
 					"behind": 1.33,
 					"tier": "B",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 691.2,
-					"behind": 1.71,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -4639,18 +4639,18 @@
 					"racials": "Endurance (+2% crit damage)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 697.6,
+					"behind": 7.64,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Troll",
 					"dps": 694,
 					"behind": 8.12,
 					"tier": "D",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 691.2,
-					"behind": 8.48,
-					"tier": "D",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -4665,37 +4665,37 @@
 			"target": "Beast",
 			"races": [
 				{
-					"race": "Troll",
-					"dps": 745.2,
+					"race": "Dwarf",
+					"dps": 749.2,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 742.2,
-					"behind": 0.4,
-					"tier": "S",
-					"racials": "Big Game Hunter"
+					"race": "Troll",
+					"dps": 745.2,
+					"behind": 0.54,
+					"tier": "A",
+					"racials": "Berserking + Beast Slaying"
 				},
 				{
 					"race": "Windshaper Skyborne",
 					"dps": 703.3,
-					"behind": 5.63,
+					"behind": 6.13,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Orc",
 					"dps": 700.6,
-					"behind": 5.98,
+					"behind": 6.49,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Tauren",
 					"dps": 697.7,
-					"behind": 6.38,
+					"behind": 6.88,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
 				}
@@ -5463,7 +5463,7 @@
 					"dps": 819.1,
 					"behind": 1.69,
 					"tier": "C",
-					"racials": "Earth Fury (+2% crit damage with a mace)"
+					"racials": "Earth Fury (+2% crit damage)"
 				},
 				{
 					"race": "Undead",
@@ -5545,7 +5545,7 @@
 					"dps": 819.1,
 					"behind": 8.61,
 					"tier": "D",
-					"racials": "Earth Fury (+2% crit damage with a mace)"
+					"racials": "Earth Fury (+2% crit damage)"
 				},
 				{
 					"race": "Undead",
@@ -5585,7 +5585,7 @@
 					"dps": 884.1,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage with a mace) + Big Game Hunter"
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
 				},
 				{
 					"race": "Troll",
@@ -5698,6 +5698,13 @@
 					"racials": "Endurance (+2% crit damage)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 742.8,
+					"behind": 0.83,
+					"tier": "A",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Undead",
 					"dps": 741.6,
 					"behind": 1,
@@ -5724,13 +5731,6 @@
 					"behind": 1.6,
 					"tier": "C",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 733.7,
-					"behind": 2.05,
-					"tier": "C",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -5780,6 +5780,13 @@
 					"racials": "Endurance (+2% crit damage)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 742.8,
+					"behind": 7.81,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage)"
+				},
+				{
 					"race": "Undead",
 					"dps": 741.6,
 					"behind": 7.96,
@@ -5806,13 +5813,6 @@
 					"behind": 8.52,
 					"tier": "D",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 733.7,
-					"behind": 8.94,
-					"tier": "D",
-					"racials": "base stats only"
 				}
 			]
 		},
@@ -5827,72 +5827,72 @@
 			"target": "Beast",
 			"races": [
 				{
-					"race": "Troll",
-					"dps": 797.1,
+					"race": "Dwarf",
+					"dps": 803.4,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
+					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 793.4,
-					"behind": 0.47,
-					"tier": "S",
-					"racials": "Big Game Hunter"
+					"race": "Troll",
+					"dps": 797.1,
+					"behind": 0.78,
+					"tier": "A",
+					"racials": "Berserking + Beast Slaying"
 				},
 				{
 					"race": "Human",
 					"dps": 749,
-					"behind": 6.03,
+					"behind": 6.76,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit)"
 				},
 				{
 					"race": "High Order Skyborne",
 					"dps": 745,
-					"behind": 6.53,
+					"behind": 7.26,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Windshaper Skyborne",
 					"dps": 745,
-					"behind": 6.53,
+					"behind": 7.26,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Orc",
 					"dps": 745,
-					"behind": 6.54,
+					"behind": 7.27,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Tauren",
 					"dps": 743.7,
-					"behind": 6.69,
+					"behind": 7.42,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
 				},
 				{
 					"race": "Undead",
 					"dps": 741.6,
-					"behind": 6.97,
+					"behind": 7.69,
 					"tier": "D",
 					"racials": "Touch of the Grave"
 				},
 				{
 					"race": "Night Elf",
 					"dps": 740.4,
-					"behind": 7.11,
+					"behind": 7.84,
 					"tier": "D",
 					"racials": "Elune's Light"
 				},
 				{
 					"race": "Gnome",
 					"dps": 740.2,
-					"behind": 7.14,
+					"behind": 7.87,
 					"tier": "D",
 					"racials": "Eureka! + Expansive Mind"
 				}
