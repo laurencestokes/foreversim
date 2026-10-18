@@ -1,8 +1,7 @@
 {
-	"commit": "41893b0c49795d5aa32ca803fa4c1e8ecf57b2f3",
-	"generated": "2026-10-16T19:26:17Z",
+	"commit": "9870deebf903b39b4f8796b98c6522f8788d7b85",
+	"generated": "2026-10-18T12:53:12Z",
 	"iterations": 50000,
-	"clientBuild": "1.60.1.70425",
 	"fight": {
 		"seconds": 180,
 		"targetLevel": 63,
@@ -30,692 +29,810 @@
 		}
 	],
 	"noise": {
-		"maxError": 0.037,
-		"maxDifference": 0.105
+		"maxError": 0.032,
+		"maxDifference": 0.092
 	},
 	"lists": [
 		{
 			"spec": "balance_druid",
 			"class": "Druid",
-			"build": "Moonkin 38/0/13",
-			"talents": "5502220115501351--055003",
-			"gear": "p0.bis",
-			"rotation": "launch",
-			"consumables": "Arena-Caster",
+			"build": "Moonkin",
+			"talents": "5532220115501351--505",
+			"gear": "Pre-BiS",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
 			"target": "Mechanical",
 			"races": [
 				{
-					"race": "Skyborne",
-					"dps": 614.1,
+					"race": "High Order Skyborne",
+					"dps": 764.5,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 764.5,
 					"behind": 0,
 					"tier": "S",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Tauren",
-					"dps": 612.9,
-					"behind": 0.2,
-					"tier": "S",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 611.6,
-					"behind": 0.41,
-					"tier": "S",
-					"racials": "Elune's Light"
-				}
-			]
-		},
-		{
-			"spec": "balance_druid",
-			"class": "Druid",
-			"build": "Moonkin 38/0/13",
-			"talents": "5502220115501351--055003",
-			"gear": "p0.bis",
-			"rotation": "launch",
-			"consumables": "Arena-Caster",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 644.8,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
-				},
-				{
-					"race": "Tauren",
-					"dps": 612.9,
-					"behind": 4.95,
-					"tier": "D",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 611.6,
-					"behind": 5.15,
-					"tier": "D",
-					"racials": "Elune's Light"
-				}
-			]
-		},
-		{
-			"spec": "balance_druid",
-			"class": "Druid",
-			"build": "Moonkin 38/0/13",
-			"talents": "5502220115501351--055003",
-			"gear": "p0.bis",
-			"rotation": "launch",
-			"consumables": "Arena-Caster",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 614.1,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 612.9,
-					"behind": 0.2,
-					"tier": "S",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 611.6,
-					"behind": 0.41,
-					"tier": "S",
-					"racials": "Elune's Light"
-				}
-			]
-		},
-		{
-			"spec": "feral_druid",
-			"class": "Druid",
-			"build": "Feral Cat 9/35/7",
-			"talents": "050022-55000032121032212051-052",
-			"gear": "launch",
-			"rotation": "default",
-			"consumables": "Arena-Melee",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Tauren",
-					"dps": 606.8,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 605.6,
-					"behind": 0.2,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 602.9,
-					"behind": 0.64,
-					"tier": "A",
-					"racials": "Elune's Light"
-				}
-			]
-		},
-		{
-			"spec": "feral_druid",
-			"class": "Druid",
-			"build": "Feral Cat 9/35/7",
-			"talents": "050022-55000032121032212051-052",
-			"gear": "launch",
-			"rotation": "default",
-			"consumables": "Arena-Melee",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 635.9,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
-				},
-				{
-					"race": "Tauren",
-					"dps": 606.8,
-					"behind": 4.57,
-					"tier": "D",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 602.9,
-					"behind": 5.19,
-					"tier": "D",
-					"racials": "Elune's Light"
-				}
-			]
-		},
-		{
-			"spec": "feral_druid",
-			"class": "Druid",
-			"build": "Feral Cat 9/35/7",
-			"talents": "050022-55000032121032212051-052",
-			"gear": "launch",
-			"rotation": "default",
-			"consumables": "Arena-Melee",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Tauren",
-					"dps": 606.8,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 605.6,
-					"behind": 0.2,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 602.9,
-					"behind": 0.64,
-					"tier": "A",
-					"racials": "Elune's Light"
-				}
-			]
-		},
-		{
-			"spec": "hunter",
-			"class": "Hunter",
-			"build": "Beast Mastery 35/16/0",
-			"talents": "5520001505121251-0050551",
-			"gear": "p0.bis",
-			"rotation": "bm",
-			"consumables": "Arena-Ranged",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 561.4,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Human",
-					"dps": 560.6,
-					"behind": 0.14,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 558.1,
-					"behind": 0.59,
-					"tier": "A",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Orc",
-					"dps": 556.4,
-					"behind": 0.89,
-					"tier": "A",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Troll",
-					"dps": 553.7,
-					"behind": 1.37,
-					"tier": "B",
-					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 553,
-					"behind": 1.49,
-					"tier": "B",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 552.1,
-					"behind": 1.66,
+					"dps": 752.9,
+					"behind": 1.51,
 					"tier": "C",
 					"racials": "Endurance (+2% crit damage)"
-				}
-			]
-		},
-		{
-			"spec": "hunter",
-			"class": "Hunter",
-			"build": "Beast Mastery 35/16/0",
-			"talents": "5520001505121251-0050551",
-			"gear": "p0.bis",
-			"rotation": "bm",
-			"consumables": "Arena-Ranged",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 583.3,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
-				},
-				{
-					"race": "Human",
-					"dps": 560.6,
-					"behind": 3.89,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
 					"race": "Night Elf",
-					"dps": 558.1,
-					"behind": 4.32,
-					"tier": "D",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Orc",
-					"dps": 556.4,
-					"behind": 4.61,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Troll",
-					"dps": 553.7,
-					"behind": 5.07,
-					"tier": "D",
-					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 553,
-					"behind": 5.19,
-					"tier": "D",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 552.1,
-					"behind": 5.35,
-					"tier": "D",
-					"racials": "Endurance (+2% crit damage)"
-				}
-			]
-		},
-		{
-			"spec": "hunter",
-			"class": "Hunter",
-			"build": "Beast Mastery 35/16/0",
-			"talents": "5520001505121251-0050551",
-			"gear": "p0.bis",
-			"rotation": "bm",
-			"consumables": "Arena-Ranged",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Troll",
-					"dps": 575.2,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 574.5,
-					"behind": 0.12,
-					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 561.4,
-					"behind": 2.4,
-					"tier": "C",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Human",
-					"dps": 560.6,
-					"behind": 2.54,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 558.1,
-					"behind": 2.98,
-					"tier": "D",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Orc",
-					"dps": 556.4,
-					"behind": 3.26,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 552.1,
-					"behind": 4.02,
-					"tier": "D",
-					"racials": "Endurance (+2% crit damage)"
-				}
-			]
-		},
-		{
-			"spec": "hunter",
-			"class": "Hunter",
-			"build": "Marksmanship 0/39/12",
-			"talents": "-3050552301503151-50024001",
-			"gear": "p0.bis",
-			"rotation": "mm",
-			"consumables": "Arena-Ranged",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 533,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 529.6,
-					"behind": 0.65,
-					"tier": "A",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 529.5,
-					"behind": 0.66,
-					"tier": "A",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Orc",
-					"dps": 527.4,
-					"behind": 1.05,
-					"tier": "B",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Troll",
-					"dps": 526.6,
-					"behind": 1.2,
-					"tier": "B",
-					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 524.4,
-					"behind": 1.61,
-					"tier": "C",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 522.4,
-					"behind": 1.99,
-					"tier": "C",
-					"racials": "Endurance (+2% crit damage)"
-				}
-			]
-		},
-		{
-			"spec": "hunter",
-			"class": "Hunter",
-			"build": "Marksmanship 0/39/12",
-			"talents": "-3050552301503151-50024001",
-			"gear": "p0.bis",
-			"rotation": "mm",
-			"consumables": "Arena-Ranged",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 576.7,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
-				},
-				{
-					"race": "Human",
-					"dps": 556.1,
-					"behind": 3.56,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 552.6,
-					"behind": 4.18,
-					"tier": "D",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Orc",
-					"dps": 550.3,
-					"behind": 4.58,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Troll",
-					"dps": 549.5,
-					"behind": 4.71,
-					"tier": "D",
-					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 547.2,
-					"behind": 5.12,
-					"tier": "D",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 545.1,
-					"behind": 5.48,
-					"tier": "D",
-					"racials": "Endurance (+2% crit damage)"
-				}
-			]
-		},
-		{
-			"spec": "hunter",
-			"class": "Hunter",
-			"build": "Marksmanship 0/39/12",
-			"talents": "-3050552301503151-50024001",
-			"gear": "p0.bis",
-			"rotation": "mm",
-			"consumables": "Arena-Ranged",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Troll",
-					"dps": 573.5,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 571.1,
-					"behind": 0.43,
-					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
-				},
-				{
-					"race": "Human",
-					"dps": 556.1,
-					"behind": 3.03,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 552.6,
-					"behind": 3.65,
-					"tier": "D",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 552.5,
-					"behind": 3.66,
-					"tier": "D",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Orc",
-					"dps": 550.3,
-					"behind": 4.05,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 545.1,
-					"behind": 4.96,
-					"tier": "D",
-					"racials": "Endurance (+2% crit damage)"
-				}
-			]
-		},
-		{
-			"spec": "hunter",
-			"class": "Hunter",
-			"build": "Survival 0/15/36",
-			"talents": "-005055-550230031051220151",
-			"gear": "p0.bis",
-			"rotation": "sv",
-			"consumables": "Arena-Ranged",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 506.2,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Human",
-					"dps": 505.6,
-					"behind": 0.12,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 503.1,
-					"behind": 0.61,
-					"tier": "A",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Orc",
-					"dps": 501.6,
-					"behind": 0.92,
-					"tier": "A",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Troll",
-					"dps": 500.7,
-					"behind": 1.09,
-					"tier": "B",
-					"racials": "Berserking"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 498.4,
-					"behind": 1.55,
-					"tier": "C",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 497,
+					"dps": 750.6,
 					"behind": 1.81,
 					"tier": "C",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "balance_druid",
+			"class": "Druid",
+			"build": "Moonkin",
+			"talents": "5532220115501351--505",
+			"gear": "Pre-BiS",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 824.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 824.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Tauren",
+					"dps": 752.9,
+					"behind": 8.71,
+					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 750.6,
+					"behind": 8.99,
+					"tier": "D",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "balance_druid",
+			"class": "Druid",
+			"build": "Moonkin",
+			"talents": "5532220115501351--505",
+			"gear": "Pre-BiS",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 764.5,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 764.5,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 752.9,
+					"behind": 1.51,
+					"tier": "C",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 750.6,
+					"behind": 1.81,
+					"tier": "C",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "feral_druid",
+			"class": "Druid",
+			"build": "Bearweave (45s fights)",
+			"talents": "050022-55000032021131212051-053",
+			"gear": "Pre-raid",
+			"rotation": "Bearweave",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Tauren",
+					"dps": 823.7,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 819.7,
+					"behind": 0.49,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 819.7,
+					"behind": 0.49,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 818.5,
+					"behind": 0.63,
+					"tier": "A",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "feral_druid",
+			"class": "Druid",
+			"build": "Bearweave (45s fights)",
+			"talents": "050022-55000032021131212051-053",
+			"gear": "Pre-raid",
+			"rotation": "Bearweave",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 890.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 890.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Tauren",
+					"dps": 823.7,
+					"behind": 7.47,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 818.5,
+					"behind": 8.06,
+					"tier": "D",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "feral_druid",
+			"class": "Druid",
+			"build": "Bearweave (45s fights)",
+			"talents": "050022-55000032021131212051-053",
+			"gear": "Pre-raid",
+			"rotation": "Bearweave",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Tauren",
+					"dps": 823.7,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 819.7,
+					"behind": 0.49,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 819.7,
+					"behind": 0.49,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 818.5,
+					"behind": 0.63,
+					"tier": "A",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "feral_druid",
+			"class": "Druid",
+			"build": "Monocat",
+			"talents": "050022-55000032021031212051-054",
+			"gear": "Pre-raid",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Tauren",
+					"dps": 829.9,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 825.8,
+					"behind": 0.49,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 825.8,
+					"behind": 0.49,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 824.4,
+					"behind": 0.66,
+					"tier": "A",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "feral_druid",
+			"class": "Druid",
+			"build": "Monocat",
+			"talents": "050022-55000032021031212051-054",
+			"gear": "Pre-raid",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 896.9,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 896.9,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Tauren",
+					"dps": 829.9,
+					"behind": 7.48,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 824.4,
+					"behind": 8.09,
+					"tier": "D",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "feral_druid",
+			"class": "Druid",
+			"build": "Monocat",
+			"talents": "050022-55000032021031212051-054",
+			"gear": "Pre-raid",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Tauren",
+					"dps": 829.9,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 825.8,
+					"behind": 0.49,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 825.8,
+					"behind": 0.49,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 824.4,
+					"behind": 0.66,
+					"tier": "A",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "feral_druid",
+			"class": "Druid",
+			"build": "Mana Efficient 0/35/16",
+			"talents": "0000000000000000-35200032121032212051-0550330000000000",
+			"gear": "Pre-raid",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Tauren",
+					"dps": 781.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 777.7,
+					"behind": 0.46,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 777.7,
+					"behind": 0.46,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 777.1,
+					"behind": 0.55,
+					"tier": "A",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "feral_druid",
+			"class": "Druid",
+			"build": "Mana Efficient 0/35/16",
+			"talents": "0000000000000000-35200032121032212051-0550330000000000",
+			"gear": "Pre-raid",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 843.5,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 843.5,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Tauren",
+					"dps": 781.3,
+					"behind": 7.37,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 777.1,
+					"behind": 7.88,
+					"tier": "D",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "feral_druid",
+			"class": "Druid",
+			"build": "Mana Efficient 0/35/16",
+			"talents": "0000000000000000-35200032121032212051-0550330000000000",
+			"gear": "Pre-raid",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Tauren",
+					"dps": 781.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 777.7,
+					"behind": 0.46,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 777.7,
+					"behind": 0.46,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 777.1,
+					"behind": 0.55,
+					"tier": "A",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "feral_druid",
+			"class": "Druid",
+			"build": "Hybrid 9/42/0",
+			"talents": "0500220000000000-35230332121132212051-0000000000000000",
+			"gear": "Pre-raid",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Tauren",
+					"dps": 799.7,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 794.7,
+					"behind": 0.62,
+					"tier": "A",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 794.7,
+					"behind": 0.62,
+					"tier": "A",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 794.4,
+					"behind": 0.66,
+					"tier": "A",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "feral_druid",
+			"class": "Druid",
+			"build": "Hybrid 9/42/0",
+			"talents": "0500220000000000-35230332121132212051-0000000000000000",
+			"gear": "Pre-raid",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 863.1,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 863.1,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Tauren",
+					"dps": 799.7,
+					"behind": 7.36,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 794.4,
+					"behind": 7.96,
+					"tier": "D",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "feral_druid",
+			"class": "Druid",
+			"build": "Hybrid 9/42/0",
+			"talents": "0500220000000000-35230332121132212051-0000000000000000",
+			"gear": "Pre-raid",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Tauren",
+					"dps": 799.7,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 794.7,
+					"behind": 0.62,
+					"tier": "A",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 794.7,
+					"behind": 0.62,
+					"tier": "A",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 794.4,
+					"behind": 0.66,
+					"tier": "A",
+					"racials": "Elune's Light"
 				}
 			]
 		},
 		{
 			"spec": "hunter",
 			"class": "Hunter",
-			"build": "Survival 0/15/36",
-			"talents": "-005055-550230031051220151",
-			"gear": "p0.bis",
-			"rotation": "sv",
-			"consumables": "Arena-Ranged",
+			"build": "SV Weave",
+			"talents": "-00530501114-550200030050220151",
+			"gear": "P1",
+			"rotation": "Melee Weave",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 1061.5,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 1061.5,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Human",
+					"dps": 1040.7,
+					"behind": 1.96,
+					"tier": "C",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 1036.5,
+					"behind": 2.35,
+					"tier": "C",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Orc",
+					"dps": 1032.9,
+					"behind": 2.69,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Troll",
+					"dps": 1025.9,
+					"behind": 3.35,
+					"tier": "D",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Tauren",
+					"dps": 1024.4,
+					"behind": 3.49,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 1017.4,
+					"behind": 4.15,
+					"tier": "D",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "SV Weave",
+			"talents": "-00530501114-550200030050220151",
+			"gear": "P1",
+			"rotation": "Melee Weave",
+			"consumables": "Preset consumables",
 			"target": "Elemental",
 			"races": [
 				{
-					"race": "Skyborne",
-					"dps": 550.9,
+					"race": "High Order Skyborne",
+					"dps": 1139.7,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 1139.7,
 					"behind": 0,
 					"tier": "S",
 					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
 				},
 				{
 					"race": "Human",
-					"dps": 527.3,
-					"behind": 4.28,
+					"dps": 1040.7,
+					"behind": 8.68,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
 					"race": "Night Elf",
-					"dps": 524.7,
-					"behind": 4.75,
+					"dps": 1036.5,
+					"behind": 9.05,
 					"tier": "D",
 					"racials": "Elune's Light"
 				},
 				{
 					"race": "Orc",
-					"dps": 523.1,
-					"behind": 5.05,
+					"dps": 1032.9,
+					"behind": 9.36,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Troll",
-					"dps": 522.2,
-					"behind": 5.21,
+					"dps": 1025.9,
+					"behind": 9.98,
 					"tier": "D",
 					"racials": "Berserking"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 519.8,
-					"behind": 5.65,
+					"race": "Tauren",
+					"dps": 1024.4,
+					"behind": 10.11,
 					"tier": "D",
-					"racials": "Earth Fury (+2% crit damage)"
+					"racials": "Endurance (+2% crit damage)"
 				},
 				{
-					"race": "Tauren",
-					"dps": 518.4,
+					"race": "Dwarf",
+					"dps": 1017.4,
+					"behind": 10.73,
+					"tier": "D",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "SV Weave",
+			"talents": "-00530501114-550200030050220151",
+			"gear": "P1",
+			"rotation": "Melee Weave",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 1101.5,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 1092.3,
+					"behind": 0.84,
+					"tier": "A",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 1061.5,
+					"behind": 3.63,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 1061.5,
+					"behind": 3.63,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Human",
+					"dps": 1040.7,
+					"behind": 5.52,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 1036.5,
 					"behind": 5.9,
 					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Orc",
+					"dps": 1032.9,
+					"behind": 6.22,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 1024.4,
+					"behind": 7,
+					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
 				}
 			]
@@ -723,1379 +840,2230 @@
 		{
 			"spec": "hunter",
 			"class": "Hunter",
-			"build": "Survival 0/15/36",
-			"talents": "-005055-550230031051220151",
-			"gear": "p0.bis",
-			"rotation": "sv",
-			"consumables": "Arena-Ranged",
-			"target": "Beast",
+			"build": "MM Weave",
+			"talents": "-205305031150001-5502000300502201",
+			"gear": "P1",
+			"rotation": "Melee Weave",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
 			"races": [
 				{
-					"race": "Troll",
-					"dps": 544.8,
+					"race": "High Order Skyborne",
+					"dps": 986,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
+					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 542.3,
-					"behind": 0.47,
+					"race": "Windshaper Skyborne",
+					"dps": 986,
+					"behind": 0,
 					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 528,
-					"behind": 3.08,
-					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Human",
-					"dps": 527.3,
-					"behind": 3.21,
+					"dps": 982.8,
+					"behind": 0.32,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 977.9,
+					"behind": 0.82,
+					"tier": "A",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Orc",
+					"dps": 975.2,
+					"behind": 1.09,
+					"tier": "B",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 966.9,
+					"behind": 1.94,
+					"tier": "C",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 960.2,
+					"behind": 2.62,
+					"tier": "D",
+					"racials": "base stats only"
+				},
+				{
+					"race": "Troll",
+					"dps": 958.3,
+					"behind": 2.81,
+					"tier": "D",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "MM Weave",
+			"talents": "-205305031150001-5502000300502201",
+			"gear": "P1",
+			"rotation": "Melee Weave",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 1057.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 1057.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Human",
+					"dps": 982.8,
+					"behind": 7.04,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
 					"race": "Night Elf",
-					"dps": 524.7,
-					"behind": 3.68,
+					"dps": 977.9,
+					"behind": 7.51,
 					"tier": "D",
 					"racials": "Elune's Light"
 				},
 				{
 					"race": "Orc",
-					"dps": 523.1,
-					"behind": 3.99,
+					"dps": 975.2,
+					"behind": 7.76,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Tauren",
-					"dps": 518.4,
-					"behind": 4.85,
+					"dps": 966.9,
+					"behind": 8.55,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
-				}
-			]
-		},
-		{
-			"spec": "mage",
-			"class": "Mage",
-			"build": "Fire 0/35/16",
-			"talents": "-03552020130133151-005500033",
-			"gear": "p0.bis",
-			"rotation": "fire",
-			"consumables": "Arena-Caster",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 455.7,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
-					"race": "Human",
-					"dps": 450.8,
-					"behind": 1.06,
-					"tier": "B",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Orc",
-					"dps": 447,
-					"behind": 1.91,
-					"tier": "C",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 446,
-					"behind": 2.13,
-					"tier": "C",
-					"racials": "Touch of the Grave"
+					"race": "Dwarf",
+					"dps": 960.2,
+					"behind": 9.18,
+					"tier": "D",
+					"racials": "base stats only"
 				},
 				{
 					"race": "Troll",
-					"dps": 444.7,
-					"behind": 2.4,
-					"tier": "C",
+					"dps": 958.3,
+					"behind": 9.36,
+					"tier": "D",
 					"racials": "Berserking"
-				},
-				{
-					"race": "Gnome",
-					"dps": 444.5,
-					"behind": 2.45,
-					"tier": "C",
-					"racials": "Eureka! + Expansive Mind"
 				}
 			]
 		},
 		{
-			"spec": "mage",
-			"class": "Mage",
-			"build": "Fire 0/35/16",
-			"talents": "-03552020130133151-005500033",
-			"gear": "p0.bis",
-			"rotation": "fire",
-			"consumables": "Arena-Caster",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 478.5,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
-				},
-				{
-					"race": "Human",
-					"dps": 450.8,
-					"behind": 5.78,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Orc",
-					"dps": 447,
-					"behind": 6.58,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 446,
-					"behind": 6.79,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Troll",
-					"dps": 444.7,
-					"behind": 7.05,
-					"tier": "D",
-					"racials": "Berserking"
-				},
-				{
-					"race": "Gnome",
-					"dps": 444.5,
-					"behind": 7.09,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				}
-			]
-		},
-		{
-			"spec": "mage",
-			"class": "Mage",
-			"build": "Fire 0/35/16",
-			"talents": "-03552020130133151-005500033",
-			"gear": "p0.bis",
-			"rotation": "fire",
-			"consumables": "Arena-Caster",
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "MM Weave",
+			"talents": "-205305031150001-5502000300502201",
+			"gear": "P1",
+			"rotation": "Melee Weave",
+			"consumables": "Preset consumables",
 			"target": "Beast",
 			"races": [
 				{
-					"race": "Troll",
-					"dps": 467,
+					"race": "Dwarf",
+					"dps": 1029.5,
 					"behind": 0,
+					"tier": "S",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "Troll",
+					"dps": 1027.6,
+					"behind": 0.19,
 					"tier": "S",
 					"racials": "Berserking + Beast Slaying"
 				},
 				{
-					"race": "Skyborne",
-					"dps": 455.7,
-					"behind": 2.42,
-					"tier": "C",
+					"race": "High Order Skyborne",
+					"dps": 986,
+					"behind": 4.23,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 986,
+					"behind": 4.23,
+					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Human",
-					"dps": 450.8,
-					"behind": 3.46,
+					"dps": 982.8,
+					"behind": 4.54,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
-					"race": "Orc",
-					"dps": 447,
-					"behind": 4.28,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 446,
-					"behind": 4.5,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Gnome",
-					"dps": 444.5,
-					"behind": 4.81,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				}
-			]
-		},
-		{
-			"spec": "mage",
-			"class": "Mage",
-			"build": "Frost 14/0/37",
-			"talents": "050005013--0555003301001301251",
-			"gear": "p0.bis",
-			"rotation": "frost",
-			"consumables": "Arena-Caster",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 538.1,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Gnome",
-					"dps": 536.9,
-					"behind": 0.22,
-					"tier": "S",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Human",
-					"dps": 536.7,
-					"behind": 0.26,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Undead",
-					"dps": 532.3,
-					"behind": 1.06,
-					"tier": "B",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Orc",
-					"dps": 531.7,
-					"behind": 1.19,
-					"tier": "B",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Troll",
-					"dps": 528.7,
-					"behind": 1.75,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "mage",
-			"class": "Mage",
-			"build": "Frost 14/0/37",
-			"talents": "050005013--0555003301001301251",
-			"gear": "p0.bis",
-			"rotation": "frost",
-			"consumables": "Arena-Caster",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 565,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
-				},
-				{
-					"race": "Gnome",
-					"dps": 536.9,
-					"behind": 4.97,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Human",
-					"dps": 536.7,
+					"race": "Night Elf",
+					"dps": 977.9,
 					"behind": 5.01,
 					"tier": "D",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Undead",
-					"dps": 532.3,
-					"behind": 5.77,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Orc",
-					"dps": 531.7,
-					"behind": 5.89,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Troll",
-					"dps": 528.7,
-					"behind": 6.43,
-					"tier": "D",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "mage",
-			"class": "Mage",
-			"build": "Frost 14/0/37",
-			"talents": "050005013--0555003301001301251",
-			"gear": "p0.bis",
-			"rotation": "frost",
-			"consumables": "Arena-Caster",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Troll",
-					"dps": 555.1,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 538.1,
-					"behind": 3.07,
-					"tier": "D",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Gnome",
-					"dps": 536.9,
-					"behind": 3.28,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Human",
-					"dps": 536.7,
-					"behind": 3.32,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Undead",
-					"dps": 532.3,
-					"behind": 4.1,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Orc",
-					"dps": 531.7,
-					"behind": 4.22,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				}
-			]
-		},
-		{
-			"spec": "mage",
-			"class": "Mage",
-			"build": "Arcane 35/0/16",
-			"talents": "055005023100311531--005500033",
-			"gear": "p0.bis",
-			"rotation": "arcane",
-			"consumables": "Arena-Caster",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 514.6,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Orc",
-					"dps": 512.2,
-					"behind": 0.48,
-					"tier": "S",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 512.1,
-					"behind": 0.48,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Undead",
-					"dps": 511.5,
-					"behind": 0.61,
-					"tier": "A",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Gnome",
-					"dps": 511.3,
-					"behind": 0.65,
-					"tier": "A",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Troll",
-					"dps": 507.7,
-					"behind": 1.35,
-					"tier": "B",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "mage",
-			"class": "Mage",
-			"build": "Arcane 35/0/16",
-			"talents": "055005023100311531--005500033",
-			"gear": "p0.bis",
-			"rotation": "arcane",
-			"consumables": "Arena-Caster",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 537.7,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
-				},
-				{
-					"race": "Human",
-					"dps": 514.6,
-					"behind": 4.3,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Orc",
-					"dps": 512.2,
-					"behind": 4.76,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 511.5,
-					"behind": 4.88,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Gnome",
-					"dps": 511.3,
-					"behind": 4.92,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Troll",
-					"dps": 507.7,
-					"behind": 5.59,
-					"tier": "D",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "mage",
-			"class": "Mage",
-			"build": "Arcane 35/0/16",
-			"talents": "055005023100311531--005500033",
-			"gear": "p0.bis",
-			"rotation": "arcane",
-			"consumables": "Arena-Caster",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Troll",
-					"dps": 533.1,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Human",
-					"dps": 514.6,
-					"behind": 3.46,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Orc",
-					"dps": 512.2,
-					"behind": 3.92,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 512.1,
-					"behind": 3.93,
-					"tier": "D",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Undead",
-					"dps": 511.5,
-					"behind": 4.05,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Gnome",
-					"dps": 511.3,
-					"behind": 4.08,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				}
-			]
-		},
-		{
-			"spec": "retribution_paladin",
-			"class": "Paladin",
-			"build": "Retribution 9/0/42",
-			"talents": "51003--55225331201331321",
-			"gear": "launch",
-			"rotation": "default",
-			"consumables": "Arena-Melee",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Undead",
-					"dps": 558.8,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Human",
-					"dps": 558.6,
-					"behind": 0.03,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 553.3,
-					"behind": 0.99,
-					"tier": "A",
-					"racials": "Earth Fury (+2% crit damage)"
-				}
-			]
-		},
-		{
-			"spec": "retribution_paladin",
-			"class": "Paladin",
-			"build": "Retribution 9/0/42",
-			"talents": "51003--55225331201331321",
-			"gear": "launch",
-			"rotation": "default",
-			"consumables": "Arena-Melee",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Undead",
-					"dps": 558.8,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Human",
-					"dps": 558.6,
-					"behind": 0.03,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 553.3,
-					"behind": 0.99,
-					"tier": "A",
-					"racials": "Earth Fury (+2% crit damage)"
-				}
-			]
-		},
-		{
-			"spec": "retribution_paladin",
-			"class": "Paladin",
-			"build": "Retribution 9/0/42",
-			"talents": "51003--55225331201331321",
-			"gear": "launch",
-			"rotation": "default",
-			"consumables": "Arena-Melee",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Dwarf",
-					"dps": 580.9,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
-				},
-				{
-					"race": "Undead",
-					"dps": 558.8,
-					"behind": 3.81,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Human",
-					"dps": 558.6,
-					"behind": 3.84,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				}
-			]
-		},
-		{
-			"spec": "shadow_priest",
-			"class": "Priest",
-			"build": "Shadow 15/0/36",
-			"talents": "0253000311--550022501201302251",
-			"gear": "p0.bis",
-			"rotation": "shadow",
-			"consumables": "Arena-Caster",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 643,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Undead",
-					"dps": 637.7,
-					"behind": 0.83,
-					"tier": "A",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 636,
-					"behind": 1.09,
-					"tier": "B",
 					"racials": "Elune's Light"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 635.8,
-					"behind": 1.13,
-					"tier": "B",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Gnome",
-					"dps": 634.9,
-					"behind": 1.26,
-					"tier": "B",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Troll",
-					"dps": 632.3,
-					"behind": 1.66,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "shadow_priest",
-			"class": "Priest",
-			"build": "Shadow 15/0/36",
-			"talents": "0253000311--550022501201302251",
-			"gear": "p0.bis",
-			"rotation": "shadow",
-			"consumables": "Arena-Caster",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 643,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Undead",
-					"dps": 637.7,
-					"behind": 0.83,
-					"tier": "A",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 636,
-					"behind": 1.09,
-					"tier": "B",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 635.8,
-					"behind": 1.13,
-					"tier": "B",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Gnome",
-					"dps": 634.9,
-					"behind": 1.26,
-					"tier": "B",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Troll",
-					"dps": 632.3,
-					"behind": 1.66,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "shadow_priest",
-			"class": "Priest",
-			"build": "Shadow 15/0/36",
-			"talents": "0253000311--550022501201302251",
-			"gear": "p0.bis",
-			"rotation": "shadow",
-			"consumables": "Arena-Caster",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Dwarf",
-					"dps": 667.5,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
-				},
-				{
-					"race": "Troll",
-					"dps": 664,
-					"behind": 0.54,
-					"tier": "A",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Human",
-					"dps": 643,
-					"behind": 3.68,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Undead",
-					"dps": 637.7,
-					"behind": 4.48,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 636,
-					"behind": 4.72,
-					"tier": "D",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Gnome",
-					"dps": 634.9,
-					"behind": 4.89,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				}
-			]
-		},
-		{
-			"spec": "smite_priest",
-			"class": "Priest",
-			"build": "Smite 31/17/3",
-			"talents": "515030031305001031-00505023002-003",
-			"gear": "smite_launch",
-			"rotation": "smite",
-			"consumables": "Arena-Caster",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 466.6,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Gnome",
-					"dps": 466.2,
-					"behind": 0.1,
-					"tier": "S",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Undead",
-					"dps": 464.6,
-					"behind": 0.44,
-					"tier": "S",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 458.4,
-					"behind": 1.77,
-					"tier": "C",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 457.9,
-					"behind": 1.86,
-					"tier": "C",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Troll",
-					"dps": 457.4,
-					"behind": 1.97,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "smite_priest",
-			"class": "Priest",
-			"build": "Smite 31/17/3",
-			"talents": "515030031305001031-00505023002-003",
-			"gear": "smite_launch",
-			"rotation": "smite",
-			"consumables": "Arena-Caster",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 466.6,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Gnome",
-					"dps": 466.2,
-					"behind": 0.1,
-					"tier": "S",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Undead",
-					"dps": 464.6,
-					"behind": 0.44,
-					"tier": "S",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 458.4,
-					"behind": 1.77,
-					"tier": "C",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 457.9,
-					"behind": 1.86,
-					"tier": "C",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Troll",
-					"dps": 457.4,
-					"behind": 1.97,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "smite_priest",
-			"class": "Priest",
-			"build": "Smite 31/17/3",
-			"talents": "515030031305001031-00505023002-003",
-			"gear": "smite_launch",
-			"rotation": "smite",
-			"consumables": "Arena-Caster",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Dwarf",
-					"dps": 480.8,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
-				},
-				{
-					"race": "Troll",
-					"dps": 480.3,
-					"behind": 0.11,
-					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Human",
-					"dps": 466.6,
-					"behind": 2.95,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Gnome",
-					"dps": 466.2,
-					"behind": 3.05,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Undead",
-					"dps": 464.6,
-					"behind": 3.38,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 458.4,
-					"behind": 4.67,
-					"tier": "D",
-					"racials": "Elune's Light"
-				}
-			]
-		},
-		{
-			"spec": "rogue",
-			"class": "Rogue",
-			"build": "Combat Dual-Wield 15/33/3",
-			"talents": "1053231-22530300001515231-012",
-			"gear": "combat_sinister_strike_prebis",
-			"rotation": "combat_sinister_strike",
-			"consumables": "Arena-Melee+class",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 569.1,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Human",
-					"dps": 569.1,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 567.9,
-					"behind": 0.22,
-					"tier": "S",
-					"racials": "Touch of the Grave"
-				},
-				{
 					"race": "Orc",
-					"dps": 566.5,
-					"behind": 0.45,
-					"tier": "S",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 565.1,
-					"behind": 0.71,
-					"tier": "A",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Gnome",
-					"dps": 564.8,
-					"behind": 0.77,
-					"tier": "A",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 562.3,
-					"behind": 1.2,
-					"tier": "B",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Troll",
-					"dps": 561.6,
-					"behind": 1.33,
-					"tier": "B",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "rogue",
-			"class": "Rogue",
-			"build": "Combat Dual-Wield 15/33/3",
-			"talents": "1053231-22530300001515231-012",
-			"gear": "combat_sinister_strike_prebis",
-			"rotation": "combat_sinister_strike",
-			"consumables": "Arena-Melee+class",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 597.6,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
-				},
-				{
-					"race": "Human",
-					"dps": 569.1,
-					"behind": 4.76,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 567.9,
-					"behind": 4.97,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Orc",
-					"dps": 566.5,
-					"behind": 5.19,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 565.1,
-					"behind": 5.44,
-					"tier": "D",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Gnome",
-					"dps": 564.8,
-					"behind": 5.49,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 562.3,
-					"behind": 5.91,
-					"tier": "D",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Troll",
-					"dps": 561.6,
-					"behind": 6.03,
-					"tier": "D",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "rogue",
-			"class": "Rogue",
-			"build": "Combat Dual-Wield 15/33/3",
-			"talents": "1053231-22530300001515231-012",
-			"gear": "combat_sinister_strike_prebis",
-			"rotation": "combat_sinister_strike",
-			"consumables": "Arena-Melee+class",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Dwarf",
-					"dps": 590.4,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
-				},
-				{
-					"race": "Troll",
-					"dps": 589.6,
-					"behind": 0.13,
-					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 569.1,
-					"behind": 3.6,
-					"tier": "D",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Human",
-					"dps": 569.1,
-					"behind": 3.6,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 567.9,
-					"behind": 3.81,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Orc",
-					"dps": 566.5,
-					"behind": 4.04,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 565.1,
-					"behind": 4.29,
-					"tier": "D",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Gnome",
-					"dps": 564.8,
-					"behind": 4.34,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				}
-			]
-		},
-		{
-			"spec": "rogue",
-			"class": "Rogue",
-			"build": "Assassination Mutilate 31/20/0",
-			"talents": "02532010531201051-225303000005",
-			"gear": "combat_backstab_prebis",
-			"rotation": "forever_mutilate",
-			"consumables": "Arena-Melee+class",
-			"target": "Mechanical",
-			"keptWeaponType": true,
-			"races": [
-				{
-					"race": "Human",
-					"dps": 538.3,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 537.6,
-					"behind": 0.11,
-					"tier": "S",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 537.1,
-					"behind": 0.21,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Orc",
-					"dps": 534.3,
-					"behind": 0.74,
-					"tier": "A",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Gnome",
-					"dps": 533.4,
-					"behind": 0.9,
-					"tier": "A",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 532.6,
-					"behind": 1.05,
-					"tier": "B",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 531.4,
-					"behind": 1.28,
-					"tier": "B",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Troll",
-					"dps": 530.3,
-					"behind": 1.48,
-					"tier": "B",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "rogue",
-			"class": "Rogue",
-			"build": "Assassination Mutilate 31/20/0",
-			"talents": "02532010531201051-225303000005",
-			"gear": "combat_backstab_prebis",
-			"rotation": "forever_mutilate",
-			"consumables": "Arena-Melee+class",
-			"target": "Elemental",
-			"keptWeaponType": true,
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 564,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
-				},
-				{
-					"race": "Human",
-					"dps": 538.3,
-					"behind": 4.56,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 537.6,
-					"behind": 4.67,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Orc",
-					"dps": 534.3,
+					"dps": 975.2,
 					"behind": 5.27,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
-					"race": "Gnome",
-					"dps": 533.4,
-					"behind": 5.42,
+					"race": "Tauren",
+					"dps": 966.9,
+					"behind": 6.08,
 					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
+					"racials": "Endurance (+2% crit damage)"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "BM Weave",
+			"talents": "5320001505101251-0053250001-4",
+			"gear": "P1",
+			"rotation": "Melee Weave (Hawks)",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 1096.4,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 1092.6,
+					"behind": 0.35,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 1092.6,
+					"behind": 0.35,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Night Elf",
-					"dps": 532.6,
-					"behind": 5.56,
+					"dps": 1092.1,
+					"behind": 0.39,
+					"tier": "S",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Orc",
+					"dps": 1088,
+					"behind": 0.77,
+					"tier": "A",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Troll",
+					"dps": 1078.6,
+					"behind": 1.63,
+					"tier": "C",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Tauren",
+					"dps": 1077.1,
+					"behind": 1.76,
+					"tier": "C",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 1073.9,
+					"behind": 2.05,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "BM Weave",
+			"talents": "5320001505101251-0053250001-4",
+			"gear": "P1",
+			"rotation": "Melee Weave (Hawks)",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 1137.1,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 1137.1,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Human",
+					"dps": 1096.4,
+					"behind": 3.57,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 1092.1,
+					"behind": 3.95,
 					"tier": "D",
 					"racials": "Elune's Light"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 531.4,
-					"behind": 5.79,
+					"race": "Orc",
+					"dps": 1088,
+					"behind": 4.32,
 					"tier": "D",
-					"racials": "Earth Fury (+2% crit damage)"
+					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Troll",
-					"dps": 530.3,
-					"behind": 5.98,
+					"dps": 1078.6,
+					"behind": 5.14,
+					"tier": "D",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Tauren",
+					"dps": 1077.1,
+					"behind": 5.27,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 1073.9,
+					"behind": 5.56,
+					"tier": "D",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "BM Weave",
+			"talents": "5320001505101251-0053250001-4",
+			"gear": "P1",
+			"rotation": "Melee Weave (Hawks)",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 1122.4,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 1117.4,
+					"behind": 0.44,
+					"tier": "S",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "Human",
+					"dps": 1096.4,
+					"behind": 2.32,
+					"tier": "C",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 1092.6,
+					"behind": 2.66,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 1092.6,
+					"behind": 2.66,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 1092.1,
+					"behind": 2.7,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Orc",
+					"dps": 1088,
+					"behind": 3.07,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 1077.1,
+					"behind": 4.04,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "MM",
+			"talents": "5-005355251152205-5",
+			"gear": "P1",
+			"rotation": "Turret",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 742.9,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 739.1,
+					"behind": 0.51,
+					"tier": "A",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 739.1,
+					"behind": 0.51,
+					"tier": "A",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 738.6,
+					"behind": 0.58,
+					"tier": "A",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Orc",
+					"dps": 736.7,
+					"behind": 0.83,
+					"tier": "A",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Troll",
+					"dps": 730.9,
+					"behind": 1.62,
+					"tier": "C",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Tauren",
+					"dps": 729.7,
+					"behind": 1.77,
+					"tier": "C",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 724.9,
+					"behind": 2.42,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "MM",
+			"talents": "5-005355251152205-5",
+			"gear": "P1",
+			"rotation": "Turret",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 792.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 792.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Human",
+					"dps": 742.9,
+					"behind": 6.3,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 738.6,
+					"behind": 6.85,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Orc",
+					"dps": 736.7,
+					"behind": 7.08,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Troll",
+					"dps": 730.9,
+					"behind": 7.82,
+					"tier": "D",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Tauren",
+					"dps": 729.7,
+					"behind": 7.96,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 724.9,
+					"behind": 8.56,
+					"tier": "D",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "MM",
+			"talents": "5-005355251152205-5",
+			"gear": "P1",
+			"rotation": "Turret",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 784,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 777.5,
+					"behind": 0.82,
+					"tier": "A",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "Human",
+					"dps": 742.9,
+					"behind": 5.24,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 739.1,
+					"behind": 5.72,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 739.1,
+					"behind": 5.72,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 738.6,
+					"behind": 5.79,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Orc",
+					"dps": 736.7,
+					"behind": 6.03,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 729.7,
+					"behind": 6.92,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "BM",
+			"talents": "5320001505101251-0053250001-4",
+			"gear": "P1",
+			"rotation": "Turret (Hawks)",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 953.1,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 947.9,
+					"behind": 0.54,
+					"tier": "A",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 946.1,
+					"behind": 0.73,
+					"tier": "A",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 946.1,
+					"behind": 0.73,
+					"tier": "A",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Orc",
+					"dps": 945.2,
+					"behind": 0.82,
+					"tier": "A",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Troll",
+					"dps": 938.1,
+					"behind": 1.57,
+					"tier": "C",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Tauren",
+					"dps": 935.7,
+					"behind": 1.83,
+					"tier": "C",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 933.4,
+					"behind": 2.07,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "BM",
+			"talents": "5320001505101251-0053250001-4",
+			"gear": "P1",
+			"rotation": "Turret (Hawks)",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 980.1,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 980.1,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Human",
+					"dps": 953.1,
+					"behind": 2.75,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 947.9,
+					"behind": 3.28,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Orc",
+					"dps": 945.2,
+					"behind": 3.55,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Troll",
+					"dps": 938.1,
+					"behind": 4.28,
+					"tier": "D",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Tauren",
+					"dps": 935.7,
+					"behind": 4.53,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 933.4,
+					"behind": 4.77,
+					"tier": "D",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "BM",
+			"talents": "5320001505101251-0053250001-4",
+			"gear": "P1",
+			"rotation": "Turret (Hawks)",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 971.6,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 966.5,
+					"behind": 0.52,
+					"tier": "A",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "Human",
+					"dps": 953.1,
+					"behind": 1.9,
+					"tier": "C",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 947.9,
+					"behind": 2.44,
+					"tier": "C",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 946.1,
+					"behind": 2.62,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 946.1,
+					"behind": 2.62,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Orc",
+					"dps": 945.2,
+					"behind": 2.71,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 935.7,
+					"behind": 3.7,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "SV",
+			"talents": "1-00531500114-52225303000021005",
+			"gear": "P1",
+			"rotation": "Turret (Multi-Shot)",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 669,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 666.2,
+					"behind": 0.41,
+					"tier": "S",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 666.2,
+					"behind": 0.42,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 666.2,
+					"behind": 0.42,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Orc",
+					"dps": 664.1,
+					"behind": 0.73,
+					"tier": "A",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Troll",
+					"dps": 660,
+					"behind": 1.35,
+					"tier": "B",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Tauren",
+					"dps": 657.8,
+					"behind": 1.68,
+					"tier": "C",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 654,
+					"behind": 2.25,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "SV",
+			"talents": "1-00531500114-52225303000021005",
+			"gear": "P1",
+			"rotation": "Turret (Multi-Shot)",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 714.6,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 714.6,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Human",
+					"dps": 669,
+					"behind": 6.38,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 666.2,
+					"behind": 6.77,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Orc",
+					"dps": 664.1,
+					"behind": 7.07,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Troll",
+					"dps": 660,
+					"behind": 7.64,
+					"tier": "D",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Tauren",
+					"dps": 657.8,
+					"behind": 7.95,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 654,
+					"behind": 8.49,
+					"tier": "D",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "SV",
+			"talents": "1-00531500114-52225303000021005",
+			"gear": "P1",
+			"rotation": "Turret (Multi-Shot)",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 708,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 701.4,
+					"behind": 0.92,
+					"tier": "A",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "Human",
+					"dps": 669,
+					"behind": 5.5,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 666.2,
+					"behind": 5.89,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 666.2,
+					"behind": 5.9,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 666.2,
+					"behind": 5.9,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Orc",
+					"dps": 664.1,
+					"behind": 6.19,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 657.8,
+					"behind": 7.09,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "SV Melee",
+			"talents": "53200005021-005005-5502000300500201",
+			"gear": "P1 Dual Wield",
+			"rotation": "Melee",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 891.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 885.2,
+					"behind": 0.68,
+					"tier": "A",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 885.2,
+					"behind": 0.68,
+					"tier": "A",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 884.8,
+					"behind": 0.73,
+					"tier": "A",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Orc",
+					"dps": 884.6,
+					"behind": 0.76,
+					"tier": "A",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 876.7,
+					"behind": 1.64,
+					"tier": "C",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Troll",
+					"dps": 876.5,
+					"behind": 1.67,
+					"tier": "C",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 872.4,
+					"behind": 2.13,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "SV Melee",
+			"talents": "53200005021-005005-5502000300500201",
+			"gear": "P1 Dual Wield",
+			"rotation": "Melee",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 925.1,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 925.1,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Human",
+					"dps": 891.3,
+					"behind": 3.64,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 884.8,
+					"behind": 4.35,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Orc",
+					"dps": 884.6,
+					"behind": 4.37,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 876.7,
+					"behind": 5.22,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Troll",
+					"dps": 876.5,
+					"behind": 5.25,
+					"tier": "D",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 872.4,
+					"behind": 5.7,
+					"tier": "D",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "hunter",
+			"class": "Hunter",
+			"build": "SV Melee",
+			"talents": "53200005021-005005-5502000300500201",
+			"gear": "P1 Dual Wield",
+			"rotation": "Melee",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 915.6,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 911.2,
+					"behind": 0.48,
+					"tier": "S",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "Human",
+					"dps": 891.3,
+					"behind": 2.65,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 885.2,
+					"behind": 3.32,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 885.2,
+					"behind": 3.32,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 884.8,
+					"behind": 3.37,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Orc",
+					"dps": 884.6,
+					"behind": 3.39,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 876.7,
+					"behind": 4.25,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				}
+			]
+		},
+		{
+			"spec": "mage",
+			"class": "Mage",
+			"build": "Arcane",
+			"talents": "0552205003100311531-03-0515",
+			"gear": "P1 Arcane",
+			"rotation": "Arcane",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 860.6,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Gnome",
+					"dps": 859.9,
+					"behind": 0.08,
+					"tier": "S",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 859.4,
+					"behind": 0.13,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Orc",
+					"dps": 857.7,
+					"behind": 0.33,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 856.1,
+					"behind": 0.53,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Troll",
+					"dps": 850.7,
+					"behind": 1.15,
+					"tier": "B",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "mage",
+			"class": "Mage",
+			"build": "Arcane",
+			"talents": "0552205003100311531-03-0515",
+			"gear": "P1 Arcane",
+			"rotation": "Arcane",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 937.4,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Human",
+					"dps": 860.6,
+					"behind": 8.2,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Gnome",
+					"dps": 859.9,
+					"behind": 8.27,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Orc",
+					"dps": 857.7,
+					"behind": 8.5,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 856.1,
+					"behind": 8.68,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Troll",
+					"dps": 850.7,
+					"behind": 9.26,
 					"tier": "D",
 					"racials": "Berserking"
 				}
 			]
 		},
 		{
-			"spec": "rogue",
-			"class": "Rogue",
-			"build": "Assassination Mutilate 31/20/0",
-			"talents": "02532010531201051-225303000005",
-			"gear": "combat_backstab_prebis",
-			"rotation": "forever_mutilate",
-			"consumables": "Arena-Melee+class",
+			"spec": "mage",
+			"class": "Mage",
+			"build": "Arcane",
+			"talents": "0552205003100311531-03-0515",
+			"gear": "P1 Arcane",
+			"rotation": "Arcane",
+			"consumables": "Preset consumables",
 			"target": "Beast",
-			"keptWeaponType": true,
 			"races": [
 				{
-					"race": "Dwarf",
-					"dps": 557.9,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
-				},
-				{
 					"race": "Troll",
-					"dps": 556.8,
-					"behind": 0.2,
+					"dps": 927.7,
+					"behind": 0,
 					"tier": "S",
 					"racials": "Berserking + Beast Slaying"
 				},
 				{
 					"race": "Human",
-					"dps": 538.3,
-					"behind": 3.53,
+					"dps": 860.6,
+					"behind": 7.23,
 					"tier": "D",
-					"racials": "Ruthless (+2% crit)"
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
 				},
 				{
-					"race": "Undead",
-					"dps": 537.6,
-					"behind": 3.64,
+					"race": "Gnome",
+					"dps": 859.9,
+					"behind": 7.3,
 					"tier": "D",
-					"racials": "Touch of the Grave"
+					"racials": "Eureka! + Expansive Mind"
 				},
 				{
-					"race": "Skyborne",
-					"dps": 537.1,
-					"behind": 3.73,
+					"race": "High Order Skyborne",
+					"dps": 859.4,
+					"behind": 7.35,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Orc",
-					"dps": 534.3,
-					"behind": 4.24,
+					"dps": 857.7,
+					"behind": 7.54,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 856.1,
+					"behind": 7.72,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				}
+			]
+		},
+		{
+			"spec": "mage",
+			"class": "Mage",
+			"build": "FFB",
+			"talents": "-2355000013011503-00550003310003002",
+			"gear": "P1 Arcane",
+			"rotation": "FFB",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 1053.7,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 1049.2,
+					"behind": 0.42,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Gnome",
+					"dps": 1042.7,
+					"behind": 1.04,
+					"tier": "B",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Undead",
+					"dps": 1041.5,
+					"behind": 1.15,
+					"tier": "B",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Troll",
+					"dps": 1039.2,
+					"behind": 1.37,
+					"tier": "B",
+					"racials": "Berserking"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 1037.3,
+					"behind": 1.56,
+					"tier": "C",
+					"racials": "Wind Blessed (+3% haste)"
+				}
+			]
+		},
+		{
+			"spec": "mage",
+			"class": "Mage",
+			"build": "FFB",
+			"talents": "-2355000013011503-00550003310003002",
+			"gear": "P1 Arcane",
+			"rotation": "FFB",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 1132.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Human",
+					"dps": 1053.7,
+					"behind": 6.99,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 1049.2,
+					"behind": 7.38,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Gnome",
-					"dps": 533.4,
-					"behind": 4.39,
+					"dps": 1042.7,
+					"behind": 7.95,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Undead",
+					"dps": 1041.5,
+					"behind": 8.06,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Troll",
+					"dps": 1039.2,
+					"behind": 8.27,
+					"tier": "D",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "mage",
+			"class": "Mage",
+			"build": "FFB",
+			"talents": "-2355000013011503-00550003310003002",
+			"gear": "P1 Arcane",
+			"rotation": "FFB",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 1135,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Human",
+					"dps": 1053.7,
+					"behind": 7.17,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 1049.2,
+					"behind": 7.56,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Gnome",
+					"dps": 1042.7,
+					"behind": 8.13,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Undead",
+					"dps": 1041.5,
+					"behind": 8.24,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 1037.3,
+					"behind": 8.61,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				}
+			]
+		},
+		{
+			"spec": "mage",
+			"class": "Mage",
+			"build": "Fire",
+			"talents": "0502205-23550000130135031-005",
+			"gear": "P1 Arcane",
+			"rotation": "Fire",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 1019.5,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Human",
+					"dps": 1019,
+					"behind": 0.05,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Gnome",
+					"dps": 1017.4,
+					"behind": 0.21,
+					"tier": "S",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Orc",
+					"dps": 1013.3,
+					"behind": 0.61,
+					"tier": "A",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 1008,
+					"behind": 1.12,
+					"tier": "B",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Troll",
+					"dps": 1003.7,
+					"behind": 1.55,
+					"tier": "C",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "mage",
+			"class": "Mage",
+			"build": "Fire",
+			"talents": "0502205-23550000130135031-005",
+			"gear": "P1 Arcane",
+			"rotation": "Fire",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 1098.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Human",
+					"dps": 1019,
+					"behind": 7.26,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Gnome",
+					"dps": 1017.4,
+					"behind": 7.41,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Orc",
+					"dps": 1013.3,
+					"behind": 7.78,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 1008,
+					"behind": 8.26,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Troll",
+					"dps": 1003.7,
+					"behind": 8.65,
+					"tier": "D",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "mage",
+			"class": "Mage",
+			"build": "Fire",
+			"talents": "0502205-23550000130135031-005",
+			"gear": "P1 Arcane",
+			"rotation": "Fire",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 1081.7,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 1019.5,
+					"behind": 5.75,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Human",
+					"dps": 1019,
+					"behind": 5.8,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Gnome",
+					"dps": 1017.4,
+					"behind": 5.95,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Orc",
+					"dps": 1013.3,
+					"behind": 6.32,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 1008,
+					"behind": 6.81,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				}
+			]
+		},
+		{
+			"spec": "retribution_paladin",
+			"class": "Paladin",
+			"build": "Twist of Light",
+			"talents": "55003003--05225331101330321",
+			"gear": "Twist of Light",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 833.4,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Undead",
+					"dps": 825.4,
+					"behind": 0.96,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 819,
+					"behind": 1.73,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "retribution_paladin",
+			"class": "Paladin",
+			"build": "Twist of Light",
+			"talents": "55003003--05225331101330321",
+			"gear": "Twist of Light",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 833.4,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Undead",
+					"dps": 825.4,
+					"behind": 0.96,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 819,
+					"behind": 1.73,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "retribution_paladin",
+			"class": "Paladin",
+			"build": "Twist of Light",
+			"talents": "55003003--05225331101330321",
+			"gear": "Twist of Light",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Dwarf",
+					"dps": 875.9,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "Human",
+					"dps": 833.4,
+					"behind": 4.85,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Undead",
+					"dps": 825.4,
+					"behind": 5.76,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				}
+			]
+		},
+		{
+			"spec": "retribution_paladin",
+			"class": "Paladin",
+			"build": "Holy Shock",
+			"talents": "550030032101012--052252300012303",
+			"gear": "Holy Shock",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 795,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Undead",
+					"dps": 789.2,
+					"behind": 0.73,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 782.7,
+					"behind": 1.55,
+					"tier": "C",
+					"racials": "Earth Fury (+2% crit damage with a mace)"
+				}
+			]
+		},
+		{
+			"spec": "retribution_paladin",
+			"class": "Paladin",
+			"build": "Holy Shock",
+			"talents": "550030032101012--052252300012303",
+			"gear": "Holy Shock",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 795,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Undead",
+					"dps": 789.2,
+					"behind": 0.73,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 782.7,
+					"behind": 1.55,
+					"tier": "C",
+					"racials": "Earth Fury (+2% crit damage with a mace)"
+				}
+			]
+		},
+		{
+			"spec": "retribution_paladin",
+			"class": "Paladin",
+			"build": "Holy Shock",
+			"talents": "550030032101012--052252300012303",
+			"gear": "Holy Shock",
+			"rotation": "Default",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Dwarf",
+					"dps": 832.9,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Earth Fury (+2% crit damage with a mace) + Big Game Hunter"
+				},
+				{
+					"race": "Human",
+					"dps": 795,
+					"behind": 4.55,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Undead",
+					"dps": 789.2,
+					"behind": 5.25,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				}
+			]
+		},
+		{
+			"spec": "shadow_priest",
+			"class": "Priest",
+			"build": "Shadow Testing",
+			"talents": "00530320103--50052201251302051",
+			"gear": "Shadow Testing",
+			"rotation": "Shadow Testing",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 833.2,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Undead",
+					"dps": 825.3,
+					"behind": 0.95,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 824.7,
+					"behind": 1.02,
+					"tier": "B",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Gnome",
+					"dps": 824.7,
+					"behind": 1.03,
+					"tier": "B",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 824.5,
+					"behind": 1.05,
+					"tier": "B",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 820.3,
+					"behind": 1.55,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "shadow_priest",
+			"class": "Priest",
+			"build": "Shadow Testing",
+			"talents": "00530320103--50052201251302051",
+			"gear": "Shadow Testing",
+			"rotation": "Shadow Testing",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 833.2,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Undead",
+					"dps": 825.3,
+					"behind": 0.95,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 824.7,
+					"behind": 1.02,
+					"tier": "B",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Gnome",
+					"dps": 824.7,
+					"behind": 1.03,
+					"tier": "B",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 824.5,
+					"behind": 1.05,
+					"tier": "B",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 820.3,
+					"behind": 1.55,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "shadow_priest",
+			"class": "Priest",
+			"build": "Shadow Testing",
+			"talents": "00530320103--50052201251302051",
+			"gear": "Shadow Testing",
+			"rotation": "Shadow Testing",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 886.6,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 882.1,
+					"behind": 0.51,
+					"tier": "A",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "Human",
+					"dps": 833.2,
+					"behind": 6.02,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Undead",
+					"dps": 825.3,
+					"behind": 6.91,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 824.7,
+					"behind": 6.97,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Gnome",
+					"dps": 824.7,
+					"behind": 6.98,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				}
+			]
+		},
+		{
+			"spec": "smite_priest",
+			"class": "Priest",
+			"build": "Smite Testing",
+			"talents": "525235031030001001-30515100002-3",
+			"gear": "Smite Testing",
+			"rotation": "Smite Testing",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 465.9,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Undead",
+					"dps": 465.1,
+					"behind": 0.17,
+					"tier": "S",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 463.7,
+					"behind": 0.47,
+					"tier": "S",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 458.7,
+					"behind": 1.56,
+					"tier": "C",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Troll",
+					"dps": 458.3,
+					"behind": 1.64,
+					"tier": "C",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 458.2,
+					"behind": 1.65,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "smite_priest",
+			"class": "Priest",
+			"build": "Smite Testing",
+			"talents": "525235031030001001-30515100002-3",
+			"gear": "Smite Testing",
+			"rotation": "Smite Testing",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 465.9,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Undead",
+					"dps": 465.1,
+					"behind": 0.17,
+					"tier": "S",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 463.7,
+					"behind": 0.47,
+					"tier": "S",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 458.7,
+					"behind": 1.56,
+					"tier": "C",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Troll",
+					"dps": 458.3,
+					"behind": 1.64,
+					"tier": "C",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 458.2,
+					"behind": 1.65,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "smite_priest",
+			"class": "Priest",
+			"build": "Smite Testing",
+			"talents": "525235031030001001-30515100002-3",
+			"gear": "Smite Testing",
+			"rotation": "Smite Testing",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 485.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 485.2,
+					"behind": 0.01,
+					"tier": "S",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "Human",
+					"dps": 465.9,
+					"behind": 3.98,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Undead",
+					"dps": 465.1,
+					"behind": 4.15,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 463.7,
+					"behind": 4.44,
 					"tier": "D",
 					"racials": "Eureka! + Expansive Mind"
 				},
 				{
 					"race": "Night Elf",
-					"dps": 532.6,
-					"behind": 4.54,
+					"dps": 458.7,
+					"behind": 5.48,
 					"tier": "D",
 					"racials": "Elune's Light"
 				}
@@ -2104,1642 +3072,2827 @@
 		{
 			"spec": "rogue",
 			"class": "Rogue",
-			"build": "Subtlety Hemo 15/0/36",
-			"talents": "125320101--5320003310013211551",
-			"gear": "combat_sinister_strike_prebis",
-			"rotation": "forever_hemorrhage",
-			"consumables": "Arena-Melee+class",
+			"build": "Asn Muti",
+			"talents": "00532310151501031-302303202014",
+			"gear": "Mutilate",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
 			"target": "Mechanical",
 			"races": [
 				{
-					"race": "Human",
-					"dps": 499.2,
+					"race": "High Order Skyborne",
+					"dps": 634.7,
 					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 498.8,
-					"behind": 0.07,
-					"tier": "S",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 498.3,
-					"behind": 0.17,
 					"tier": "S",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
+					"race": "Windshaper Skyborne",
+					"dps": 634.7,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Human",
+					"dps": 634,
+					"behind": 0.12,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "Gnome",
+					"dps": 633.7,
+					"behind": 0.16,
+					"tier": "S",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Undead",
+					"dps": 632.5,
+					"behind": 0.35,
+					"tier": "S",
+					"racials": "Touch of the Grave"
+				},
+				{
 					"race": "Orc",
-					"dps": 496.3,
+					"dps": 631,
 					"behind": 0.58,
 					"tier": "A",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
-					"race": "Gnome",
-					"dps": 494.8,
-					"behind": 0.88,
-					"tier": "A",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
 					"race": "Night Elf",
-					"dps": 493.3,
-					"behind": 1.18,
-					"tier": "B",
+					"dps": 629.9,
+					"behind": 0.76,
+					"tier": "A",
 					"racials": "Elune's Light"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 493,
-					"behind": 1.24,
-					"tier": "B",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
 					"race": "Troll",
-					"dps": 491.9,
-					"behind": 1.45,
+					"dps": 626.4,
+					"behind": 1.31,
 					"tier": "B",
 					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 621.9,
+					"behind": 2.01,
+					"tier": "C",
+					"racials": "base stats only"
 				}
 			]
 		},
 		{
 			"spec": "rogue",
 			"class": "Rogue",
-			"build": "Subtlety Hemo 15/0/36",
-			"talents": "125320101--5320003310013211551",
-			"gear": "combat_sinister_strike_prebis",
-			"rotation": "forever_hemorrhage",
-			"consumables": "Arena-Melee+class",
+			"build": "Asn Muti",
+			"talents": "00532310151501031-302303202014",
+			"gear": "Mutilate",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
 			"target": "Elemental",
 			"races": [
 				{
-					"race": "Skyborne",
-					"dps": 523.3,
+					"race": "High Order Skyborne",
+					"dps": 683.2,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 683.2,
 					"behind": 0,
 					"tier": "S",
 					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
 				},
 				{
 					"race": "Human",
-					"dps": 499.2,
-					"behind": 4.6,
+					"dps": 634,
+					"behind": 7.2,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit)"
 				},
 				{
+					"race": "Gnome",
+					"dps": 633.7,
+					"behind": 7.24,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
 					"race": "Undead",
-					"dps": 498.8,
-					"behind": 4.67,
+					"dps": 632.5,
+					"behind": 7.42,
 					"tier": "D",
 					"racials": "Touch of the Grave"
 				},
 				{
 					"race": "Orc",
-					"dps": 496.3,
-					"behind": 5.16,
+					"dps": 631,
+					"behind": 7.63,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
-					"race": "Gnome",
-					"dps": 494.8,
-					"behind": 5.44,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
 					"race": "Night Elf",
-					"dps": 493.3,
-					"behind": 5.73,
+					"dps": 629.9,
+					"behind": 7.8,
 					"tier": "D",
 					"racials": "Elune's Light"
 				},
 				{
-					"race": "Dwarf",
-					"dps": 493,
-					"behind": 5.79,
-					"tier": "D",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
 					"race": "Troll",
-					"dps": 491.9,
-					"behind": 5.99,
+					"dps": 626.4,
+					"behind": 8.31,
 					"tier": "D",
 					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 621.9,
+					"behind": 8.96,
+					"tier": "D",
+					"racials": "base stats only"
 				}
 			]
 		},
 		{
 			"spec": "rogue",
 			"class": "Rogue",
-			"build": "Subtlety Hemo 15/0/36",
-			"talents": "125320101--5320003310013211551",
-			"gear": "combat_sinister_strike_prebis",
-			"rotation": "forever_hemorrhage",
-			"consumables": "Arena-Melee+class",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Dwarf",
-					"dps": 517.6,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
-				},
-				{
-					"race": "Troll",
-					"dps": 516.5,
-					"behind": 0.21,
-					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Human",
-					"dps": 499.2,
-					"behind": 3.56,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 498.8,
-					"behind": 3.63,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 498.3,
-					"behind": 3.72,
-					"tier": "D",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Orc",
-					"dps": 496.3,
-					"behind": 4.12,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Gnome",
-					"dps": 494.8,
-					"behind": 4.41,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 493.3,
-					"behind": 4.7,
-					"tier": "D",
-					"racials": "Elune's Light"
-				}
-			]
-		},
-		{
-			"spec": "elemental_shaman",
-			"class": "Shaman",
-			"build": "Elemental 31/6/14",
-			"talents": "2505301300123051-0500001-053050001",
-			"gear": "launch",
-			"rotation": "forever",
-			"consumables": "Arena-Caster",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 472.5,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Orc",
-					"dps": 468.3,
-					"behind": 0.88,
-					"tier": "A",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 467.4,
-					"behind": 1.07,
-					"tier": "B",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 466.7,
-					"behind": 1.22,
-					"tier": "B",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Troll",
-					"dps": 463.6,
-					"behind": 1.88,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "elemental_shaman",
-			"class": "Shaman",
-			"build": "Elemental 31/6/14",
-			"talents": "2505301300123051-0500001-053050001",
-			"gear": "launch",
-			"rotation": "forever",
-			"consumables": "Arena-Caster",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 496.1,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
-				},
-				{
-					"race": "Orc",
-					"dps": 468.3,
-					"behind": 5.6,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 467.4,
-					"behind": 5.78,
-					"tier": "D",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 466.7,
-					"behind": 5.92,
-					"tier": "D",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Troll",
-					"dps": 463.6,
-					"behind": 6.55,
-					"tier": "D",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "elemental_shaman",
-			"class": "Shaman",
-			"build": "Elemental 31/6/14",
-			"talents": "2505301300123051-0500001-053050001",
-			"gear": "launch",
-			"rotation": "forever",
-			"consumables": "Arena-Caster",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Dwarf",
-					"dps": 490.8,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
-				},
-				{
-					"race": "Troll",
-					"dps": 486.8,
-					"behind": 0.82,
-					"tier": "A",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 472.5,
-					"behind": 3.73,
-					"tier": "D",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Orc",
-					"dps": 468.3,
-					"behind": 4.58,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 466.7,
-					"behind": 4.9,
-					"tier": "D",
-					"racials": "Endurance (+2% crit damage)"
-				}
-			]
-		},
-		{
-			"spec": "elemental_shaman",
-			"class": "Shaman",
-			"build": "Stormcaller 28/23/0",
-			"talents": "150533130010303-055030030004102",
-			"gear": "launch",
-			"rotation": "forever",
-			"consumables": "Arena-Caster",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 452.8,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Orc",
-					"dps": 447.3,
-					"behind": 1.21,
-					"tier": "B",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 446.6,
-					"behind": 1.36,
-					"tier": "B",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 445,
-					"behind": 1.73,
-					"tier": "C",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Troll",
-					"dps": 443.1,
-					"behind": 2.14,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "elemental_shaman",
-			"class": "Shaman",
-			"build": "Stormcaller 28/23/0",
-			"talents": "150533130010303-055030030004102",
-			"gear": "launch",
-			"rotation": "forever",
-			"consumables": "Arena-Caster",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 475.4,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
-				},
-				{
-					"race": "Orc",
-					"dps": 447.3,
-					"behind": 5.91,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 446.6,
-					"behind": 6.06,
-					"tier": "D",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 445,
-					"behind": 6.41,
-					"tier": "D",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Troll",
-					"dps": 443.1,
-					"behind": 6.8,
-					"tier": "D",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "elemental_shaman",
-			"class": "Shaman",
-			"build": "Stormcaller 28/23/0",
-			"talents": "150533130010303-055030030004102",
-			"gear": "launch",
-			"rotation": "forever",
-			"consumables": "Arena-Caster",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Dwarf",
-					"dps": 469,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
-				},
-				{
-					"race": "Troll",
-					"dps": 465.2,
-					"behind": 0.79,
-					"tier": "A",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 452.8,
-					"behind": 3.45,
-					"tier": "D",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Orc",
-					"dps": 447.3,
-					"behind": 4.61,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 445,
-					"behind": 5.11,
-					"tier": "D",
-					"racials": "Endurance (+2% crit damage)"
-				}
-			]
-		},
-		{
-			"spec": "enhancement_shaman",
-			"class": "Shaman",
-			"build": "Enhancement 16/35/0",
-			"talents": "2502331-055030030205112251",
-			"gear": "launch",
-			"rotation": "forever",
-			"consumables": "Arena-Melee+class",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 566.1,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 560,
-					"behind": 1.09,
-					"tier": "B",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 559.7,
-					"behind": 1.14,
-					"tier": "B",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Orc",
-					"dps": 558.6,
-					"behind": 1.32,
-					"tier": "B",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Troll",
-					"dps": 555.6,
-					"behind": 1.86,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "enhancement_shaman",
-			"class": "Shaman",
-			"build": "Enhancement 16/35/0",
-			"talents": "2502331-055030030205112251",
-			"gear": "launch",
-			"rotation": "forever",
-			"consumables": "Arena-Melee+class",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 594.4,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 560,
-					"behind": 5.8,
-					"tier": "D",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 559.7,
-					"behind": 5.85,
-					"tier": "D",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Orc",
-					"dps": 558.6,
-					"behind": 6.02,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Troll",
-					"dps": 555.6,
-					"behind": 6.53,
-					"tier": "D",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "enhancement_shaman",
-			"class": "Shaman",
-			"build": "Enhancement 16/35/0",
-			"talents": "2502331-055030030205112251",
-			"gear": "launch",
-			"rotation": "forever",
-			"consumables": "Arena-Melee+class",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Dwarf",
-					"dps": 588,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
-				},
-				{
-					"race": "Troll",
-					"dps": 583.4,
-					"behind": 0.78,
-					"tier": "A",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 566.1,
-					"behind": 3.71,
-					"tier": "D",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Tauren",
-					"dps": 559.7,
-					"behind": 4.81,
-					"tier": "D",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Orc",
-					"dps": 558.6,
-					"behind": 4.99,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				}
-			]
-		},
-		{
-			"spec": "warlock",
-			"class": "Warlock",
-			"build": "Demonic Pact 2/31/18",
-			"talents": "113-0005003221220311351-0550005",
-			"gear": "prebis",
-			"rotation": "demonic_pact",
-			"consumables": "Arena-Caster",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 598.2,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Orc",
-					"dps": 592.5,
-					"behind": 0.96,
-					"tier": "A",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 592.2,
-					"behind": 1,
-					"tier": "A",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Gnome",
-					"dps": 589.8,
-					"behind": 1.41,
-					"tier": "B",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Troll",
-					"dps": 586,
-					"behind": 2.04,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "warlock",
-			"class": "Warlock",
-			"build": "Demonic Pact 2/31/18",
-			"talents": "113-0005003221220311351-0550005",
-			"gear": "prebis",
-			"rotation": "demonic_pact",
-			"consumables": "Arena-Caster",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 598.2,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Orc",
-					"dps": 592.5,
-					"behind": 0.96,
-					"tier": "A",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 592.2,
-					"behind": 1,
-					"tier": "A",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Gnome",
-					"dps": 589.8,
-					"behind": 1.41,
-					"tier": "B",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Troll",
-					"dps": 586,
-					"behind": 2.04,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "warlock",
-			"class": "Warlock",
-			"build": "Demonic Pact 2/31/18",
-			"talents": "113-0005003221220311351-0550005",
-			"gear": "prebis",
-			"rotation": "demonic_pact",
-			"consumables": "Arena-Caster",
+			"build": "Asn Muti",
+			"talents": "00532310151501031-302303202014",
+			"gear": "Mutilate",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
 			"target": "Beast",
 			"races": [
 				{
 					"race": "Troll",
-					"dps": 612.3,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Human",
-					"dps": 598.2,
-					"behind": 2.3,
-					"tier": "C",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Orc",
-					"dps": 592.5,
-					"behind": 3.24,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 592.2,
-					"behind": 3.28,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Gnome",
-					"dps": 589.8,
-					"behind": 3.68,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				}
-			]
-		},
-		{
-			"spec": "warlock",
-			"class": "Warlock",
-			"build": "Deep Affliction 35/0/16",
-			"talents": "2535002013521105--05000551",
-			"gear": "prebis",
-			"rotation": "affliction",
-			"consumables": "Arena-Caster",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 505.2,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Undead",
-					"dps": 500.7,
-					"behind": 0.88,
-					"tier": "A",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Orc",
-					"dps": 499.9,
-					"behind": 1.04,
-					"tier": "B",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Gnome",
-					"dps": 497.1,
-					"behind": 1.59,
-					"tier": "C",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Troll",
-					"dps": 495.1,
-					"behind": 2,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "warlock",
-			"class": "Warlock",
-			"build": "Deep Affliction 35/0/16",
-			"talents": "2535002013521105--05000551",
-			"gear": "prebis",
-			"rotation": "affliction",
-			"consumables": "Arena-Caster",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 505.2,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Undead",
-					"dps": 500.7,
-					"behind": 0.88,
-					"tier": "A",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Orc",
-					"dps": 499.9,
-					"behind": 1.04,
-					"tier": "B",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Gnome",
-					"dps": 497.1,
-					"behind": 1.59,
-					"tier": "C",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Troll",
-					"dps": 495.1,
-					"behind": 2,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "warlock",
-			"class": "Warlock",
-			"build": "Deep Affliction 35/0/16",
-			"talents": "2535002013521105--05000551",
-			"gear": "prebis",
-			"rotation": "affliction",
-			"consumables": "Arena-Caster",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Troll",
-					"dps": 517.3,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Human",
-					"dps": 505.2,
-					"behind": 2.35,
-					"tier": "C",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Undead",
-					"dps": 500.7,
-					"behind": 3.21,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Orc",
-					"dps": 499.9,
-					"behind": 3.37,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Gnome",
-					"dps": 497.1,
-					"behind": 3.91,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				}
-			]
-		},
-		{
-			"spec": "warlock",
-			"class": "Warlock",
-			"build": "DS/Ruin Pandemic 24/11/16",
-			"talents": "25220010135201-0025003001-05500051",
-			"gear": "prebis",
-			"rotation": "ds_ruin",
-			"consumables": "Arena-Caster",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 517,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Orc",
-					"dps": 511.2,
-					"behind": 1.11,
-					"tier": "B",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 510.8,
-					"behind": 1.2,
-					"tier": "B",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Gnome",
-					"dps": 507.9,
-					"behind": 1.76,
-					"tier": "C",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Troll",
-					"dps": 505.2,
-					"behind": 2.28,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "warlock",
-			"class": "Warlock",
-			"build": "DS/Ruin Pandemic 24/11/16",
-			"talents": "25220010135201-0025003001-05500051",
-			"gear": "prebis",
-			"rotation": "ds_ruin",
-			"consumables": "Arena-Caster",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 517,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Orc",
-					"dps": 511.2,
-					"behind": 1.11,
-					"tier": "B",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 510.8,
-					"behind": 1.2,
-					"tier": "B",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Gnome",
-					"dps": 507.9,
-					"behind": 1.76,
-					"tier": "C",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Troll",
-					"dps": 505.2,
-					"behind": 2.28,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "warlock",
-			"class": "Warlock",
-			"build": "DS/Ruin Pandemic 24/11/16",
-			"talents": "25220010135201-0025003001-05500051",
-			"gear": "prebis",
-			"rotation": "ds_ruin",
-			"consumables": "Arena-Caster",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Troll",
-					"dps": 530.4,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Human",
-					"dps": 517,
-					"behind": 2.54,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Orc",
-					"dps": 511.2,
-					"behind": 3.62,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 510.8,
-					"behind": 3.71,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Gnome",
-					"dps": 507.9,
-					"behind": 4.25,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				}
-			]
-		},
-		{
-			"spec": "warlock",
-			"class": "Warlock",
-			"build": "Shadow and Flame 13/11/27",
-			"talents": "25501-0025003001-055035510010002",
-			"gear": "prebis",
-			"rotation": "destruction",
-			"consumables": "Arena-Caster",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 490.9,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Undead",
-					"dps": 487.3,
-					"behind": 0.74,
-					"tier": "A",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Orc",
-					"dps": 486.1,
-					"behind": 0.97,
-					"tier": "A",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Gnome",
-					"dps": 484.1,
-					"behind": 1.38,
-					"tier": "B",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Troll",
-					"dps": 481.3,
-					"behind": 1.95,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "warlock",
-			"class": "Warlock",
-			"build": "Shadow and Flame 13/11/27",
-			"talents": "25501-0025003001-055035510010002",
-			"gear": "prebis",
-			"rotation": "destruction",
-			"consumables": "Arena-Caster",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 490.9,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Undead",
-					"dps": 487.3,
-					"behind": 0.74,
-					"tier": "A",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Orc",
-					"dps": 486.1,
-					"behind": 0.97,
-					"tier": "A",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Gnome",
-					"dps": 484.1,
-					"behind": 1.38,
-					"tier": "B",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Troll",
-					"dps": 481.3,
-					"behind": 1.95,
-					"tier": "C",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "warlock",
-			"class": "Warlock",
-			"build": "Shadow and Flame 13/11/27",
-			"talents": "25501-0025003001-055035510010002",
-			"gear": "prebis",
-			"rotation": "destruction",
-			"consumables": "Arena-Caster",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Troll",
-					"dps": 505.4,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Human",
-					"dps": 490.9,
-					"behind": 2.87,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit) + +5% Spirit"
-				},
-				{
-					"race": "Undead",
-					"dps": 487.3,
-					"behind": 3.58,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Orc",
-					"dps": 486.1,
-					"behind": 3.81,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Gnome",
-					"dps": 484.1,
-					"behind": 4.21,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				}
-			]
-		},
-		{
-			"spec": "warrior",
-			"class": "Warrior",
-			"build": "Fury 17/34/0",
-			"talents": "30305213-55051105050010501",
-			"gear": "p0.bis",
-			"rotation": "dps_no_reck",
-			"consumables": "Arena-Melee",
-			"target": "Mechanical",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 706.7,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit)"
-				},
-				{
-					"race": "Orc",
-					"dps": 700.4,
-					"behind": 0.89,
-					"tier": "A",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 696.9,
-					"behind": 1.39,
-					"tier": "B",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Tauren",
-					"dps": 695.2,
-					"behind": 1.63,
-					"tier": "C",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 694,
-					"behind": 1.8,
-					"tier": "C",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 693.3,
-					"behind": 1.9,
-					"tier": "C",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Gnome",
-					"dps": 692.7,
-					"behind": 1.98,
-					"tier": "C",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Troll",
-					"dps": 687.6,
-					"behind": 2.7,
-					"tier": "D",
-					"racials": "Berserking"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 664.5,
-					"behind": 5.98,
-					"tier": "D",
-					"racials": "Wind Blessed (+3% haste)"
-				}
-			]
-		},
-		{
-			"spec": "warrior",
-			"class": "Warrior",
-			"build": "Fury 17/34/0",
-			"talents": "30305213-55051105050010501",
-			"gear": "p0.bis",
-			"rotation": "dps_no_reck",
-			"consumables": "Arena-Melee",
-			"target": "Elemental",
-			"races": [
-				{
-					"race": "Human",
-					"dps": 706.7,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Ruthless (+2% crit)"
-				},
-				{
-					"race": "Orc",
-					"dps": 700.4,
-					"behind": 0.89,
-					"tier": "A",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 696.9,
-					"behind": 1.39,
-					"tier": "B",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 696.3,
-					"behind": 1.47,
-					"tier": "B",
-					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
-				},
-				{
-					"race": "Tauren",
-					"dps": 695.2,
-					"behind": 1.63,
-					"tier": "C",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 694,
-					"behind": 1.8,
-					"tier": "C",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 693.3,
-					"behind": 1.9,
-					"tier": "C",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Gnome",
-					"dps": 692.7,
-					"behind": 1.98,
-					"tier": "C",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Troll",
-					"dps": 687.6,
-					"behind": 2.7,
-					"tier": "D",
-					"racials": "Berserking"
-				}
-			]
-		},
-		{
-			"spec": "warrior",
-			"class": "Warrior",
-			"build": "Fury 17/34/0",
-			"talents": "30305213-55051105050010501",
-			"gear": "p0.bis",
-			"rotation": "dps_no_reck",
-			"consumables": "Arena-Melee",
-			"target": "Beast",
-			"races": [
-				{
-					"race": "Dwarf",
-					"dps": 727.3,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
-				},
-				{
-					"race": "Troll",
-					"dps": 720.6,
-					"behind": 0.92,
-					"tier": "A",
-					"racials": "Berserking + Beast Slaying"
-				},
-				{
-					"race": "Human",
-					"dps": 706.7,
-					"behind": 2.83,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit)"
-				},
-				{
-					"race": "Orc",
-					"dps": 700.4,
-					"behind": 3.69,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 696.9,
-					"behind": 4.18,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Tauren",
-					"dps": 695.2,
-					"behind": 4.41,
-					"tier": "D",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 693.3,
-					"behind": 4.67,
-					"tier": "D",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Gnome",
-					"dps": 692.7,
-					"behind": 4.75,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				},
-				{
-					"race": "Skyborne",
-					"dps": 664.5,
-					"behind": 8.63,
-					"tier": "D",
-					"racials": "Wind Blessed (+3% haste)"
-				}
-			]
-		},
-		{
-			"spec": "warrior",
-			"class": "Warrior",
-			"build": "Arms 39/12/0",
-			"talents": "32305213132515201-5502",
-			"gear": "arms_launch",
-			"rotation": "dps_no_reck",
-			"consumables": "Arena-Melee",
-			"target": "Mechanical",
-			"weaponType": "Sword",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 564,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste)"
-				},
-				{
-					"race": "Human",
-					"dps": 560.4,
-					"behind": 0.64,
-					"tier": "A",
-					"racials": "Ruthless (+2% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 558,
-					"behind": 1.08,
-					"tier": "B",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Orc",
-					"dps": 557.8,
-					"behind": 1.11,
-					"tier": "B",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Troll",
-					"dps": 557.2,
-					"behind": 1.21,
-					"tier": "B",
-					"racials": "Berserking"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 555.4,
-					"behind": 1.54,
-					"tier": "C",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Tauren",
-					"dps": 553.9,
-					"behind": 1.8,
-					"tier": "C",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 553.2,
-					"behind": 1.92,
-					"tier": "C",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Gnome",
-					"dps": 552.6,
-					"behind": 2.02,
-					"tier": "C",
-					"racials": "Eureka! + Expansive Mind"
-				}
-			]
-		},
-		{
-			"spec": "warrior",
-			"class": "Warrior",
-			"build": "Arms 39/12/0",
-			"talents": "32305213132515201-5502",
-			"gear": "arms_launch",
-			"rotation": "dps_no_reck",
-			"consumables": "Arena-Melee",
-			"target": "Elemental",
-			"weaponType": "Sword",
-			"races": [
-				{
-					"race": "Skyborne",
-					"dps": 590.9,
-					"behind": 0,
-					"tier": "S",
-					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
-				},
-				{
-					"race": "Human",
-					"dps": 560.4,
-					"behind": 5.15,
-					"tier": "D",
-					"racials": "Ruthless (+2% crit)"
-				},
-				{
-					"race": "Undead",
-					"dps": 558,
-					"behind": 5.58,
-					"tier": "D",
-					"racials": "Touch of the Grave"
-				},
-				{
-					"race": "Orc",
-					"dps": 557.8,
-					"behind": 5.61,
-					"tier": "D",
-					"racials": "Blood Fury + Savage (+1% crit)"
-				},
-				{
-					"race": "Troll",
-					"dps": 557.2,
-					"behind": 5.7,
-					"tier": "D",
-					"racials": "Berserking"
-				},
-				{
-					"race": "Night Elf",
-					"dps": 555.4,
-					"behind": 6.01,
-					"tier": "D",
-					"racials": "Elune's Light"
-				},
-				{
-					"race": "Tauren",
-					"dps": 553.9,
-					"behind": 6.27,
-					"tier": "D",
-					"racials": "Endurance (+2% crit damage)"
-				},
-				{
-					"race": "Dwarf",
-					"dps": 553.2,
-					"behind": 6.38,
-					"tier": "D",
-					"racials": "Earth Fury (+2% crit damage)"
-				},
-				{
-					"race": "Gnome",
-					"dps": 552.6,
-					"behind": 6.48,
-					"tier": "D",
-					"racials": "Eureka! + Expansive Mind"
-				}
-			]
-		},
-		{
-			"spec": "warrior",
-			"class": "Warrior",
-			"build": "Arms 39/12/0",
-			"talents": "32305213132515201-5502",
-			"gear": "arms_launch",
-			"rotation": "dps_no_reck",
-			"consumables": "Arena-Melee",
-			"target": "Beast",
-			"weaponType": "Sword",
-			"races": [
-				{
-					"race": "Troll",
-					"dps": 583.8,
+					"dps": 674.2,
 					"behind": 0,
 					"tier": "S",
 					"racials": "Berserking + Beast Slaying"
 				},
 				{
 					"race": "Dwarf",
-					"dps": 579.6,
+					"dps": 669.3,
 					"behind": 0.72,
 					"tier": "A",
-					"racials": "Earth Fury (+2% crit damage) + Big Game Hunter"
+					"racials": "Big Game Hunter"
 				},
 				{
-					"race": "Skyborne",
-					"dps": 564,
-					"behind": 3.38,
+					"race": "High Order Skyborne",
+					"dps": 634.7,
+					"behind": 5.86,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 634.7,
+					"behind": 5.86,
 					"tier": "D",
 					"racials": "Wind Blessed (+3% haste)"
 				},
 				{
 					"race": "Human",
-					"dps": 560.4,
-					"behind": 3.99,
+					"dps": 634,
+					"behind": 5.97,
 					"tier": "D",
 					"racials": "Ruthless (+2% crit)"
 				},
 				{
+					"race": "Gnome",
+					"dps": 633.7,
+					"behind": 6.01,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
 					"race": "Undead",
-					"dps": 558,
-					"behind": 4.42,
+					"dps": 632.5,
+					"behind": 6.19,
 					"tier": "D",
 					"racials": "Touch of the Grave"
 				},
 				{
 					"race": "Orc",
-					"dps": 557.8,
-					"behind": 4.45,
+					"dps": 631,
+					"behind": 6.41,
 					"tier": "D",
 					"racials": "Blood Fury + Savage (+1% crit)"
 				},
 				{
 					"race": "Night Elf",
-					"dps": 555.4,
-					"behind": 4.86,
+					"dps": 629.9,
+					"behind": 6.58,
+					"tier": "D",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Combat Muti",
+			"talents": "00532310101401-302303202015152-001",
+			"gear": "Mutilate",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 674.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 674.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Gnome",
+					"dps": 673,
+					"behind": 0.2,
+					"tier": "S",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Human",
+					"dps": 672.9,
+					"behind": 0.21,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 671.7,
+					"behind": 0.39,
+					"tier": "S",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Orc",
+					"dps": 670.8,
+					"behind": 0.52,
+					"tier": "A",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 668.5,
+					"behind": 0.87,
+					"tier": "A",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Troll",
+					"dps": 666.1,
+					"behind": 1.22,
+					"tier": "B",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 661.4,
+					"behind": 1.92,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Combat Muti",
+			"talents": "00532310101401-302303202015152-001",
+			"gear": "Mutilate",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 728.5,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 728.5,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Gnome",
+					"dps": 673,
+					"behind": 7.61,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Human",
+					"dps": 672.9,
+					"behind": 7.63,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 671.7,
+					"behind": 7.79,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Orc",
+					"dps": 670.8,
+					"behind": 7.91,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 668.5,
+					"behind": 8.23,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Troll",
+					"dps": 666.1,
+					"behind": 8.56,
+					"tier": "D",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 661.4,
+					"behind": 9.21,
+					"tier": "D",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Combat Muti",
+			"talents": "00532310101401-302303202015152-001",
+			"gear": "Mutilate",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 719.6,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 714.4,
+					"behind": 0.72,
+					"tier": "A",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 674.3,
+					"behind": 6.28,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 674.3,
+					"behind": 6.28,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Gnome",
+					"dps": 673,
+					"behind": 6.47,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Human",
+					"dps": 672.9,
+					"behind": 6.48,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 671.7,
+					"behind": 6.65,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Orc",
+					"dps": 670.8,
+					"behind": 6.77,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 668.5,
+					"behind": 7.1,
+					"tier": "D",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Combat SS",
+			"talents": "005323101012-32030320201515231",
+			"gear": "Slow Main Hand",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 712.2,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 712.2,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Human",
+					"dps": 710.9,
+					"behind": 0.17,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "Gnome",
+					"dps": 710.1,
+					"behind": 0.29,
+					"tier": "S",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Orc",
+					"dps": 709.1,
+					"behind": 0.43,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 707.8,
+					"behind": 0.61,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 707.6,
+					"behind": 0.64,
+					"tier": "A",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 705.4,
+					"behind": 0.95,
+					"tier": "A",
+					"racials": "Earth Fury (+2% crit damage with a mace)"
+				},
+				{
+					"race": "Troll",
+					"dps": 703.4,
+					"behind": 1.23,
+					"tier": "B",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Combat SS",
+			"talents": "005323101012-32030320201515231",
+			"gear": "Slow Main Hand",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 767.2,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 767.2,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Human",
+					"dps": 710.9,
+					"behind": 7.33,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "Gnome",
+					"dps": 710.1,
+					"behind": 7.43,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Orc",
+					"dps": 709.1,
+					"behind": 7.57,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 707.8,
+					"behind": 7.74,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 707.6,
+					"behind": 7.77,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 705.4,
+					"behind": 8.05,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage with a mace)"
+				},
+				{
+					"race": "Troll",
+					"dps": 703.4,
+					"behind": 8.31,
+					"tier": "D",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Combat SS",
+			"talents": "005323101012-32030320201515231",
+			"gear": "Slow Main Hand",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Dwarf",
+					"dps": 760,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Earth Fury (+2% crit damage with a mace) + Big Game Hunter"
+				},
+				{
+					"race": "Troll",
+					"dps": 757.7,
+					"behind": 0.3,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 712.2,
+					"behind": 6.3,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 712.2,
+					"behind": 6.3,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Human",
+					"dps": 710.9,
+					"behind": 6.46,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "Gnome",
+					"dps": 710.1,
+					"behind": 6.56,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Orc",
+					"dps": 709.1,
+					"behind": 6.7,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 707.8,
+					"behind": 6.87,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 707.6,
+					"behind": 6.9,
+					"tier": "D",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Combat BS",
+			"talents": "00532310101-32030320201515231-002",
+			"gear": "Backstab Combat",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 707.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 707.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Gnome",
+					"dps": 706.9,
+					"behind": 0.13,
+					"tier": "S",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Human",
+					"dps": 706.3,
+					"behind": 0.22,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "Orc",
+					"dps": 704.6,
+					"behind": 0.46,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 704.4,
+					"behind": 0.49,
+					"tier": "S",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 702.9,
+					"behind": 0.69,
+					"tier": "A",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Troll",
+					"dps": 699.2,
+					"behind": 1.22,
+					"tier": "B",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 694.2,
+					"behind": 1.92,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Combat BS",
+			"talents": "00532310101-32030320201515231-002",
+			"gear": "Backstab Combat",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 766.2,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 766.2,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Gnome",
+					"dps": 706.9,
+					"behind": 7.74,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Human",
+					"dps": 706.3,
+					"behind": 7.83,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "Orc",
+					"dps": 704.6,
+					"behind": 8.05,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 704.4,
+					"behind": 8.07,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 702.9,
+					"behind": 8.27,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Troll",
+					"dps": 699.2,
+					"behind": 8.75,
+					"tier": "D",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 694.2,
+					"behind": 9.4,
+					"tier": "D",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Combat BS",
+			"talents": "00532310101-32030320201515231-002",
+			"gear": "Backstab Combat",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 756.9,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 751.5,
+					"behind": 0.72,
+					"tier": "A",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 707.8,
+					"behind": 6.49,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 707.8,
+					"behind": 6.49,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Gnome",
+					"dps": 706.9,
+					"behind": 6.61,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Human",
+					"dps": 706.3,
+					"behind": 6.69,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "Orc",
+					"dps": 704.6,
+					"behind": 6.92,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 704.4,
+					"behind": 6.94,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 702.9,
+					"behind": 7.14,
+					"tier": "D",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Subtlety Hemo",
+			"talents": "005323101014--4323200300013211501",
+			"gear": "Slow Main Hand",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 673.5,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 672,
+					"behind": 0.23,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 672,
+					"behind": 0.23,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Orc",
+					"dps": 671.4,
+					"behind": 0.32,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 671,
+					"behind": 0.38,
+					"tier": "S",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 670.9,
+					"behind": 0.39,
+					"tier": "S",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 669.2,
+					"behind": 0.64,
+					"tier": "A",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 668.4,
+					"behind": 0.77,
+					"tier": "A",
+					"racials": "Earth Fury (+2% crit damage with a mace)"
+				},
+				{
+					"race": "Troll",
+					"dps": 665,
+					"behind": 1.27,
+					"tier": "B",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Subtlety Hemo",
+			"talents": "005323101014--4323200300013211501",
+			"gear": "Slow Main Hand",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 723.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 723.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Human",
+					"dps": 673.5,
+					"behind": 6.95,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "Orc",
+					"dps": 671.4,
+					"behind": 7.25,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 671,
+					"behind": 7.3,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 670.9,
+					"behind": 7.32,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 669.2,
+					"behind": 7.55,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 668.4,
+					"behind": 7.66,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage with a mace)"
+				},
+				{
+					"race": "Troll",
+					"dps": 665,
+					"behind": 8.13,
+					"tier": "D",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Subtlety Hemo",
+			"talents": "005323101014--4323200300013211501",
+			"gear": "Slow Main Hand",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Dwarf",
+					"dps": 720,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Earth Fury (+2% crit damage with a mace) + Big Game Hunter"
+				},
+				{
+					"race": "Troll",
+					"dps": 716.3,
+					"behind": 0.52,
+					"tier": "A",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Human",
+					"dps": 673.5,
+					"behind": 6.45,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 672,
+					"behind": 6.66,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 672,
+					"behind": 6.66,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Orc",
+					"dps": 671.4,
+					"behind": 6.75,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 671,
+					"behind": 6.8,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 670.9,
+					"behind": 6.82,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 669.2,
+					"behind": 7.05,
+					"tier": "D",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Subtlety BS",
+			"talents": "0053031-3203-4320203300013211051",
+			"gear": "Backstab Subtlety",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 650.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 649.5,
+					"behind": 0.13,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 649.5,
+					"behind": 0.13,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Gnome",
+					"dps": 649.3,
+					"behind": 0.16,
+					"tier": "S",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Undead",
+					"dps": 648.1,
+					"behind": 0.33,
+					"tier": "S",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Orc",
+					"dps": 647.9,
+					"behind": 0.36,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 646.2,
+					"behind": 0.63,
+					"tier": "A",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Troll",
+					"dps": 642.5,
+					"behind": 1.2,
+					"tier": "B",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 638.5,
+					"behind": 1.81,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Subtlety BS",
+			"talents": "0053031-3203-4320203300013211051",
+			"gear": "Backstab Subtlety",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 700.9,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 700.9,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Human",
+					"dps": 650.3,
+					"behind": 7.23,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "Gnome",
+					"dps": 649.3,
+					"behind": 7.37,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Undead",
+					"dps": 648.1,
+					"behind": 7.53,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Orc",
+					"dps": 647.9,
+					"behind": 7.56,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 646.2,
+					"behind": 7.81,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Troll",
+					"dps": 642.5,
+					"behind": 8.34,
+					"tier": "D",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 638.5,
+					"behind": 8.91,
+					"tier": "D",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "rogue",
+			"class": "Rogue",
+			"build": "Subtlety BS",
+			"talents": "0053031-3203-4320203300013211051",
+			"gear": "Backstab Subtlety",
+			"rotation": "Configurable",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 693.4,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 689.1,
+					"behind": 0.63,
+					"tier": "A",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "Human",
+					"dps": 650.3,
+					"behind": 6.22,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 649.5,
+					"behind": 6.34,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 649.5,
+					"behind": 6.34,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Gnome",
+					"dps": 649.3,
+					"behind": 6.37,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Undead",
+					"dps": 648.1,
+					"behind": 6.53,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Orc",
+					"dps": 647.9,
+					"behind": 6.56,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 646.2,
+					"behind": 6.81,
+					"tier": "D",
+					"racials": "Elune's Light"
+				}
+			]
+		},
+		{
+			"spec": "elemental_shaman",
+			"class": "Shaman",
+			"build": "Testing",
+			"talents": "5500331023001351-053002001-053",
+			"gear": "Testing",
+			"rotation": "Testing",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 629.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 624.7,
+					"behind": 0.82,
+					"tier": "A",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Orc",
+					"dps": 624.1,
+					"behind": 0.91,
+					"tier": "A",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Troll",
+					"dps": 619.3,
+					"behind": 1.68,
+					"tier": "C",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 616.5,
+					"behind": 2.12,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "elemental_shaman",
+			"class": "Shaman",
+			"build": "Testing",
+			"talents": "5500331023001351-053002001-053",
+			"gear": "Testing",
+			"rotation": "Testing",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 684.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Tauren",
+					"dps": 624.7,
+					"behind": 8.72,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Orc",
+					"dps": 624.1,
+					"behind": 8.81,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Troll",
+					"dps": 619.3,
+					"behind": 9.51,
+					"tier": "D",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 616.5,
+					"behind": 9.92,
+					"tier": "D",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "elemental_shaman",
+			"class": "Shaman",
+			"build": "Testing",
+			"talents": "5500331023001351-053002001-053",
+			"gear": "Testing",
+			"rotation": "Testing",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 672.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 669.8,
+					"behind": 0.45,
+					"tier": "S",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 629.8,
+					"behind": 6.38,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 624.7,
+					"behind": 7.15,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Orc",
+					"dps": 624.1,
+					"behind": 7.24,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				}
+			]
+		},
+		{
+			"spec": "enhancement_shaman",
+			"class": "Shaman",
+			"build": "Testing",
+			"talents": "053503102-053030031005112251",
+			"gear": "Testing",
+			"rotation": "Testing",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 703.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Orc",
+					"dps": 700.6,
+					"behind": 0.38,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 697.7,
+					"behind": 0.8,
+					"tier": "A",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Troll",
+					"dps": 694,
+					"behind": 1.33,
+					"tier": "B",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 691.2,
+					"behind": 1.71,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "enhancement_shaman",
+			"class": "Shaman",
+			"build": "Testing",
+			"talents": "053503102-053030031005112251",
+			"gear": "Testing",
+			"rotation": "Testing",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 755.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Orc",
+					"dps": 700.6,
+					"behind": 7.24,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 697.7,
+					"behind": 7.63,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Troll",
+					"dps": 694,
+					"behind": 8.12,
+					"tier": "D",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 691.2,
+					"behind": 8.48,
+					"tier": "D",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "enhancement_shaman",
+			"class": "Shaman",
+			"build": "Testing",
+			"talents": "053503102-053030031005112251",
+			"gear": "Testing",
+			"rotation": "Testing",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 745.2,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 742.2,
+					"behind": 0.4,
+					"tier": "S",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 703.3,
+					"behind": 5.63,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Orc",
+					"dps": 700.6,
+					"behind": 5.98,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 697.7,
+					"behind": 6.38,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "Demo (Fire Brand)",
+			"talents": "011-0305003201220301351-0050055003",
+			"gear": "preraid",
+			"rotation": "Demo (Fire Brand)",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 717.9,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 716.9,
+					"behind": 0.14,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 714.7,
+					"behind": 0.45,
+					"tier": "S",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 711.4,
+					"behind": 0.9,
+					"tier": "A",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 709.4,
+					"behind": 1.19,
+					"tier": "B",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "Demo (Fire Brand)",
+			"talents": "011-0305003201220301351-0050055003",
+			"gear": "preraid",
+			"rotation": "Demo (Fire Brand)",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 717.9,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 716.9,
+					"behind": 0.14,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 714.7,
+					"behind": 0.45,
+					"tier": "S",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 711.4,
+					"behind": 0.9,
+					"tier": "A",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 709.4,
+					"behind": 1.19,
+					"tier": "B",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "Demo (Fire Brand)",
+			"talents": "011-0305003201220301351-0050055003",
+			"gear": "preraid",
+			"rotation": "Demo (Fire Brand)",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 749.6,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Human",
+					"dps": 717.9,
+					"behind": 4.22,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 716.9,
+					"behind": 4.36,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 714.7,
+					"behind": 4.66,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 711.4,
+					"behind": 5.09,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "Demo (Shadow Brand)",
+			"talents": "011-0005003231220301351-0550005003",
+			"gear": "preraid",
+			"rotation": "Demo (Shadow Brand)",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 699.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 697.4,
+					"behind": 0.28,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 692.9,
+					"behind": 0.92,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 690.4,
+					"behind": 1.28,
+					"tier": "B",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 688.2,
+					"behind": 1.59,
+					"tier": "C",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "Demo (Shadow Brand)",
+			"talents": "011-0005003231220301351-0550005003",
+			"gear": "preraid",
+			"rotation": "Demo (Shadow Brand)",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 699.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 697.4,
+					"behind": 0.28,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 692.9,
+					"behind": 0.92,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 690.4,
+					"behind": 1.28,
+					"tier": "B",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 688.2,
+					"behind": 1.59,
+					"tier": "C",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "Demo (Shadow Brand)",
+			"talents": "011-0005003231220301351-0550005003",
+			"gear": "preraid",
+			"rotation": "Demo (Shadow Brand)",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 726,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Human",
+					"dps": 699.3,
+					"behind": 3.68,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 697.4,
+					"behind": 3.94,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 692.9,
+					"behind": 4.56,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 690.4,
+					"behind": 4.91,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "Destro",
+			"talents": "2530000013-0004-0050355103101351",
+			"gear": "preraid",
+			"rotation": "Destro",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 643.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 641.8,
+					"behind": 0.31,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 639.3,
+					"behind": 0.7,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 636,
+					"behind": 1.21,
+					"tier": "B",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 632.3,
+					"behind": 1.78,
+					"tier": "C",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "Destro",
+			"talents": "2530000013-0004-0050355103101351",
+			"gear": "preraid",
+			"rotation": "Destro",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 643.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 641.8,
+					"behind": 0.31,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 639.3,
+					"behind": 0.7,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 636,
+					"behind": 1.21,
+					"tier": "B",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 632.3,
+					"behind": 1.78,
+					"tier": "C",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "Destro",
+			"talents": "2530000013-0004-0050355103101351",
+			"gear": "preraid",
+			"rotation": "Destro",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 673.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Human",
+					"dps": 643.8,
+					"behind": 4.45,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 641.8,
+					"behind": 4.75,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 639.3,
+					"behind": 5.12,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 636,
+					"behind": 5.6,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "SM/Ruin",
+			"talents": "2540002013520105--0550305003",
+			"gear": "preraid",
+			"rotation": "SM/Ruin",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 645.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 642.7,
+					"behind": 0.47,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 638.2,
+					"behind": 1.17,
+					"tier": "B",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 634.1,
+					"behind": 1.81,
+					"tier": "C",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 632.2,
+					"behind": 2.1,
+					"tier": "C",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "SM/Ruin",
+			"talents": "2540002013520105--0550305003",
+			"gear": "preraid",
+			"rotation": "SM/Ruin",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 645.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 642.7,
+					"behind": 0.47,
+					"tier": "S",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 638.2,
+					"behind": 1.17,
+					"tier": "B",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 634.1,
+					"behind": 1.81,
+					"tier": "C",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 632.2,
+					"behind": 2.1,
+					"tier": "C",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "SM/Ruin",
+			"talents": "2540002013520105--0550305003",
+			"gear": "preraid",
+			"rotation": "SM/Ruin",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 675.1,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Human",
+					"dps": 645.8,
+					"behind": 4.35,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 642.7,
+					"behind": 4.8,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 638.2,
+					"behind": 5.47,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 634.1,
+					"behind": 6.08,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "Aff (Wrack)",
+			"talents": "25300020135201351--0550005003",
+			"gear": "preraid",
+			"rotation": "Aff (Wrack)",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 585.2,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 581.3,
+					"behind": 0.67,
+					"tier": "A",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 580.4,
+					"behind": 0.82,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 576.6,
+					"behind": 1.46,
+					"tier": "B",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 574.1,
+					"behind": 1.89,
+					"tier": "C",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "Aff (Wrack)",
+			"talents": "25300020135201351--0550005003",
+			"gear": "preraid",
+			"rotation": "Aff (Wrack)",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 585.2,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 581.3,
+					"behind": 0.67,
+					"tier": "A",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 580.4,
+					"behind": 0.82,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 576.6,
+					"behind": 1.46,
+					"tier": "B",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 574.1,
+					"behind": 1.89,
+					"tier": "C",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "warlock",
+			"class": "Warlock",
+			"build": "Aff (Wrack)",
+			"talents": "25300020135201351--0550005003",
+			"gear": "preraid",
+			"rotation": "Aff (Wrack)",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 612.8,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Human",
+					"dps": 585.2,
+					"behind": 4.51,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit) + +5% Spirit"
+				},
+				{
+					"race": "Orc",
+					"dps": 581.3,
+					"behind": 5.14,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Undead",
+					"dps": 580.4,
+					"behind": 5.28,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 576.6,
+					"behind": 5.9,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				}
+			]
+		},
+		{
+			"spec": "warrior",
+			"class": "Warrior",
+			"build": "Fury / Pre-BiS",
+			"talents": "30305013002-25053005052010501",
+			"gear": "Pre-BiS",
+			"rotation": "Simple",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 833.2,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 830.4,
+					"behind": 0.33,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 830.4,
+					"behind": 0.33,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Orc",
+					"dps": 826.8,
+					"behind": 0.77,
+					"tier": "A",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 821.3,
+					"behind": 1.42,
+					"tier": "B",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Tauren",
+					"dps": 820.4,
+					"behind": 1.53,
+					"tier": "C",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 819.1,
+					"behind": 1.69,
+					"tier": "C",
+					"racials": "Earth Fury (+2% crit damage with a mace)"
+				},
+				{
+					"race": "Undead",
+					"dps": 818.3,
+					"behind": 1.78,
+					"tier": "C",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 817.3,
+					"behind": 1.91,
+					"tier": "C",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 817.1,
+					"behind": 1.93,
+					"tier": "C",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "warrior",
+			"class": "Warrior",
+			"build": "Fury / Pre-BiS",
+			"talents": "30305013002-25053005052010501",
+			"gear": "Pre-BiS",
+			"rotation": "Simple",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 896.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 896.3,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Human",
+					"dps": 833.2,
+					"behind": 7.04,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "Orc",
+					"dps": 826.8,
+					"behind": 7.76,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 821.3,
+					"behind": 8.37,
 					"tier": "D",
 					"racials": "Elune's Light"
 				},
 				{
 					"race": "Tauren",
-					"dps": 553.9,
-					"behind": 5.12,
+					"dps": 820.4,
+					"behind": 8.46,
 					"tier": "D",
 					"racials": "Endurance (+2% crit damage)"
 				},
 				{
+					"race": "Dwarf",
+					"dps": 819.1,
+					"behind": 8.61,
+					"tier": "D",
+					"racials": "Earth Fury (+2% crit damage with a mace)"
+				},
+				{
+					"race": "Undead",
+					"dps": 818.3,
+					"behind": 8.7,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
 					"race": "Gnome",
-					"dps": 552.6,
-					"behind": 5.33,
+					"dps": 817.3,
+					"behind": 8.81,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 817.1,
+					"behind": 8.83,
+					"tier": "D",
+					"racials": "Berserking"
+				}
+			]
+		},
+		{
+			"spec": "warrior",
+			"class": "Warrior",
+			"build": "Fury / Pre-BiS",
+			"talents": "30305013002-25053005052010501",
+			"gear": "Pre-BiS",
+			"rotation": "Simple",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Dwarf",
+					"dps": 884.1,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Earth Fury (+2% crit damage with a mace) + Big Game Hunter"
+				},
+				{
+					"race": "Troll",
+					"dps": 881.9,
+					"behind": 0.25,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Human",
+					"dps": 833.2,
+					"behind": 5.76,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 830.4,
+					"behind": 6.07,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 830.4,
+					"behind": 6.07,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Orc",
+					"dps": 826.8,
+					"behind": 6.49,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 821.3,
+					"behind": 7.11,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Tauren",
+					"dps": 820.4,
+					"behind": 7.2,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Undead",
+					"dps": 818.3,
+					"behind": 7.45,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Gnome",
+					"dps": 817.3,
+					"behind": 7.56,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				}
+			]
+		},
+		{
+			"spec": "warrior",
+			"class": "Warrior",
+			"build": "Arms / Pre-BiS",
+			"talents": "30325213132515201-0505-2",
+			"gear": "Pre-BiS",
+			"rotation": "Simple",
+			"consumables": "Preset consumables",
+			"target": "Mechanical",
+			"races": [
+				{
+					"race": "Human",
+					"dps": 749,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 745,
+					"behind": 0.53,
+					"tier": "A",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 745,
+					"behind": 0.53,
+					"tier": "A",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Orc",
+					"dps": 745,
+					"behind": 0.55,
+					"tier": "A",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 743.7,
+					"behind": 0.71,
+					"tier": "A",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Undead",
+					"dps": 741.6,
+					"behind": 1,
+					"tier": "A",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 740.4,
+					"behind": 1.15,
+					"tier": "B",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Gnome",
+					"dps": 740.2,
+					"behind": 1.18,
+					"tier": "B",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 737.1,
+					"behind": 1.6,
+					"tier": "C",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 733.7,
+					"behind": 2.05,
+					"tier": "C",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "warrior",
+			"class": "Warrior",
+			"build": "Arms / Pre-BiS",
+			"talents": "30325213132515201-0505-2",
+			"gear": "Pre-BiS",
+			"rotation": "Simple",
+			"consumables": "Preset consumables",
+			"target": "Elemental",
+			"races": [
+				{
+					"race": "High Order Skyborne",
+					"dps": 805.7,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 805.7,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Wind Blessed (+3% haste) + Elemental Insight"
+				},
+				{
+					"race": "Human",
+					"dps": 749,
+					"behind": 7.04,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "Orc",
+					"dps": 745,
+					"behind": 7.54,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 743.7,
+					"behind": 7.7,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Undead",
+					"dps": 741.6,
+					"behind": 7.96,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 740.4,
+					"behind": 8.11,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Gnome",
+					"dps": 740.2,
+					"behind": 8.14,
+					"tier": "D",
+					"racials": "Eureka! + Expansive Mind"
+				},
+				{
+					"race": "Troll",
+					"dps": 737.1,
+					"behind": 8.52,
+					"tier": "D",
+					"racials": "Berserking"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 733.7,
+					"behind": 8.94,
+					"tier": "D",
+					"racials": "base stats only"
+				}
+			]
+		},
+		{
+			"spec": "warrior",
+			"class": "Warrior",
+			"build": "Arms / Pre-BiS",
+			"talents": "30325213132515201-0505-2",
+			"gear": "Pre-BiS",
+			"rotation": "Simple",
+			"consumables": "Preset consumables",
+			"target": "Beast",
+			"races": [
+				{
+					"race": "Troll",
+					"dps": 797.1,
+					"behind": 0,
+					"tier": "S",
+					"racials": "Berserking + Beast Slaying"
+				},
+				{
+					"race": "Dwarf",
+					"dps": 793.4,
+					"behind": 0.47,
+					"tier": "S",
+					"racials": "Big Game Hunter"
+				},
+				{
+					"race": "Human",
+					"dps": 749,
+					"behind": 6.03,
+					"tier": "D",
+					"racials": "Ruthless (+2% crit)"
+				},
+				{
+					"race": "High Order Skyborne",
+					"dps": 745,
+					"behind": 6.53,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Windshaper Skyborne",
+					"dps": 745,
+					"behind": 6.53,
+					"tier": "D",
+					"racials": "Wind Blessed (+3% haste)"
+				},
+				{
+					"race": "Orc",
+					"dps": 745,
+					"behind": 6.54,
+					"tier": "D",
+					"racials": "Blood Fury + Savage (+1% crit)"
+				},
+				{
+					"race": "Tauren",
+					"dps": 743.7,
+					"behind": 6.69,
+					"tier": "D",
+					"racials": "Endurance (+2% crit damage)"
+				},
+				{
+					"race": "Undead",
+					"dps": 741.6,
+					"behind": 6.97,
+					"tier": "D",
+					"racials": "Touch of the Grave"
+				},
+				{
+					"race": "Night Elf",
+					"dps": 740.4,
+					"behind": 7.11,
+					"tier": "D",
+					"racials": "Elune's Light"
+				},
+				{
+					"race": "Gnome",
+					"dps": 740.2,
+					"behind": 7.14,
 					"tier": "D",
 					"racials": "Eureka! + Expansive Mind"
 				}
