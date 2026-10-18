@@ -25,10 +25,9 @@ type build struct {
 }
 
 type row struct {
-	Race         string  `json:"race"`
-	Dps          float64 `json:"dps"`
-	Error        float64 `json:"error"`
-	WeaponRacial bool    `json:"weaponRacial,omitempty"`
+	Race  string  `json:"race"`
+	Dps   float64 `json:"dps"`
+	Error float64 `json:"error"`
 }
 
 type list struct {
@@ -82,7 +81,7 @@ func main() {
 				p := gp.Clone(player).(*proto.Player)
 				p.Race = race
 				p.Buffs = gp.Clone(core.FullIndividualBuffs).(*proto.IndividualBuffs)
-				l.Races = append(l.Races, row{Race: raceName(race), WeaponRacial: hasMace(p)})
+				l.Races = append(l.Races, row{Race: raceName(race)})
 				jobs = append(jobs, job{len(lists), len(l.Races) - 1, p, target})
 			}
 			if len(l.Races) == 0 {
@@ -143,15 +142,6 @@ func raceName(r proto.Race) string {
 		return "Windshaper Skyborne"
 	}
 	return strings.TrimPrefix(r.String(), "Race")
-}
-
-func hasMace(p *proto.Player) bool {
-	for _, spec := range p.Equipment.Items {
-		if item := core.GetItemByID(spec.Id); item != nil && item.WeaponType == proto.WeaponType_WeaponTypeMace {
-			return true
-		}
-	}
-	return false
 }
 
 func check(err error) {

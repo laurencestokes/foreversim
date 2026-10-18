@@ -64,8 +64,8 @@ func TestScore(t *testing.T) {
 		Target: "Mechanical",
 		Races: []rawRow{
 			{Race: "Troll", Dps: 970, Error: 0.2},
-			{Race: "Orc", Dps: 1000, Error: 0.3, WeaponRacial: true},
-			{Race: "Human", Dps: 994, Error: 0.2, Relabelled: "Sword", WeaponRacial: true},
+			{Race: "Orc", Dps: 1000, Error: 0.3},
+			{Race: "Human", Dps: 994, Error: 0.2, Relabelled: "Sword"},
 		},
 	})
 	want := []struct {
@@ -95,20 +95,19 @@ func TestScore(t *testing.T) {
 func TestRacials(t *testing.T) {
 	cases := []struct {
 		race, class, target string
-		weapon              bool
 		want                string
 	}{
-		{"Skyborne", "Mage", "Mechanical", false, "Wind Blessed (+3% haste)"},
-		{"Skyborne", "Mage", "Elemental", false, "Wind Blessed (+3% haste) + Elemental Insight"},
-		{"Dwarf", "Warrior", "Beast", true, "Earth Fury (+2% crit damage with a mace) + Big Game Hunter"},
-		{"Dwarf", "Priest", "Mechanical", false, "base stats only"},
-		{"Gnome", "Mage", "Mechanical", false, "Eureka! + Expansive Mind"},
-		{"Gnome", "Priest", "Mechanical", false, "Eureka! + Expansive Mind"},
-		{"Gnome", "Warlock", "Mechanical", false, "Eureka! + Expansive Mind"},
-		{"Human", "Rogue", "Mechanical", false, "Ruthless (+2% crit)"},
+		{"Skyborne", "Mage", "Mechanical", "Wind Blessed (+3% haste)"},
+		{"Skyborne", "Mage", "Elemental", "Wind Blessed (+3% haste) + Elemental Insight"},
+		{"Dwarf", "Warrior", "Beast", "Earth Fury (+2% crit damage) + Big Game Hunter"},
+		{"Dwarf", "Priest", "Mechanical", "Earth Fury (+2% crit damage)"},
+		{"Gnome", "Mage", "Mechanical", "Eureka! + Expansive Mind"},
+		{"Gnome", "Priest", "Mechanical", "Eureka! + Expansive Mind"},
+		{"Gnome", "Warlock", "Mechanical", "Eureka! + Expansive Mind"},
+		{"Human", "Rogue", "Mechanical", "Ruthless (+2% crit)"},
 	}
 	for _, c := range cases {
-		if got := racials(c.race, c.class, c.target, c.weapon); got != c.want {
+		if got := racials(c.race, c.class, c.target); got != c.want {
 			t.Errorf("%s %s vs %s: %q, want %q", c.race, c.class, c.target, got, c.want)
 		}
 	}

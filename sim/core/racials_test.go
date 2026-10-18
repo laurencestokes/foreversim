@@ -423,8 +423,7 @@ func racialCritMultipliers(sim *Simulation, character *Character) map[string]flo
 	}
 }
 
-// Endurance raises the crit damage bonus of attacks, spells and heals alike by 2% of the base
-// multiplier with any weapon or none, and Earth Fury does while any weapon slot holds a mace.
+// Endurance and Earth Fury raise the crit damage of attacks, spells and heals with any weapon or none.
 func TestCritDamageRacials(t *testing.T) {
 	addRacialTestMaces()
 	bareHands := WeaponTestSlots(0, 0, 0)
@@ -441,8 +440,8 @@ func TestCritDamageRacials(t *testing.T) {
 		{"dwarf with a mace", proto.Race_RaceDwarf, WeaponTestSlots(racialTestMaceID, 0, 0), 1.02},
 		{"dwarf with a two-handed mace", proto.Race_RaceDwarf, WeaponTestSlots(racialTestTwoHandMaceID, 0, 0), 1.02},
 		{"dwarf with a mace in the off hand", proto.Race_RaceDwarf, WeaponTestSlots(WeaponTestDaggerID, racialTestMaceID, 0), 1.02},
-		{"dwarf with a sword", proto.Race_RaceDwarf, sword, 1},
-		{"dwarf with bare hands", proto.Race_RaceDwarf, bareHands, 1},
+		{"dwarf with a sword", proto.Race_RaceDwarf, sword, 1.02},
+		{"dwarf with bare hands", proto.Race_RaceDwarf, bareHands, 1.02},
 	} {
 		human := racialCritMultipliers(NewWeaponTestSim(t, proto.Race_RaceHuman, tc.weapons, nil, nil))
 		for name, got := range racialCritMultipliers(NewWeaponTestSim(t, tc.race, tc.weapons, nil, nil)) {
@@ -453,9 +452,8 @@ func TestCritDamageRacials(t *testing.T) {
 	}
 }
 
-// Earth Fury follows the weapons through an item swap in combat, and an iteration that ends on the
-// swapped weapons starts the next one with the crit damage it began with.
-func TestEarthFuryFollowsAnItemSwapInCombat(t *testing.T) {
+// Earth Fury keeps the same bonus as Endurance through weapon swaps and iteration resets.
+func TestEarthFuryPersistsThroughItemSwaps(t *testing.T) {
 	addRacialTestMaces()
 	withMace := WeaponTestSlots(racialTestMaceID, WeaponTestDaggerID, WeaponTestBowID)
 	withSword := WeaponTestSlots(WeaponTestSwordID, WeaponTestDaggerID, WeaponTestBowID)
@@ -463,19 +461,18 @@ func TestEarthFuryFollowsAnItemSwapInCombat(t *testing.T) {
 	for _, tc := range []struct {
 		name              string
 		equipped, swapped []*proto.ItemSpec
-		before, after     float64
 	}{
-		{"mace swapped for a sword", withMace, withSword, 1.02, 1},
-		{"sword swapped for a mace", withSword, withMace, 1, 1.02},
+		{"mace swapped for a sword", withMace, withSword},
+		{"sword swapped for a mace", withSword, withMace},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			sim, dwarf := NewWeaponTestSim(t, proto.Race_RaceDwarf, tc.equipped, tc.swapped, nil)
-			base := racialCritMultipliers(NewWeaponTestSim(t, proto.Race_RaceHuman, tc.equipped, nil, nil))
-			check := func(when string, want float64) {
+			want := racialCritMultipliers(NewWeaponTestSim(t, proto.Race_RaceTauren, tc.equipped, nil, nil))
+			check := func(when string) {
 				t.Helper()
 				for name, got := range racialCritMultipliers(sim, dwarf) {
-					if !WithinToleranceFloat64(base[name]*want, got, 1e-9) {
-						t.Errorf("%s at %v: a %s should crit for x%0.4f, got x%0.4f", when, sim.CurrentTime, name, base[name]*want, got)
+					if !WithinToleranceFloat64(want[name], got, 1e-9) {
+						t.Errorf("%s at %v: a %s should match Endurance at x%0.4f, got x%0.4f", when, sim.CurrentTime, name, want[name], got)
 					}
 				}
 			}
@@ -484,20 +481,20 @@ func TestEarthFuryFollowsAnItemSwapInCombat(t *testing.T) {
 			for sim.CurrentTime < 3*time.Second {
 				sim.Step()
 			}
-			check("before the swap", tc.before)
+			check("before the swap")
 			dwarf.ItemSwap.SwapItems(sim, proto.APLActionItemSwap_Swap1, false)
-			check("after the swap", tc.after)
+			check("after the swap")
 
 			for sim.CurrentTime < 6*time.Second {
 				sim.Step()
 			}
 			dwarf.ItemSwap.SwapItems(sim, proto.APLActionItemSwap_Main, false)
-			check("after the swap back", tc.before)
+			check("after the swap back")
 
 			dwarf.ItemSwap.SwapItems(sim, proto.APLActionItemSwap_Swap1, false)
 			sim.Cleanup()
 			sim.Reset()
-			check("in the next iteration", tc.before)
+			check("in the next iteration")
 		})
 	}
 }

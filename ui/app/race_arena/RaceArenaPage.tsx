@@ -210,9 +210,8 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 					armor for {data.fight.seconds} seconds.
 				</p>
 				<p className="m-0">
-					The gear keeps its actual weapon types. Dwarf's mace bonus applies only when the preset equips a mace. Both Skyborne races are shown
-					separately. Cooldown racials follow the preset rotation. Rankings include pets and racial base attributes; they measure damage, with no
-					value assigned to survival or utility.
+					The gear keeps its actual weapon types. Both Skyborne races are shown separately. Cooldown racials follow the preset rotation. Rankings
+					include pets and racial base attributes; they measure damage, with no value assigned to survival or utility.
 				</p>
 				<p className="m-0">
 					{formatToNumber(data.iterations)} iterations per race use the same random seed. The largest standard error is{' '}
@@ -221,7 +220,8 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 					damage between builds.
 				</p>
 				<p className="m-0">
-					The engine and race mechanics follow wowsims/forever. A different gear set, fight length or future engine update can change these rankings.
+					The engine follows wowsims/forever with one exception: Dwarf's Earth Fury grants +2% critical damage and healing with any weapon. A
+					different gear set, fight length or future engine update can change these rankings.
 				</p>
 			</section>
 			<Lists data={data} />

@@ -1,6 +1,9 @@
 # Race arena
 
-The simulator, game data and preset builds follow [wowsims/forever](https://github.com/wowsims/forever).
+The simulator, game data and preset builds follow [wowsims/forever](https://github.com/wowsims/forever),
+with one explicit race-mechanics exception: Dwarf's Earth Fury grants +2% critical damage and healing
+with any weapon or none, including through item swaps. This follows the unrestricted bonus in the
+[October 15 development notes](https://us.forums.blizzard.com/en/wow/t/2360696/6) and the spell tooltip.
 The race arena compares every legal race on each DPS build. It keeps the preset's gear, talents,
 resolved rotation, consumables and class options fixed. Warlock presets contain no gear, so they use
 the upstream `preraid` set, as the warlock regression suites do. Development gear sets are included.
@@ -11,7 +14,7 @@ Elemental and Beast targets. Both Skyborne races are included. Weapon types are 
 
 The preset export goes through the UI's existing defaults, build application and player serialization.
 Its test checks that each build has gear, talents and a resolved rotation before writing any input.
-The Go runner uses the canonical engine without changes to its race mechanics.
+The Go runner uses the same engine as the simulator, including the Earth Fury exception above.
 
 ## Rebuild
 

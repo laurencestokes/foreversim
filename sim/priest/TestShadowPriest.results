@@ -1024,45 +1024,45 @@ dps_results: {
 dps_results: {
  key: "TestShadowPriest-Settings-Dwarf-testing-Shadow-default-FullBuffs-0.0yards-LongMultiTarget"
  value: {
-  dps: 847.26598
-  tps: 626.02536
-  dtps: 5.22802
+  dps: 853.54297
+  tps: 629.16365
+  dtps: 5.25492
  }
 }
 dps_results: {
  key: "TestShadowPriest-Settings-Dwarf-testing-Shadow-default-FullBuffs-0.0yards-LongSingleTarget"
  value: {
-  dps: 766.27899
-  tps: 386.09801
-  dtps: 5.20752
+  dps: 772.25922
+  tps: 389.03222
+  dtps: 5.22445
  }
 }
 dps_results: {
  key: "TestShadowPriest-Settings-Dwarf-testing-Shadow-default-FullBuffs-0.0yards-ShortSingleTarget"
  value: {
-  dps: 772.15661
-  tps: 385.81075
+  dps: 778.80137
+  tps: 389.07121
  }
 }
 dps_results: {
  key: "TestShadowPriest-Settings-Dwarf-testing-Shadow-default-NoBuffs-0.0yards-LongMultiTarget"
  value: {
-  dps: 297.21187
-  tps: 208.04831
+  dps: 298.60089
+  tps: 209.02063
  }
 }
 dps_results: {
  key: "TestShadowPriest-Settings-Dwarf-testing-Shadow-default-NoBuffs-0.0yards-LongSingleTarget"
  value: {
-  dps: 297.21187
-  tps: 208.04831
+  dps: 298.60089
+  tps: 209.02063
  }
 }
 dps_results: {
  key: "TestShadowPriest-Settings-Dwarf-testing-Shadow-default-NoBuffs-0.0yards-ShortSingleTarget"
  value: {
-  dps: 539.25678
-  tps: 377.47974
+  dps: 542.32631
+  tps: 379.62842
  }
 }
 dps_results: {

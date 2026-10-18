@@ -74,7 +74,6 @@ type rawRow struct {
 	Dps           float64 `json:"dps"`
 	Error         float64 `json:"error"`
 	Relabelled    string  `json:"relabelled"`
-	WeaponRacial  bool    `json:"weaponRacial"`
 	Shipped       float64 `json:"shipped"`
 	RelabelledDps float64 `json:"relabelledDps"`
 }
@@ -233,7 +232,7 @@ func score(r rawList) (list, float64) {
 			Behind:     behind,
 			Tier:       tierFor(behind),
 			Relabelled: row.Relabelled,
-			Racials:    racials(row.Race, r.Class, r.Target, row.WeaponRacial),
+			Racials:    racials(row.Race, r.Class, r.Target),
 		})
 		worst = max(worst, row.Error/best*100)
 	}
@@ -241,9 +240,9 @@ func score(r rawList) (list, float64) {
 }
 
 // The racials in play for a race on a list, in a few words. Static text: which pieces a race
-// has is fixed, and only the weapon, the class and the target decide which of them count.
+// has is fixed, and only the class and the target decide which of them count.
 // Survival and utility racials are left out, because nothing here measures them.
-func racials(raceName string, class string, target string, weaponRacial bool) string {
+func racials(raceName string, class string, target string) string {
 	parts := []string{}
 	add := func(when bool, part string) {
 		if when {
@@ -257,7 +256,7 @@ func racials(raceName string, class string, target string, weaponRacial bool) st
 
 		add(manaUser, "+5% Spirit")
 	case "Dwarf":
-		add(weaponRacial, "Earth Fury (+2% crit damage with a mace)")
+		add(true, "Earth Fury (+2% crit damage)")
 		add(target == "Beast", "Big Game Hunter")
 	case "Night Elf":
 		add(true, "Elune's Light")
