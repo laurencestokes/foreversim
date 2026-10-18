@@ -8,6 +8,17 @@ The race arena compares every legal race on each DPS build. It keeps the preset'
 resolved rotation, consumables and class options fixed. Warlock presets contain no gear, so they use
 the upstream `preraid` set, as the warlock regression suites do. Development gear sets are included.
 
+The aim is a controlled level-60 baseline for race choice ahead of release. These are the upstream
+presets, including development items, rather than a claim about final release gear. Only the race
+changes within a build; gear and rotations are not optimized separately for each race. Rankings
+measure damage, including pets, with no value assigned to survival or utility. Changes to gear,
+balance, buffs or the encounter can change the ordering.
+
+Each build's **View setup** dialog shows the equipped items, random suffixes, enchants, active weapon
+swap gear and selected talent ranks. These are saved with the results. Item names come from the
+exported player's own database; talent names and ranks come from the matching talent definitions.
+The item and spell links open current game descriptions, which may change after the snapshot.
+
 Every run uses the engine's full raid, party and individual buffs and debuffs, seed 101, and a fixed
 180 second fight against a level 63 target with 3,731 armor. Each build is run against Mechanical,
 Elemental and Beast targets. Both Skyborne races are included. Weapon types are unchanged.
@@ -22,6 +33,7 @@ After installing the dependencies and generating Go and TypeScript sources:
 
 ```sh
 RACE_ARENA_INPUT=/tmp/race-arena-input.json npx vitest run ui/specs/race_arena_export.test.ts
+node tools/race_arena/snapshot.mjs /tmp/race-arena-input.json
 go run -tags=with_db ./tools/race_arena/simulate -input /tmp/race-arena-input.json -out /tmp/race-arena-out
 go run ./tools/race_arena /tmp/race-arena-out
 npx oxfmt ui/app/race_arena/results.json
@@ -30,6 +42,15 @@ npx oxfmt ui/app/race_arena/results.json
 Use an empty output directory. The runner defaults to 50,000 iterations per race; `-iterations 2`
 checks that every build can run, but those results must not replace the published rankings.
 `-workers` limits concurrent simulations. A failed simulation stops the run before writing results.
+
+The runner carries each setup snapshot into its raw results, and the scorer saves one copy per build
+across target types. Missing or inconsistent snapshots stop publication. Run
+`node --test tools/race_arena/snapshot.test.mjs` to check the snapshot extraction.
+
+To attach setups to older results, use the original saved input from that simulation run:
+`node tools/race_arena/snapshot.mjs /path/to/original-input.json ui/app/race_arena/results.json`.
+This reads talent definitions at the results' recorded commit and preserves the DPS, ranks, generation
+date and engine revision. Do not substitute a fresh export after presets have changed.
 
 The manual **Build Race Arena** workflow performs these steps, commits the result and starts the
 Pages deployment on `master`. A concurrent branch update rejects the push so results cannot be

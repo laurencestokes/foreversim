@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -55,18 +56,19 @@ func tierFor(behind float64) string {
 
 // The lists written by tools/race_arena/simulate.
 type rawList struct {
-	Spec           string   `json:"spec"`
-	Class          string   `json:"class"`
-	Build          string   `json:"build"`
-	Talents        string   `json:"talents"`
-	Gear           string   `json:"gear"`
-	Rotation       string   `json:"rotation"`
-	Consumables    string   `json:"consumables"`
-	Target         string   `json:"target"`
-	Iterations     int      `json:"iterations"`
-	KeptWeaponType bool     `json:"keptWeaponType"`
-	WeaponType     string   `json:"weaponType"`
-	Races          []rawRow `json:"races"`
+	Spec           string          `json:"spec"`
+	Class          string          `json:"class"`
+	Build          string          `json:"build"`
+	Talents        string          `json:"talents"`
+	Gear           string          `json:"gear"`
+	Rotation       string          `json:"rotation"`
+	Consumables    string          `json:"consumables"`
+	Target         string          `json:"target"`
+	Iterations     int             `json:"iterations"`
+	KeptWeaponType bool            `json:"keptWeaponType"`
+	WeaponType     string          `json:"weaponType"`
+	Races          []rawRow        `json:"races"`
+	Setup          json.RawMessage `json:"setup"`
 }
 
 type rawRow struct {
@@ -107,13 +109,14 @@ type list struct {
 }
 
 type output struct {
-	Commit     string    `json:"commit"`
-	Generated  time.Time `json:"generated"`
-	Iterations int       `json:"iterations"`
-	Fight      fight     `json:"fight"`
-	Tiers      []tier    `json:"tiers"`
-	Noise      noise     `json:"noise"`
-	Lists      []list    `json:"lists"`
+	Commit     string                     `json:"commit"`
+	Generated  time.Time                  `json:"generated"`
+	Iterations int                        `json:"iterations"`
+	Fight      fight                      `json:"fight"`
+	Tiers      []tier                     `json:"tiers"`
+	Noise      noise                      `json:"noise"`
+	Lists      []list                     `json:"lists"`
+	Setups     map[string]json.RawMessage `json:"setups"`
 }
 
 type fight struct {
@@ -162,8 +165,17 @@ func main() {
 		Generated: time.Now().UTC().Truncate(time.Second),
 		Fight:     fight{fightSeconds, targetLevel, targetArmor},
 		Tiers:     tiers,
+		Setups:    make(map[string]json.RawMessage),
 	}
 	for _, r := range raw {
+		key := r.Spec + "|" + r.Build
+		if len(r.Setup) == 0 || bytes.Equal(r.Setup, []byte("null")) {
+			fail("%s: missing setup snapshot", key)
+		}
+		if previous, exists := out.Setups[key]; exists && !bytes.Equal(previous, r.Setup) {
+			fail("%s: targets have different setup snapshots", key)
+		}
+		out.Setups[key] = r.Setup
 		if out.Iterations != 0 && r.Iterations != out.Iterations {
 			// The page states one iteration count and one noise figure for everything on it.
 			fail("%s / %s ran %d iterations and another list ran %d; rerun them together", r.Spec, r.Build, r.Iterations, out.Iterations)

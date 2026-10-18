@@ -1,4 +1,4 @@
-import { fireEvent, render, within } from '@testing-library/react';
+import { fireEvent, render, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { RaceArenaPage, type RaceArenaResults, type RaceList, tierRange } from './RaceArenaPage';
@@ -25,6 +25,20 @@ const fixture: RaceArenaResults = {
 	fight: { seconds: 180, targetLevel: 63, targetArmor: 3731 },
 	tiers: TIERS,
 	noise: { maxError: 0.038, maxDifference: 0.107 },
+	setups: {
+		'warrior|Fury 17/34/0': {
+			equipment: [
+				{ slot: 'Main hand', item: { id: 1, name: 'Recorded mace of Testing', suffixId: 3, enchant: 'Recorded enchant' } },
+				{ slot: 'Off hand' },
+			],
+			itemSwap: [{ slot: 'Main hand', item: { id: 2, name: 'Recorded sword' } }],
+			talentsString: '30305213-550501015050010051',
+			talents: [
+				{ name: 'Arms', points: 2, talents: [{ id: 10, name: 'Recorded talent', rank: 2, maxRank: 3 }] },
+				{ name: 'Protection', points: 0, talents: [] },
+			],
+		},
+	},
 	lists: [
 		list({
 			races: [
@@ -66,7 +80,30 @@ describe('RaceArenaPage', () => {
 		expect(method.textContent).toContain('wowsims/forever');
 		expect(method.textContent).toContain('actual weapon types');
 		expect(method.textContent).toContain('Both Skyborne races');
+		expect(method.textContent).toContain('pre-release baseline');
+		expect(method.textContent).toContain('development gear');
+		expect(method.textContent).toContain('including through swaps');
 		expect(getByTestId('tier-legend').querySelectorAll('li')).toHaveLength(5);
+	});
+
+	it('opens the recorded gear and talents, including swaps, and closes with Escape', async () => {
+		const { getByRole, findByRole, queryByRole } = render(<RaceArenaPage data={fixture} />);
+		fireEvent.click(getByRole('button', { name: 'View setup for Warrior: Fury 17/34/0' }));
+		const dialog = await findByRole('dialog', { name: 'Warrior: Fury 17/34/0' });
+		const gear = within(dialog).getByRole('tabpanel', { name: 'Gear & enchants' });
+		expect(within(gear).getByRole('link', { name: 'Recorded mace of Testing' }).getAttribute('href')).toContain('item=1?level=60&bonus=3');
+		expect(gear.textContent).toContain('Recorded enchant');
+		expect(gear.textContent).toContain('Empty');
+		expect(within(gear).getByRole('heading', { name: 'Weapon swaps' })).toBeTruthy();
+		expect(within(gear).getByRole('link', { name: 'Recorded sword' })).toBeTruthy();
+		fireEvent.click(within(dialog).getByRole('tab', { name: 'Talents (2/0)' }));
+		const talents = within(dialog).getByRole('tabpanel', { name: 'Talents (2/0)' });
+		expect(within(talents).getByRole('link', { name: 'Recorded talent' }).getAttribute('href')).toContain('spell=10?rank=2');
+		expect(talents.textContent).toContain('2/3');
+		expect(talents.textContent).toContain('No points spent.');
+		expect(talents.textContent).toContain(fixture.setups['warrior|Fury 17/34/0'].talentsString);
+		fireEvent.keyDown(dialog, { key: 'Escape' });
+		await waitFor(() => expect(queryByRole('dialog')).toBeNull());
 	});
 
 	it('puts every race in its tier row, grouped by class, on the neutral target first', () => {

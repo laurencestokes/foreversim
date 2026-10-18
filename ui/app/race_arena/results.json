@@ -5898,5 +5898,9319 @@
 				}
 			]
 		}
-	]
+	],
+	"setups": {
+		"balance_druid|Moonkin": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 10250,
+						"name": "Master's Hat of Magic",
+						"suffixId": 12734,
+						"enchant": "Arcanum of Focus"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 22149,
+						"name": "Beads of Ogre Mojo",
+						"enchant": "Enchant Necklace - Spell Power"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 10253,
+						"name": "Master's Mantle of Magic",
+						"suffixId": 12734
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 272411,
+						"name": "Arcanoweave Cloak"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 10246,
+						"name": "Master's Vest of Magic",
+						"suffixId": 12734,
+						"enchant": "Mystic Rugged Armor Kit"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 10136,
+						"name": "High Councillor's Bracers of Magic",
+						"suffixId": 12734,
+						"enchant": "Enchant Bracer - Greater Spellpower"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 10251,
+						"name": "Master's Gloves of Magic",
+						"suffixId": 12734,
+						"enchant": "Enchant Gloves - Arcane Power"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 18405,
+						"name": "Belt of the Archmage"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 252486,
+						"name": "Ironfeather Leggings",
+						"enchant": "Arcanum of Focus"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 10247,
+						"name": "Master's Boots of Magic",
+						"suffixId": 12734,
+						"enchant": "Mystic Rugged Armor Kit"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 272407,
+						"name": "Blessed Band of Light"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 272406,
+						"name": "Channeler's Ring"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272438,
+						"name": "Weakness Analyzer"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 272439,
+						"name": "Serenity Field"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 274420,
+						"name": "Wisepaw Totem",
+						"enchant": "Enchant 2H Weapon - Spellblasting"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 272430,
+						"name": "Swarming Idol"
+					}
+				}
+			],
+			"talentsString": "5532220115501351--505",
+			"talents": [
+				{
+					"name": "Balance",
+					"points": 41,
+					"talents": [
+						{
+							"id": 16814,
+							"definitionId": 134384,
+							"name": "Improved Wrath",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1223081,
+							"definitionId": 134385,
+							"name": "Genesis",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 16845,
+							"definitionId": 134386,
+							"name": "Moonglow",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16821,
+							"definitionId": 134392,
+							"name": "Improved Moonfire",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1223082,
+							"definitionId": 134388,
+							"name": "Nature's Majesty",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 16819,
+							"definitionId": 134390,
+							"name": "Nature's Reach",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1223083,
+							"definitionId": 134389,
+							"name": "Nature's Splendor",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 5570,
+							"definitionId": 134391,
+							"name": "Insect Swarm",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 16909,
+							"definitionId": 134393,
+							"name": "Vengeance",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 16850,
+							"definitionId": 134394,
+							"name": "Improved Starfire",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 16880,
+							"definitionId": 134395,
+							"name": "Nature's Grace",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 408248,
+							"definitionId": 134396,
+							"name": "Eclipse",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16896,
+							"definitionId": 134397,
+							"name": "Moonfury",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 24858,
+							"definitionId": 134398,
+							"name": "Moonkin Form",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Feral Combat",
+					"points": 0,
+					"talents": []
+				},
+				{
+					"name": "Restoration",
+					"points": 10,
+					"talents": [
+						{
+							"id": 17063,
+							"definitionId": 134418,
+							"name": "Nature's Focus",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17069,
+							"definitionId": 134383,
+							"name": "Naturalist",
+							"rank": 5,
+							"maxRank": 5
+						}
+					]
+				}
+			]
+		},
+		"feral_druid|Bearweave (45s fights)": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 8345,
+						"name": "Wolfshead Helm",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 19491,
+						"name": "Amulet of the Darkmoon",
+						"enchant": "Enchant Necklace - Agility"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 271955,
+						"name": "Theramore Pauldrons"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 18511,
+						"name": "Shifting Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 252484,
+						"name": "Timbermaw Tunic",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 19587,
+						"name": "Forest Stalker's Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 271948,
+						"name": "Theramore Gloves",
+						"enchant": "Enchant Gloves - Superior Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 272396,
+						"name": "Shifter's Belt"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 15065,
+						"name": "Warbear Woolies",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 20715,
+						"name": "Dunestalker's Boots",
+						"enchant": "Enchant Boots - Greater Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 19325,
+						"name": "Don Julio's Band"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 275981,
+						"name": "Ferocious Watcher's Signet"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 19120,
+						"name": "Rune of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270275,
+						"name": "Cleansed Vilebranch Medallion"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 19323,
+						"name": "The Unstoppable Force",
+						"enchant": "Enchant 2H Weapon - Superior Impact"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 272427,
+						"name": "Howling Idol"
+					}
+				}
+			],
+			"talentsString": "050022-55000032021131212051-053",
+			"talents": [
+				{
+					"name": "Balance",
+					"points": 9,
+					"talents": [
+						{
+							"id": 1223081,
+							"definitionId": 134385,
+							"name": "Genesis",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1223082,
+							"definitionId": 134388,
+							"name": "Nature's Majesty",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 16819,
+							"definitionId": 134390,
+							"name": "Nature's Reach",
+							"rank": 2,
+							"maxRank": 2
+						}
+					]
+				},
+				{
+					"name": "Feral Combat",
+					"points": 34,
+					"talents": [
+						{
+							"id": 16934,
+							"definitionId": 134399,
+							"name": "Ferocity",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17003,
+							"definitionId": 134400,
+							"name": "Heart of the Wild",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 16966,
+							"definitionId": 134406,
+							"name": "Shredding Attacks",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16998,
+							"definitionId": 134409,
+							"name": "Savage Fury",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 16942,
+							"definitionId": 134407,
+							"name": "Sharpened Claws",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1322605,
+							"definitionId": 134412,
+							"name": "Shifting Power",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 407995,
+							"definitionId": 134410,
+							"name": "Primal Bite",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 16972,
+							"definitionId": 134413,
+							"name": "Predatory Strikes",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16958,
+							"definitionId": 134408,
+							"name": "Blood Frenzy",
+							"rank": 1,
+							"maxRank": 2
+						},
+						{
+							"id": 1322670,
+							"definitionId": 145859,
+							"name": "Improved Shifting Power",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 17007,
+							"definitionId": 134416,
+							"name": "Leader of the Pack",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 1223242,
+							"definitionId": 134411,
+							"name": "Natural Instinct",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1223246,
+							"definitionId": 134414,
+							"name": "Rend and Tear",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 417141,
+							"definitionId": 134417,
+							"name": "Berserk",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Restoration",
+					"points": 8,
+					"talents": [
+						{
+							"id": 17056,
+							"definitionId": 134419,
+							"name": "Furor",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17069,
+							"definitionId": 134383,
+							"name": "Naturalist",
+							"rank": 3,
+							"maxRank": 5
+						}
+					]
+				}
+			]
+		},
+		"feral_druid|Monocat": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 8345,
+						"name": "Wolfshead Helm",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 19491,
+						"name": "Amulet of the Darkmoon",
+						"enchant": "Enchant Necklace - Agility"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 271955,
+						"name": "Theramore Pauldrons"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 18511,
+						"name": "Shifting Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 252484,
+						"name": "Timbermaw Tunic",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 19587,
+						"name": "Forest Stalker's Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 271948,
+						"name": "Theramore Gloves",
+						"enchant": "Enchant Gloves - Superior Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 272396,
+						"name": "Shifter's Belt"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 15065,
+						"name": "Warbear Woolies",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 20715,
+						"name": "Dunestalker's Boots",
+						"enchant": "Enchant Boots - Greater Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 19325,
+						"name": "Don Julio's Band"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 275981,
+						"name": "Ferocious Watcher's Signet"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 19120,
+						"name": "Rune of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270275,
+						"name": "Cleansed Vilebranch Medallion"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 19323,
+						"name": "The Unstoppable Force",
+						"enchant": "Enchant 2H Weapon - Superior Impact"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 272427,
+						"name": "Howling Idol"
+					}
+				}
+			],
+			"talentsString": "050022-55000032021031212051-054",
+			"talents": [
+				{
+					"name": "Balance",
+					"points": 9,
+					"talents": [
+						{
+							"id": 1223081,
+							"definitionId": 134385,
+							"name": "Genesis",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1223082,
+							"definitionId": 134388,
+							"name": "Nature's Majesty",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 16819,
+							"definitionId": 134390,
+							"name": "Nature's Reach",
+							"rank": 2,
+							"maxRank": 2
+						}
+					]
+				},
+				{
+					"name": "Feral Combat",
+					"points": 33,
+					"talents": [
+						{
+							"id": 16934,
+							"definitionId": 134399,
+							"name": "Ferocity",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17003,
+							"definitionId": 134400,
+							"name": "Heart of the Wild",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 16966,
+							"definitionId": 134406,
+							"name": "Shredding Attacks",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16998,
+							"definitionId": 134409,
+							"name": "Savage Fury",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 16942,
+							"definitionId": 134407,
+							"name": "Sharpened Claws",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1322605,
+							"definitionId": 134412,
+							"name": "Shifting Power",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 16972,
+							"definitionId": 134413,
+							"name": "Predatory Strikes",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16958,
+							"definitionId": 134408,
+							"name": "Blood Frenzy",
+							"rank": 1,
+							"maxRank": 2
+						},
+						{
+							"id": 1322670,
+							"definitionId": 145859,
+							"name": "Improved Shifting Power",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 17007,
+							"definitionId": 134416,
+							"name": "Leader of the Pack",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 1223242,
+							"definitionId": 134411,
+							"name": "Natural Instinct",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1223246,
+							"definitionId": 134414,
+							"name": "Rend and Tear",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 417141,
+							"definitionId": 134417,
+							"name": "Berserk",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Restoration",
+					"points": 9,
+					"talents": [
+						{
+							"id": 17056,
+							"definitionId": 134419,
+							"name": "Furor",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17069,
+							"definitionId": 134383,
+							"name": "Naturalist",
+							"rank": 4,
+							"maxRank": 5
+						}
+					]
+				}
+			]
+		},
+		"feral_druid|Mana Efficient 0/35/16": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 8345,
+						"name": "Wolfshead Helm",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 19491,
+						"name": "Amulet of the Darkmoon",
+						"enchant": "Enchant Necklace - Agility"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 271955,
+						"name": "Theramore Pauldrons"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 18511,
+						"name": "Shifting Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 252484,
+						"name": "Timbermaw Tunic",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 19587,
+						"name": "Forest Stalker's Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 271948,
+						"name": "Theramore Gloves",
+						"enchant": "Enchant Gloves - Superior Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 272396,
+						"name": "Shifter's Belt"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 15065,
+						"name": "Warbear Woolies",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 20715,
+						"name": "Dunestalker's Boots",
+						"enchant": "Enchant Boots - Greater Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 19325,
+						"name": "Don Julio's Band"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 275981,
+						"name": "Ferocious Watcher's Signet"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 19120,
+						"name": "Rune of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270275,
+						"name": "Cleansed Vilebranch Medallion"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 19323,
+						"name": "The Unstoppable Force",
+						"enchant": "Enchant 2H Weapon - Superior Impact"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 272427,
+						"name": "Howling Idol"
+					}
+				}
+			],
+			"talentsString": "0000000000000000-35200032121032212051-0550330000000000",
+			"talents": [
+				{
+					"name": "Balance",
+					"points": 0,
+					"talents": []
+				},
+				{
+					"name": "Feral Combat",
+					"points": 35,
+					"talents": [
+						{
+							"id": 16934,
+							"definitionId": 134399,
+							"name": "Ferocity",
+							"rank": 3,
+							"maxRank": 5
+						},
+						{
+							"id": 17003,
+							"definitionId": 134400,
+							"name": "Heart of the Wild",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17002,
+							"definitionId": 134404,
+							"name": "Feral Swiftness",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 16966,
+							"definitionId": 134406,
+							"name": "Shredding Attacks",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16998,
+							"definitionId": 134409,
+							"name": "Savage Fury",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1238122,
+							"definitionId": 134405,
+							"name": "Feral Charge",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 16942,
+							"definitionId": 134407,
+							"name": "Sharpened Claws",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1322605,
+							"definitionId": 134412,
+							"name": "Shifting Power",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 16972,
+							"definitionId": 134413,
+							"name": "Predatory Strikes",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16958,
+							"definitionId": 134408,
+							"name": "Blood Frenzy",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1322670,
+							"definitionId": 145859,
+							"name": "Improved Shifting Power",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 17007,
+							"definitionId": 134416,
+							"name": "Leader of the Pack",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 1223242,
+							"definitionId": 134411,
+							"name": "Natural Instinct",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1223246,
+							"definitionId": 134414,
+							"name": "Rend and Tear",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 417141,
+							"definitionId": 134417,
+							"name": "Berserk",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Restoration",
+					"points": 16,
+					"talents": [
+						{
+							"id": 17056,
+							"definitionId": 134419,
+							"name": "Furor",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17069,
+							"definitionId": 134383,
+							"name": "Naturalist",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 16833,
+							"definitionId": 134380,
+							"name": "Natural Shapeshifter",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 17106,
+							"definitionId": 134378,
+							"name": "Reflection",
+							"rank": 3,
+							"maxRank": 3
+						}
+					]
+				}
+			]
+		},
+		"feral_druid|Hybrid 9/42/0": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 8345,
+						"name": "Wolfshead Helm",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 19491,
+						"name": "Amulet of the Darkmoon",
+						"enchant": "Enchant Necklace - Agility"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 271955,
+						"name": "Theramore Pauldrons"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 18511,
+						"name": "Shifting Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 252484,
+						"name": "Timbermaw Tunic",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 19587,
+						"name": "Forest Stalker's Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 271948,
+						"name": "Theramore Gloves",
+						"enchant": "Enchant Gloves - Superior Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 272396,
+						"name": "Shifter's Belt"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 15065,
+						"name": "Warbear Woolies",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 20715,
+						"name": "Dunestalker's Boots",
+						"enchant": "Enchant Boots - Greater Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 19325,
+						"name": "Don Julio's Band"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 275981,
+						"name": "Ferocious Watcher's Signet"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 19120,
+						"name": "Rune of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270275,
+						"name": "Cleansed Vilebranch Medallion"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 19323,
+						"name": "The Unstoppable Force",
+						"enchant": "Enchant 2H Weapon - Superior Impact"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 272427,
+						"name": "Howling Idol"
+					}
+				}
+			],
+			"talentsString": "0500220000000000-35230332121132212051-0000000000000000",
+			"talents": [
+				{
+					"name": "Balance",
+					"points": 9,
+					"talents": [
+						{
+							"id": 1223081,
+							"definitionId": 134385,
+							"name": "Genesis",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1223082,
+							"definitionId": 134388,
+							"name": "Nature's Majesty",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 16819,
+							"definitionId": 134390,
+							"name": "Nature's Reach",
+							"rank": 2,
+							"maxRank": 2
+						}
+					]
+				},
+				{
+					"name": "Feral Combat",
+					"points": 42,
+					"talents": [
+						{
+							"id": 16934,
+							"definitionId": 134399,
+							"name": "Ferocity",
+							"rank": 3,
+							"maxRank": 5
+						},
+						{
+							"id": 17003,
+							"definitionId": 134400,
+							"name": "Heart of the Wild",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17002,
+							"definitionId": 134404,
+							"name": "Feral Swiftness",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 16947,
+							"definitionId": 134401,
+							"name": "Feral Instinct",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16929,
+							"definitionId": 134403,
+							"name": "Thick Hide",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16966,
+							"definitionId": 134406,
+							"name": "Shredding Attacks",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16998,
+							"definitionId": 134409,
+							"name": "Savage Fury",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1238122,
+							"definitionId": 134405,
+							"name": "Feral Charge",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 16942,
+							"definitionId": 134407,
+							"name": "Sharpened Claws",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1322605,
+							"definitionId": 134412,
+							"name": "Shifting Power",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 407995,
+							"definitionId": 134410,
+							"name": "Primal Bite",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 16972,
+							"definitionId": 134413,
+							"name": "Predatory Strikes",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16958,
+							"definitionId": 134408,
+							"name": "Blood Frenzy",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1322670,
+							"definitionId": 145859,
+							"name": "Improved Shifting Power",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 17007,
+							"definitionId": 134416,
+							"name": "Leader of the Pack",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 1223242,
+							"definitionId": 134411,
+							"name": "Natural Instinct",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1223246,
+							"definitionId": 134414,
+							"name": "Rend and Tear",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 417141,
+							"definitionId": 134417,
+							"name": "Berserk",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Restoration",
+					"points": 0,
+					"talents": []
+				}
+			]
+		},
+		"hunter|SV Weave": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 16428,
+						"name": "Lieutenant Commander's Chain Helmet",
+						"enchant": "Falcon's Call"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 21809,
+						"name": "Fury of the Forgotten Swarm"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 13116,
+						"name": "Spaulders of the Unseen"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21187,
+						"name": "Earthweave Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 19685,
+						"name": "Primal Batskin Jerkin",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 19687,
+						"name": "Primal Batskin Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 19686,
+						"name": "Primal Batskin Gloves",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 20216,
+						"name": "Belt of Preserved Heads"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22690,
+						"name": "Leggings of the Plague Hunter",
+						"enchant": "Falcon's Call"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 18506,
+						"name": "Mongoose Boots",
+						"enchant": "Enchant Boots - Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 272408,
+						"name": "Cutthroat's Signet"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 21182,
+						"name": "Band of Earthen Might"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270276,
+						"name": "Cleansed Vilebranch Icon"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 250619,
+						"name": "Legionite Glaive",
+						"enchant": "Enchant 2H Weapon - Agility"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 22347,
+						"name": "Fahrad's Reloading Repeater",
+						"enchant": "SAF-T Ultra Precision Scope"
+					}
+				}
+			],
+			"talentsString": "-00530501114-550200030050220151",
+			"talents": [
+				{
+					"name": "Beast Mastery",
+					"points": 0,
+					"talents": []
+				},
+				{
+					"name": "Marksmanship",
+					"points": 20,
+					"talents": [
+						{
+							"id": 19426,
+							"definitionId": 134476,
+							"name": "Lethal Attacks",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1310661,
+							"definitionId": 142622,
+							"name": "Improved Stings",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1223984,
+							"definitionId": 134473,
+							"name": "Careful Aim",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19454,
+							"definitionId": 134471,
+							"name": "Improved Arcane Shot",
+							"rank": 1,
+							"maxRank": 5
+						},
+						{
+							"id": 415370,
+							"definitionId": 134472,
+							"name": "Lone Wolf",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 1299346,
+							"definitionId": 134469,
+							"name": "Trueshot Aura",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 19485,
+							"definitionId": 134467,
+							"name": "Mortal Shots",
+							"rank": 4,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Survival",
+					"points": 31,
+					"talents": [
+						{
+							"id": 24293,
+							"definitionId": 134461,
+							"name": "Improved Tracking",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19295,
+							"definitionId": 134460,
+							"name": "Deflection",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19159,
+							"definitionId": 134458,
+							"name": "Savage Strikes",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 19290,
+							"definitionId": 134452,
+							"name": "Surefooted",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1310627,
+							"definitionId": 142607,
+							"name": "Predator's Edge",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 440529,
+							"definitionId": 134448,
+							"name": "Resourcefulness",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1310532,
+							"definitionId": 134450,
+							"name": "Expose Prey",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1317257,
+							"definitionId": 134446,
+							"name": "Strider Kick",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 19168,
+							"definitionId": 142605,
+							"name": "Lightning Reflexes",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1310533,
+							"definitionId": 134449,
+							"name": "Lacerating Strikes",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				}
+			]
+		},
+		"hunter|MM Weave": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 16428,
+						"name": "Lieutenant Commander's Chain Helmet",
+						"enchant": "Falcon's Call"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 21809,
+						"name": "Fury of the Forgotten Swarm"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 13116,
+						"name": "Spaulders of the Unseen"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21187,
+						"name": "Earthweave Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 19685,
+						"name": "Primal Batskin Jerkin",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 19687,
+						"name": "Primal Batskin Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 19686,
+						"name": "Primal Batskin Gloves",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 20216,
+						"name": "Belt of Preserved Heads"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22690,
+						"name": "Leggings of the Plague Hunter",
+						"enchant": "Falcon's Call"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 18506,
+						"name": "Mongoose Boots",
+						"enchant": "Enchant Boots - Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 272408,
+						"name": "Cutthroat's Signet"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 21182,
+						"name": "Band of Earthen Might"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270276,
+						"name": "Cleansed Vilebranch Icon"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 250619,
+						"name": "Legionite Glaive",
+						"enchant": "Enchant 2H Weapon - Agility"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 22347,
+						"name": "Fahrad's Reloading Repeater",
+						"enchant": "SAF-T Ultra Precision Scope"
+					}
+				}
+			],
+			"talentsString": "-205305031150001-5502000300502201",
+			"talents": [
+				{
+					"name": "Beast Mastery",
+					"points": 0,
+					"talents": []
+				},
+				{
+					"name": "Marksmanship",
+					"points": 26,
+					"talents": [
+						{
+							"id": 19498,
+							"definitionId": 134478,
+							"name": "Hawk Eye",
+							"rank": 2,
+							"maxRank": 3
+						},
+						{
+							"id": 19426,
+							"definitionId": 134476,
+							"name": "Lethal Attacks",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1310661,
+							"definitionId": 142622,
+							"name": "Improved Stings",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1223984,
+							"definitionId": 134473,
+							"name": "Careful Aim",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19454,
+							"definitionId": 134471,
+							"name": "Improved Arcane Shot",
+							"rank": 3,
+							"maxRank": 5
+						},
+						{
+							"id": 415370,
+							"definitionId": 134472,
+							"name": "Lone Wolf",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 1299346,
+							"definitionId": 134469,
+							"name": "Trueshot Aura",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 19485,
+							"definitionId": 134467,
+							"name": "Mortal Shots",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19507,
+							"definitionId": 134463,
+							"name": "Ranged Weapon Specialization",
+							"rank": 1,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Survival",
+					"points": 25,
+					"talents": [
+						{
+							"id": 24293,
+							"definitionId": 134461,
+							"name": "Improved Tracking",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19295,
+							"definitionId": 134460,
+							"name": "Deflection",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19159,
+							"definitionId": 134458,
+							"name": "Savage Strikes",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 19290,
+							"definitionId": 134452,
+							"name": "Surefooted",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1310627,
+							"definitionId": 142607,
+							"name": "Predator's Edge",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 440529,
+							"definitionId": 134448,
+							"name": "Resourcefulness",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1310532,
+							"definitionId": 134450,
+							"name": "Expose Prey",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1317257,
+							"definitionId": 134446,
+							"name": "Strider Kick",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				}
+			]
+		},
+		"hunter|BM Weave": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 16428,
+						"name": "Lieutenant Commander's Chain Helmet",
+						"enchant": "Falcon's Call"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 21809,
+						"name": "Fury of the Forgotten Swarm"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 13116,
+						"name": "Spaulders of the Unseen"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21187,
+						"name": "Earthweave Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 19685,
+						"name": "Primal Batskin Jerkin",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 19687,
+						"name": "Primal Batskin Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 19686,
+						"name": "Primal Batskin Gloves",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 20216,
+						"name": "Belt of Preserved Heads"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22690,
+						"name": "Leggings of the Plague Hunter",
+						"enchant": "Falcon's Call"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 18506,
+						"name": "Mongoose Boots",
+						"enchant": "Enchant Boots - Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 272408,
+						"name": "Cutthroat's Signet"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 21182,
+						"name": "Band of Earthen Might"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270276,
+						"name": "Cleansed Vilebranch Icon"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 250619,
+						"name": "Legionite Glaive",
+						"enchant": "Enchant 2H Weapon - Agility"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 22347,
+						"name": "Fahrad's Reloading Repeater",
+						"enchant": "SAF-T Ultra Precision Scope"
+					}
+				}
+			],
+			"talentsString": "5320001505101251-0053250001-4",
+			"talents": [
+				{
+					"name": "Beast Mastery",
+					"points": 31,
+					"talents": [
+						{
+							"id": 19552,
+							"definitionId": 134422,
+							"name": "Deadly Aspects",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19583,
+							"definitionId": 134438,
+							"name": "Endurance Training",
+							"rank": 3,
+							"maxRank": 5
+						},
+						{
+							"id": 1223755,
+							"definitionId": 134437,
+							"name": "Focused Fire",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 19596,
+							"definitionId": 134432,
+							"name": "Bestial Swiftness",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 19616,
+							"definitionId": 134431,
+							"name": "Unleashed Fury",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19598,
+							"definitionId": 134429,
+							"name": "Ferocity",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1293241,
+							"definitionId": 134428,
+							"name": "Summon Hawk",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 19577,
+							"definitionId": 134426,
+							"name": "Intimidation",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 19590,
+							"definitionId": 134425,
+							"name": "Bestial Discipline",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 19621,
+							"definitionId": 134424,
+							"name": "Frenzy",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19574,
+							"definitionId": 134423,
+							"name": "Bestial Wrath",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Marksmanship",
+					"points": 16,
+					"talents": [
+						{
+							"id": 19426,
+							"definitionId": 134476,
+							"name": "Lethal Attacks",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1310661,
+							"definitionId": 142622,
+							"name": "Improved Stings",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 19416,
+							"definitionId": 134474,
+							"name": "Efficiency",
+							"rank": 2,
+							"maxRank": 5
+						},
+						{
+							"id": 1223984,
+							"definitionId": 134473,
+							"name": "Careful Aim",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1299346,
+							"definitionId": 134469,
+							"name": "Trueshot Aura",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Survival",
+					"points": 4,
+					"talents": [
+						{
+							"id": 24293,
+							"definitionId": 134461,
+							"name": "Improved Tracking",
+							"rank": 4,
+							"maxRank": 5
+						}
+					]
+				}
+			]
+		},
+		"hunter|MM": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 16428,
+						"name": "Lieutenant Commander's Chain Helmet",
+						"enchant": "Falcon's Call"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 21809,
+						"name": "Fury of the Forgotten Swarm"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 13116,
+						"name": "Spaulders of the Unseen"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21187,
+						"name": "Earthweave Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 19685,
+						"name": "Primal Batskin Jerkin",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 19687,
+						"name": "Primal Batskin Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 19686,
+						"name": "Primal Batskin Gloves",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 20216,
+						"name": "Belt of Preserved Heads"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22690,
+						"name": "Leggings of the Plague Hunter",
+						"enchant": "Falcon's Call"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 18506,
+						"name": "Mongoose Boots",
+						"enchant": "Enchant Boots - Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 272408,
+						"name": "Cutthroat's Signet"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 21182,
+						"name": "Band of Earthen Might"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270276,
+						"name": "Cleansed Vilebranch Icon"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 250619,
+						"name": "Legionite Glaive",
+						"enchant": "Enchant 2H Weapon - Agility"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 22347,
+						"name": "Fahrad's Reloading Repeater",
+						"enchant": "SAF-T Ultra Precision Scope"
+					}
+				}
+			],
+			"talentsString": "5-005355251152205-5",
+			"talents": [
+				{
+					"name": "Beast Mastery",
+					"points": 5,
+					"talents": [
+						{
+							"id": 19552,
+							"definitionId": 134422,
+							"name": "Deadly Aspects",
+							"rank": 5,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Marksmanship",
+					"points": 41,
+					"talents": [
+						{
+							"id": 19426,
+							"definitionId": 134476,
+							"name": "Lethal Attacks",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1310661,
+							"definitionId": 142622,
+							"name": "Improved Stings",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 19416,
+							"definitionId": 134474,
+							"name": "Efficiency",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1223984,
+							"definitionId": 134473,
+							"name": "Careful Aim",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 415405,
+							"definitionId": 134470,
+							"name": "Rapid Killing",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 19454,
+							"definitionId": 134471,
+							"name": "Improved Arcane Shot",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 415370,
+							"definitionId": 134472,
+							"name": "Lone Wolf",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 1299346,
+							"definitionId": 134469,
+							"name": "Trueshot Aura",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 19485,
+							"definitionId": 134467,
+							"name": "Mortal Shots",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1223987,
+							"definitionId": 134464,
+							"name": "Rapid Recuperation",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 19461,
+							"definitionId": 134466,
+							"name": "Barrage",
+							"rank": 2,
+							"maxRank": 3
+						},
+						{
+							"id": 19507,
+							"definitionId": 134463,
+							"name": "Ranged Weapon Specialization",
+							"rank": 5,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Survival",
+					"points": 5,
+					"talents": [
+						{
+							"id": 24293,
+							"definitionId": 134461,
+							"name": "Improved Tracking",
+							"rank": 5,
+							"maxRank": 5
+						}
+					]
+				}
+			]
+		},
+		"hunter|BM": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 16428,
+						"name": "Lieutenant Commander's Chain Helmet",
+						"enchant": "Falcon's Call"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 21809,
+						"name": "Fury of the Forgotten Swarm"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 13116,
+						"name": "Spaulders of the Unseen"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21187,
+						"name": "Earthweave Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 19685,
+						"name": "Primal Batskin Jerkin",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 19687,
+						"name": "Primal Batskin Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 19686,
+						"name": "Primal Batskin Gloves",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 20216,
+						"name": "Belt of Preserved Heads"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22690,
+						"name": "Leggings of the Plague Hunter",
+						"enchant": "Falcon's Call"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 18506,
+						"name": "Mongoose Boots",
+						"enchant": "Enchant Boots - Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 272408,
+						"name": "Cutthroat's Signet"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 21182,
+						"name": "Band of Earthen Might"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270276,
+						"name": "Cleansed Vilebranch Icon"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 250619,
+						"name": "Legionite Glaive",
+						"enchant": "Enchant 2H Weapon - Agility"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 22347,
+						"name": "Fahrad's Reloading Repeater",
+						"enchant": "SAF-T Ultra Precision Scope"
+					}
+				}
+			],
+			"talentsString": "5320001505101251-0053250001-4",
+			"talents": [
+				{
+					"name": "Beast Mastery",
+					"points": 31,
+					"talents": [
+						{
+							"id": 19552,
+							"definitionId": 134422,
+							"name": "Deadly Aspects",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19583,
+							"definitionId": 134438,
+							"name": "Endurance Training",
+							"rank": 3,
+							"maxRank": 5
+						},
+						{
+							"id": 1223755,
+							"definitionId": 134437,
+							"name": "Focused Fire",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 19596,
+							"definitionId": 134432,
+							"name": "Bestial Swiftness",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 19616,
+							"definitionId": 134431,
+							"name": "Unleashed Fury",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19598,
+							"definitionId": 134429,
+							"name": "Ferocity",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1293241,
+							"definitionId": 134428,
+							"name": "Summon Hawk",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 19577,
+							"definitionId": 134426,
+							"name": "Intimidation",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 19590,
+							"definitionId": 134425,
+							"name": "Bestial Discipline",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 19621,
+							"definitionId": 134424,
+							"name": "Frenzy",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19574,
+							"definitionId": 134423,
+							"name": "Bestial Wrath",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Marksmanship",
+					"points": 16,
+					"talents": [
+						{
+							"id": 19426,
+							"definitionId": 134476,
+							"name": "Lethal Attacks",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1310661,
+							"definitionId": 142622,
+							"name": "Improved Stings",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 19416,
+							"definitionId": 134474,
+							"name": "Efficiency",
+							"rank": 2,
+							"maxRank": 5
+						},
+						{
+							"id": 1223984,
+							"definitionId": 134473,
+							"name": "Careful Aim",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1299346,
+							"definitionId": 134469,
+							"name": "Trueshot Aura",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Survival",
+					"points": 4,
+					"talents": [
+						{
+							"id": 24293,
+							"definitionId": 134461,
+							"name": "Improved Tracking",
+							"rank": 4,
+							"maxRank": 5
+						}
+					]
+				}
+			]
+		},
+		"hunter|SV": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 16428,
+						"name": "Lieutenant Commander's Chain Helmet",
+						"enchant": "Falcon's Call"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 21809,
+						"name": "Fury of the Forgotten Swarm"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 13116,
+						"name": "Spaulders of the Unseen"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21187,
+						"name": "Earthweave Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 19685,
+						"name": "Primal Batskin Jerkin",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 19687,
+						"name": "Primal Batskin Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 19686,
+						"name": "Primal Batskin Gloves",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 20216,
+						"name": "Belt of Preserved Heads"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22690,
+						"name": "Leggings of the Plague Hunter",
+						"enchant": "Falcon's Call"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 18506,
+						"name": "Mongoose Boots",
+						"enchant": "Enchant Boots - Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 272408,
+						"name": "Cutthroat's Signet"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 21182,
+						"name": "Band of Earthen Might"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270276,
+						"name": "Cleansed Vilebranch Icon"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 250619,
+						"name": "Legionite Glaive",
+						"enchant": "Enchant 2H Weapon - Agility"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 22347,
+						"name": "Fahrad's Reloading Repeater",
+						"enchant": "SAF-T Ultra Precision Scope"
+					}
+				}
+			],
+			"talentsString": "1-00531500114-52225303000021005",
+			"talents": [
+				{
+					"name": "Beast Mastery",
+					"points": 1,
+					"talents": [
+						{
+							"id": 19552,
+							"definitionId": 134422,
+							"name": "Deadly Aspects",
+							"rank": 1,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Marksmanship",
+					"points": 20,
+					"talents": [
+						{
+							"id": 19426,
+							"definitionId": 134476,
+							"name": "Lethal Attacks",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1310661,
+							"definitionId": 142622,
+							"name": "Improved Stings",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 19416,
+							"definitionId": 134474,
+							"name": "Efficiency",
+							"rank": 1,
+							"maxRank": 5
+						},
+						{
+							"id": 1223984,
+							"definitionId": 134473,
+							"name": "Careful Aim",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 415370,
+							"definitionId": 134472,
+							"name": "Lone Wolf",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 1299346,
+							"definitionId": 134469,
+							"name": "Trueshot Aura",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 19485,
+							"definitionId": 134467,
+							"name": "Mortal Shots",
+							"rank": 4,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Survival",
+					"points": 30,
+					"talents": [
+						{
+							"id": 24293,
+							"definitionId": 134461,
+							"name": "Improved Tracking",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19295,
+							"definitionId": 134460,
+							"name": "Deflection",
+							"rank": 2,
+							"maxRank": 5
+						},
+						{
+							"id": 19184,
+							"definitionId": 134459,
+							"name": "Entrapment",
+							"rank": 2,
+							"maxRank": 5
+						},
+						{
+							"id": 19159,
+							"definitionId": 134458,
+							"name": "Savage Strikes",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 19255,
+							"definitionId": 134457,
+							"name": "Survivalist",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19228,
+							"definitionId": 134455,
+							"name": "Improved Wing Clip",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 19290,
+							"definitionId": 134452,
+							"name": "Surefooted",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 440529,
+							"definitionId": 134448,
+							"name": "Resourcefulness",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1310532,
+							"definitionId": 134450,
+							"name": "Expose Prey",
+							"rank": 1,
+							"maxRank": 2
+						},
+						{
+							"id": 19168,
+							"definitionId": 142605,
+							"name": "Lightning Reflexes",
+							"rank": 5,
+							"maxRank": 5
+						}
+					]
+				}
+			]
+		},
+		"hunter|SV Melee": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 16428,
+						"name": "Lieutenant Commander's Chain Helmet",
+						"enchant": "Falcon's Call"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 21809,
+						"name": "Fury of the Forgotten Swarm"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 13116,
+						"name": "Spaulders of the Unseen"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21187,
+						"name": "Earthweave Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 19685,
+						"name": "Primal Batskin Jerkin",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 19687,
+						"name": "Primal Batskin Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 19686,
+						"name": "Primal Batskin Gloves",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 20216,
+						"name": "Belt of Preserved Heads"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22690,
+						"name": "Leggings of the Plague Hunter",
+						"enchant": "Falcon's Call"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 18506,
+						"name": "Mongoose Boots",
+						"enchant": "Enchant Boots - Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 272408,
+						"name": "Cutthroat's Signet"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 21182,
+						"name": "Band of Earthen Might"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270276,
+						"name": "Cleansed Vilebranch Icon"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 13036,
+						"name": "Assassination Blade",
+						"enchant": "Enchant Weapon - Superior Striking"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 12783,
+						"name": "Heartseeker",
+						"enchant": "Enchant Weapon - Superior Striking"
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 22347,
+						"name": "Fahrad's Reloading Repeater",
+						"enchant": "SAF-T Ultra Precision Scope"
+					}
+				}
+			],
+			"talentsString": "53200005021-005005-5502000300500201",
+			"talents": [
+				{
+					"name": "Beast Mastery",
+					"points": 18,
+					"talents": [
+						{
+							"id": 19552,
+							"definitionId": 134422,
+							"name": "Deadly Aspects",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19583,
+							"definitionId": 134438,
+							"name": "Endurance Training",
+							"rank": 3,
+							"maxRank": 5
+						},
+						{
+							"id": 1223755,
+							"definitionId": 134437,
+							"name": "Focused Fire",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 19616,
+							"definitionId": 134431,
+							"name": "Unleashed Fury",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19598,
+							"definitionId": 134429,
+							"name": "Ferocity",
+							"rank": 2,
+							"maxRank": 5
+						},
+						{
+							"id": 1293241,
+							"definitionId": 134428,
+							"name": "Summon Hawk",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Marksmanship",
+					"points": 10,
+					"talents": [
+						{
+							"id": 19426,
+							"definitionId": 134476,
+							"name": "Lethal Attacks",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1223984,
+							"definitionId": 134473,
+							"name": "Careful Aim",
+							"rank": 5,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Survival",
+					"points": 23,
+					"talents": [
+						{
+							"id": 24293,
+							"definitionId": 134461,
+							"name": "Improved Tracking",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19295,
+							"definitionId": 134460,
+							"name": "Deflection",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 19159,
+							"definitionId": 134458,
+							"name": "Savage Strikes",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 19290,
+							"definitionId": 134452,
+							"name": "Surefooted",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1310627,
+							"definitionId": 142607,
+							"name": "Predator's Edge",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1310532,
+							"definitionId": 134450,
+							"name": "Expose Prey",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1317257,
+							"definitionId": 134446,
+							"name": "Strider Kick",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				}
+			]
+		},
+		"mage|Arcane": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 22498,
+						"name": "Frostfire Circlet"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 23057,
+						"name": "Gem of Trapped Innocents"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 22499,
+						"name": "Frostfire Shoulderpads"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21415,
+						"name": "Drape of Vaulted Secrets"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 22496,
+						"name": "Frostfire Robe"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 22503,
+						"name": "Frostfire Bindings"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 22501,
+						"name": "Frostfire Gloves"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 22502,
+						"name": "Frostfire Belt"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22497,
+						"name": "Frostfire Leggings"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 22500,
+						"name": "Frostfire Sandals"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 23025,
+						"name": "Seal of the Damned"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 23062,
+						"name": "Frostfire Ring"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 19339,
+						"name": "Mind Quickening Gem"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 19379,
+						"name": "Neltharion's Tear"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 22589,
+						"name": "Atiesh, Greatstaff of the Guardian"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 19108,
+						"name": "Wand of Biting Cold"
+					}
+				}
+			],
+			"talentsString": "0552205003100311531-03-0515",
+			"talents": [
+				{
+					"name": "Arcane",
+					"points": 37,
+					"talents": [
+						{
+							"id": 11222,
+							"definitionId": 135344,
+							"name": "Arcane Focus",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 11237,
+							"definitionId": 135343,
+							"name": "Improved Channeling",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 400588,
+							"definitionId": 135332,
+							"name": "Missile Barrage",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 11210,
+							"definitionId": 135342,
+							"name": "Arcane Subtlety",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 11213,
+							"definitionId": 135340,
+							"name": "Arcane Concentration",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 11242,
+							"definitionId": 135337,
+							"name": "Arcane Impact",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 400574,
+							"definitionId": 135336,
+							"name": "Arcane Blast",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 18462,
+							"definitionId": 135333,
+							"name": "Arcane Meditation",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1326079,
+							"definitionId": 145958,
+							"name": "Arcane Wrath",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 12043,
+							"definitionId": 135331,
+							"name": "Presence of Mind",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 11232,
+							"definitionId": 135330,
+							"name": "Arcane Mind",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 15058,
+							"definitionId": 135329,
+							"name": "Arcane Instability",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 12042,
+							"definitionId": 135328,
+							"name": "Arcane Power",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Fire",
+					"points": 3,
+					"talents": [
+						{
+							"id": 18459,
+							"definitionId": 135326,
+							"name": "Incineration",
+							"rank": 3,
+							"maxRank": 3
+						}
+					]
+				},
+				{
+					"name": "Frost",
+					"points": 11,
+					"talents": [
+						{
+							"id": 11070,
+							"definitionId": 135309,
+							"name": "Improved Frostbolt",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 29438,
+							"definitionId": 135308,
+							"name": "Elemental Precision",
+							"rank": 1,
+							"maxRank": 5
+						},
+						{
+							"id": 11207,
+							"definitionId": 135307,
+							"name": "Ice Shards",
+							"rank": 5,
+							"maxRank": 5
+						}
+					]
+				}
+			]
+		},
+		"mage|FFB": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 22498,
+						"name": "Frostfire Circlet"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 23057,
+						"name": "Gem of Trapped Innocents"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 22499,
+						"name": "Frostfire Shoulderpads"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21415,
+						"name": "Drape of Vaulted Secrets"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 22496,
+						"name": "Frostfire Robe"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 22503,
+						"name": "Frostfire Bindings"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 22501,
+						"name": "Frostfire Gloves"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 22502,
+						"name": "Frostfire Belt"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22497,
+						"name": "Frostfire Leggings"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 22500,
+						"name": "Frostfire Sandals"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 23025,
+						"name": "Seal of the Damned"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 23062,
+						"name": "Frostfire Ring"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 19339,
+						"name": "Mind Quickening Gem"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 19379,
+						"name": "Neltharion's Tear"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 22589,
+						"name": "Atiesh, Greatstaff of the Guardian"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 19108,
+						"name": "Wand of Biting Cold"
+					}
+				}
+			],
+			"talentsString": "-2355000013011503-00550003310003002",
+			"talents": [
+				{
+					"name": "Arcane",
+					"points": 0,
+					"talents": []
+				},
+				{
+					"name": "Fire",
+					"points": 29,
+					"talents": [
+						{
+							"id": 11078,
+							"definitionId": 135327,
+							"name": "Improved Fire Blast",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 18459,
+							"definitionId": 135326,
+							"name": "Incineration",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 11069,
+							"definitionId": 135325,
+							"name": "Improved Fireball",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 11119,
+							"definitionId": 135324,
+							"name": "Ignite",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 11366,
+							"definitionId": 135320,
+							"name": "Pyroblast",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 11095,
+							"definitionId": 135318,
+							"name": "Improved Scorch",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 400624,
+							"definitionId": 135316,
+							"name": "Heating Up",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 29074,
+							"definitionId": 135315,
+							"name": "Master of Elements",
+							"rank": 1,
+							"maxRank": 3
+						},
+						{
+							"id": 11115,
+							"definitionId": 135314,
+							"name": "Critical Mass",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 11124,
+							"definitionId": 135312,
+							"name": "Fire Power",
+							"rank": 3,
+							"maxRank": 3
+						}
+					]
+				},
+				{
+					"name": "Frost",
+					"points": 22,
+					"talents": [
+						{
+							"id": 29438,
+							"definitionId": 135308,
+							"name": "Elemental Precision",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 11207,
+							"definitionId": 135307,
+							"name": "Ice Shards",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 11151,
+							"definitionId": 135303,
+							"name": "Piercing Ice",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 11160,
+							"definitionId": 135302,
+							"name": "Frost Channeling",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1312002,
+							"definitionId": 135297,
+							"name": "Ice Lance",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 11170,
+							"definitionId": 135298,
+							"name": "Shatter",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 400647,
+							"definitionId": 135294,
+							"name": "Fingers of Frost",
+							"rank": 2,
+							"maxRank": 2
+						}
+					]
+				}
+			]
+		},
+		"mage|Fire": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 22498,
+						"name": "Frostfire Circlet"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 23057,
+						"name": "Gem of Trapped Innocents"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 22499,
+						"name": "Frostfire Shoulderpads"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21415,
+						"name": "Drape of Vaulted Secrets"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 22496,
+						"name": "Frostfire Robe"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 22503,
+						"name": "Frostfire Bindings"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 22501,
+						"name": "Frostfire Gloves"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 22502,
+						"name": "Frostfire Belt"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22497,
+						"name": "Frostfire Leggings"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 22500,
+						"name": "Frostfire Sandals"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 23025,
+						"name": "Seal of the Damned"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 23062,
+						"name": "Frostfire Ring"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 19339,
+						"name": "Mind Quickening Gem"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 19379,
+						"name": "Neltharion's Tear"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 22589,
+						"name": "Atiesh, Greatstaff of the Guardian"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 19108,
+						"name": "Wand of Biting Cold"
+					}
+				}
+			],
+			"talentsString": "0502205-23550000130135031-005",
+			"talents": [
+				{
+					"name": "Arcane",
+					"points": 14,
+					"talents": [
+						{
+							"id": 11222,
+							"definitionId": 135344,
+							"name": "Arcane Focus",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 400588,
+							"definitionId": 135332,
+							"name": "Missile Barrage",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 11210,
+							"definitionId": 135342,
+							"name": "Arcane Subtlety",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 11213,
+							"definitionId": 135340,
+							"name": "Arcane Concentration",
+							"rank": 5,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Fire",
+					"points": 32,
+					"talents": [
+						{
+							"id": 11078,
+							"definitionId": 135327,
+							"name": "Improved Fire Blast",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 18459,
+							"definitionId": 135326,
+							"name": "Incineration",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 11069,
+							"definitionId": 135325,
+							"name": "Improved Fireball",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 11119,
+							"definitionId": 135324,
+							"name": "Ignite",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 11366,
+							"definitionId": 135320,
+							"name": "Pyroblast",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 11095,
+							"definitionId": 135318,
+							"name": "Improved Scorch",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 400624,
+							"definitionId": 135316,
+							"name": "Heating Up",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 29074,
+							"definitionId": 135315,
+							"name": "Master of Elements",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 11115,
+							"definitionId": 135314,
+							"name": "Critical Mass",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 11124,
+							"definitionId": 135312,
+							"name": "Fire Power",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 11129,
+							"definitionId": 135311,
+							"name": "Combustion",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Frost",
+					"points": 5,
+					"talents": [
+						{
+							"id": 29438,
+							"definitionId": 135308,
+							"name": "Elemental Precision",
+							"rank": 5,
+							"maxRank": 5
+						}
+					]
+				}
+			]
+		},
+		"retribution_paladin|Twist of Light": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 12640,
+						"name": "Lionheart Helm",
+						"enchant": "Arcanum of Rapidity"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 22150,
+						"name": "Beads of Ogre Might",
+						"enchant": "Enchant Necklace - Agility"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 22093,
+						"name": "Soulforge Spaulders"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 272411,
+						"name": "Arcanoweave Cloak",
+						"enchant": "Enchant Cloak - Lesser Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 22089,
+						"name": "Soulforge Breastplate",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 22088,
+						"name": "Soulforge Bracers",
+						"enchant": "Enchant Bracer - Healing Power"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 22090,
+						"name": "Soulforge Gauntlets",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 22086,
+						"name": "Soulforge Belt"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22385,
+						"name": "Titanic Leggings",
+						"enchant": "Arcanum of Rapidity"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 22087,
+						"name": "Soulforge Boots",
+						"enchant": "Enchant Boots - Greater Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 21182,
+						"name": "Band of Earthen Might"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 19325,
+						"name": "Don Julio's Band"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 274759,
+						"name": "Everlook Pathcarver"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 12784,
+						"name": "Arcanite Reaper",
+						"enchant": "Enchant Weapon - Crusader"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 272435,
+						"name": "Libram of Law"
+					}
+				}
+			],
+			"talentsString": "55003003--05225331101330321",
+			"talents": [
+				{
+					"name": "Holy",
+					"points": 16,
+					"talents": [
+						{
+							"id": 20262,
+							"definitionId": 135164,
+							"name": "Divine Strength",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 20257,
+							"definitionId": 134827,
+							"name": "Divine Intellect",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 20224,
+							"definitionId": 134829,
+							"name": "Improved Seals",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1310899,
+							"definitionId": 142623,
+							"name": "Reverence",
+							"rank": 3,
+							"maxRank": 3
+						}
+					]
+				},
+				{
+					"name": "Protection",
+					"points": 0,
+					"talents": []
+				},
+				{
+					"name": "Retribution",
+					"points": 35,
+					"talents": [
+						{
+							"id": 20101,
+							"definitionId": 135236,
+							"name": "Benediction",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 25956,
+							"definitionId": 135235,
+							"name": "Improved Judgement",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1237268,
+							"definitionId": 135234,
+							"name": "Holy Conduit",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 20117,
+							"definitionId": 135233,
+							"name": "Conviction",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 9452,
+							"definitionId": 135232,
+							"name": "Vindication",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1311074,
+							"definitionId": 135231,
+							"name": "Sanctified Judgement",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 20375,
+							"definitionId": 135226,
+							"name": "Seal of Command",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 26022,
+							"definitionId": 135229,
+							"name": "Pursuit of Justice",
+							"rank": 1,
+							"maxRank": 2
+						},
+						{
+							"id": 1311087,
+							"definitionId": 135230,
+							"name": "Sacred Arbiter",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 20111,
+							"definitionId": 135227,
+							"name": "Two-Handed Weapon Specialization",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 20049,
+							"definitionId": 135223,
+							"name": "Vengeance",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1311084,
+							"definitionId": 142634,
+							"name": "Champion of the Light",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1311085,
+							"definitionId": 142632,
+							"name": "Instrument of Law",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1310735,
+							"definitionId": 135222,
+							"name": "Twist of Light",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				}
+			]
+		},
+		"retribution_paladin|Holy Shock": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 16686,
+						"name": "Magister's Crown"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 15856,
+						"name": "Archlight Talisman",
+						"enchant": "Enchant Necklace - Spell Power"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 16729,
+						"name": "Lightforge Spaulders"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 272411,
+						"name": "Arcanoweave Cloak",
+						"enchant": "Enchant Cloak - Lesser Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 16666,
+						"name": "Vest of Elements",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 16722,
+						"name": "Lightforge Bracers",
+						"enchant": "Enchant Bracer - Healing Power"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 16672,
+						"name": "Gauntlets of Elements",
+						"enchant": "Enchant Gloves - Healing Power"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 16723,
+						"name": "Lightforge Belt"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 16687,
+						"name": "Magister's Leggings",
+						"enchant": "Mystic Rugged Armor Kit"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 16682,
+						"name": "Magister's Boots",
+						"enchant": "Mystic Rugged Armor Kit"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 272407,
+						"name": "Blessed Band of Light"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 272406,
+						"name": "Channeler's Ring"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 270225,
+						"name": "Jewel of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 9449,
+						"name": "Manual Crowd Pummeler",
+						"enchant": "Enchant 2H Weapon - Mighty Spell Power"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 272435,
+						"name": "Libram of Law"
+					}
+				}
+			],
+			"itemSwap": [
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 15257,
+						"name": "Shin Blade of Healing",
+						"suffixId": 12919,
+						"enchant": "Enchant 2H Weapon - Mighty Spell Power"
+					}
+				}
+			],
+			"talentsString": "550030032101012--052252300012303",
+			"talents": [
+				{
+					"name": "Holy",
+					"points": 23,
+					"talents": [
+						{
+							"id": 20262,
+							"definitionId": 135164,
+							"name": "Divine Strength",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 20257,
+							"definitionId": 134827,
+							"name": "Divine Intellect",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 20224,
+							"definitionId": 134829,
+							"name": "Improved Seals",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1310899,
+							"definitionId": 142623,
+							"name": "Reverence",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 429144,
+							"definitionId": 134822,
+							"name": "Purifying Power",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 426065,
+							"definitionId": 142625,
+							"name": "Infusion of Light",
+							"rank": 1,
+							"maxRank": 2
+						},
+						{
+							"id": 20216,
+							"definitionId": 134820,
+							"name": "Divine Favor",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 1311606,
+							"definitionId": 134818,
+							"name": "Holy Shock",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 1310905,
+							"definitionId": 142624,
+							"name": "Consecrated Ground",
+							"rank": 2,
+							"maxRank": 2
+						}
+					]
+				},
+				{
+					"name": "Protection",
+					"points": 0,
+					"talents": []
+				},
+				{
+					"name": "Retribution",
+					"points": 28,
+					"talents": [
+						{
+							"id": 20101,
+							"definitionId": 135236,
+							"name": "Benediction",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 25956,
+							"definitionId": 135235,
+							"name": "Improved Judgement",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1237268,
+							"definitionId": 135234,
+							"name": "Holy Conduit",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 20117,
+							"definitionId": 135233,
+							"name": "Conviction",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 9452,
+							"definitionId": 135232,
+							"name": "Vindication",
+							"rank": 2,
+							"maxRank": 3
+						},
+						{
+							"id": 1311074,
+							"definitionId": 135231,
+							"name": "Sanctified Judgement",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1311087,
+							"definitionId": 135230,
+							"name": "Sacred Arbiter",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 20111,
+							"definitionId": 135227,
+							"name": "Two-Handed Weapon Specialization",
+							"rank": 2,
+							"maxRank": 3
+						},
+						{
+							"id": 20049,
+							"definitionId": 135223,
+							"name": "Vengeance",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1311084,
+							"definitionId": 142634,
+							"name": "Champion of the Light",
+							"rank": 3,
+							"maxRank": 3
+						}
+					]
+				}
+			]
+		},
+		"shadow_priest|Shadow Testing": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 14332,
+						"name": "Eternal Crown of Shadow Wrath",
+						"suffixId": 12761
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 23125,
+						"name": "Chains of the Lich"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 14112,
+						"name": "Felcloth Shoulders"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 272411,
+						"name": "Arcanoweave Cloak"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 14136,
+						"name": "Robe of Winter Night",
+						"enchant": "Mystic Rugged Armor Kit"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 10248,
+						"name": "Master's Bracers of Shadow Wrath",
+						"suffixId": 12761,
+						"enchant": "Enchant Bracer - Superior Intellect"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 18407,
+						"name": "Felcloth Gloves",
+						"enchant": "Mystic Rugged Armor Kit"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 10255,
+						"name": "Master's Belt of Shadow Wrath",
+						"suffixId": 12761
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 10252,
+						"name": "Master's Leggings of Shadow Wrath",
+						"suffixId": 12761,
+						"enchant": "Mystic Rugged Armor Kit"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 10247,
+						"name": "Master's Boots of Shadow Wrath",
+						"suffixId": 12761,
+						"enchant": "Mystic Rugged Armor Kit"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 272407,
+						"name": "Blessed Band of Light"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 275973,
+						"name": "Brilliant Watcher's Signet"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272438,
+						"name": "Weakness Analyzer"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270225,
+						"name": "Jewel of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 22688,
+						"name": "Verimonde's Last Resort",
+						"enchant": "Enchant Weapon - Revelation"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 15942,
+						"name": "Master's Rod of Shadow Wrath",
+						"suffixId": 12761
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 15283,
+						"name": "Lunar Wand of Shadow Wrath",
+						"suffixId": 12761
+					}
+				}
+			],
+			"talentsString": "00530320103--50052201251302051",
+			"talents": [
+				{
+					"name": "Discipline",
+					"points": 17,
+					"talents": [
+						{
+							"id": 1225132,
+							"definitionId": 135379,
+							"name": "Twin Disciplines",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 14523,
+							"definitionId": 135378,
+							"name": "Silent Resolve",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 18551,
+							"definitionId": 135367,
+							"name": "Mental Strength",
+							"rank": 3,
+							"maxRank": 5
+						},
+						{
+							"id": 14531,
+							"definitionId": 135375,
+							"name": "Martyrdom",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 14751,
+							"definitionId": 135374,
+							"name": "Inner Focus",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14521,
+							"definitionId": 135373,
+							"name": "Meditation",
+							"rank": 3,
+							"maxRank": 3
+						}
+					]
+				},
+				{
+					"name": "Holy",
+					"points": 0,
+					"talents": []
+				},
+				{
+					"name": "Shadow",
+					"points": 34,
+					"talents": [
+						{
+							"id": 15260,
+							"definitionId": 142597,
+							"name": "Shadow Focus",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 15273,
+							"definitionId": 135361,
+							"name": "Improved Mind Blast",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 15275,
+							"definitionId": 135360,
+							"name": "Improved Shadow Word: Pain",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 17322,
+							"definitionId": 135359,
+							"name": "Shadow Reach",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 15407,
+							"definitionId": 135356,
+							"name": "Mind Flay",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 1225139,
+							"definitionId": 135355,
+							"name": "Improved Mind Flay",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1326159,
+							"definitionId": 135353,
+							"name": "Dark Inspiration",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 15286,
+							"definitionId": 135350,
+							"name": "Vampiric Embrace",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 15257,
+							"definitionId": 135351,
+							"name": "Shadow Weaving",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1309950,
+							"definitionId": 135349,
+							"name": "Devouring Contagion",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 15259,
+							"definitionId": 135348,
+							"name": "Darkness",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 15473,
+							"definitionId": 135347,
+							"name": "Shadowform",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				}
+			]
+		},
+		"smite_priest|Smite Testing": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 260212,
+						"name": "Bad Hat"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 23125,
+						"name": "Chains of the Lich"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 19050,
+						"name": "Mantle of the Timbermaw"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 19121,
+						"name": "Deep Woodlands Cloak"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 14141,
+						"name": "Ghostweave Vest"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 254071,
+						"name": "Netherlight Cuffs"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 254105,
+						"name": "Radiant Gloves"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 19047,
+						"name": "Wisdom of the Timbermaw"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 14144,
+						"name": "Ghostweave Pants"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 254013,
+						"name": "Earthen Silk Slippers"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 275738,
+						"name": "Jereman's Bauble"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 19523,
+						"name": "Lorekeeper's Ring"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 10659,
+						"name": "Shard of the Splithooves"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270225,
+						"name": "Jewel of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 274420,
+						"name": "Wisepaw Totem"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 249385,
+						"name": "Brilliant Wand"
+					}
+				}
+			],
+			"talentsString": "525235031030001001-30515100002-3",
+			"talents": [
+				{
+					"name": "Discipline",
+					"points": 31,
+					"talents": [
+						{
+							"id": 1309969,
+							"definitionId": 142599,
+							"name": "Power in Light",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 14524,
+							"definitionId": 135380,
+							"name": "Wand Specialization",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1225132,
+							"definitionId": 135379,
+							"name": "Twin Disciplines",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 14523,
+							"definitionId": 135378,
+							"name": "Silent Resolve",
+							"rank": 2,
+							"maxRank": 3
+						},
+						{
+							"id": 1309957,
+							"definitionId": 142598,
+							"name": "Holy Precision",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 18551,
+							"definitionId": 135367,
+							"name": "Mental Strength",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 14520,
+							"definitionId": 135372,
+							"name": "Mental Agility",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14751,
+							"definitionId": 135374,
+							"name": "Inner Focus",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14521,
+							"definitionId": 135373,
+							"name": "Meditation",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 402174,
+							"definitionId": 135364,
+							"name": "Penance",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 10060,
+							"definitionId": 135366,
+							"name": "Power Infusion",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Holy",
+					"points": 17,
+					"talents": [
+						{
+							"id": 14913,
+							"definitionId": 135397,
+							"name": "Twilight Focus",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14889,
+							"definitionId": 142601,
+							"name": "Holy Specialization",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 27900,
+							"definitionId": 135394,
+							"name": "Spell Warding",
+							"rank": 1,
+							"maxRank": 5
+						},
+						{
+							"id": 18530,
+							"definitionId": 135393,
+							"name": "Divine Fury",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 15237,
+							"definitionId": 135392,
+							"name": "Holy Nova",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14909,
+							"definitionId": 135387,
+							"name": "Searing Light",
+							"rank": 2,
+							"maxRank": 2
+						}
+					]
+				},
+				{
+					"name": "Shadow",
+					"points": 3,
+					"talents": [
+						{
+							"id": 15260,
+							"definitionId": 142597,
+							"name": "Shadow Focus",
+							"rank": 3,
+							"maxRank": 5
+						}
+					]
+				}
+			]
+		},
+		"rogue|Asn Muti": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 22005,
+						"name": "Darkmantle Cap",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 22150,
+						"name": "Beads of Ogre Might"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 272105,
+						"name": "Darkspear Pauldrons"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21187,
+						"name": "Earthweave Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 22009,
+						"name": "Darkmantle Tunic",
+						"enchant": "Enchant Chest - Living Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 22004,
+						"name": "Darkmantle Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 22006,
+						"name": "Darkmantle Gloves",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 272395,
+						"name": "Assassin's Waistguard"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22007,
+						"name": "Darkmantle Pants",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 22003,
+						"name": "Darkmantle Boots",
+						"enchant": "Enchant Boots - Minor Speed"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 19325,
+						"name": "Don Julio's Band"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 21189,
+						"name": "Might of Cenarius"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 19120,
+						"name": "Rune of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 19324,
+						"name": "The Lobotomizer",
+						"enchant": "Enchant Weapon - Crusader"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 5267,
+						"name": "Scarlet Kris",
+						"enchant": "Enchant Weapon - Agility"
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 22347,
+						"name": "Fahrad's Reloading Repeater"
+					}
+				}
+			],
+			"talentsString": "00532310151501031-302303202014",
+			"talents": [
+				{
+					"name": "Assassination",
+					"points": 31,
+					"talents": [
+						{
+							"id": 14138,
+							"definitionId": 135252,
+							"name": "Malice",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 14156,
+							"definitionId": 135251,
+							"name": "Ruthlessness",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14158,
+							"definitionId": 135250,
+							"name": "Murder",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 14165,
+							"definitionId": 135269,
+							"name": "Improved Slice and Dice",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14179,
+							"definitionId": 135289,
+							"name": "Relentless Strikes",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14128,
+							"definitionId": 135246,
+							"name": "Lethality",
+							"rank": 1,
+							"maxRank": 5
+						},
+						{
+							"id": 16513,
+							"definitionId": 135244,
+							"name": "Vile Poisons",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 14177,
+							"definitionId": 135245,
+							"name": "Cold Blood",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14113,
+							"definitionId": 135243,
+							"name": "Improved Poisons",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1310707,
+							"definitionId": 135239,
+							"name": "Mutilate",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14186,
+							"definitionId": 135240,
+							"name": "Seal Fate",
+							"rank": 3,
+							"maxRank": 5
+						},
+						{
+							"id": 1310703,
+							"definitionId": 135242,
+							"name": "Venom",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Combat",
+					"points": 20,
+					"talents": [
+						{
+							"id": 14162,
+							"definitionId": 135238,
+							"name": "Improved Eviscerate",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13712,
+							"definitionId": 145370,
+							"name": "Lightning Reflexes",
+							"rank": 2,
+							"maxRank": 5
+						},
+						{
+							"id": 1224716,
+							"definitionId": 135249,
+							"name": "Puncturing Wounds",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13705,
+							"definitionId": 135267,
+							"name": "Precision",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13742,
+							"definitionId": 135266,
+							"name": "Endurance",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 13743,
+							"definitionId": 135262,
+							"name": "Improved Sprint",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1310711,
+							"definitionId": 138268,
+							"name": "Flawless Execution",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 13715,
+							"definitionId": 135270,
+							"name": "Dual Wield Specialization",
+							"rank": 4,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Subtlety",
+					"points": 0,
+					"talents": []
+				}
+			]
+		},
+		"rogue|Combat Muti": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 22005,
+						"name": "Darkmantle Cap",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 22150,
+						"name": "Beads of Ogre Might"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 272105,
+						"name": "Darkspear Pauldrons"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21187,
+						"name": "Earthweave Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 22009,
+						"name": "Darkmantle Tunic",
+						"enchant": "Enchant Chest - Living Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 22004,
+						"name": "Darkmantle Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 22006,
+						"name": "Darkmantle Gloves",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 272395,
+						"name": "Assassin's Waistguard"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22007,
+						"name": "Darkmantle Pants",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 22003,
+						"name": "Darkmantle Boots",
+						"enchant": "Enchant Boots - Minor Speed"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 19325,
+						"name": "Don Julio's Band"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 21189,
+						"name": "Might of Cenarius"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 19120,
+						"name": "Rune of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 19324,
+						"name": "The Lobotomizer",
+						"enchant": "Enchant Weapon - Crusader"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 5267,
+						"name": "Scarlet Kris",
+						"enchant": "Enchant Weapon - Agility"
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 22347,
+						"name": "Fahrad's Reloading Repeater"
+					}
+				}
+			],
+			"talentsString": "00532310101401-302303202015152-001",
+			"talents": [
+				{
+					"name": "Assassination",
+					"points": 21,
+					"talents": [
+						{
+							"id": 14138,
+							"definitionId": 135252,
+							"name": "Malice",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 14156,
+							"definitionId": 135251,
+							"name": "Ruthlessness",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14158,
+							"definitionId": 135250,
+							"name": "Murder",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 14165,
+							"definitionId": 135269,
+							"name": "Improved Slice and Dice",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14179,
+							"definitionId": 135289,
+							"name": "Relentless Strikes",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14128,
+							"definitionId": 135246,
+							"name": "Lethality",
+							"rank": 1,
+							"maxRank": 5
+						},
+						{
+							"id": 14177,
+							"definitionId": 135245,
+							"name": "Cold Blood",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14113,
+							"definitionId": 135243,
+							"name": "Improved Poisons",
+							"rank": 4,
+							"maxRank": 5
+						},
+						{
+							"id": 1310707,
+							"definitionId": 135239,
+							"name": "Mutilate",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Combat",
+					"points": 29,
+					"talents": [
+						{
+							"id": 14162,
+							"definitionId": 135238,
+							"name": "Improved Eviscerate",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13712,
+							"definitionId": 145370,
+							"name": "Lightning Reflexes",
+							"rank": 2,
+							"maxRank": 5
+						},
+						{
+							"id": 1224716,
+							"definitionId": 135249,
+							"name": "Puncturing Wounds",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13705,
+							"definitionId": 135267,
+							"name": "Precision",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13742,
+							"definitionId": 135266,
+							"name": "Endurance",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 13743,
+							"definitionId": 135262,
+							"name": "Improved Sprint",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1310711,
+							"definitionId": 138268,
+							"name": "Flawless Execution",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 13715,
+							"definitionId": 135270,
+							"name": "Dual Wield Specialization",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 13877,
+							"definitionId": 135258,
+							"name": "Blade Flurry",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 13960,
+							"definitionId": 135257,
+							"name": "Hack and Slash",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 30919,
+							"definitionId": 135256,
+							"name": "Weapon Expertise",
+							"rank": 2,
+							"maxRank": 2
+						}
+					]
+				},
+				{
+					"name": "Subtlety",
+					"points": 1,
+					"talents": [
+						{
+							"id": 14057,
+							"definitionId": 135290,
+							"name": "Opportunity",
+							"rank": 1,
+							"maxRank": 2
+						}
+					]
+				}
+			]
+		},
+		"rogue|Combat SS": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 22005,
+						"name": "Darkmantle Cap",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 22150,
+						"name": "Beads of Ogre Might"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 272105,
+						"name": "Darkspear Pauldrons"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21187,
+						"name": "Earthweave Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 22009,
+						"name": "Darkmantle Tunic",
+						"enchant": "Enchant Chest - Living Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 22004,
+						"name": "Darkmantle Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 22006,
+						"name": "Darkmantle Gloves",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 272395,
+						"name": "Assassin's Waistguard"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22007,
+						"name": "Darkmantle Pants",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 22003,
+						"name": "Darkmantle Boots",
+						"enchant": "Enchant Boots - Minor Speed"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 19325,
+						"name": "Don Julio's Band"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 21189,
+						"name": "Might of Cenarius"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 19120,
+						"name": "Rune of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 22384,
+						"name": "Persuader",
+						"enchant": "Enchant Weapon - Crusader"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 871,
+						"name": "Flurry Axe",
+						"enchant": "Enchant Weapon - Agility"
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 22347,
+						"name": "Fahrad's Reloading Repeater"
+					}
+				}
+			],
+			"talentsString": "005323101012-32030320201515231",
+			"talents": [
+				{
+					"name": "Assassination",
+					"points": 18,
+					"talents": [
+						{
+							"id": 14138,
+							"definitionId": 135252,
+							"name": "Malice",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 14156,
+							"definitionId": 135251,
+							"name": "Ruthlessness",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14158,
+							"definitionId": 135250,
+							"name": "Murder",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 14165,
+							"definitionId": 135269,
+							"name": "Improved Slice and Dice",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14179,
+							"definitionId": 135289,
+							"name": "Relentless Strikes",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14128,
+							"definitionId": 135246,
+							"name": "Lethality",
+							"rank": 1,
+							"maxRank": 5
+						},
+						{
+							"id": 14177,
+							"definitionId": 135245,
+							"name": "Cold Blood",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14113,
+							"definitionId": 135243,
+							"name": "Improved Poisons",
+							"rank": 2,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Combat",
+					"points": 33,
+					"talents": [
+						{
+							"id": 14162,
+							"definitionId": 135238,
+							"name": "Improved Eviscerate",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13732,
+							"definitionId": 135271,
+							"name": "Improved Sinister Strike",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1224716,
+							"definitionId": 135249,
+							"name": "Puncturing Wounds",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13705,
+							"definitionId": 135267,
+							"name": "Precision",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13742,
+							"definitionId": 135266,
+							"name": "Endurance",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 13743,
+							"definitionId": 135262,
+							"name": "Improved Sprint",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1310711,
+							"definitionId": 138268,
+							"name": "Flawless Execution",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 13715,
+							"definitionId": 135270,
+							"name": "Dual Wield Specialization",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 13877,
+							"definitionId": 135258,
+							"name": "Blade Flurry",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 13960,
+							"definitionId": 135257,
+							"name": "Hack and Slash",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 30919,
+							"definitionId": 135256,
+							"name": "Weapon Expertise",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 18427,
+							"definitionId": 135260,
+							"name": "Aggression",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13750,
+							"definitionId": 135254,
+							"name": "Adrenaline Rush",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Subtlety",
+					"points": 0,
+					"talents": []
+				}
+			]
+		},
+		"rogue|Combat BS": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 22005,
+						"name": "Darkmantle Cap",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 22150,
+						"name": "Beads of Ogre Might"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 272105,
+						"name": "Darkspear Pauldrons"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21187,
+						"name": "Earthweave Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 22009,
+						"name": "Darkmantle Tunic",
+						"enchant": "Enchant Chest - Living Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 22004,
+						"name": "Darkmantle Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 22006,
+						"name": "Darkmantle Gloves",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 272395,
+						"name": "Assassin's Waistguard"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22007,
+						"name": "Darkmantle Pants",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 22003,
+						"name": "Darkmantle Boots",
+						"enchant": "Enchant Boots - Minor Speed"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 19325,
+						"name": "Don Julio's Band"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 21189,
+						"name": "Might of Cenarius"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 19120,
+						"name": "Rune of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 19324,
+						"name": "The Lobotomizer",
+						"enchant": "Enchant Weapon - Crusader"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 871,
+						"name": "Flurry Axe",
+						"enchant": "Enchant Weapon - Agility"
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 22347,
+						"name": "Fahrad's Reloading Repeater"
+					}
+				}
+			],
+			"talentsString": "00532310101-32030320201515231-002",
+			"talents": [
+				{
+					"name": "Assassination",
+					"points": 16,
+					"talents": [
+						{
+							"id": 14138,
+							"definitionId": 135252,
+							"name": "Malice",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 14156,
+							"definitionId": 135251,
+							"name": "Ruthlessness",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14158,
+							"definitionId": 135250,
+							"name": "Murder",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 14165,
+							"definitionId": 135269,
+							"name": "Improved Slice and Dice",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14179,
+							"definitionId": 135289,
+							"name": "Relentless Strikes",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14128,
+							"definitionId": 135246,
+							"name": "Lethality",
+							"rank": 1,
+							"maxRank": 5
+						},
+						{
+							"id": 14177,
+							"definitionId": 135245,
+							"name": "Cold Blood",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Combat",
+					"points": 33,
+					"talents": [
+						{
+							"id": 14162,
+							"definitionId": 135238,
+							"name": "Improved Eviscerate",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13732,
+							"definitionId": 135271,
+							"name": "Improved Sinister Strike",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1224716,
+							"definitionId": 135249,
+							"name": "Puncturing Wounds",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13705,
+							"definitionId": 135267,
+							"name": "Precision",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13742,
+							"definitionId": 135266,
+							"name": "Endurance",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 13743,
+							"definitionId": 135262,
+							"name": "Improved Sprint",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1310711,
+							"definitionId": 138268,
+							"name": "Flawless Execution",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 13715,
+							"definitionId": 135270,
+							"name": "Dual Wield Specialization",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 13877,
+							"definitionId": 135258,
+							"name": "Blade Flurry",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 13960,
+							"definitionId": 135257,
+							"name": "Hack and Slash",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 30919,
+							"definitionId": 135256,
+							"name": "Weapon Expertise",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 18427,
+							"definitionId": 135260,
+							"name": "Aggression",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13750,
+							"definitionId": 135254,
+							"name": "Adrenaline Rush",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Subtlety",
+					"points": 2,
+					"talents": [
+						{
+							"id": 14057,
+							"definitionId": 135290,
+							"name": "Opportunity",
+							"rank": 2,
+							"maxRank": 2
+						}
+					]
+				}
+			]
+		},
+		"rogue|Subtlety Hemo": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 22005,
+						"name": "Darkmantle Cap",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 22150,
+						"name": "Beads of Ogre Might"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 272105,
+						"name": "Darkspear Pauldrons"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21187,
+						"name": "Earthweave Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 22009,
+						"name": "Darkmantle Tunic",
+						"enchant": "Enchant Chest - Living Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 22004,
+						"name": "Darkmantle Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 22006,
+						"name": "Darkmantle Gloves",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 272395,
+						"name": "Assassin's Waistguard"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22007,
+						"name": "Darkmantle Pants",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 22003,
+						"name": "Darkmantle Boots",
+						"enchant": "Enchant Boots - Minor Speed"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 19325,
+						"name": "Don Julio's Band"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 21189,
+						"name": "Might of Cenarius"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 19120,
+						"name": "Rune of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 22384,
+						"name": "Persuader",
+						"enchant": "Enchant Weapon - Crusader"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 871,
+						"name": "Flurry Axe",
+						"enchant": "Enchant Weapon - Agility"
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 22347,
+						"name": "Fahrad's Reloading Repeater"
+					}
+				}
+			],
+			"talentsString": "005323101014--4323200300013211501",
+			"talents": [
+				{
+					"name": "Assassination",
+					"points": 20,
+					"talents": [
+						{
+							"id": 14138,
+							"definitionId": 135252,
+							"name": "Malice",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 14156,
+							"definitionId": 135251,
+							"name": "Ruthlessness",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14158,
+							"definitionId": 135250,
+							"name": "Murder",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 14165,
+							"definitionId": 135269,
+							"name": "Improved Slice and Dice",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14179,
+							"definitionId": 135289,
+							"name": "Relentless Strikes",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14128,
+							"definitionId": 135246,
+							"name": "Lethality",
+							"rank": 1,
+							"maxRank": 5
+						},
+						{
+							"id": 14177,
+							"definitionId": 135245,
+							"name": "Cold Blood",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14113,
+							"definitionId": 135243,
+							"name": "Improved Poisons",
+							"rank": 4,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Combat",
+					"points": 0,
+					"talents": []
+				},
+				{
+					"name": "Subtlety",
+					"points": 31,
+					"talents": [
+						{
+							"id": 13975,
+							"definitionId": 135286,
+							"name": "Camouflage",
+							"rank": 4,
+							"maxRank": 5
+						},
+						{
+							"id": 13958,
+							"definitionId": 135291,
+							"name": "Master of Deception",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14057,
+							"definitionId": 135290,
+							"name": "Opportunity",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 13983,
+							"definitionId": 135281,
+							"name": "Setup",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13981,
+							"definitionId": 135283,
+							"name": "Elusiveness",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 13976,
+							"definitionId": 135285,
+							"name": "Initiative",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14183,
+							"definitionId": 135273,
+							"name": "Premeditation",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14171,
+							"definitionId": 135282,
+							"name": "Serrated Blades",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14082,
+							"definitionId": 135275,
+							"name": "Dirty Deeds",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 14185,
+							"definitionId": 135276,
+							"name": "Preparation",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 16511,
+							"definitionId": 135278,
+							"name": "Hemorrhage",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 1310728,
+							"definitionId": 142619,
+							"name": "Quietus",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1310721,
+							"definitionId": 142618,
+							"name": "Thousand Cuts",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				}
+			]
+		},
+		"rogue|Subtlety BS": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 22005,
+						"name": "Darkmantle Cap",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 22150,
+						"name": "Beads of Ogre Might"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 272105,
+						"name": "Darkspear Pauldrons"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 21187,
+						"name": "Earthweave Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 22009,
+						"name": "Darkmantle Tunic",
+						"enchant": "Enchant Chest - Living Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 22004,
+						"name": "Darkmantle Bracers",
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 22006,
+						"name": "Darkmantle Gloves",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 272395,
+						"name": "Assassin's Waistguard"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22007,
+						"name": "Darkmantle Pants",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 22003,
+						"name": "Darkmantle Boots",
+						"enchant": "Enchant Boots - Minor Speed"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 19325,
+						"name": "Don Julio's Band"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 21189,
+						"name": "Might of Cenarius"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 19120,
+						"name": "Rune of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 19324,
+						"name": "The Lobotomizer",
+						"enchant": "Enchant Weapon - Crusader"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 871,
+						"name": "Flurry Axe",
+						"enchant": "Enchant Weapon - Agility"
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 22347,
+						"name": "Fahrad's Reloading Repeater"
+					}
+				}
+			],
+			"talentsString": "0053031-3203-4320203300013211051",
+			"talents": [
+				{
+					"name": "Assassination",
+					"points": 12,
+					"talents": [
+						{
+							"id": 14138,
+							"definitionId": 135252,
+							"name": "Malice",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 14156,
+							"definitionId": 135251,
+							"name": "Ruthlessness",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14165,
+							"definitionId": 135269,
+							"name": "Improved Slice and Dice",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14179,
+							"definitionId": 135289,
+							"name": "Relentless Strikes",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Combat",
+					"points": 8,
+					"talents": [
+						{
+							"id": 14162,
+							"definitionId": 135238,
+							"name": "Improved Eviscerate",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13732,
+							"definitionId": 135271,
+							"name": "Improved Sinister Strike",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1224716,
+							"definitionId": 135249,
+							"name": "Puncturing Wounds",
+							"rank": 3,
+							"maxRank": 3
+						}
+					]
+				},
+				{
+					"name": "Subtlety",
+					"points": 31,
+					"talents": [
+						{
+							"id": 13975,
+							"definitionId": 135286,
+							"name": "Camouflage",
+							"rank": 4,
+							"maxRank": 5
+						},
+						{
+							"id": 13958,
+							"definitionId": 135291,
+							"name": "Master of Deception",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14057,
+							"definitionId": 135290,
+							"name": "Opportunity",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 13981,
+							"definitionId": 135283,
+							"name": "Elusiveness",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 14079,
+							"definitionId": 135279,
+							"name": "Improved Ambush",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 13976,
+							"definitionId": 135285,
+							"name": "Initiative",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14183,
+							"definitionId": 135273,
+							"name": "Premeditation",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 14171,
+							"definitionId": 135282,
+							"name": "Serrated Blades",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 14082,
+							"definitionId": 135275,
+							"name": "Dirty Deeds",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 14185,
+							"definitionId": 135276,
+							"name": "Preparation",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 16511,
+							"definitionId": 135278,
+							"name": "Hemorrhage",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 462708,
+							"definitionId": 135280,
+							"name": "Cutthroat",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1310721,
+							"definitionId": 142618,
+							"name": "Thousand Cuts",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				}
+			]
+		},
+		"elemental_shaman|Testing": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 252604,
+						"name": "Blue Dragonscale Helm",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 23125,
+						"name": "Chains of the Lich",
+						"enchant": "Enchant Necklace - Spell Power"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 19050,
+						"name": "Mantle of the Timbermaw"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 272411,
+						"name": "Arcanoweave Cloak",
+						"enchant": "Enchant Cloak - Subtlety"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 10246,
+						"name": "Master's Vest of Magic",
+						"suffixId": 12734,
+						"enchant": "Enchant Chest - Major Intellect"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 10248,
+						"name": "Master's Bracers of Magic",
+						"suffixId": 12734,
+						"enchant": "Enchant Bracer - Superior Intellect"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 17721,
+						"name": "Gloves of the Greatfather",
+						"enchant": "Enchant Gloves - Natural Power"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 20047,
+						"name": "Highlander's Cloth Girdle"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 252486,
+						"name": "Ironfeather Leggings",
+						"enchant": "Lesser Arcane Amalgamation"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 10247,
+						"name": "Master's Boots of Magic",
+						"suffixId": 12734,
+						"enchant": "Mystic Rugged Armor Kit"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 272407,
+						"name": "Blessed Band of Light"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 13001,
+						"name": "Maiden's Circle"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272438,
+						"name": "Weakness Analyzer"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270225,
+						"name": "Jewel of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 22688,
+						"name": "Verimonde's Last Resort",
+						"enchant": "Enchant Weapon - Revelation"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 11904,
+						"name": "Spirit of Aquementas"
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 23199,
+						"name": "Totem of the Storm"
+					}
+				}
+			],
+			"talentsString": "5500331023001351-053002001-053",
+			"talents": [
+				{
+					"name": "Elemental",
+					"points": 32,
+					"talents": [
+						{
+							"id": 16039,
+							"definitionId": 134234,
+							"name": "Convection",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 16035,
+							"definitionId": 134233,
+							"name": "Concussion",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 16578,
+							"definitionId": 134232,
+							"name": "Elemental Alacrity",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16038,
+							"definitionId": 134231,
+							"name": "Call of Flame",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16164,
+							"definitionId": 134229,
+							"name": "Elemental Focus",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 16086,
+							"definitionId": 134225,
+							"name": "Trial by Fire",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 29062,
+							"definitionId": 134224,
+							"name": "Eye of the Storm",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 408490,
+							"definitionId": 134221,
+							"name": "Lava Burst",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 408438,
+							"definitionId": 134220,
+							"name": "Lightning Overload",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16089,
+							"definitionId": 134227,
+							"name": "Elemental Fury",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 16166,
+							"definitionId": 134219,
+							"name": "Elemental Mastery",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Enhancement",
+					"points": 11,
+					"talents": [
+						{
+							"id": 16255,
+							"definitionId": 134214,
+							"name": "Thundering Strikes",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17485,
+							"definitionId": 134217,
+							"name": "Ancestral Knowledge",
+							"rank": 3,
+							"maxRank": 5
+						},
+						{
+							"id": 16262,
+							"definitionId": 134213,
+							"name": "Improved Ghost Wolf",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1223030,
+							"definitionId": 134210,
+							"name": "Shamanistic Focus",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Restoration",
+					"points": 8,
+					"talents": [
+						{
+							"id": 16179,
+							"definitionId": 134190,
+							"name": "Tidal Focus",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1223033,
+							"definitionId": 134195,
+							"name": "Mindfulness",
+							"rank": 3,
+							"maxRank": 3
+						}
+					]
+				}
+			]
+		},
+		"enhancement_shaman|Testing": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 252605,
+						"name": "Black Dragonscale Helm",
+						"enchant": "Arcanum of Rapidity"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 22150,
+						"name": "Beads of Ogre Might"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 275737,
+						"name": "Hermit's Pauldron"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 272411,
+						"name": "Arcanoweave Cloak",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 252483,
+						"name": "Dawn Armor",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 16714,
+						"name": "Wildheart Bracers",
+						"enchant": "Enchant Bracer - Superior Strength"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 21278,
+						"name": "Stormshroud Gloves",
+						"enchant": "Enchant Gloves - Greater Strength"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 20216,
+						"name": "Belt of Preserved Heads"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 252486,
+						"name": "Ironfeather Leggings",
+						"enchant": "Arcanum of Rapidity"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 22096,
+						"name": "Boots of The Five Thunders",
+						"enchant": "Enchant Boots - Greater Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 275973,
+						"name": "Brilliant Watcher's Signet"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 272406,
+						"name": "Channeler's Ring"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 249469,
+						"name": "Frozen Heart of the Mountain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 12784,
+						"name": "Arcanite Reaper",
+						"enchant": "Enchant Weapon - Crusader"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 23199,
+						"name": "Totem of the Storm"
+					}
+				}
+			],
+			"talentsString": "053503102-053030031005112251",
+			"talents": [
+				{
+					"name": "Elemental",
+					"points": 19,
+					"talents": [
+						{
+							"id": 16035,
+							"definitionId": 134233,
+							"name": "Concussion",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 30160,
+							"definitionId": 134230,
+							"name": "Elemental Devastation",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16040,
+							"definitionId": 134228,
+							"name": "Reverberation",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 16038,
+							"definitionId": 134231,
+							"name": "Call of Flame",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16164,
+							"definitionId": 134229,
+							"name": "Elemental Focus",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 16086,
+							"definitionId": 134225,
+							"name": "Trial by Fire",
+							"rank": 2,
+							"maxRank": 2
+						}
+					]
+				},
+				{
+					"name": "Enhancement",
+					"points": 32,
+					"talents": [
+						{
+							"id": 16255,
+							"definitionId": 134214,
+							"name": "Thundering Strikes",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17485,
+							"definitionId": 134217,
+							"name": "Ancestral Knowledge",
+							"rank": 3,
+							"maxRank": 5
+						},
+						{
+							"id": 415140,
+							"definitionId": 134216,
+							"name": "Mental Dexterity",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16266,
+							"definitionId": 134211,
+							"name": "Elemental Weapons",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1223030,
+							"definitionId": 134210,
+							"name": "Shamanistic Focus",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 16256,
+							"definitionId": 134208,
+							"name": "Flurry",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17364,
+							"definitionId": 134204,
+							"name": "Stormstrike",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 16268,
+							"definitionId": 134206,
+							"name": "Spirit Weapons",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 30812,
+							"definitionId": 134205,
+							"name": "Mental Quickness",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1223031,
+							"definitionId": 134203,
+							"name": "Improved Stormstrike",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 408498,
+							"definitionId": 134202,
+							"name": "Maelstrom Weapon",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 425336,
+							"definitionId": 134201,
+							"name": "Rage of the Farseer",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Restoration",
+					"points": 0,
+					"talents": []
+				}
+			]
+		},
+		"warlock|Demo (Fire Brand)": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 16698,
+						"name": "Dreadmist Mask"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 22149,
+						"name": "Beads of Ogre Mojo"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 16701,
+						"name": "Dreadmist Mantle"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 272411,
+						"name": "Arcanoweave Cloak"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 14153,
+						"name": "Robe of the Void"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 16703,
+						"name": "Dreadmist Bracers"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 16705,
+						"name": "Dreadmist Wraps"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 16702,
+						"name": "Dreadmist Belt"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 16699,
+						"name": "Dreadmist Leggings"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 16704,
+						"name": "Dreadmist Sandals"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 275738,
+						"name": "Jereman's Bauble"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 19518,
+						"name": "Advisor's Ring"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272438,
+						"name": "Weakness Analyzer"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270225,
+						"name": "Jewel of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 271928,
+						"name": "Clever Expeditionary's Spellblade"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 249455,
+						"name": "Truesilver Conduit"
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 15283,
+						"name": "Lunar Wand"
+					}
+				}
+			],
+			"talentsString": "011-0305003201220301351-0050055003",
+			"talents": [
+				{
+					"name": "Affliction",
+					"points": 2,
+					"talents": [
+						{
+							"id": 18174,
+							"definitionId": 135456,
+							"name": "Suppression",
+							"rank": 1,
+							"maxRank": 5
+						},
+						{
+							"id": 17810,
+							"definitionId": 135455,
+							"name": "Improved Corruption",
+							"rank": 1,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Demonology",
+					"points": 31,
+					"talents": [
+						{
+							"id": 18694,
+							"definitionId": 135439,
+							"name": "Improved Imp",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 18769,
+							"definitionId": 135437,
+							"name": "Unholy Power",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 18731,
+							"definitionId": 135434,
+							"name": "Fel Vitality",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1225214,
+							"definitionId": 135430,
+							"name": "Demonic Energies",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 18788,
+							"definitionId": 135431,
+							"name": "Demonic Sacrifice",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 18709,
+							"definitionId": 135429,
+							"name": "Master Summoner",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 440870,
+							"definitionId": 135428,
+							"name": "Decimation",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1293695,
+							"definitionId": 135427,
+							"name": "Demonic Brand",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 19028,
+							"definitionId": 135423,
+							"name": "Soul Link",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 412732,
+							"definitionId": 135424,
+							"name": "Demonic Knowledge",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 23785,
+							"definitionId": 135422,
+							"name": "Master Demonologist",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 425464,
+							"definitionId": 135421,
+							"name": "Demonic Pact",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Destruction",
+					"points": 18,
+					"talents": [
+						{
+							"id": 17788,
+							"definitionId": 135419,
+							"name": "Bane",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 18119,
+							"definitionId": 135417,
+							"name": "Aftermath",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17959,
+							"definitionId": 135414,
+							"name": "Ruin",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17927,
+							"definitionId": 135410,
+							"name": "Agonizing Flames",
+							"rank": 3,
+							"maxRank": 3
+						}
+					]
+				}
+			]
+		},
+		"warlock|Demo (Shadow Brand)": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 16698,
+						"name": "Dreadmist Mask"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 22149,
+						"name": "Beads of Ogre Mojo"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 16701,
+						"name": "Dreadmist Mantle"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 272411,
+						"name": "Arcanoweave Cloak"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 14153,
+						"name": "Robe of the Void"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 16703,
+						"name": "Dreadmist Bracers"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 16705,
+						"name": "Dreadmist Wraps"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 16702,
+						"name": "Dreadmist Belt"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 16699,
+						"name": "Dreadmist Leggings"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 16704,
+						"name": "Dreadmist Sandals"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 275738,
+						"name": "Jereman's Bauble"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 19518,
+						"name": "Advisor's Ring"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272438,
+						"name": "Weakness Analyzer"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270225,
+						"name": "Jewel of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 271928,
+						"name": "Clever Expeditionary's Spellblade"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 249455,
+						"name": "Truesilver Conduit"
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 15283,
+						"name": "Lunar Wand"
+					}
+				}
+			],
+			"talentsString": "011-0005003231220301351-0550005003",
+			"talents": [
+				{
+					"name": "Affliction",
+					"points": 2,
+					"talents": [
+						{
+							"id": 18174,
+							"definitionId": 135456,
+							"name": "Suppression",
+							"rank": 1,
+							"maxRank": 5
+						},
+						{
+							"id": 17810,
+							"definitionId": 135455,
+							"name": "Improved Corruption",
+							"rank": 1,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Demonology",
+					"points": 31,
+					"talents": [
+						{
+							"id": 18769,
+							"definitionId": 135437,
+							"name": "Unholy Power",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 18731,
+							"definitionId": 135434,
+							"name": "Fel Vitality",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1225214,
+							"definitionId": 135430,
+							"name": "Demonic Energies",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 18754,
+							"definitionId": 135432,
+							"name": "Improved Sayaad",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 18788,
+							"definitionId": 135431,
+							"name": "Demonic Sacrifice",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 18709,
+							"definitionId": 135429,
+							"name": "Master Summoner",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 440870,
+							"definitionId": 135428,
+							"name": "Decimation",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1293695,
+							"definitionId": 135427,
+							"name": "Demonic Brand",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 19028,
+							"definitionId": 135423,
+							"name": "Soul Link",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 412732,
+							"definitionId": 135424,
+							"name": "Demonic Knowledge",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 23785,
+							"definitionId": 135422,
+							"name": "Master Demonologist",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 425464,
+							"definitionId": 135421,
+							"name": "Demonic Pact",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Destruction",
+					"points": 18,
+					"talents": [
+						{
+							"id": 17793,
+							"definitionId": 135420,
+							"name": "Improved Shadow Bolt",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17788,
+							"definitionId": 135419,
+							"name": "Bane",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17959,
+							"definitionId": 135414,
+							"name": "Ruin",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17927,
+							"definitionId": 135410,
+							"name": "Agonizing Flames",
+							"rank": 3,
+							"maxRank": 3
+						}
+					]
+				}
+			]
+		},
+		"warlock|Destro": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 16698,
+						"name": "Dreadmist Mask"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 22149,
+						"name": "Beads of Ogre Mojo"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 16701,
+						"name": "Dreadmist Mantle"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 272411,
+						"name": "Arcanoweave Cloak"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 14153,
+						"name": "Robe of the Void"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 16703,
+						"name": "Dreadmist Bracers"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 16705,
+						"name": "Dreadmist Wraps"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 16702,
+						"name": "Dreadmist Belt"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 16699,
+						"name": "Dreadmist Leggings"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 16704,
+						"name": "Dreadmist Sandals"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 275738,
+						"name": "Jereman's Bauble"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 19518,
+						"name": "Advisor's Ring"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272438,
+						"name": "Weakness Analyzer"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270225,
+						"name": "Jewel of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 271928,
+						"name": "Clever Expeditionary's Spellblade"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 249455,
+						"name": "Truesilver Conduit"
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 15283,
+						"name": "Lunar Wand"
+					}
+				}
+			],
+			"talentsString": "2530000013-0004-0050355103101351",
+			"talents": [
+				{
+					"name": "Affliction",
+					"points": 14,
+					"talents": [
+						{
+							"id": 18182,
+							"definitionId": 135452,
+							"name": "Improved Life Tap",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 18174,
+							"definitionId": 135456,
+							"name": "Suppression",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17810,
+							"definitionId": 135455,
+							"name": "Improved Corruption",
+							"rank": 3,
+							"maxRank": 5
+						},
+						{
+							"id": 18288,
+							"definitionId": 135447,
+							"name": "Amplify Curse",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 427712,
+							"definitionId": 135448,
+							"name": "Pandemic",
+							"rank": 3,
+							"maxRank": 3
+						}
+					]
+				},
+				{
+					"name": "Demonology",
+					"points": 4,
+					"talents": [
+						{
+							"id": 18769,
+							"definitionId": 135437,
+							"name": "Unholy Power",
+							"rank": 4,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Destruction",
+					"points": 33,
+					"talents": [
+						{
+							"id": 17788,
+							"definitionId": 135419,
+							"name": "Bane",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17778,
+							"definitionId": 135418,
+							"name": "Cataclysm",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 18119,
+							"definitionId": 135417,
+							"name": "Aftermath",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17959,
+							"definitionId": 135414,
+							"name": "Ruin",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17877,
+							"definitionId": 135415,
+							"name": "Shadowburn",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 17927,
+							"definitionId": 135410,
+							"name": "Agonizing Flames",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1293817,
+							"definitionId": 135411,
+							"name": "Conflagrate",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 1225228,
+							"definitionId": 135407,
+							"name": "Bane of Havoc",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 412751,
+							"definitionId": 135408,
+							"name": "Fire and Brimstone",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 426316,
+							"definitionId": 135406,
+							"name": "Shadow and Flame",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 412758,
+							"definitionId": 135405,
+							"name": "Incinerate",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				}
+			]
+		},
+		"warlock|SM/Ruin": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 16698,
+						"name": "Dreadmist Mask"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 22149,
+						"name": "Beads of Ogre Mojo"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 16701,
+						"name": "Dreadmist Mantle"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 272411,
+						"name": "Arcanoweave Cloak"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 14153,
+						"name": "Robe of the Void"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 16703,
+						"name": "Dreadmist Bracers"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 16705,
+						"name": "Dreadmist Wraps"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 16702,
+						"name": "Dreadmist Belt"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 16699,
+						"name": "Dreadmist Leggings"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 16704,
+						"name": "Dreadmist Sandals"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 275738,
+						"name": "Jereman's Bauble"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 19518,
+						"name": "Advisor's Ring"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272438,
+						"name": "Weakness Analyzer"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270225,
+						"name": "Jewel of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 271928,
+						"name": "Clever Expeditionary's Spellblade"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 249455,
+						"name": "Truesilver Conduit"
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 15283,
+						"name": "Lunar Wand"
+					}
+				}
+			],
+			"talentsString": "2540002013520105--0550305003",
+			"talents": [
+				{
+					"name": "Affliction",
+					"points": 30,
+					"talents": [
+						{
+							"id": 18182,
+							"definitionId": 135452,
+							"name": "Improved Life Tap",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 18174,
+							"definitionId": 135456,
+							"name": "Suppression",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17810,
+							"definitionId": 135455,
+							"name": "Improved Corruption",
+							"rank": 4,
+							"maxRank": 5
+						},
+						{
+							"id": 18827,
+							"definitionId": 135450,
+							"name": "Improved Bane of Agony",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 18288,
+							"definitionId": 135447,
+							"name": "Amplify Curse",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 427712,
+							"definitionId": 135448,
+							"name": "Pandemic",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1310949,
+							"definitionId": 142628,
+							"name": "Malevolence",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 18094,
+							"definitionId": 135445,
+							"name": "Nightfall",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 18265,
+							"definitionId": 135443,
+							"name": "Siphon Life",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 18271,
+							"definitionId": 135441,
+							"name": "Shadow Mastery",
+							"rank": 5,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Demonology",
+					"points": 0,
+					"talents": []
+				},
+				{
+					"name": "Destruction",
+					"points": 21,
+					"talents": [
+						{
+							"id": 17793,
+							"definitionId": 135420,
+							"name": "Improved Shadow Bolt",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17788,
+							"definitionId": 135419,
+							"name": "Bane",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17778,
+							"definitionId": 135418,
+							"name": "Cataclysm",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 17959,
+							"definitionId": 135414,
+							"name": "Ruin",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17927,
+							"definitionId": 135410,
+							"name": "Agonizing Flames",
+							"rank": 3,
+							"maxRank": 3
+						}
+					]
+				}
+			]
+		},
+		"warlock|Aff (Wrack)": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 16698,
+						"name": "Dreadmist Mask"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 22149,
+						"name": "Beads of Ogre Mojo"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 16701,
+						"name": "Dreadmist Mantle"
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 272411,
+						"name": "Arcanoweave Cloak"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 14153,
+						"name": "Robe of the Void"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 16703,
+						"name": "Dreadmist Bracers"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 16705,
+						"name": "Dreadmist Wraps"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 16702,
+						"name": "Dreadmist Belt"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 16699,
+						"name": "Dreadmist Leggings"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 16704,
+						"name": "Dreadmist Sandals"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 275738,
+						"name": "Jereman's Bauble"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 19518,
+						"name": "Advisor's Ring"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 272438,
+						"name": "Weakness Analyzer"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 270225,
+						"name": "Jewel of the Guard Captain"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 271928,
+						"name": "Clever Expeditionary's Spellblade"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 249455,
+						"name": "Truesilver Conduit"
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 15283,
+						"name": "Lunar Wand"
+					}
+				}
+			],
+			"talentsString": "25300020135201351--0550005003",
+			"talents": [
+				{
+					"name": "Affliction",
+					"points": 33,
+					"talents": [
+						{
+							"id": 18182,
+							"definitionId": 135452,
+							"name": "Improved Life Tap",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 18174,
+							"definitionId": 135456,
+							"name": "Suppression",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17810,
+							"definitionId": 135455,
+							"name": "Improved Corruption",
+							"rank": 3,
+							"maxRank": 5
+						},
+						{
+							"id": 18827,
+							"definitionId": 135450,
+							"name": "Improved Bane of Agony",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 18288,
+							"definitionId": 135447,
+							"name": "Amplify Curse",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 427712,
+							"definitionId": 135448,
+							"name": "Pandemic",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1310949,
+							"definitionId": 142628,
+							"name": "Malevolence",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 18094,
+							"definitionId": 135445,
+							"name": "Nightfall",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 18265,
+							"definitionId": 135443,
+							"name": "Siphon Life",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 17804,
+							"definitionId": 135442,
+							"name": "Soul Siphon",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 18271,
+							"definitionId": 135441,
+							"name": "Shadow Mastery",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1316697,
+							"definitionId": 135440,
+							"name": "Wrack",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Demonology",
+					"points": 0,
+					"talents": []
+				},
+				{
+					"name": "Destruction",
+					"points": 18,
+					"talents": [
+						{
+							"id": 17793,
+							"definitionId": 135420,
+							"name": "Improved Shadow Bolt",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17788,
+							"definitionId": 135419,
+							"name": "Bane",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17959,
+							"definitionId": 135414,
+							"name": "Ruin",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 17927,
+							"definitionId": 135410,
+							"name": "Agonizing Flames",
+							"rank": 3,
+							"maxRank": 3
+						}
+					]
+				}
+			]
+		},
+		"warrior|Fury / Pre-BiS": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 12640,
+						"name": "Lionheart Helm",
+						"enchant": "Arcanum of Rapidity"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 19491,
+						"name": "Amulet of the Darkmoon"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 10263,
+						"name": "Adventurer's Shoulders of the Tiger",
+						"suffixId": 12727
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 272414,
+						"name": "Howler's Furs",
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 252483,
+						"name": "Dawn Armor",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 10147,
+						"name": "Mighty Armsplints of the Tiger",
+						"suffixId": 12727,
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 21998,
+						"name": "Gauntlets of Heroism",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 20216,
+						"name": "Belt of Preserved Heads"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22385,
+						"name": "Titanic Leggings",
+						"enchant": "Arcanum of Rapidity"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 21995,
+						"name": "Boots of Heroism",
+						"enchant": "Enchant Boots - Greater Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 272408,
+						"name": "Cutthroat's Signet"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 284716,
+						"name": "Band of the Better Half"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 249469,
+						"name": "Frozen Heart of the Mountain"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 22384,
+						"name": "Persuader",
+						"enchant": "Enchant Weapon - Crusader"
+					}
+				},
+				{
+					"slot": "Off hand",
+					"item": {
+						"id": 12798,
+						"name": "Annihilator",
+						"enchant": "Enchant Weapon - Crusader"
+					}
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 22347,
+						"name": "Fahrad's Reloading Repeater"
+					}
+				}
+			],
+			"talentsString": "30305013002-25053005052010501",
+			"talents": [
+				{
+					"name": "Arms",
+					"points": 17,
+					"talents": [
+						{
+							"id": 12282,
+							"definitionId": 135489,
+							"name": "Improved Heroic Strike",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 12286,
+							"definitionId": 135487,
+							"name": "Improved Rend",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 12295,
+							"definitionId": 135485,
+							"name": "Improved Tactical Mastery",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 12296,
+							"definitionId": 135482,
+							"name": "Anger Management",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 12834,
+							"definitionId": 135481,
+							"name": "Deep Wounds",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16493,
+							"definitionId": 135478,
+							"name": "Impale",
+							"rank": 2,
+							"maxRank": 2
+						}
+					]
+				},
+				{
+					"name": "Fury",
+					"points": 34,
+					"talents": [
+						{
+							"id": 12321,
+							"definitionId": 135469,
+							"name": "Booming Voice",
+							"rank": 2,
+							"maxRank": 5
+						},
+						{
+							"id": 12320,
+							"definitionId": 135470,
+							"name": "Cruelty",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 12322,
+							"definitionId": 135468,
+							"name": "Unbridled Wrath",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 1323963,
+							"definitionId": 135484,
+							"name": "Furious Precision",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 23584,
+							"definitionId": 135464,
+							"name": "Dual Wield Specialization",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 12317,
+							"definitionId": 135462,
+							"name": "Enrage",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 20502,
+							"definitionId": 135463,
+							"name": "Improved Execute",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 12328,
+							"definitionId": 135458,
+							"name": "Death Wish",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 12319,
+							"definitionId": 135459,
+							"name": "Flurry",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 23881,
+							"definitionId": 135461,
+							"name": "Bloodthirst",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Protection",
+					"points": 0,
+					"talents": []
+				}
+			]
+		},
+		"warrior|Arms / Pre-BiS": {
+			"equipment": [
+				{
+					"slot": "Head",
+					"item": {
+						"id": 12640,
+						"name": "Lionheart Helm",
+						"enchant": "Arcanum of Rapidity"
+					}
+				},
+				{
+					"slot": "Neck",
+					"item": {
+						"id": 19491,
+						"name": "Amulet of the Darkmoon"
+					}
+				},
+				{
+					"slot": "Shoulders",
+					"item": {
+						"id": 10263,
+						"name": "Adventurer's Shoulders of the Tiger",
+						"suffixId": 12727
+					}
+				},
+				{
+					"slot": "Back",
+					"item": {
+						"id": 10249,
+						"name": "Master's Cloak of the Tiger",
+						"suffixId": 12727,
+						"enchant": "Enchant Cloak - Agility"
+					}
+				},
+				{
+					"slot": "Chest",
+					"item": {
+						"id": 252483,
+						"name": "Dawn Armor",
+						"enchant": "Enchant Chest - Greater Stats"
+					}
+				},
+				{
+					"slot": "Wrist",
+					"item": {
+						"id": 10147,
+						"name": "Mighty Armsplints of the Tiger",
+						"suffixId": 12727,
+						"enchant": "Enchant Bracer - Agility"
+					}
+				},
+				{
+					"slot": "Hands",
+					"item": {
+						"id": 21998,
+						"name": "Gauntlets of Heroism",
+						"enchant": "Enchant Gloves - Greater Agility"
+					}
+				},
+				{
+					"slot": "Waist",
+					"item": {
+						"id": 272403,
+						"name": "Valiant's Waistguard"
+					}
+				},
+				{
+					"slot": "Legs",
+					"item": {
+						"id": 22385,
+						"name": "Titanic Leggings",
+						"enchant": "Arcanum of Rapidity"
+					}
+				},
+				{
+					"slot": "Feet",
+					"item": {
+						"id": 21995,
+						"name": "Boots of Heroism",
+						"enchant": "Enchant Boots - Greater Agility"
+					}
+				},
+				{
+					"slot": "Ring 1",
+					"item": {
+						"id": 272408,
+						"name": "Cutthroat's Signet"
+					}
+				},
+				{
+					"slot": "Ring 2",
+					"item": {
+						"id": 284716,
+						"name": "Band of the Better Half"
+					}
+				},
+				{
+					"slot": "Trinket 1",
+					"item": {
+						"id": 249469,
+						"name": "Frozen Heart of the Mountain"
+					}
+				},
+				{
+					"slot": "Trinket 2",
+					"item": {
+						"id": 272437,
+						"name": "Adaptive Combat Assistant"
+					}
+				},
+				{
+					"slot": "Main hand",
+					"item": {
+						"id": 12784,
+						"name": "Arcanite Reaper",
+						"enchant": "Enchant Weapon - Crusader"
+					}
+				},
+				{
+					"slot": "Off hand"
+				},
+				{
+					"slot": "Ranged / relic",
+					"item": {
+						"id": 15289,
+						"name": "Archstrike Bow of the Tiger",
+						"suffixId": 12727
+					}
+				}
+			],
+			"talentsString": "30325213132515201-0505-2",
+			"talents": [
+				{
+					"name": "Arms",
+					"points": 39,
+					"talents": [
+						{
+							"id": 12282,
+							"definitionId": 135489,
+							"name": "Improved Heroic Strike",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 12286,
+							"definitionId": 135487,
+							"name": "Improved Rend",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 12285,
+							"definitionId": 135486,
+							"name": "Improved Charge",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 12295,
+							"definitionId": 135485,
+							"name": "Improved Tactical Mastery",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 12290,
+							"definitionId": 135483,
+							"name": "Improved Overpower",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 12296,
+							"definitionId": 135482,
+							"name": "Anger Management",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 12834,
+							"definitionId": 135481,
+							"name": "Deep Wounds",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 1310222,
+							"definitionId": 135480,
+							"name": "Spearing Strike",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 12163,
+							"definitionId": 135479,
+							"name": "Two-Handed Weapon Specialization",
+							"rank": 3,
+							"maxRank": 3
+						},
+						{
+							"id": 16493,
+							"definitionId": 135478,
+							"name": "Impale",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 1289682,
+							"definitionId": 141974,
+							"name": "Bloodthrill",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 12292,
+							"definitionId": 135476,
+							"name": "Sweeping Strikes",
+							"rank": 1,
+							"maxRank": 1
+						},
+						{
+							"id": 1290261,
+							"definitionId": 135475,
+							"name": "Weaponmaster",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 12862,
+							"definitionId": 142604,
+							"name": "Improved Slam",
+							"rank": 2,
+							"maxRank": 2
+						},
+						{
+							"id": 12294,
+							"definitionId": 135472,
+							"name": "Mortal Strike",
+							"rank": 1,
+							"maxRank": 1
+						}
+					]
+				},
+				{
+					"name": "Fury",
+					"points": 10,
+					"talents": [
+						{
+							"id": 12320,
+							"definitionId": 135470,
+							"name": "Cruelty",
+							"rank": 5,
+							"maxRank": 5
+						},
+						{
+							"id": 12322,
+							"definitionId": 135468,
+							"name": "Unbridled Wrath",
+							"rank": 5,
+							"maxRank": 5
+						}
+					]
+				},
+				{
+					"name": "Protection",
+					"points": 2,
+					"talents": [
+						{
+							"id": 12301,
+							"definitionId": 135505,
+							"name": "Improved Bloodrage",
+							"rank": 2,
+							"maxRank": 2
+						}
+					]
+				}
+			]
+		}
+	}
 }

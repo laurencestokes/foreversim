@@ -35,6 +35,7 @@ jobs:
               run: npx vitest run ui/specs/race_arena_export.test.ts
             - name: Simulate and score every race
               run: |
+                  node tools/race_arena/snapshot.mjs "$RUNNER_TEMP/race-arena-input.json"
                   go run -tags=with_db ./tools/race_arena/simulate -input "$RUNNER_TEMP/race-arena-input.json" -out "$RUNNER_TEMP/race-arena-out"
                   go run ./tools/race_arena "$RUNNER_TEMP/race-arena-out"
                   npx oxfmt ui/app/race_arena/results.json

@@ -22,6 +22,7 @@ import (
 type build struct {
 	Spec, Class, Build, Gear, Rotation, Consumables string
 	Player                                          json.RawMessage
+	Setup                                           json.RawMessage
 }
 
 type row struct {
@@ -31,16 +32,17 @@ type row struct {
 }
 
 type list struct {
-	Spec        string `json:"spec"`
-	Class       string `json:"class"`
-	Build       string `json:"build"`
-	Gear        string `json:"gear"`
-	Rotation    string `json:"rotation"`
-	Consumables string `json:"consumables"`
-	Talents     string `json:"talents"`
-	Target      string `json:"target"`
-	Iterations  int    `json:"iterations"`
-	Races       []row  `json:"races"`
+	Spec        string          `json:"spec"`
+	Class       string          `json:"class"`
+	Build       string          `json:"build"`
+	Gear        string          `json:"gear"`
+	Rotation    string          `json:"rotation"`
+	Consumables string          `json:"consumables"`
+	Talents     string          `json:"talents"`
+	Target      string          `json:"target"`
+	Iterations  int             `json:"iterations"`
+	Races       []row           `json:"races"`
+	Setup       json.RawMessage `json:"setup"`
 }
 
 func main() {
@@ -69,6 +71,9 @@ func main() {
 	}
 	jobs := []job{}
 	for _, b := range builds {
+		if len(b.Setup) == 0 {
+			panic("missing setup snapshot: run tools/race_arena/snapshot.mjs before simulating")
+		}
 		player := &proto.Player{}
 		check(protojson.Unmarshal(b.Player, player))
 		if len(player.GetEquipment().GetItems()) == 0 || len(player.GetRotation().GetPriorityList()) == 0 {
@@ -76,7 +81,7 @@ func main() {
 		}
 		for _, target := range targets {
 			l := list{Spec: b.Spec, Class: b.Class, Build: b.Build, Gear: b.Gear, Rotation: b.Rotation,
-				Consumables: b.Consumables, Talents: player.TalentsString, Target: strings.TrimPrefix(target.String(), "MobType"), Iterations: *iterations}
+				Consumables: b.Consumables, Talents: player.TalentsString, Target: strings.TrimPrefix(target.String(), "MobType"), Iterations: *iterations, Setup: b.Setup}
 			for _, race := range core.ClassRaceCapabilities[player.Class] {
 				p := gp.Clone(player).(*proto.Player)
 				p.Race = race

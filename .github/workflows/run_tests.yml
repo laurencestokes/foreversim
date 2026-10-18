@@ -80,7 +80,9 @@ jobs:
               run: npm run type-check
 
             - name: Unit tests 🧪
-              run: npm run test:unit
+              run: |
+                  npm run test:unit
+                  node --test tools/race_arena/snapshot.test.mjs
 
             - name: Build Storybook 📚
               run: npm run storybook:build
