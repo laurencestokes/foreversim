@@ -16,7 +16,7 @@ concurrency:
 jobs:
     triage:
         if: github.repository == 'wowsims/forever'
-        runs-on: self-hosted
+        runs-on: ubuntu-latest
         steps:
             - uses: actions/labeler@v4
               with:

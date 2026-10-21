@@ -10,16 +10,18 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
 )
 
-// The fight every list is run in: the leaderboard's one target (core.MakeSingleTargetEncounter).
+// The fight every list is run in: the leaderboard's one target (core.MakeSingleTargetEncounter), at
+// each of the runner's fight lengths. defaultSeconds is the length the page opens on.
 const (
-	fightSeconds = 180
-	targetLevel  = 63
-	targetArmor  = 3731
+	defaultSeconds = 180
+	targetLevel    = 63
+	targetArmor    = 3731
 )
 
 // A tier and how far behind its list's best race a race may be, in percent, to sit in it. The
@@ -64,6 +66,7 @@ type rawList struct {
 	Rotation       string          `json:"rotation"`
 	Consumables    string          `json:"consumables"`
 	Target         string          `json:"target"`
+	Seconds        int             `json:"seconds"`
 	Iterations     int             `json:"iterations"`
 	KeptWeaponType bool            `json:"keptWeaponType"`
 	WeaponType     string          `json:"weaponType"`
@@ -94,15 +97,17 @@ type race struct {
 }
 
 type list struct {
-	Spec           string `json:"spec"`
-	Class          string `json:"class"`
-	Build          string `json:"build"`
-	Talents        string `json:"talents"`
-	Gear           string `json:"gear"`
-	Rotation       string `json:"rotation"`
-	Consumables    string `json:"consumables"`
-	Target         string `json:"target"`
-	KeptWeaponType bool   `json:"keptWeaponType,omitempty"`
+	Spec        string `json:"spec"`
+	Class       string `json:"class"`
+	Build       string `json:"build"`
+	Talents     string `json:"talents"`
+	Gear        string `json:"gear"`
+	Rotation    string `json:"rotation"`
+	Consumables string `json:"consumables"`
+	Target      string `json:"target"`
+	// The fight length the list was run at, in seconds.
+	Seconds        int  `json:"seconds"`
+	KeptWeaponType bool `json:"keptWeaponType,omitempty"`
 	// The type every race's weapons were run as, when not the one they ship as.
 	WeaponType string `json:"weaponType,omitempty"`
 	Races      []race `json:"races"`
@@ -120,9 +125,11 @@ type output struct {
 }
 
 type fight struct {
-	Seconds     int `json:"seconds"`
-	TargetLevel int `json:"targetLevel"`
-	TargetArmor int `json:"targetArmor"`
+	// The length the page opens on, and every length the lists were run at.
+	Seconds     int   `json:"seconds"`
+	Durations   []int `json:"durations"`
+	TargetLevel int   `json:"targetLevel"`
+	TargetArmor int   `json:"targetArmor"`
 }
 
 // How far a race's number can be trusted, as a percentage of its list's best: the largest
@@ -163,7 +170,7 @@ func main() {
 	out := output{
 		Commit:    commit(),
 		Generated: time.Now().UTC().Truncate(time.Second),
-		Fight:     fight{fightSeconds, targetLevel, targetArmor},
+		Fight:     fight{Seconds: defaultSeconds, TargetLevel: targetLevel, TargetArmor: targetArmor},
 		Tiers:     tiers,
 		Setups:    make(map[string]json.RawMessage),
 	}
@@ -181,9 +188,19 @@ func main() {
 			fail("%s / %s ran %d iterations and another list ran %d; rerun them together", r.Spec, r.Build, r.Iterations, out.Iterations)
 		}
 		out.Iterations = r.Iterations
+		if r.Seconds <= 0 {
+			fail("%s / %s / %s: no fight length; rerun with the current runner", r.Spec, r.Build, r.Target)
+		}
+		if !slices.Contains(out.Fight.Durations, r.Seconds) {
+			out.Fight.Durations = append(out.Fight.Durations, r.Seconds)
+		}
 		scored, worst := score(r)
 		out.Lists = append(out.Lists, scored)
 		out.Noise.MaxError = max(out.Noise.MaxError, worst)
+	}
+	slices.Sort(out.Fight.Durations)
+	if !slices.Contains(out.Fight.Durations, defaultSeconds) {
+		out.Fight.Seconds = out.Fight.Durations[0]
 	}
 	out.Noise.MaxDifference = roundTo(2*math.Sqrt2*out.Noise.MaxError, 3)
 	out.Noise.MaxError = roundTo(out.Noise.MaxError, 3)
@@ -232,6 +249,7 @@ func score(r rawList) (list, float64) {
 		Rotation:       r.Rotation,
 		Consumables:    r.Consumables,
 		Target:         r.Target,
+		Seconds:        r.Seconds,
 		KeptWeaponType: r.KeptWeaponType,
 		WeaponType:     r.WeaponType,
 	}

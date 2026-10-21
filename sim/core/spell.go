@@ -392,7 +392,7 @@ func (unit *Unit) RegisterSpell(config SpellConfig) *Spell {
 		spell.MaxRange = config.MaxRange
 		oldExtraCastCondition := spell.ExtraCastCondition
 		spell.ExtraCastCondition = func(sim *Simulation, target *Unit) bool {
-			if ((spell.MinRange != 0) && (spell.Unit.DistanceFromTarget < spell.MinRange)) || ((spell.MaxRange != 0) && (spell.Unit.DistanceFromTarget > spell.MaxRange*spell.RangeMultiplier)) {
+			if ((spell.MinRange != 0) && (spell.Unit.DistanceFromTarget < spell.MinRange)) || ((spell.MaxRange != 0) && (spell.Unit.DistanceFromTarget > spell.EffectiveMaxRange())) {
 				/*if sim.Log != nil {
 					sim.Log("Cannot cast spell %s, out of range!", spell.ActionID)
 				}*/
@@ -446,6 +446,12 @@ func (spell *Spell) Dot(target *Unit) *Dot {
 	}
 	return spell.dots.Get(target)
 }
+
+// The distance the range check allows: MaxRange after the range mods.
+func (spell *Spell) EffectiveMaxRange() float64 {
+	return spell.MaxRange * spell.RangeMultiplier
+}
+
 func (spell *Spell) CurDot() *Dot {
 	if spell.dots == nil {
 		if spell.RelatedDotSpell != nil {
@@ -844,6 +850,14 @@ func (spell *Spell) ApplyAOEThreatIgnoreMultipliers(threatAmount float64) {
 		spell.SpellMetrics[target.UnitIndex].TotalThreat += threatAmount
 	}
 }
+
+// Threat no single enemy draws, such as a heal's or a resource gain's, split between the targets in
+// combat at the time.
+func (spell *Spell) applySplitThreat(sim *Simulation, threat float64) {
+	if targets := len(sim.Encounter.ActiveTargetUnits); targets > 0 {
+		spell.ApplyAOEThreatIgnoreMultipliers(threat / float64(targets))
+	}
+}
 func (spell *Spell) ApplyAOEThreat(threatAmount float64) {
 	spell.ApplyAOEThreatIgnoreMultipliers(threatAmount * spell.unitThreatMultiplier())
 }
@@ -893,6 +907,22 @@ func (spell *Spell) CritDamageMultiplier(at *AttackTable) float64 {
 		tableMultiplier = at.CritMultiplier
 	}
 	return (base*spell.CritMultiplierPct*spell.Unit.PseudoStats.CritDamageMultiplier*tableMultiplier-1)*(spell.CritMultiplierAdditive+1) + 1
+}
+
+// The table the spell's outcome rolls, as a DefenseType. Auto shots roll the ranged weapon table whatever their
+// DefenseType, which for a wand's shots is Magic, and a spell without a DefenseType goes by its proc mask.
+func (spell *Spell) rolledDefenseType() DefenseType {
+	switch {
+	case spell.ProcMask.Matches(ProcMaskRangedAuto):
+		return DefenseTypeRanged
+	case spell.DefenseType != DefenseTypeNone:
+		return spell.DefenseType
+	case spell.ProcMask.Matches(ProcMaskRanged):
+		return DefenseTypeRanged
+	case spell.ProcMask.Matches(ProcMaskMelee):
+		return DefenseTypeMelee
+	}
+	return DefenseTypeMagic
 }
 
 // Time until either the cast is finished or GCD is ready again, whichever is longer

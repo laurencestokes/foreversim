@@ -14,7 +14,7 @@ func applyRaceEffects(agent Agent) {
 	case proto.Race_RaceDwarf:
 		// Earth Fury 1259719 follows its tooltip; the game files' mace equip row is ignored.
 		character.PseudoStats.CritDamageMultiplier *= 1.02
-		applyCreatureTypeSlaying(character, proto.MobType_MobTypeBeast)
+		applyDamageVersus(character, proto.MobType_MobTypeBeast)
 
 		actionID := ActionID{SpellID: 20594}
 
@@ -159,7 +159,7 @@ func applyRaceEffects(agent Agent) {
 		character.MultiplyStat(stats.Health, 1.05)
 		character.PseudoStats.CritDamageMultiplier *= 1.02 // Endurance 20550
 	case proto.Race_RaceTroll:
-		applyCreatureTypeSlaying(character, proto.MobType_MobTypeBeast)
+		applyDamageVersus(character, proto.MobType_MobTypeBeast)
 
 		actionID := ActionID{SpellID: 20554}
 
@@ -269,16 +269,18 @@ func applyRaceEffects(agent Agent) {
 }
 
 func applySkyborneSharedRacials(character *Character) {
-	applyCreatureTypeSlaying(character, proto.MobType_MobTypeElemental)
+	applyDamageVersus(character, proto.MobType_MobTypeElemental)
 
 	character.PseudoStats.AttackSpeedMultiplier *= 1.03 // Wind Blessed 1259710
 	character.PseudoStats.CastSpeedMultiplier *= 1.03
 }
 
-func applyCreatureTypeSlaying(character *Character, mobType proto.MobType) {
+// Beast Slaying 20557, Big Game Hunter 1259721 and Elemental Insight 1259707 state one effect, aura 168:
+// 5% damage against the creature type. Their rows carry no aura 547, the critical damage half that
+// Humanoid Slaying 19151 and Monster Slaying 24294 state.
+func applyDamageVersus(character *Character, mobType proto.MobType) {
 	character.Env.RegisterPostFinalizeEffect(func() {
 		character.MultiplyDamageVersus(1.05, mobType)
-		character.MultiplyCritDamageVersus(1.05, mobType)
 	})
 }
 

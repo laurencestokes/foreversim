@@ -9,7 +9,7 @@ jobs:
     schedule:
         if: github.repository == 'wowsims/forever'
         permissions: write-all
-        runs-on: self-hosted
+        runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v5
               with:

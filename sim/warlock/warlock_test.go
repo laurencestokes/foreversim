@@ -54,6 +54,8 @@ func runBuildSuite(t *testing.T, label string, buildFile string, otherRace proto
 			Profession1: build.Profession1,
 			Profession2: build.Profession2,
 			Rotation:    core.RotationCombo{Label: buildFile, Rotation: build.Rotation.Rotation},
+			// The UI preset's distance, from which the demon walks in
+			StartingDistance: 20,
 			ItemFilter: core.ItemFilter{
 				WeaponTypes: []proto.WeaponType{
 					proto.WeaponType_WeaponTypeDagger,
@@ -170,7 +172,7 @@ func TestDecimationGrantedOnLandedCast(t *testing.T) {
 	newSim := func(resistance float64) (*core.Simulation, *Warlock, *core.Unit) {
 		encounter := core.MakeSingleTargetEncounter(0)
 		encounter.Duration = 3600
-		encounter.ExecuteProportion_90, encounter.ExecuteProportion_45, encounter.ExecuteProportion_35 = 1, 1, 1
+		encounter.ExecuteProportion_35 = 1
 		encounter.Targets[0].Stats[stats.FireResistance] = resistance
 		encounter.Targets[0].Stats[stats.ShadowResistance] = resistance
 		sim, warlock := newWarlockSim("-000000000002", &proto.WarlockOptions{}, encounter)
@@ -289,6 +291,21 @@ func TestBaneOfAgonyTicksSetAtCast(t *testing.T) {
 			t.Errorf("amplified third %d tick %.3f, want %.3f: the base %.3f plus the share at cast %.3f, amplified",
 				i+1, got, want, base*ramp, ampShare)
 		}
+	}
+}
+
+// Casting Bane of Agony spends Amplify Curse. The tooltip names it, but neither of Amplify Curse's class masks in
+// the game files does.
+func TestBaneOfAgonySpendsAmplifyCurse(t *testing.T) {
+	sim, warlock := newWarlockSim("000000001", &proto.WarlockOptions{}, core.MakeSingleTargetEncounter(0))
+	target := sim.Encounter.AllTargetUnits[0]
+
+	warlock.AmplifyCurseAura.Activate(sim)
+	if !warlock.BaneOfAgony.Cast(sim, target) {
+		t.Fatalf("Bane of Agony did not cast")
+	}
+	if warlock.AmplifyCurseAura.IsActive() {
+		t.Fatalf("Amplify Curse is still up after a Bane of Agony cast")
 	}
 }
 

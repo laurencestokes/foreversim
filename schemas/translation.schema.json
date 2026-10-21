@@ -1606,6 +1606,37 @@
 				},
 				"close": {
 					"type": "string"
+				},
+				"release_info": {
+					"type": "object",
+					"properties": {
+						"game_version": {
+							"type": "string"
+						},
+						"built": {
+							"type": "string"
+						},
+						"commit_link": {
+							"type": "string"
+						},
+						"sim_build": {
+							"type": "string"
+						},
+						"changed": {
+							"type": "string"
+						},
+						"details": {
+							"type": "string"
+						},
+						"presets": {
+							"type": "string"
+						},
+						"engine": {
+							"type": "string"
+						}
+					},
+					"additionalProperties": false,
+					"required": ["game_version", "built", "commit_link", "sim_build", "changed", "details", "presets", "engine"]
 				}
 			},
 			"additionalProperties": false,
@@ -1646,7 +1677,8 @@
 				"significance",
 				"action_names",
 				"action_tags",
-				"close"
+				"close",
+				"release_info"
 			]
 		},
 		"sim": {
@@ -2329,6 +2361,18 @@
 						},
 						"stamina": {
 							"type": "string"
+						},
+						"fire_resistance": {
+							"type": "string"
+						},
+						"frost_resistance": {
+							"type": "string"
+						},
+						"shadow_resistance": {
+							"type": "string"
+						},
+						"nature_resistance": {
+							"type": "string"
 						}
 					},
 					"additionalProperties": false,
@@ -2343,7 +2387,11 @@
 						"spell_power",
 						"spell_haste",
 						"crit_percent",
-						"stamina"
+						"stamina",
+						"fire_resistance",
+						"frost_resistance",
+						"shadow_resistance",
+						"nature_resistance"
 					]
 				},
 				"party_buffs": {
@@ -2451,10 +2499,39 @@
 						},
 						"spell_dmg": {
 							"type": "string"
+						},
+						"major_armor_reduction": {
+							"type": "string"
+						},
+						"minor_armor_reduction": {
+							"type": "string"
+						},
+						"attack_power_reduction": {
+							"type": "string"
+						},
+						"hit_chance_reduction": {
+							"type": "string"
+						},
+						"attack_speed_reduction": {
+							"type": "string"
 						}
 					},
 					"additionalProperties": false,
-					"required": ["title", "tooltip", "misc", "armor_reduction", "phys_dmg_reduction", "cast_speed", "phys_dmg", "spell_dmg"]
+					"required": [
+						"title",
+						"tooltip",
+						"misc",
+						"armor_reduction",
+						"phys_dmg_reduction",
+						"cast_speed",
+						"phys_dmg",
+						"spell_dmg",
+						"major_armor_reduction",
+						"minor_armor_reduction",
+						"attack_power_reduction",
+						"hit_chance_reduction",
+						"attack_speed_reduction"
+					]
 				},
 				"other": {
 					"type": "object",
@@ -3412,10 +3489,16 @@
 							"properties": {
 								"title": {
 									"type": "string"
+								},
+								"offensive": {
+									"type": "string"
+								},
+								"defensive": {
+									"type": "string"
 								}
 							},
 							"additionalProperties": false,
-							"required": ["title"]
+							"required": ["title", "offensive", "defensive"]
 						}
 					},
 					"additionalProperties": false,
@@ -3632,46 +3715,7 @@
 							"additionalProperties": false,
 							"required": ["label", "tooltip"]
 						},
-						"execute_duration_25": {
-							"type": "object",
-							"properties": {
-								"label": {
-									"type": "string"
-								},
-								"tooltip": {
-									"type": "string"
-								}
-							},
-							"additionalProperties": false,
-							"required": ["label", "tooltip"]
-						},
 						"execute_duration_35": {
-							"type": "object",
-							"properties": {
-								"label": {
-									"type": "string"
-								},
-								"tooltip": {
-									"type": "string"
-								}
-							},
-							"additionalProperties": false,
-							"required": ["label", "tooltip"]
-						},
-						"execute_duration_45": {
-							"type": "object",
-							"properties": {
-								"label": {
-									"type": "string"
-								},
-								"tooltip": {
-									"type": "string"
-								}
-							},
-							"additionalProperties": false,
-							"required": ["label", "tooltip"]
-						},
-						"duration_below_high_hp": {
 							"type": "object",
 							"properties": {
 								"label": {
@@ -3933,10 +3977,7 @@
 						"duration",
 						"duration_variation",
 						"execute_duration_20",
-						"execute_duration_25",
 						"execute_duration_35",
-						"execute_duration_45",
-						"duration_below_high_hp",
 						"encounter_preset",
 						"zone",
 						"area_types",
@@ -5440,6 +5481,32 @@
 										"move_duration_tooltip"
 									]
 								},
+								"pet_attack": {
+									"type": "object",
+									"properties": {
+										"label": {
+											"type": "string"
+										},
+										"tooltip": {
+											"type": "string"
+										}
+									},
+									"additionalProperties": false,
+									"required": ["label", "tooltip"]
+								},
+								"start_attack": {
+									"type": "object",
+									"properties": {
+										"label": {
+											"type": "string"
+										},
+										"tooltip": {
+											"type": "string"
+										}
+									},
+									"additionalProperties": false,
+									"required": ["label", "tooltip"]
+								},
 								"custom_rotation": {
 									"type": "object",
 									"properties": {
@@ -5520,6 +5587,8 @@
 								"trigger_icd",
 								"item_swap",
 								"move",
+								"pet_attack",
+								"start_attack",
 								"custom_rotation",
 								"warlock_cast_assigned_curse",
 								"group_reference"
@@ -5840,6 +5909,19 @@
 									"required": ["label", "tooltip"]
 								},
 								"distance_to_unit": {
+									"type": "object",
+									"properties": {
+										"label": {
+											"type": "string"
+										},
+										"tooltip": {
+											"type": "string"
+										}
+									},
+									"additionalProperties": false,
+									"required": ["label", "tooltip"]
+								},
+								"unit_movement_speed": {
 									"type": "object",
 									"properties": {
 										"label": {
@@ -6222,6 +6304,38 @@
 									"additionalProperties": false,
 									"required": ["label", "tooltip", "full_description"]
 								},
+								"is_hit_capped": {
+									"type": "object",
+									"properties": {
+										"label": {
+											"type": "string"
+										},
+										"tooltip": {
+											"type": "string"
+										},
+										"full_description": {
+											"type": "string"
+										}
+									},
+									"additionalProperties": false,
+									"required": ["label", "tooltip", "full_description"]
+								},
+								"is_expertise_capped": {
+									"type": "object",
+									"properties": {
+										"label": {
+											"type": "string"
+										},
+										"tooltip": {
+											"type": "string"
+										},
+										"full_description": {
+											"type": "string"
+										}
+									},
+									"additionalProperties": false,
+									"required": ["label", "tooltip", "full_description"]
+								},
 								"is_ready": {
 									"type": "object",
 									"properties": {
@@ -6392,6 +6506,19 @@
 									"required": ["label", "tooltip"]
 								},
 								"spell_in_flight": {
+									"type": "object",
+									"properties": {
+										"label": {
+											"type": "string"
+										},
+										"tooltip": {
+											"type": "string"
+										}
+									},
+									"additionalProperties": false,
+									"required": ["label", "tooltip"]
+								},
+								"spell_expected_dpet": {
 									"type": "object",
 									"properties": {
 										"label": {
@@ -7024,19 +7151,6 @@
 									"required": ["label", "tooltip"],
 									"additionalProperties": false
 								},
-								"dot_expected_dps": {
-									"type": "object",
-									"properties": {
-										"label": {
-											"type": "string"
-										},
-										"tooltip": {
-											"type": "string"
-										}
-									},
-									"required": ["label", "tooltip"],
-									"additionalProperties": false
-								},
 								"variable_ref": {
 									"type": "object",
 									"properties": {
@@ -7125,6 +7239,7 @@
 								"encounter_in_area",
 								"unit_is_moving",
 								"distance_to_unit",
+								"unit_movement_speed",
 								"current_health",
 								"current_health_percent",
 								"max_health",
@@ -7154,6 +7269,8 @@
 								"spell_known",
 								"current_cost",
 								"can_cast",
+								"is_hit_capped",
+								"is_expertise_capped",
 								"is_ready",
 								"time_to_ready",
 								"cast_time",
@@ -7168,6 +7285,7 @@
 								"channel_clip_delay",
 								"input_delay",
 								"spell_in_flight",
+								"spell_expected_dpet",
 								"aura_known",
 								"aura_active",
 								"aura_active_with_reaction_time",
@@ -7212,7 +7330,6 @@
 								"offset",
 								"dot_base_duration",
 								"dot_tick_rate_percent_increase",
-								"dot_expected_dps",
 								"variable_ref",
 								"variable_placeholder",
 								"action_group_used",
@@ -7273,21 +7390,12 @@
 								"e20": {
 									"type": "string"
 								},
-								"e25": {
-									"type": "string"
-								},
 								"e35": {
-									"type": "string"
-								},
-								"e45": {
-									"type": "string"
-								},
-								"e90": {
 									"type": "string"
 								}
 							},
 							"additionalProperties": false,
-							"required": ["e20", "e25", "e35", "e45", "e90"]
+							"required": ["e20", "e35"]
 						},
 						"totem_types": {
 							"type": "object",
@@ -7579,6 +7687,9 @@
 										"expected_dot_spells": {
 											"type": "string"
 										},
+										"expected_damage_spells": {
+											"type": "string"
+										},
 										"spells_with_travelTime": {
 											"type": "string"
 										}
@@ -7598,6 +7709,7 @@
 										"non_instant_spells",
 										"friendly_spells",
 										"expected_dot_spells",
+										"expected_damage_spells",
 										"spells_with_travelTime"
 									]
 								},
@@ -9830,12 +9942,22 @@
 						"windfury_over_flametongue": {
 							"type": "string"
 						},
+						"elemental_stormstrike": {
+							"type": "string"
+						},
 						"label": {
 							"type": "string"
 						}
 					},
 					"additionalProperties": false,
-					"required": ["profession_requirement", "unspent_talent_points", "broken_talents", "windfury_over_flametongue", "label"]
+					"required": [
+						"profession_requirement",
+						"unspent_talent_points",
+						"broken_talents",
+						"windfury_over_flametongue",
+						"elemental_stormstrike",
+						"label"
+					]
 				},
 				"buttons": {
 					"type": "object",

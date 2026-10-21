@@ -20,8 +20,9 @@ exported player's own database; talent names and ranks come from the matching ta
 The item and spell links open current game descriptions, which may change after the snapshot.
 
 Every run uses the engine's full raid, party and individual buffs and debuffs, seed 101, and a fixed
-180 second fight against a level 63 target with 3,731 armor. Each build is run against Mechanical,
-Elemental and Beast targets. Both Skyborne races are included. Weapon types are unchanged.
+length fight against a level 63 target with 3,731 armor: 90 seconds, 3 minutes and 6 minutes, with 3
+minutes the page's main view. Each build is run against Mechanical, Elemental and Beast targets at
+each length. The runner's `-durations` flag (default `90,180,360`) sets the lengths. Both Skyborne races are included. Weapon types are unchanged.
 
 The preset export goes through the UI's existing defaults, build application and player serialization.
 Its test checks that each build has gear, talents and a resolved rotation before writing any input.
@@ -41,6 +42,7 @@ npx oxfmt ui/app/race_arena/results.json
 
 Use an empty output directory. The runner defaults to 50,000 iterations per race; `-iterations 2`
 checks that every build can run, but those results must not replace the published rankings.
+Three fight lengths make a full run three times as long as a single one.
 `-workers` limits concurrent simulations. A failed simulation stops the run before writing results.
 
 The runner carries each setup snapshot into its raw results, and the scorer saves one copy per build

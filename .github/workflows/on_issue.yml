@@ -5,7 +5,7 @@ on:
 jobs:
     send_webhook:
         if: github.repository == 'wowsims/forever'
-        runs-on: self-hosted
+        runs-on: ubuntu-latest
         steps:
             - name: Send webhook
               uses: Ilshidur/action-discord@master

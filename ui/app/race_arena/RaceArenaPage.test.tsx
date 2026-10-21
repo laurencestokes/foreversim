@@ -72,6 +72,27 @@ const chipsIn = (row: Element) => [...row.querySelectorAll('[data-testid="race-c
 const rowOf = (card: HTMLElement, tier: string) => card.querySelector(`[data-testid="tier-row"][data-tier="${tier}"]`)!;
 
 describe('RaceArenaPage', () => {
+	it('opens on the main fight length and switches to the others', () => {
+		const leader: Record<number, string> = { 90: 'Orc', 180: 'Human', 360: 'Undead' };
+		const lengths: RaceArenaResults = {
+			...fixture,
+			fight: { ...fixture.fight, durations: [90, 180, 360] },
+			lists: [90, 180, 360].map(seconds => list({ seconds, races: [{ race: leader[seconds], dps: 600, behind: 0, tier: 'S', racials: '' }] })),
+		};
+		const { getByRole, getAllByTestId } = render(<RaceArenaPage data={lengths} />);
+		const shown = () =>
+			getAllByTestId('race-class')
+				.map(section => section.textContent)
+				.join();
+		expect(getByRole('button', { name: '3 min fight' }).getAttribute('aria-pressed')).toBe('true');
+		expect(shown()).toContain('Human');
+		fireEvent.click(getByRole('button', { name: '90 s fight' }));
+		expect(shown()).toContain('Orc');
+		expect(shown()).not.toContain('Human');
+		fireEvent.click(getByRole('button', { name: '6 min fight' }));
+		expect(shown()).toContain('Undead');
+	});
+
 	it('explains the upstream presets, weapon rules and measured uncertainty', () => {
 		const { getByRole, getByTestId } = render(<RaceArenaPage data={fixture} />);
 		const method = getByRole('heading', { name: 'Method' }).closest('section')!;

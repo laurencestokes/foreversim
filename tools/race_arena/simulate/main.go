@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -40,6 +41,7 @@ type list struct {
 	Consumables string          `json:"consumables"`
 	Talents     string          `json:"talents"`
 	Target      string          `json:"target"`
+	Seconds     int             `json:"seconds"`
 	Iterations  int             `json:"iterations"`
 	Races       []row           `json:"races"`
 	Setup       json.RawMessage `json:"setup"`
@@ -50,6 +52,7 @@ func main() {
 	out := flag.String("out", "race-arena-out", "output directory")
 	iterations := flag.Int("iterations", 50000, "iterations per race")
 	workers := flag.Int("workers", runtime.NumCPU(), "concurrent simulations")
+	durations := flag.String("durations", "90,180,360", "fight lengths in seconds, comma separated")
 	flag.Parse()
 	if *iterations < 1 || *workers < 1 {
 		panic("iterations and workers must be positive")
@@ -63,11 +66,20 @@ func main() {
 	}
 	sim.RegisterAll()
 	targets := []proto.MobType{proto.MobType_MobTypeMechanical, proto.MobType_MobTypeElemental, proto.MobType_MobTypeBeast}
+	fightLengths := []int{}
+	for _, field := range strings.Split(*durations, ",") {
+		seconds, err := strconv.Atoi(strings.TrimSpace(field))
+		if err != nil || seconds <= 0 {
+			panic("durations must be positive whole seconds: " + *durations)
+		}
+		fightLengths = append(fightLengths, seconds)
+	}
 	lists := []list{}
 	type job struct {
 		list, row int
 		player    *proto.Player
 		target    proto.MobType
+		seconds   int
 	}
 	jobs := []job{}
 	for _, b := range builds {
@@ -79,20 +91,22 @@ func main() {
 		if len(player.GetEquipment().GetItems()) == 0 || len(player.GetRotation().GetPriorityList()) == 0 {
 			panic("incomplete build: " + b.Build)
 		}
-		for _, target := range targets {
-			l := list{Spec: b.Spec, Class: b.Class, Build: b.Build, Gear: b.Gear, Rotation: b.Rotation,
-				Consumables: b.Consumables, Talents: player.TalentsString, Target: strings.TrimPrefix(target.String(), "MobType"), Iterations: *iterations, Setup: b.Setup}
-			for _, race := range core.ClassRaceCapabilities[player.Class] {
-				p := gp.Clone(player).(*proto.Player)
-				p.Race = race
-				p.Buffs = gp.Clone(core.FullIndividualBuffs).(*proto.IndividualBuffs)
-				l.Races = append(l.Races, row{Race: raceName(race)})
-				jobs = append(jobs, job{len(lists), len(l.Races) - 1, p, target})
+		for _, seconds := range fightLengths {
+			for _, target := range targets {
+				l := list{Spec: b.Spec, Class: b.Class, Build: b.Build, Gear: b.Gear, Rotation: b.Rotation,
+					Consumables: b.Consumables, Talents: player.TalentsString, Target: strings.TrimPrefix(target.String(), "MobType"), Seconds: seconds, Iterations: *iterations, Setup: b.Setup}
+				for _, race := range core.ClassRaceCapabilities[player.Class] {
+					p := gp.Clone(player).(*proto.Player)
+					p.Race = race
+					p.Buffs = gp.Clone(core.FullIndividualBuffs).(*proto.IndividualBuffs)
+					l.Races = append(l.Races, row{Race: raceName(race)})
+					jobs = append(jobs, job{len(lists), len(l.Races) - 1, p, target, seconds})
+				}
+				if len(l.Races) == 0 {
+					panic("no legal races: " + b.Class)
+				}
+				lists = append(lists, l)
 			}
-			if len(l.Races) == 0 {
-				panic("no legal races: " + b.Class)
-			}
-			lists = append(lists, l)
 		}
 	}
 	queue := make(chan job)
@@ -106,6 +120,7 @@ func main() {
 				target.MobType = j.target
 				encounter := core.MakeSingleTargetEncounter(0)
 				encounter.Targets = []*proto.Target{target}
+				encounter.Duration = float64(j.seconds)
 				result := core.RunRaidSim(&proto.RaidSimRequest{
 					Raid: &proto.Raid{Parties: []*proto.Party{{Players: []*proto.Player{j.player}, Buffs: gp.Clone(core.FullPartyBuffs).(*proto.PartyBuffs)}},
 						Buffs: gp.Clone(core.FullRaidBuffs).(*proto.RaidBuffs), Debuffs: gp.Clone(core.FullDebuffs).(*proto.Debuffs)},
@@ -121,7 +136,7 @@ func main() {
 				}
 				r := &lists[j.list].Races[j.row]
 				r.Dps, r.Error = metrics.Avg, metrics.Stdev/math.Sqrt(float64(*iterations))
-				fmt.Printf("%s / %s / %s / %s: %.1f DPS\n", lists[j.list].Spec, lists[j.list].Build, lists[j.list].Target, r.Race, r.Dps)
+				fmt.Printf("%s / %s / %s / %ds / %s: %.1f DPS\n", lists[j.list].Spec, lists[j.list].Build, lists[j.list].Target, j.seconds, r.Race, r.Dps)
 			}
 		}()
 	}

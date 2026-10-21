@@ -19,6 +19,8 @@ export type RaceList = {
 	rotation: string;
 	consumables: string;
 	target: string;
+	// The fight length the list was run at; absent on results from before fight lengths were split.
+	seconds?: number;
 	keptWeaponType?: boolean;
 	weaponType?: string;
 	races: Array<RaceResult>;
@@ -28,7 +30,7 @@ export type RaceArenaResults = {
 	commit: string;
 	generated: string;
 	iterations: number;
-	fight: { seconds: number; targetLevel: number; targetArmor: number };
+	fight: { seconds: number; durations?: Array<number>; targetLevel: number; targetArmor: number };
 	tiers: Array<Tier>;
 	noise: { maxError: number; maxDifference: number };
 	lists: Array<RaceList>;
@@ -174,10 +176,16 @@ const TierList = ({ list, tiers, setup, commit }: { list: RaceList; tiers: Array
 	);
 };
 
+const secondsOf = (data: RaceArenaResults, list: RaceList) => list.seconds ?? data.fight.seconds;
+
+const fightLabel = (seconds: number) => (seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds} s`);
+
 const Lists = ({ data }: { data: RaceArenaResults }) => {
 	const targets = TARGETS.filter(target => data.lists.some(list => list.target === target.key));
 	const [target, setTarget] = useState(targets[0]?.key ?? 'Mechanical');
-	const shown = data.lists.filter(list => list.target === target);
+	const durations = data.fight.durations ?? [data.fight.seconds];
+	const [seconds, setSeconds] = useState(durations.includes(data.fight.seconds) ? data.fight.seconds : durations[0]);
+	const shown = data.lists.filter(list => list.target === target && secondsOf(data, list) === seconds);
 	const classes = [...new Set(shown.map(list => list.class))];
 
 	return (
@@ -191,6 +199,24 @@ const Lists = ({ data }: { data: RaceArenaResults }) => {
 						</li>
 					))}
 				</ul>
+				{durations.length > 1 && (
+					<div className="flex flex-wrap items-center gap-2" data-testid="fight-lengths">
+						{durations.map(d => (
+							<Button
+								variant="unstyled"
+								key={d}
+								className={clsx(PILL, d === seconds ? PILL_ON : PILL_OFF)}
+								type="button"
+								aria-pressed={d === seconds}
+								onClick={() => setSeconds(d)}>
+								{fightLabel(d)} fight
+							</Button>
+						))}
+						<span className="text-sm text-white/50">
+							Short fights favour burst cooldowns and opening racials; long ones favour passives that pay every second.
+						</span>
+					</div>
+				)}
 				{targets.length > 1 && (
 					<div className="flex flex-wrap items-center gap-2">
 						{targets.map(t => (
@@ -239,7 +265,11 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 			</Button>
 			<header>
 				<h1 className="text-3xl font-bold text-brand">Race tier list</h1>
-				<p>Every legal race, compared on {data.lists.filter(list => list.target === 'Mechanical').length} DPS builds from the upstream simulator.</p>
+				<p>
+					Every legal race, compared on{' '}
+					{data.lists.filter(list => list.target === 'Mechanical' && secondsOf(data, list) === data.fight.seconds).length} DPS builds from the
+					upstream simulator.
+				</p>
 			</header>
 			<section className="flex flex-col gap-2 border border-surface-border p-4">
 				<h2 className="m-0 text-xl">Method</h2>
@@ -254,7 +284,8 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 					are not a prediction of final release gear.
 				</p>
 				<p className="m-0">
-					Every simulation is a fixed {data.fight.seconds}-second fight against one level {data.fight.targetLevel} target with{' '}
+					Every simulation is a fixed-length fight ({(data.fight.durations ?? [data.fight.seconds]).map(fightLabel).join(', ')};{' '}
+					{fightLabel(data.fight.seconds)} is the main view) against one level {data.fight.targetLevel} target with{' '}
 					{formatToNumber(data.fight.targetArmor)} armor, with full raid, party and individual buffs and debuffs. The neutral target is the main
 					comparison; Elemental and Beast views show the relevant creature-type racials. Both Skyborne races appear wherever their class is legal.
 					Cooldown racials follow the preset rotation. Rankings measure damage, including pets; survival and utility are outside this comparison.

@@ -49,7 +49,7 @@ message APLGroup {
 	repeated APLValueVariable variables = 3; // Variables that can be used in this group
 }
 
-// NextIndex: 30
+// NextIndex: 32
 message APLAction {
     APLValue condition = 1; // If set, action will only execute if value is true or != 0.
 
@@ -84,6 +84,8 @@ message APLAction {
         APLActionItemSwap item_swap = 17;
         APLActionMove move = 21;
         APLActionMoveDuration move_duration = 22;
+        APLActionPetAttack pet_attack = 30;
+        APLActionStartAttack start_attack = 31;
 
         // Class or Spec-specific actions
         APLActionGuardianHotwDpsRotation guardian_hotw_dps_rotation = 27;
@@ -98,7 +100,7 @@ message APLAction {
 }
 
 
-// NextIndex: 136
+// NextIndex: 137
 message APLValue {
 	UUID uuid = 85;
 
@@ -149,6 +151,7 @@ message APLValue {
 		// Unit values
 		APLValueUnitIsMoving unit_is_moving = 72;
 		APLValueUnitDistance unit_distance = 105;
+		APLValueUnitMovementSpeed unit_movement_speed = 136;
 
         // GCD values
         APLValueGCDIsReady gcd_is_ready = 17;
@@ -175,6 +178,9 @@ message APLValue {
         APLValueSpellGCDHastedDuration spell_gcd_hasted_duration = 115;
         APLValueSpellFullCooldown spell_full_cooldown = 116;
         APLValueSpellInFlight spell_in_flight = 118;
+        APLValueSpellExpectedDpet spell_expected_dpet = 109;
+        APLValueSpellIsHitCapped spell_is_hit_capped = 25;
+        APLValueSpellIsExpertiseCapped spell_is_expertise_capped = 29;
 
         // Aura values
         APLValueAuraIsKnown aura_is_known = 73;
@@ -208,7 +214,6 @@ message APLValue {
         APLValueDotBaseDuration dot_base_duration = 114;
 		APLValueDotPercentIncrease dot_percent_increase = 101;
         APLValueDotPercentIncrease dot_tick_rate_percent_increase = 110;
-        APLValueDotExpectedDps dot_expected_dps = 109;
 
         // Sequence values
         APLValueSequenceIsComplete sequence_is_complete = 44;
@@ -385,6 +390,16 @@ message APLActionMoveDuration {
     APLValue duration = 1;
 }
 
+// Before the pull, sets the player's pets out on the target: from then on they run their rotations, walking in
+// to their range first, and swing once in reach.
+message APLActionPetAttack {
+}
+
+// Turns the melee attack on, as the Attack button does in game. Starting it on the way in starts the off
+// hand's half swing early; starting a ranged auto turns it off again.
+message APLActionStartAttack {
+}
+
 message APLActionCustomRotation {
 }
 
@@ -462,10 +477,9 @@ message APLValueIsExecutePhase {
     enum ExecutePhaseThreshold {
         Unknown = 0;
         E20 = 1;
-        E25 = 2;
         E35 = 3;
-        E45 = 4;
-		E90 = 5;
+        reserved 2, 4, 5;
+        reserved "E25", "E45", "E90";
     }
     ExecutePhaseThreshold threshold = 1;
 }
@@ -492,6 +506,10 @@ message APLValueUnitIsMoving {
     UnitReference source_unit = 1;
 }
 message APLValueUnitDistance {
+    UnitReference source_unit = 1;
+}
+// The unit's run speed in yards per second, with its speed auras.
+message APLValueUnitMovementSpeed {
     UnitReference source_unit = 1;
 }
 message APLValueCurrentHealth {
@@ -605,6 +623,16 @@ message APLValueSpellFullCooldown{
     ActionID spell_id = 1;
 }
 message APLValueSpellInFlight{
+	ActionID spell_id = 1;
+}
+message APLValueSpellExpectedDpet {
+	ActionID spell_id = 1;
+	UnitReference target_unit = 2;
+}
+message APLValueSpellIsHitCapped {
+	ActionID spell_id = 1;
+}
+message APLValueSpellIsExpertiseCapped {
 	ActionID spell_id = 1;
 }
 
@@ -762,11 +790,6 @@ message APLValueProtectionPaladinDamageTakenLastGlobal {}
 
 message APLValueDotBaseDuration {
 	ActionID spell_id = 1;
-}
-
-message APLValueDotExpectedDps {
-	ActionID spell_id = 1;
-	UnitReference target_unit = 2;
 }
 
 message APLValueDotPercentIncrease {
