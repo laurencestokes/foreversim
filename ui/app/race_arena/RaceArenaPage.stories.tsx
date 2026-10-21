@@ -12,8 +12,8 @@ export const Rankings: Story = {};
 export const InspectSetup: Story = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		await userEvent.click(canvas.getByRole('button', { name: 'View setup for Feral Druid: Monocat' }));
-		const dialog = await within(canvasElement.ownerDocument.body).findByRole('dialog', { name: 'Feral Druid: Monocat' });
+		await userEvent.click(canvas.getByRole('button', { name: 'View setup for Feral Druid: Hybrid' }));
+		const dialog = await within(canvasElement.ownerDocument.body).findByRole('dialog', { name: 'Feral Druid: Hybrid' });
 		await expect(within(dialog).getByRole('link', { name: 'Wolfshead Helm' })).toBeVisible();
 	},
 };

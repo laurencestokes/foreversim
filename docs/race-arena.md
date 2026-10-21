@@ -14,6 +14,13 @@ changes within a build; gear and rotations are not optimized separately for each
 measure damage, including pets, with no value assigned to survival or utility. Changes to gear,
 balance, buffs or the encounter can change the ordering.
 
+The page opens on **Best race for your fights**. A reader picks fight lengths and target types, and
+each build names the race whose largest gap behind the best race, across those fights, is smallest:
+the race that is never far off, rather than the best on average. Races within the noise figure of it
+are named as level with it. **Show detail** opens a heatmap of every race against every fight (tier
+letter in each cell, shaded on a one-hue ramp validated against the page surface; unpicked fights are
+faded) and a chart of each race's gap by fight length at one target. The per-fight tier lists follow.
+
 Each build's **View setup** dialog shows the equipped items, random suffixes, enchants, active weapon
 swap gear and selected talent ranks. These are saved with the results. Item names come from the
 exported player's own database; talent names and ranks come from the matching talent definitions.

@@ -6,64 +6,12 @@ import { useState } from 'react';
 
 import { LandingFooter } from '../landing/LandingFooter';
 import { LandingHeader } from '../landing/LandingHeader';
+import { durationsOf, fightLabel, type RaceArenaResults, type RaceList, type RaceResult, secondsOf, specName, TARGETS, type Tier } from './raceArenaData';
+import { RaceArenaExplorer } from './RaceArenaExplorer';
 import { type RaceArenaSetup, RaceArenaSetupDialog } from './RaceArenaSetupDialog';
 import results from './results.json';
 
-export type RaceResult = { race: string; dps: number; behind: number; tier: string; relabelled?: string; racials: string };
-export type RaceList = {
-	spec: string;
-	class: string;
-	build: string;
-	talents: string;
-	gear: string;
-	rotation: string;
-	consumables: string;
-	target: string;
-	// The fight length the list was run at; absent on results from before fight lengths were split.
-	seconds?: number;
-	keptWeaponType?: boolean;
-	weaponType?: string;
-	races: Array<RaceResult>;
-};
-export type Tier = { name: string; maxBehind?: number };
-export type RaceArenaResults = {
-	commit: string;
-	generated: string;
-	iterations: number;
-	fight: { seconds: number; durations?: Array<number>; targetLevel: number; targetArmor: number };
-	tiers: Array<Tier>;
-	noise: { maxError: number; maxDifference: number };
-	lists: Array<RaceList>;
-	setups: Record<string, RaceArenaSetup>;
-};
-
-// The runner groups DPS builds by these spec keys.
-const SPEC_NAMES: Record<string, string> = {
-	balance_druid: 'Balance Druid',
-	feral_druid: 'Feral Druid',
-	hunter: 'Hunter',
-	mage: 'Mage',
-	retribution_paladin: 'Retribution Paladin',
-	shadow_priest: 'Shadow Priest',
-	smite_priest: 'Smite Priest',
-	rogue: 'Rogue',
-	elemental_shaman: 'Elemental Shaman',
-	enhancement_shaman: 'Enhancement Shaman',
-	warlock: 'Warlock',
-	warrior: 'Warrior',
-};
-
-// The creature types the lists were run against. Mechanical is the race arena's neutral target;
-// the other two are the ones a racial pays extra against.
-const TARGETS: Array<{ key: string; label: string; blurb: string }> = [
-	{ key: 'Mechanical', label: 'Neutral target', blurb: 'A target no racial pays extra against. This is the main view.' },
-	{ key: 'Elemental', label: 'Elemental target', blurb: "Adds the Skyborne's Elemental Insight: +5% damage and crit damage against Elementals." },
-	{
-		key: 'Beast',
-		label: 'Beast target',
-		blurb: "Adds the Dwarf's Big Game Hunter and the Troll's Beast Slaying: +5% damage and crit damage against Beasts.",
-	},
-];
+export type { RaceArenaResults, RaceList, RaceResult, Tier } from './raceArenaData';
 
 // Existing theme tokens, gold at the top down to red at the bottom.
 const TIER_COLOR: Record<string, string> = {
@@ -89,7 +37,6 @@ export const tierRange = (tiers: Array<Tier>, index: number): string => {
 	return `${percent(lower)} to ${percent(upper)} behind`;
 };
 
-const specName = (spec: string) => SPEC_NAMES[spec] ?? spec;
 const consumablesName = (list: string) => list.replace('Arena-', '').replace('+class', ' + class imbues').toLowerCase();
 
 const RaceChip = ({ race }: { race: RaceResult }) => (
@@ -176,14 +123,10 @@ const TierList = ({ list, tiers, setup, commit }: { list: RaceList; tiers: Array
 	);
 };
 
-const secondsOf = (data: RaceArenaResults, list: RaceList) => list.seconds ?? data.fight.seconds;
-
-const fightLabel = (seconds: number) => (seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds} s`);
-
 const Lists = ({ data }: { data: RaceArenaResults }) => {
 	const targets = TARGETS.filter(target => data.lists.some(list => list.target === target.key));
 	const [target, setTarget] = useState(targets[0]?.key ?? 'Mechanical');
-	const durations = data.fight.durations ?? [data.fight.seconds];
+	const durations = durationsOf(data);
 	const [seconds, setSeconds] = useState(durations.includes(data.fight.seconds) ? data.fight.seconds : durations[0]);
 	const shown = data.lists.filter(list => list.target === target && secondsOf(data, list) === seconds);
 	const classes = [...new Set(shown.map(list => list.class))];
@@ -284,11 +227,11 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 					are not a prediction of final release gear.
 				</p>
 				<p className="m-0">
-					Every simulation is a fixed-length fight ({(data.fight.durations ?? [data.fight.seconds]).map(fightLabel).join(', ')};{' '}
-					{fightLabel(data.fight.seconds)} is the main view) against one level {data.fight.targetLevel} target with{' '}
-					{formatToNumber(data.fight.targetArmor)} armor, with full raid, party and individual buffs and debuffs. The neutral target is the main
-					comparison; Elemental and Beast views show the relevant creature-type racials. Both Skyborne races appear wherever their class is legal.
-					Cooldown racials follow the preset rotation. Rankings measure damage, including pets; survival and utility are outside this comparison.
+					Every simulation is a fixed-length fight ({durationsOf(data).map(fightLabel).join(', ')}; {fightLabel(data.fight.seconds)} is the main view)
+					against one level {data.fight.targetLevel} target with {formatToNumber(data.fight.targetArmor)} armor, with full raid, party and individual
+					buffs and debuffs. The neutral target is the main comparison; Elemental and Beast views show the relevant creature-type racials. Both
+					Skyborne races appear wherever their class is legal. Cooldown racials follow the preset rotation. Rankings measure damage, including pets;
+					survival and utility are outside this comparison.
 				</p>
 				<p className="m-0">
 					The gear keeps its actual weapon types for every race. The engine follows wowsims/forever with one exception: Dwarf's Earth Fury grants +2%
@@ -305,6 +248,8 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 					ordering. Close races may be effectively tied, even when they appear in different tiers.
 				</p>
 			</section>
+			<RaceArenaExplorer data={data} />
+			<h2 className="m-0 text-xl">Tier lists, one fight at a time</h2>
 			<Lists data={data} />
 			<p className="m-0 text-sm text-white/60" data-testid="race-arena-source">
 				Computed from sim{' '}
