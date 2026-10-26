@@ -2,15 +2,14 @@ name: Build Race Arena
 on:
     workflow_dispatch:
 concurrency:
-    group: build-race-arena
+    group: build-race-arena-${{ github.ref }}
     cancel-in-progress: false
 jobs:
-    race-arena:
+    prepare:
         runs-on: ubuntu-latest
-        timeout-minutes: 180
+        timeout-minutes: 20
         permissions:
-            contents: write
-            actions: write
+            contents: read
         steps:
             - uses: actions/checkout@v5
             - uses: actions/setup-go@v6
@@ -30,10 +29,115 @@ jobs:
               env:
                   RACE_ARENA_INPUT: ${{ runner.temp }}/race-arena-input.json
               run: npx vitest run ui/specs/race_arena_export.test.ts
-            - name: Simulate and score every race
+            - name: Prepare simulation shards
               run: |
                   node tools/race_arena/snapshot.mjs "$RUNNER_TEMP/race-arena-input.json"
-                  go run -tags=with_db ./tools/race_arena/simulate -input "$RUNNER_TEMP/race-arena-input.json" -out "$RUNNER_TEMP/race-arena-out"
+                  mkdir -p "$RUNNER_TEMP/race-arena-job"
+                  go build -tags=with_db -o "$RUNNER_TEMP/race-arena-job/simulate" ./tools/race_arena/simulate
+                  "$RUNNER_TEMP/race-arena-job/simulate" -input "$RUNNER_TEMP/race-arena-input.json" -out "$RUNNER_TEMP/race-arena-job/smoke" -iterations 2
+                  node --input-type=module <<'NODE'
+                  import fs from 'node:fs';
+                  const root = process.env.RUNNER_TEMP;
+                  const builds = JSON.parse(fs.readFileSync(`${root}/race-arena-input.json`, 'utf8'));
+                  for (let shard = 0; shard < 16; shard++) {
+                    fs.writeFileSync(`${root}/race-arena-job/input-${shard}.json`, JSON.stringify(builds.filter((_, i) => i % 16 === shard)));
+                  }
+                  NODE
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: race-arena-inputs
+                  path: ${{ runner.temp }}/race-arena-job
+                  retention-days: 7
+
+    simulate:
+        needs: prepare
+        runs-on: ubuntu-latest
+        timeout-minutes: 180
+        permissions:
+            contents: read
+        strategy:
+            fail-fast: false
+            matrix:
+                shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+        steps:
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 22
+            - uses: actions/download-artifact@v4
+              with:
+                  name: race-arena-inputs
+                  path: ${{ runner.temp }}/race-arena-job
+            - name: Simulate every race in the shard
+              env:
+                  SHARD: ${{ matrix.shard }}
+              run: |
+                  cd "$RUNNER_TEMP/race-arena-job"
+                  chmod +x simulate
+                  if [ "$(node -p "require('./input-$SHARD.json').length")" = 0 ]; then
+                    mkdir -p out
+                    printf '[]\n' > "out/shard-$SHARD.json"
+                  else
+                    ./simulate -input "input-$SHARD.json" -out out -iterations 50000
+                    mv out/presets.json "out/shard-$SHARD.json"
+                  fi
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: race-arena-results-${{ matrix.shard }}
+                  path: ${{ runner.temp }}/race-arena-job/out/shard-*.json
+                  retention-days: 7
+
+    publish:
+        needs: [prepare, simulate]
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        permissions:
+            contents: write
+            actions: write
+        steps:
+            - uses: actions/checkout@v5
+            - uses: actions/setup-go@v6
+              with:
+                  go-version: 1.25.x
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 22
+                  cache: npm
+            - uses: actions/download-artifact@v4
+              with:
+                  name: race-arena-inputs
+                  path: ${{ runner.temp }}/race-arena-job
+            - uses: actions/download-artifact@v4
+              with:
+                  pattern: race-arena-results-*
+                  merge-multiple: true
+                  path: ${{ runner.temp }}/race-arena-out
+            - name: Verify the complete matrix and score the races
+              run: |
+                  node --input-type=module <<'NODE'
+                  import fs from 'node:fs';
+                  import assert from 'node:assert/strict';
+                  const root = process.env.RUNNER_TEMP;
+                  const expected = JSON.parse(fs.readFileSync(`${root}/race-arena-job/smoke/presets.json`, 'utf8'));
+                  const files = fs.readdirSync(`${root}/race-arena-out`).filter(name => name.endsWith('.json'));
+                  assert.equal(files.length, 16);
+                  const actual = files.flatMap(name => JSON.parse(fs.readFileSync(`${root}/race-arena-out/${name}`, 'utf8')));
+                  const key = row => [row.spec, row.build, row.seconds, row.target].join('|');
+                  const byKey = new Map(expected.map(row => [key(row), row]));
+                  assert.equal(actual.length, expected.length);
+                  assert.equal(new Set(actual.map(key)).size, expected.length);
+                  for (const row of actual) {
+                    const reference = byKey.get(key(row));
+                    assert.ok(reference, key(row));
+                    const { races, iterations, ...config } = row;
+                    const { races: expectedRaces, iterations: smokeIterations, ...expectedConfig } = reference;
+                    assert.deepEqual(config, expectedConfig);
+                    assert.equal(iterations, 50000);
+                    assert.deepEqual(races.map(race => race.race), expectedRaces.map(race => race.race));
+                    assert.ok(races.every(race => Number.isFinite(race.dps) && race.dps > 0 && Number.isFinite(race.error) && race.error >= 0));
+                  }
+                  console.log(`Verified ${actual.length} lists and ${actual.reduce((count, row) => count + row.races.length, 0)} simulations`);
+                  NODE
+                  npm ci
                   go run ./tools/race_arena "$RUNNER_TEMP/race-arena-out"
                   npx oxfmt ui/app/race_arena/results.json
             - name: Commit and deploy the rankings

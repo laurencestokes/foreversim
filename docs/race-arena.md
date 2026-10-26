@@ -65,9 +65,11 @@ To attach setups to older results, use the original saved input from that simula
 This reads talent definitions at the results' recorded commit and preserves the DPS, ranks, generation
 date and engine revision. Do not substitute a fresh export after presets have changed.
 
-The manual **Build Race Arena** workflow performs these steps, commits the result and starts the
-Pages deployment on `master`. A concurrent branch update rejects the push so results cannot be
-published under an engine revision they did not use.
+The manual **Build Race Arena** workflow exports the presets once and distributes the builds across
+16 simulation jobs. Before scoring, it checks every race, setup and fight against a complete smoke
+run and requires 50,000 iterations in every result. It then commits the result and starts the Pages
+deployment on `master`. A concurrent branch update rejects the push so results cannot be published
+under an engine revision they did not use.
 
 The fork deploys on pushes to `master` at `/foreversim/forever/`. Its GitHub-hosted test and Pages
 workflows replace upstream's private runner and deployment credentials. `tools/site_base.sh`
