@@ -282,11 +282,11 @@ func racials(raceName string, class string, target string) string {
 	manaUser := class != "Warrior" && class != "Rogue"
 	switch raceName {
 	case "Human":
-		add(true, "Ruthless (+2% crit)")
+		add(true, "Ruthless (+1% crit)")
 
-		add(manaUser, "+5% Spirit")
+		add(manaUser, "+10% Spirit")
 	case "Dwarf":
-		add(true, "Earth Fury (+2% crit damage)")
+		add(true, "Artisan's Precision (+1% hit)")
 		add(target == "Beast", "Big Game Hunter")
 	case "Night Elf":
 		add(true, "Elune's Light")
@@ -296,17 +296,15 @@ func racials(raceName string, class string, target string) string {
 		add(true, "Expansive Mind")
 	case "Orc":
 		add(true, "Blood Fury")
-		add(true, "Savage (+1% crit)")
+		add(class == "Hunter" || class == "Warlock", "Command (+5% pet damage)")
 
 	case "Undead":
 		add(true, "Touch of the Grave")
-	case "Tauren":
-		add(true, "Endurance (+2% crit damage)")
 	case "Troll":
 		add(true, "Berserking")
 		add(target == "Beast", "Beast Slaying")
 	case "Skyborne", "High Order Skyborne", "Windshaper Skyborne":
-		add(true, "Wind Blessed (+3% haste)")
+		add(true, "Wind Blessed (+2% haste)")
 		add(target == "Elemental", "Elemental Insight")
 	}
 	if len(parts) == 0 {

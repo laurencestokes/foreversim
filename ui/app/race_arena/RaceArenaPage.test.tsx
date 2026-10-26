@@ -43,7 +43,7 @@ const fixture: RaceArenaResults = {
 		list({
 			races: [
 				{ race: 'Undead', dps: 600, behind: 0, tier: 'S', racials: 'Touch of the Grave' },
-				{ race: 'Human', dps: 595, behind: 0.83, tier: 'A', relabelled: 'Sword', racials: 'sword crit' },
+				{ race: 'Human', dps: 595, behind: 0.83, tier: 'A', relabelled: 'Sword', racials: 'Ruthless (+1% crit)' },
 				{ race: 'Troll', dps: 580, behind: 3.33, tier: 'D', racials: 'Berserking' },
 			],
 		}),
@@ -54,14 +54,14 @@ const fixture: RaceArenaResults = {
 			consumables: 'Arena-Caster',
 			rotation: 'frost',
 			races: [
-				{ race: 'Human', dps: 560, behind: 0, tier: 'S', relabelled: 'Sword', racials: 'sword crit + +5% Spirit' },
+				{ race: 'Human', dps: 560, behind: 0, tier: 'S', relabelled: 'Sword', racials: 'Ruthless (+1% crit) + +10% Spirit' },
 				{ race: 'Gnome', dps: 552, behind: 1.43, tier: 'B', racials: 'Expansive Mind' },
 			],
 		}),
 		list({
 			target: 'Elemental',
 			races: [
-				{ race: 'Skyborne', dps: 630, behind: 0, tier: 'S', racials: 'Wind Blessed (+1% haste) + Elemental Insight' },
+				{ race: 'Skyborne', dps: 630, behind: 0, tier: 'S', racials: 'Wind Blessed (+2% haste) + Elemental Insight' },
 				{ race: 'Undead', dps: 600, behind: 4.76, tier: 'D', racials: 'Touch of the Grave' },
 			],
 		}),
@@ -103,7 +103,8 @@ describe('RaceArenaPage', () => {
 		expect(method.textContent).toContain('Both Skyborne races');
 		expect(method.textContent).toContain('pre-release baseline');
 		expect(method.textContent).toContain('development gear');
-		expect(method.textContent).toContain('including through swaps');
+		expect(method.textContent).toContain('October 26 racial tuning');
+		expect(method.textContent).toContain('Dwarf and Tauren have no racial crit-damage bonus');
 		expect(getByTestId('tier-legend').querySelectorAll('li')).toHaveLength(5);
 	});
 

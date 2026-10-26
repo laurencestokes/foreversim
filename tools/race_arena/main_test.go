@@ -72,8 +72,8 @@ func TestScore(t *testing.T) {
 		race, tier, racials string
 		behind              float64
 	}{
-		{"Orc", "S", "Blood Fury + Savage (+1% crit)", 0},
-		{"Human", "A", "Ruthless (+2% crit)", 0.6},
+		{"Orc", "S", "Blood Fury", 0},
+		{"Human", "A", "Ruthless (+1% crit)", 0.6},
 		{"Troll", "D", "Berserking", 3},
 	}
 	for i, w := range want {
@@ -97,14 +97,19 @@ func TestRacials(t *testing.T) {
 		race, class, target string
 		want                string
 	}{
-		{"Skyborne", "Mage", "Mechanical", "Wind Blessed (+3% haste)"},
-		{"Skyborne", "Mage", "Elemental", "Wind Blessed (+3% haste) + Elemental Insight"},
-		{"Dwarf", "Warrior", "Beast", "Earth Fury (+2% crit damage) + Big Game Hunter"},
-		{"Dwarf", "Priest", "Mechanical", "Earth Fury (+2% crit damage)"},
+		{"Skyborne", "Mage", "Mechanical", "Wind Blessed (+2% haste)"},
+		{"Skyborne", "Mage", "Elemental", "Wind Blessed (+2% haste) + Elemental Insight"},
+		{"Dwarf", "Warrior", "Beast", "Artisan's Precision (+1% hit) + Big Game Hunter"},
+		{"Dwarf", "Priest", "Mechanical", "Artisan's Precision (+1% hit)"},
 		{"Gnome", "Mage", "Mechanical", "Eureka! + Expansive Mind"},
 		{"Gnome", "Priest", "Mechanical", "Eureka! + Expansive Mind"},
 		{"Gnome", "Warlock", "Mechanical", "Eureka! + Expansive Mind"},
-		{"Human", "Rogue", "Mechanical", "Ruthless (+2% crit)"},
+		{"Human", "Rogue", "Mechanical", "Ruthless (+1% crit)"},
+		{"Human", "Mage", "Mechanical", "Ruthless (+1% crit) + +10% Spirit"},
+		{"Orc", "Hunter", "Mechanical", "Blood Fury + Command (+5% pet damage)"},
+		{"Orc", "Warlock", "Mechanical", "Blood Fury + Command (+5% pet damage)"},
+		{"Orc", "Warrior", "Mechanical", "Blood Fury"},
+		{"Tauren", "Druid", "Mechanical", "base stats only"},
 	}
 	for _, c := range cases {
 		if got := racials(c.race, c.class, c.target); got != c.want {

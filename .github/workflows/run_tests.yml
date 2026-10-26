@@ -49,10 +49,7 @@ jobs:
                   go-version: 1.25.x
 
             - name: Install Protoc
-              uses: arduino/setup-protoc@v3
-              with:
-                  version: 3.x
-                  repo-token: ${{ secrets.GITHUB_TOKEN }}
+              uses: ./.github/actions/setup-protoc
 
             - name: Install Protoc Go plugin
               run: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
@@ -62,6 +59,9 @@ jobs:
               with:
                   node-version: 22
                   cache: npm
+
+            - name: Check skills
+              run: make skills-check
 
             - name: Test Locales 💬
               run: |
@@ -83,10 +83,8 @@ jobs:
             - name: Type check 🧠
               run: npm run type-check
 
-            - name: Unit tests 🧪
-              run: |
-                  npm run test:unit
-                  node --test tools/race_arena/snapshot.test.mjs
+            - name: Test race arena snapshots
+              run: node --test tools/race_arena/snapshot.test.mjs
 
             - name: Build Storybook 📚
               run: npm run storybook:build
@@ -97,6 +95,46 @@ jobs:
                   BUILD_COMMIT: ${{ github.event.pull_request.head.sha }}
               run: |
                   make dist/forever/.dirstamp
+
+    # Vitest splits the test files across the shards; each shard generates the TS sources it imports.
+    test-ui:
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        strategy:
+            fail-fast: false
+            matrix:
+                shard: [1, 2, 3, 4]
+        steps:
+            - name: Checkout 🛎️
+              uses: actions/checkout@v5
+              with:
+                  ref: ${{ inputs.ref }}
+
+            - name: Install Go
+              uses: actions/setup-go@v6
+              with:
+                  go-version: 1.25.x
+
+            - name: Install Protoc
+              uses: ./.github/actions/setup-protoc
+
+            - name: Install Protoc Go plugin
+              run: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+
+            - name: Install Node
+              uses: actions/setup-node@v5
+              with:
+                  node-version: 22
+                  cache: npm
+
+            - name: Install npm dependencies
+              run: npm ci
+
+            - name: Generate TS sources 🧬
+              run: make ui/generated/proto/api.ts go-to-ts
+
+            - name: Unit tests (shard ${{ matrix.shard }}) 🧪
+              run: npm run test:unit -- --shard=${{ matrix.shard }}/4
 
     test:
         runs-on: ubuntu-latest
@@ -117,10 +155,7 @@ jobs:
                   go-version: 1.25.x
 
             - name: Install Protoc
-              uses: arduino/setup-protoc@v3
-              with:
-                  version: 3.x
-                  repo-token: ${{ secrets.GITHUB_TOKEN }}
+              uses: ./.github/actions/setup-protoc
 
             - name: Install Protoc Go plugin
               run: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest

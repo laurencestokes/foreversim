@@ -234,8 +234,10 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 					survival and utility are outside this comparison.
 				</p>
 				<p className="m-0">
-					The gear keeps its actual weapon types for every race. The engine follows wowsims/forever with one exception: Dwarf's Earth Fury grants +2%
-					critical damage and healing with any weapon or none, including through swaps, just like Tauren's crit bonus.
+					The gear keeps its actual weapon types for every race. The engine follows wowsims/forever and the October 26 racial tuning: Human gains 1%
+					crit and 10% Spirit, Dwarf gains 1% attack and spell hit, Orc's Command adds 5% pet damage for hunters and warlocks, and Skyborne gains 2%
+					haste. Dwarf and Tauren have no racial crit-damage bonus. Skyborne cooldowns follow the preset, including its choice of ordinary or
+					Attuned/Charged casts. Plainsrunning and health regeneration are not simulated.
 				</p>
 				<p className="m-0">
 					{formatToNumber(data.iterations)} iterations per race use the same random seed (101). The largest standard error is{' '}

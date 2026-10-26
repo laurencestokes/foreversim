@@ -20,10 +20,7 @@ jobs:
               with:
                   node-version: 22
                   cache: npm
-            - uses: arduino/setup-protoc@v3
-              with:
-                  version: 3.x
-                  repo-token: ${{ secrets.GITHUB_TOKEN }}
+            - uses: ./.github/actions/setup-protoc
             - name: Prepare the simulator
               run: |
                   npm ci

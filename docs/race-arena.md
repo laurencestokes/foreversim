@@ -1,9 +1,13 @@
 # Race arena
 
 The simulator, game data and preset builds follow [wowsims/forever](https://github.com/wowsims/forever),
-with one explicit race-mechanics exception: Dwarf's Earth Fury grants +2% critical damage and healing
-with any weapon or none, including through item swaps. This follows the unrestricted bonus in the
-[October 15 development notes](https://us.forums.blizzard.com/en/wow/t/2360696/6) and the spell tooltip.
+including the [October 26 racial tuning](https://www.wowhead.com/forever/news/racial-ability-tuning-pass-for-wow-forever-383597).
+Human has 1% crit and 10% increased Spirit; Dwarf has 1% physical and spell hit; Tauren retains its
+health bonus with no crit-damage bonus; Orc's Command grants 5% damage to hunter and warlock pets;
+Skyborne has 2% haste. Earth Fury and Savage are removed. There are no fork-specific racial overrides.
+Read Leyline and Skysight use upstream's ordinary and Attuned/Charged variants. The presets choose
+which cast to use; the arena adds no extra regional buff. As in upstream, Plainsrunning and health
+regeneration are not simulated.
 The race arena compares every legal race on each DPS build. It keeps the preset's gear, talents,
 resolved rotation, consumables and class options fixed. Warlock presets contain no gear, so they use
 the upstream `preraid` set, as the warlock regression suites do. Development gear sets are included.
@@ -33,7 +37,7 @@ each length. The runner's `-durations` flag (default `90,180,360`) sets the leng
 
 The preset export goes through the UI's existing defaults, build application and player serialization.
 Its test checks that each build has gear, talents and a resolved rotation before writing any input.
-The Go runner uses the same engine as the simulator, including the Earth Fury exception above.
+The Go runner uses the same engine as the simulator.
 
 ## Rebuild
 
