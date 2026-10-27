@@ -26,6 +26,12 @@ import warlockGear from './warlock/dps/gear_sets/preraid.gear.json';
 
 vi.mock('@sim/workers/worker_pool', async () => (await import('@testing/sim/worker_pool')).idleWorkerPool());
 
+function requestsRegionalRacial(value: unknown): boolean {
+	if (!value || typeof value !== 'object') return false;
+	if ('spellId' in value && 'tag' in value && [1259705, 1259686].includes(Number(value.spellId)) && value.tag === 1) return true;
+	return Object.values(value).some(requestsRegionalRacial);
+}
+
 // Export the same resolved players the simulator sends to Go, including simple rotations and build options.
 // RACE_ARENA_INPUT turns this check into the input step for tools/race_arena/simulate.
 it('resolves every DPS preset for the race arena with its gear and rotation', async () => {
@@ -65,6 +71,7 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 			if (key === 'warlock') player.setGear(host.sim.db.lookupEquipmentSpec(EquipmentSpec.fromJson(warlockGear)));
 			const exported = player.toProto(false, true);
 			const label = [build.group, build.name].filter(Boolean).join(' / ');
+			expect(requestsRegionalRacial(PlayerProto.toJson(exported)), `${key} / ${label}: Attuned and Charged are removed on entering a raid`).toBe(false);
 			expect(exported.equipment?.items.filter(item => item.id).length, `${key} / ${label} gear`).toBeGreaterThan(10);
 			expect(exported.rotation?.priorityList.length, `${key} / ${label} rotation`).toBeGreaterThan(0);
 			expect(exported.talentsString, `${key} / ${label} talents`).not.toBe('');

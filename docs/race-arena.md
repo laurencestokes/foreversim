@@ -1,12 +1,14 @@
 # Race arena
 
 The simulator, game data and preset builds follow [wowsims/forever](https://github.com/wowsims/forever),
-including the [October 26 racial tuning](https://www.wowhead.com/forever/news/racial-ability-tuning-pass-for-wow-forever-383597).
+including the [October 26 racial tuning](https://www.wowhead.com/forever/news/racial-ability-tuning-pass-for-wow-forever-383597)
+and the [October 27 addendum](https://us.forums.blizzard.com/en/wow/t/2360696/8).
 Human has 1% crit and 10% increased Spirit; Dwarf has 1% physical and spell hit; Tauren retains its
 health bonus with no crit-damage bonus; Orc's Command grants 5% damage to hunter and warlock pets;
 Skyborne has 2% haste. Earth Fury and Savage are removed. There are no fork-specific racial overrides.
-Read Leyline and Skysight use upstream's ordinary and Attuned/Charged variants. The presets choose
-which cast to use; the arena adds no extra regional buff. As in upstream, Plainsrunning and health
+Blood Fury has a 2-minute cooldown; Touch of the Grave has a 15-second internal cooldown.
+The raid baseline uses ordinary Read Leyline and Skysight casts. Entering a raid removes Attuned and
+Charged, so the preset export rejects their enhanced casts. As in upstream, Plainsrunning and health
 regeneration are not simulated.
 The race arena compares every legal race on each DPS build. It keeps the preset's gear, talents,
 resolved rotation, consumables and class options fixed. Warlock presets contain no gear, so they use
@@ -66,7 +68,8 @@ This reads talent definitions at the results' recorded commit and preserves the 
 date and engine revision. Do not substitute a fresh export after presets have changed.
 
 The manual **Build Race Arena** workflow exports the presets once and distributes the builds across
-16 simulation jobs. Before scoring, it checks every race, setup and fight against a complete smoke
+16 groups, each with a separate job for every fight length. Splitting the durations keeps the slowest
+builds from holding up a whole group. Before scoring, it checks every race, setup and fight against a complete smoke
 run and requires 50,000 iterations in every result. It then commits the result and starts the Pages
 deployment on `master`. A concurrent branch update rejects the push so results cannot be published
 under an engine revision they did not use.

@@ -59,6 +59,7 @@ jobs:
             fail-fast: false
             matrix:
                 shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+                duration: [90, 180, 360]
         steps:
             - uses: actions/setup-node@v5
               with:
@@ -70,19 +71,20 @@ jobs:
             - name: Simulate every race in the shard
               env:
                   SHARD: ${{ matrix.shard }}
+                  DURATION: ${{ matrix.duration }}
               run: |
                   cd "$RUNNER_TEMP/race-arena-job"
                   chmod +x simulate
                   if [ "$(node -p "require('./input-$SHARD.json').length")" = 0 ]; then
                     mkdir -p out
-                    printf '[]\n' > "out/shard-$SHARD.json"
+                    printf '[]\n' > "out/shard-$SHARD-$DURATION.json"
                   else
-                    ./simulate -input "input-$SHARD.json" -out out -iterations 50000
-                    mv out/presets.json "out/shard-$SHARD.json"
+                    ./simulate -input "input-$SHARD.json" -out out -iterations 50000 -durations "$DURATION"
+                    mv out/presets.json "out/shard-$SHARD-$DURATION.json"
                   fi
             - uses: actions/upload-artifact@v4
               with:
-                  name: race-arena-results-${{ matrix.shard }}
+                  name: race-arena-results-${{ matrix.shard }}-${{ matrix.duration }}
                   path: ${{ runner.temp }}/race-arena-job/out/shard-*.json
                   retention-days: 7
 
@@ -119,7 +121,7 @@ jobs:
                   const root = process.env.RUNNER_TEMP;
                   const expected = JSON.parse(fs.readFileSync(`${root}/race-arena-job/smoke/presets.json`, 'utf8'));
                   const files = fs.readdirSync(`${root}/race-arena-out`).filter(name => name.endsWith('.json'));
-                  assert.equal(files.length, 16);
+                  assert.equal(files.length, 48);
                   const actual = files.flatMap(name => JSON.parse(fs.readFileSync(`${root}/race-arena-out/${name}`, 'utf8')));
                   const key = row => [row.spec, row.build, row.seconds, row.target].join('|');
                   const byKey = new Map(expected.map(row => [key(row), row]));

@@ -103,7 +103,10 @@ describe('RaceArenaPage', () => {
 		expect(method.textContent).toContain('Both Skyborne races');
 		expect(method.textContent).toContain('pre-release baseline');
 		expect(method.textContent).toContain('development gear');
-		expect(method.textContent).toContain('October 26 racial tuning');
+		expect(method.textContent).toContain('October 26 and 27 racial tuning');
+		expect(method.textContent).toContain('Blood Fury has a 2-minute cooldown');
+		expect(method.textContent).toContain('Touch of the Grave has a 15-second internal cooldown');
+		expect(method.textContent).toContain('Attuned and Charged are removed on entering a raid');
 		expect(method.textContent).toContain('Dwarf and Tauren have no racial crit-damage bonus');
 		expect(getByTestId('tier-legend').querySelectorAll('li')).toHaveLength(5);
 	});
