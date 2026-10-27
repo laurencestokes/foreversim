@@ -99,8 +99,8 @@ func TestBloodFuryIsPercentBased(t *testing.T) {
 	if !WithinToleranceFloat64(apBefore*1.1, fw.GetStat(stats.AttackPower), 0.01) {
 		t.Fatalf("Blood Fury should grant 10%% Attack Power: before %0.2f, after %0.2f", apBefore, fw.GetStat(stats.AttackPower))
 	}
-	if got := fw.GetSpell(ActionID{SpellID: 20572}).TimeToReady(sim); got != 3*time.Minute {
-		t.Fatalf("Blood Fury should be ready again 3 minutes after its cast, got %v", got)
+	if got := fw.GetSpell(ActionID{SpellID: 20572}).TimeToReady(sim); got != 2*time.Minute {
+		t.Fatalf("Blood Fury should be ready again 2 minutes after its cast, got %v", got)
 	}
 }
 
