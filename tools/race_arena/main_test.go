@@ -105,7 +105,7 @@ func TestRacials(t *testing.T) {
 		{"Gnome", "Priest", "Mechanical", "Eureka! + Expansive Mind"},
 		{"Gnome", "Warlock", "Mechanical", "Eureka! + Expansive Mind"},
 		{"Human", "Rogue", "Mechanical", "Ruthless (+1% crit)"},
-		{"Human", "Mage", "Mechanical", "Ruthless (+1% crit) + +10% Spirit"},
+		{"Human", "Mage", "Mechanical", "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"},
 		{"Orc", "Hunter", "Mechanical", "Blood Fury + Command (+5% pet damage)"},
 		{"Orc", "Warlock", "Mechanical", "Blood Fury + Command (+5% pet damage)"},
 		{"Orc", "Warrior", "Mechanical", "Blood Fury"},

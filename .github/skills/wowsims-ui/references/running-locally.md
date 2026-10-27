@@ -68,6 +68,9 @@ asset copy (`make` does it; a plain `vite build` does not), not a broken databas
 restores only the bundles, and the database and assets come from other tooling. Copy `dist` to a scratch directory and
 serve that on its own port if you need an isolated build, for example the parent commit's for a comparison.
 
+When directing Vite's bundle to a scratch directory, use an absolute `--outDir`. Relative paths resolve under `ui/`,
+where the UI source checks would scan the built files.
+
 ## Screenshots
 
 A change to rendering, layout or interaction gets screenshots of the real sim, because no gate shows the page. Drive it

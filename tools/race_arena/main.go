@@ -284,7 +284,7 @@ func racials(raceName string, class string, target string) string {
 	case "Human":
 		add(true, "Ruthless (+1% crit)")
 
-		add(manaUser, "+10% Spirit")
+		add(manaUser, "The Human Spirit (+10% Spirit)")
 	case "Dwarf":
 		add(true, "Artisan's Precision (+1% hit)")
 		add(target == "Beast", "Big Game Hunter")

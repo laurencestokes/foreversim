@@ -54,7 +54,7 @@ const fixture: RaceArenaResults = {
 			consumables: 'Arena-Caster',
 			rotation: 'frost',
 			races: [
-				{ race: 'Human', dps: 560, behind: 0, tier: 'S', relabelled: 'Sword', racials: 'Ruthless (+1% crit) + +10% Spirit' },
+				{ race: 'Human', dps: 560, behind: 0, tier: 'S', relabelled: 'Sword', racials: 'Ruthless (+1% crit) + The Human Spirit (+10% Spirit)' },
 				{ race: 'Gnome', dps: 552, behind: 1.43, tier: 'B', racials: 'Expansive Mind' },
 			],
 		}),

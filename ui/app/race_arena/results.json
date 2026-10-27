@@ -1,6 +1,6 @@
 {
 	"commit": "99ccc1b41bd1d8b67074317ed7b3169bbf8c010b",
-	"generated": "2026-10-27T01:25:13Z",
+	"generated": "2026-10-27T01:27:41Z",
 	"iterations": 50000,
 	"fight": {
 		"seconds": 180,
@@ -1178,7 +1178,7 @@
 					"dps": 1044.9,
 					"behind": 1.37,
 					"tier": "B",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -1247,7 +1247,7 @@
 					"dps": 1044.9,
 					"behind": 5.22,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -1330,7 +1330,7 @@
 					"dps": 1044.9,
 					"behind": 3.77,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -1385,7 +1385,7 @@
 					"dps": 1037.5,
 					"behind": 0.64,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -1454,7 +1454,7 @@
 					"dps": 1037.5,
 					"behind": 5.32,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -1537,7 +1537,7 @@
 					"dps": 1037.5,
 					"behind": 3.97,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -1592,7 +1592,7 @@
 					"dps": 1038.7,
 					"behind": 0.36,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -1661,7 +1661,7 @@
 					"dps": 1038.7,
 					"behind": 5.06,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -1744,7 +1744,7 @@
 					"dps": 1038.7,
 					"behind": 3.88,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -1785,7 +1785,7 @@
 					"dps": 992.2,
 					"behind": 1.01,
 					"tier": "B",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -1868,7 +1868,7 @@
 					"dps": 992.2,
 					"behind": 3.56,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -1937,7 +1937,7 @@
 					"dps": 992.2,
 					"behind": 3.45,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -1992,7 +1992,7 @@
 					"dps": 977,
 					"behind": 0.29,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "High Order Skyborne",
@@ -2075,7 +2075,7 @@
 					"dps": 977,
 					"behind": 4.56,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -2144,7 +2144,7 @@
 					"dps": 977,
 					"behind": 3.91,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "High Order Skyborne",
@@ -2199,7 +2199,7 @@
 					"dps": 979.4,
 					"behind": 0.07,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "High Order Skyborne",
@@ -2282,7 +2282,7 @@
 					"dps": 979.4,
 					"behind": 4.44,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -2351,7 +2351,7 @@
 					"dps": 979.4,
 					"behind": 3.64,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "High Order Skyborne",
@@ -2413,7 +2413,7 @@
 					"dps": 985.2,
 					"behind": 1.14,
 					"tier": "B",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "High Order Skyborne",
@@ -2496,7 +2496,7 @@
 					"dps": 985.2,
 					"behind": 2.87,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -2565,7 +2565,7 @@
 					"dps": 985.2,
 					"behind": 2.43,
 					"tier": "C",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "High Order Skyborne",
@@ -2634,7 +2634,7 @@
 					"dps": 974.4,
 					"behind": 0.79,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -2703,7 +2703,7 @@
 					"dps": 974.4,
 					"behind": 3.36,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -2786,7 +2786,7 @@
 					"dps": 974.4,
 					"behind": 2.42,
 					"tier": "C",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Tauren",
@@ -2820,7 +2820,7 @@
 					"dps": 958.4,
 					"behind": 0.56,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Night Elf",
@@ -2903,7 +2903,7 @@
 					"dps": 958.4,
 					"behind": 2.84,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Night Elf",
@@ -2972,7 +2972,7 @@
 					"dps": 958.4,
 					"behind": 2.2,
 					"tier": "C",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Night Elf",
@@ -3041,7 +3041,7 @@
 					"dps": 745.2,
 					"behind": 1.36,
 					"tier": "B",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -3110,7 +3110,7 @@
 					"dps": 745.2,
 					"behind": 5.03,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -3193,7 +3193,7 @@
 					"dps": 745.2,
 					"behind": 4.36,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -3248,7 +3248,7 @@
 					"dps": 731.5,
 					"behind": 0.4,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -3317,7 +3317,7 @@
 					"dps": 731.5,
 					"behind": 4.81,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -3400,7 +3400,7 @@
 					"dps": 731.5,
 					"behind": 4.13,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -3455,7 +3455,7 @@
 					"dps": 729.8,
 					"behind": 0.39,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -3524,7 +3524,7 @@
 					"dps": 729.8,
 					"behind": 4.93,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -3607,7 +3607,7 @@
 					"dps": 729.8,
 					"behind": 4.14,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -3655,7 +3655,7 @@
 					"dps": 830.9,
 					"behind": 1.47,
 					"tier": "B",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "High Order Skyborne",
@@ -3738,7 +3738,7 @@
 					"dps": 830.9,
 					"behind": 2.82,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -3807,7 +3807,7 @@
 					"dps": 830.9,
 					"behind": 2.51,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "High Order Skyborne",
@@ -3876,7 +3876,7 @@
 					"dps": 815.5,
 					"behind": 1.12,
 					"tier": "B",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -3945,7 +3945,7 @@
 					"dps": 815.5,
 					"behind": 2.94,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -4028,7 +4028,7 @@
 					"dps": 815.5,
 					"behind": 2.34,
 					"tier": "C",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Tauren",
@@ -4083,7 +4083,7 @@
 					"dps": 808.6,
 					"behind": 1.05,
 					"tier": "B",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -4152,7 +4152,7 @@
 					"dps": 808.6,
 					"behind": 2.95,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -4235,7 +4235,7 @@
 					"dps": 808.6,
 					"behind": 2.34,
 					"tier": "C",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Tauren",
@@ -4269,7 +4269,7 @@
 					"dps": 667.6,
 					"behind": 1.41,
 					"tier": "B",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "High Order Skyborne",
@@ -4352,7 +4352,7 @@
 					"dps": 667.6,
 					"behind": 4.63,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -4421,7 +4421,7 @@
 					"dps": 667.6,
 					"behind": 4.08,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "High Order Skyborne",
@@ -4490,7 +4490,7 @@
 					"dps": 645.6,
 					"behind": 0.8,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -4559,7 +4559,7 @@
 					"dps": 645.6,
 					"behind": 5.49,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -4642,7 +4642,7 @@
 					"dps": 645.6,
 					"behind": 4.42,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -4697,7 +4697,7 @@
 					"dps": 646.1,
 					"behind": 0.42,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -4766,7 +4766,7 @@
 					"dps": 646.1,
 					"behind": 5.03,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -4849,7 +4849,7 @@
 					"dps": 646.1,
 					"behind": 4.16,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -4911,7 +4911,7 @@
 					"dps": 797.5,
 					"behind": 1.15,
 					"tier": "B",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -4980,7 +4980,7 @@
 					"dps": 797.5,
 					"behind": 3.56,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -5063,7 +5063,7 @@
 					"dps": 797.5,
 					"behind": 3.12,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Tauren",
@@ -5118,7 +5118,7 @@
 					"dps": 776.3,
 					"behind": 0.7,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -5187,7 +5187,7 @@
 					"dps": 776.3,
 					"behind": 3.46,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -5270,7 +5270,7 @@
 					"dps": 776.3,
 					"behind": 2.79,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Tauren",
@@ -5325,7 +5325,7 @@
 					"dps": 774.5,
 					"behind": 0.65,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Dwarf",
@@ -5394,7 +5394,7 @@
 					"dps": 774.5,
 					"behind": 3.42,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Dwarf",
@@ -5477,7 +5477,7 @@
 					"dps": 774.5,
 					"behind": 2.8,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Tauren",
@@ -5525,7 +5525,7 @@
 					"dps": 779.3,
 					"behind": 0.9,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -5580,7 +5580,7 @@
 					"dps": 779.3,
 					"behind": 5.1,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -5642,7 +5642,7 @@
 					"dps": 779.3,
 					"behind": 4.53,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -5683,7 +5683,7 @@
 					"dps": 726.9,
 					"behind": 0.48,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -5738,7 +5738,7 @@
 					"dps": 726.9,
 					"behind": 5.21,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -5800,7 +5800,7 @@
 					"dps": 726.9,
 					"behind": 4.01,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -5848,7 +5848,7 @@
 					"dps": 707.2,
 					"behind": 0.76,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -5903,7 +5903,7 @@
 					"dps": 707.2,
 					"behind": 5.49,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -5965,7 +5965,7 @@
 					"dps": 707.2,
 					"behind": 4.1,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -6013,7 +6013,7 @@
 					"dps": 859.4,
 					"behind": 0.87,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -6075,7 +6075,7 @@
 					"dps": 859.4,
 					"behind": 4.11,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -6130,7 +6130,7 @@
 					"dps": 859.4,
 					"behind": 3.78,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -6171,7 +6171,7 @@
 					"dps": 795,
 					"behind": 0.49,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -6233,7 +6233,7 @@
 					"dps": 795,
 					"behind": 3.92,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -6288,7 +6288,7 @@
 					"dps": 795,
 					"behind": 3.67,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -6329,7 +6329,7 @@
 					"dps": 786.4,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -6391,7 +6391,7 @@
 					"dps": 786.4,
 					"behind": 4.08,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -6446,7 +6446,7 @@
 					"dps": 786.4,
 					"behind": 2.57,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -6508,7 +6508,7 @@
 					"dps": 837.5,
 					"behind": 1.09,
 					"tier": "B",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -6563,7 +6563,7 @@
 					"dps": 837.5,
 					"behind": 5.8,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -6618,7 +6618,7 @@
 					"dps": 837.5,
 					"behind": 5.13,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -6666,7 +6666,7 @@
 					"dps": 808.9,
 					"behind": 1.21,
 					"tier": "B",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -6721,7 +6721,7 @@
 					"dps": 808.9,
 					"behind": 5.91,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -6783,7 +6783,7 @@
 					"dps": 808.9,
 					"behind": 4.49,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -6824,7 +6824,7 @@
 					"dps": 714.2,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "High Order Skyborne",
@@ -6886,7 +6886,7 @@
 					"dps": 714.2,
 					"behind": 3.72,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -6941,7 +6941,7 @@
 					"dps": 714.2,
 					"behind": 1.65,
 					"tier": "C",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "High Order Skyborne",
@@ -7017,7 +7017,7 @@
 					"dps": 866,
 					"behind": 0.37,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -7072,7 +7072,7 @@
 					"dps": 866,
 					"behind": 5.09,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -7134,7 +7134,7 @@
 					"dps": 866,
 					"behind": 4.61,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				}
 			]
 		},
@@ -7168,7 +7168,7 @@
 					"dps": 858.1,
 					"behind": 0.34,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -7223,7 +7223,7 @@
 					"dps": 858.1,
 					"behind": 5.09,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -7285,7 +7285,7 @@
 					"dps": 858.1,
 					"behind": 4.16,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -7326,7 +7326,7 @@
 					"dps": 847.1,
 					"behind": 0.01,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -7381,7 +7381,7 @@
 					"dps": 847.1,
 					"behind": 4.77,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -7443,7 +7443,7 @@
 					"dps": 847.1,
 					"behind": 3.86,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -7519,7 +7519,7 @@
 					"dps": 629.8,
 					"behind": 1.03,
 					"tier": "B",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				}
 			]
 		},
@@ -7574,7 +7574,7 @@
 					"dps": 629.8,
 					"behind": 5.75,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				}
 			]
 		},
@@ -7629,7 +7629,7 @@
 					"dps": 629.8,
 					"behind": 4.88,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				}
 			]
 		},
@@ -7670,7 +7670,7 @@
 					"dps": 628.5,
 					"behind": 0.89,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -7725,7 +7725,7 @@
 					"dps": 628.5,
 					"behind": 5.61,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -7787,7 +7787,7 @@
 					"dps": 628.5,
 					"behind": 4.34,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -7828,7 +7828,7 @@
 					"dps": 613.5,
 					"behind": 0.57,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -7883,7 +7883,7 @@
 					"dps": 613.5,
 					"behind": 5.31,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -7945,7 +7945,7 @@
 					"dps": 613.5,
 					"behind": 4.21,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -7993,7 +7993,7 @@
 					"dps": 835.3,
 					"behind": 0.27,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				}
 			]
 		},
@@ -8027,7 +8027,7 @@
 					"dps": 835.3,
 					"behind": 0.27,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				}
 			]
 		},
@@ -8061,7 +8061,7 @@
 					"dps": 835.3,
 					"behind": 4.82,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				}
 			]
 		},
@@ -8095,7 +8095,7 @@
 					"dps": 833.5,
 					"behind": 0.26,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				}
 			]
 		},
@@ -8129,7 +8129,7 @@
 					"dps": 833.5,
 					"behind": 0.26,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				}
 			]
 		},
@@ -8163,7 +8163,7 @@
 					"dps": 833.5,
 					"behind": 4.81,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				}
 			]
 		},
@@ -8197,7 +8197,7 @@
 					"dps": 823.8,
 					"behind": 0.27,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				}
 			]
 		},
@@ -8231,7 +8231,7 @@
 					"dps": 823.8,
 					"behind": 0.27,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				}
 			]
 		},
@@ -8265,7 +8265,7 @@
 					"dps": 823.8,
 					"behind": 4.82,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				}
 			]
 		},
@@ -8285,7 +8285,7 @@
 					"dps": 845.8,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -8319,7 +8319,7 @@
 					"dps": 845.8,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -8360,7 +8360,7 @@
 					"dps": 845.8,
 					"behind": 3.81,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -8387,7 +8387,7 @@
 					"dps": 854.9,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -8421,7 +8421,7 @@
 					"dps": 854.9,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -8462,7 +8462,7 @@
 					"dps": 854.9,
 					"behind": 3.78,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -8489,7 +8489,7 @@
 					"dps": 859.2,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -8523,7 +8523,7 @@
 					"dps": 859.2,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -8564,7 +8564,7 @@
 					"dps": 859.2,
 					"behind": 3.8,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -8598,7 +8598,7 @@
 					"dps": 824.4,
 					"behind": 0.25,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Dwarf",
@@ -8653,7 +8653,7 @@
 					"dps": 824.4,
 					"behind": 0.25,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Dwarf",
@@ -8722,7 +8722,7 @@
 					"dps": 824.4,
 					"behind": 4.69,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -8756,7 +8756,7 @@
 					"dps": 821.2,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Dwarf",
@@ -8811,7 +8811,7 @@
 					"dps": 821.2,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Dwarf",
@@ -8880,7 +8880,7 @@
 					"dps": 821.2,
 					"behind": 4.69,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -8921,7 +8921,7 @@
 					"dps": 824.4,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Dwarf",
@@ -8976,7 +8976,7 @@
 					"dps": 824.4,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Dwarf",
@@ -9045,7 +9045,7 @@
 					"dps": 824.4,
 					"behind": 4.69,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Night Elf",
@@ -9100,7 +9100,7 @@
 					"dps": 518.5,
 					"behind": 0.28,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Dwarf",
@@ -9155,7 +9155,7 @@
 					"dps": 518.5,
 					"behind": 0.28,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Dwarf",
@@ -9224,7 +9224,7 @@
 					"dps": 518.5,
 					"behind": 3.54,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Night Elf",
@@ -9251,7 +9251,7 @@
 					"dps": 442.1,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -9306,7 +9306,7 @@
 					"dps": 442.1,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -9375,7 +9375,7 @@
 					"dps": 442.1,
 					"behind": 2.57,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -9416,7 +9416,7 @@
 					"dps": 395.7,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -9471,7 +9471,7 @@
 					"dps": 395.7,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -9540,7 +9540,7 @@
 					"dps": 395.7,
 					"behind": 2.36,
 					"tier": "C",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -14570,7 +14570,7 @@
 					"dps": 807.8,
 					"behind": 0.84,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -14618,7 +14618,7 @@
 					"dps": 807.8,
 					"behind": 0.84,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -14666,7 +14666,7 @@
 					"dps": 807.8,
 					"behind": 3.9,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -14707,7 +14707,7 @@
 					"dps": 792.7,
 					"behind": 0.48,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -14755,7 +14755,7 @@
 					"dps": 792.7,
 					"behind": 0.48,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -14810,7 +14810,7 @@
 					"dps": 792.7,
 					"behind": 3.39,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -14851,7 +14851,7 @@
 					"dps": 774.2,
 					"behind": 0.56,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -14899,7 +14899,7 @@
 					"dps": 774.2,
 					"behind": 0.56,
 					"tier": "A",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -14954,7 +14954,7 @@
 					"dps": 774.2,
 					"behind": 3.26,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -14995,7 +14995,7 @@
 					"dps": 815.9,
 					"behind": 0.36,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -15043,7 +15043,7 @@
 					"dps": 815.9,
 					"behind": 0.36,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Troll",
@@ -15098,7 +15098,7 @@
 					"dps": 815.9,
 					"behind": 3.69,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -15132,7 +15132,7 @@
 					"dps": 777.8,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -15180,7 +15180,7 @@
 					"dps": 777.8,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -15235,7 +15235,7 @@
 					"dps": 777.8,
 					"behind": 3.2,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -15276,7 +15276,7 @@
 					"dps": 758.6,
 					"behind": 0.09,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -15324,7 +15324,7 @@
 					"dps": 758.6,
 					"behind": 0.09,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -15379,7 +15379,7 @@
 					"dps": 758.6,
 					"behind": 3.12,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -15427,7 +15427,7 @@
 					"dps": 725.1,
 					"behind": 0.26,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -15475,7 +15475,7 @@
 					"dps": 725.1,
 					"behind": 0.26,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -15530,7 +15530,7 @@
 					"dps": 725.1,
 					"behind": 4.3,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -15564,7 +15564,7 @@
 					"dps": 705.7,
 					"behind": 0.09,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -15612,7 +15612,7 @@
 					"dps": 705.7,
 					"behind": 0.09,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -15667,7 +15667,7 @@
 					"dps": 705.7,
 					"behind": 3.77,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -15708,7 +15708,7 @@
 					"dps": 696,
 					"behind": 0.04,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -15756,7 +15756,7 @@
 					"dps": 696,
 					"behind": 0.04,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -15811,7 +15811,7 @@
 					"dps": 696,
 					"behind": 3.67,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Orc",
@@ -15845,7 +15845,7 @@
 					"dps": 712.2,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -15893,7 +15893,7 @@
 					"dps": 712.2,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -15948,7 +15948,7 @@
 					"dps": 712.2,
 					"behind": 3.84,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -15989,7 +15989,7 @@
 					"dps": 693.7,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -16037,7 +16037,7 @@
 					"dps": 693.7,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -16092,7 +16092,7 @@
 					"dps": 693.7,
 					"behind": 3.47,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -16133,7 +16133,7 @@
 					"dps": 682,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -16181,7 +16181,7 @@
 					"dps": 682,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -16236,7 +16236,7 @@
 					"dps": 682,
 					"behind": 3.35,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -16291,7 +16291,7 @@
 					"dps": 597.6,
 					"behind": 0.24,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -16339,7 +16339,7 @@
 					"dps": 597.6,
 					"behind": 0.24,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -16394,7 +16394,7 @@
 					"dps": 597.6,
 					"behind": 3.6,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Gnome",
@@ -16421,7 +16421,7 @@
 					"dps": 570.2,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -16469,7 +16469,7 @@
 					"dps": 570.2,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -16524,7 +16524,7 @@
 					"dps": 570.2,
 					"behind": 3.19,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -16565,7 +16565,7 @@
 					"dps": 556.6,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -16613,7 +16613,7 @@
 					"dps": 556.6,
 					"behind": 0,
 					"tier": "S",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
@@ -16668,7 +16668,7 @@
 					"dps": 556.6,
 					"behind": 2.96,
 					"tier": "D",
-					"racials": "Ruthless (+1% crit) + +10% Spirit"
+					"racials": "Ruthless (+1% crit) + The Human Spirit (+10% Spirit)"
 				},
 				{
 					"race": "Undead",
