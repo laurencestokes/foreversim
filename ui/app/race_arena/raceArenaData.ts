@@ -19,6 +19,7 @@ export type RaceList = {
 export type Tier = { name: string; maxBehind?: number };
 export type RaceArenaResults = {
 	commit: string;
+	raceCommits?: Record<string, string>;
 	generated: string;
 	iterations: number;
 	fight: { seconds: number; durations?: Array<number>; targetLevel: number; targetArmor: number };

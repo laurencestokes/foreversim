@@ -76,6 +76,7 @@ type rawList struct {
 
 type rawRow struct {
 	Race          string  `json:"race"`
+	Commit        string  `json:"commit,omitempty"`
 	Dps           float64 `json:"dps"`
 	Error         float64 `json:"error"`
 	Relabelled    string  `json:"relabelled"`
@@ -114,14 +115,15 @@ type list struct {
 }
 
 type output struct {
-	Commit     string                     `json:"commit"`
-	Generated  time.Time                  `json:"generated"`
-	Iterations int                        `json:"iterations"`
-	Fight      fight                      `json:"fight"`
-	Tiers      []tier                     `json:"tiers"`
-	Noise      noise                      `json:"noise"`
-	Lists      []list                     `json:"lists"`
-	Setups     map[string]json.RawMessage `json:"setups"`
+	Commit      string                     `json:"commit"`
+	RaceCommits map[string]string          `json:"raceCommits,omitempty"`
+	Generated   time.Time                  `json:"generated"`
+	Iterations  int                        `json:"iterations"`
+	Fight       fight                      `json:"fight"`
+	Tiers       []tier                     `json:"tiers"`
+	Noise       noise                      `json:"noise"`
+	Lists       []list                     `json:"lists"`
+	Setups      map[string]json.RawMessage `json:"setups"`
 }
 
 type fight struct {
@@ -168,14 +170,25 @@ func main() {
 	}
 
 	out := output{
-		Commit:    commit(),
-		Generated: time.Now().UTC().Truncate(time.Second),
-		Fight:     fight{Seconds: defaultSeconds, TargetLevel: targetLevel, TargetArmor: targetArmor},
-		Tiers:     tiers,
-		Setups:    make(map[string]json.RawMessage),
+		Commit:      commit(),
+		RaceCommits: make(map[string]string),
+		Generated:   time.Now().UTC().Truncate(time.Second),
+		Fight:       fight{Seconds: defaultSeconds, TargetLevel: targetLevel, TargetArmor: targetArmor},
+		Tiers:       tiers,
+		Setups:      make(map[string]json.RawMessage),
 	}
 	for _, r := range raw {
 		key := r.Spec + "|" + r.Build
+		for _, row := range r.Races {
+			revision := row.Commit
+			if revision == "" {
+				revision = out.Commit
+			}
+			if previous, exists := out.RaceCommits[row.Race]; exists && previous != revision {
+				fail("%s has results from different simulator revisions; rerun every matchup for that race", row.Race)
+			}
+			out.RaceCommits[row.Race] = revision
+		}
 		if len(r.Setup) == 0 || bytes.Equal(r.Setup, []byte("null")) {
 			fail("%s: missing setup snapshot", key)
 		}
@@ -197,6 +210,11 @@ func main() {
 		scored, worst := score(r)
 		out.Lists = append(out.Lists, scored)
 		out.Noise.MaxError = max(out.Noise.MaxError, worst)
+	}
+	for race, revision := range out.RaceCommits {
+		if revision == out.Commit {
+			delete(out.RaceCommits, race)
+		}
 	}
 	slices.Sort(out.Fight.Durations)
 	if !slices.Contains(out.Fight.Durations, defaultSeconds) {

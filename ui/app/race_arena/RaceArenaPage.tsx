@@ -237,8 +237,8 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 					The gear keeps its actual weapon types for every race. The engine follows wowsims/forever and the October 26 and 27 racial tuning: Human
 					gains 1% crit and 10% Spirit, Dwarf gains 1% attack and spell hit, Orc's Command adds 5% pet damage for hunters and warlocks, and Skyborne
 					gains 2% haste. Dwarf and Tauren have no racial crit-damage bonus. Blood Fury has a 2-minute cooldown; Touch of the Grave has a 15-second
-					internal cooldown. The raid baseline uses ordinary Read Leyline and Skysight casts: Attuned and Charged are removed on entering a raid.
-					Plainsrunning and health regeneration are not simulated.
+					internal cooldown. Troll's Berserking lasts 15 seconds. The raid baseline uses ordinary Read Leyline and Skysight casts: Attuned and Charged
+					are removed on entering a raid. Plainsrunning and health regeneration are not simulated.
 				</p>
 				<p className="m-0">
 					{formatToNumber(data.iterations)} iterations per race use the same random seed (101). The largest standard error is{' '}
@@ -260,6 +260,16 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 					<code>{data.commit.slice(0, 7)}</code>
 				</Button>{' '}
 				on {data.generated.slice(0, 10)}, {formatToNumber(data.iterations)} iterations per race.
+				{Object.entries(data.raceCommits ?? {}).map(([race, revision]) => (
+					<span key={race}>
+						{' '}
+						{race} recomputed with sim{' '}
+						<Button variant="link" href={`https://github.com/laurencestokes/foreversim/commit/${revision}`}>
+							<code>{revision.slice(0, 7)}</code>
+						</Button>
+						.
+					</span>
+				))}
 			</p>
 		</main>
 		<LandingFooter />

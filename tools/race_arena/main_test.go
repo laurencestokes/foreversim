@@ -1,9 +1,63 @@
 package main
 
 import (
+	"encoding/json"
 	"math"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 )
+
+func TestRaceSourceRevisions(t *testing.T) {
+	t.Setenv("RACE_ARENA_COMMIT", "original")
+	dir := t.TempDir()
+	in := filepath.Join(dir, "raw")
+	if err := os.Mkdir(in, 0755); err != nil {
+		t.Fatal(err)
+	}
+	rows := []rawList{}
+	for _, seconds := range []int{90, 180} {
+		rows = append(rows, rawList{Spec: "warrior", Class: "Warrior", Build: "Fury", Seconds: seconds,
+			Iterations: 50000, Setup: json.RawMessage(`{}`), Races: []rawRow{
+				{Race: "Orc", Dps: 1000}, {Race: "Troll", Dps: 1010, Commit: "updated"},
+			}})
+	}
+	write := func() {
+		t.Helper()
+		data, err := json.Marshal(rows)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(in, "presets.json"), data, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write()
+	outPath := filepath.Join(dir, "results.json")
+	if output, err := exec.Command("go", "run", ".", in, outPath).CombinedOutput(); err != nil {
+		t.Fatalf("scoring failed: %v\n%s", err, output)
+	}
+	data, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result output
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Commit != "original" || !reflect.DeepEqual(result.RaceCommits, map[string]string{"Troll": "updated"}) {
+		t.Fatalf("source revisions were not preserved: %s, %v", result.Commit, result.RaceCommits)
+	}
+	rows[1].Races[1].Commit = ""
+	write()
+	output, err := exec.Command("go", "run", ".", in, outPath).CombinedOutput()
+	if err == nil || !strings.Contains(string(output), "different simulator revisions") {
+		t.Fatalf("an incomplete race update should fail: %v\n%s", err, output)
+	}
+}
 
 // The tier edges are the published ones: S within 0.5% of the best, A to 1.0%, B to 1.5%, C to
 // 2.5%, D beyond. Each edge belongs to the tier below it in the list ("within 0.5%" includes

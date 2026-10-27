@@ -90,8 +90,8 @@ func applyRaceEffects(agent Agent) {
 			{Stat: stats.HealingPower, Multiplier: 1.1},
 		})
 
-		// TODO: The 2 minute cooldown is from the 26 October development notes; the game build states 3 minutes
-		// for 20572.
+		// TODO: the 2 minute cooldown is from the 27 October development notes; the game build states 3
+		// minutes for 20572.
 		bloodFuryCD := Cooldown{
 			Timer:    character.NewTimer(),
 			Duration: time.Minute * 2,
@@ -165,10 +165,12 @@ func applyRaceEffects(agent Agent) {
 
 		actionID := ActionID{SpellID: 20554}
 
+		// TODO: the 15 s duration is from the 27 October development notes; the game build states 10 s
+		// for 20554.
 		berserkingAura := character.RegisterAura(Aura{
 			Label:    "Berserking",
 			ActionID: actionID,
-			Duration: time.Second * 10,
+			Duration: time.Second * 15,
 		}).
 			AttachMultiplyAttackSpeed(1.1).
 			AttachMultiplyCastSpeed(1.1)
@@ -239,8 +241,7 @@ func applySkyborneSharedRacials(character *Character) {
 // Read Leyline and Skysight each register twice on one cooldown: the plain cast, and tag 1 for a
 // character under the hour-long buff a cast at a Ley Line (Attuned) or at an elemental convergence
 // (Charged) grants, which doubles the effect. The buff lasts through death, so the APL picks the cast
-// the player holds for the whole fight. Entering a raid removes the buff, so the tag 1 casts model fights
-// outside a raid. The aura lasts 15 s at the cast's multiplier, and an activation
+// the player holds for the whole fight. The aura lasts 15 s at the cast's multiplier, and an activation
 // with no cast takes the plain one.
 func registerSkyborneCasts(character *Character, spellID int32, castTime time.Duration, config Aura, plain, buffed float64, multiply func(sim *Simulation, multiplier float64), castCondition CanCastCondition) *Aura {
 	value, applied := plain, plain
@@ -415,8 +416,7 @@ func applyEureka(character *Character) {
 
 // The drain takes no downrank scaling from a low-level trigger and no Shadow modifiers. Its amount (5%
 // of max health) and chance are the row's values, typed in here.
-// TODO: The 15 s ICD is from the 26 October development notes; the game build states 25 s for 1260189 and
-// 1260201.
+// TODO: the 15 s ICD is from the 27 October development notes; the game build states 25 s.
 func applyTouchOfTheGrave(character *Character) {
 	auraID, procChance := int32(1260201), 0.3
 	switch character.Class {

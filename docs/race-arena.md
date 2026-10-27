@@ -7,6 +7,7 @@ Human has 1% crit and 10% increased Spirit; Dwarf has 1% physical and spell hit;
 health bonus with no crit-damage bonus; Orc's Command grants 5% damage to hunter and warlock pets;
 Skyborne has 2% haste. Earth Fury and Savage are removed. There are no fork-specific racial overrides.
 Blood Fury has a 2-minute cooldown; Touch of the Grave has a 15-second internal cooldown.
+Troll's Berserking lasts 15 seconds.
 The raid baseline uses ordinary Read Leyline and Skysight casts. Entering a raid removes Attuned and
 Charged, so the preset export rejects their enhanced casts. As in upstream, Plainsrunning and health
 regeneration are not simulated.
@@ -73,6 +74,13 @@ builds from holding up a whole group. Before scoring, it checks every race, setu
 run and requires 50,000 iterations in every result. It then commits the result and starts the Pages
 deployment on `master`. A concurrent branch update rejects the push so results cannot be published
 under an engine revision they did not use.
+
+A change confined to one race can reuse the other races' raw results when the presets, encounter and
+all other simulator behavior are unchanged. Run the simulator with `-race Troll -commit <revision>`
+to recompute every legal Troll matchup. Replace that race's rows in the complete raw matrix, preserving
+their `commit` fields, then score with `RACE_ARENA_COMMIT` set to the original run's revision.
+The scorer rejects mixed revisions within one race. The result's `raceCommits` records each replacement
+revision, and the page links it beside the original run's source.
 
 The fork deploys on pushes to `master` at `/foreversim/forever/`. Its GitHub-hosted test and Pages
 workflows replace upstream's private runner and deployment credentials. `tools/site_base.sh`

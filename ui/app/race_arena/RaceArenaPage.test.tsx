@@ -72,6 +72,19 @@ const chipsIn = (row: Element) => [...row.querySelectorAll('[data-testid="race-c
 const rowOf = (card: HTMLElement, tier: string) => card.querySelector(`[data-testid="tier-row"][data-tier="${tier}"]`)!;
 
 describe('RaceArenaPage', () => {
+	it('links the source of a recomputed race beside the original simulation', () => {
+		const { getByTestId } = render(<RaceArenaPage data={{ ...fixture, raceCommits: { Troll: 'updated-troll-revision' } }} />);
+		const source = getByTestId('race-arena-source');
+		expect(source.textContent).toContain('Troll recomputed with sim');
+		expect(within(source).getByRole('link', { name: 'updated' }).getAttribute('href')).toBe(
+			'https://github.com/laurencestokes/foreversim/commit/updated-troll-revision',
+		);
+		expect(
+			within(source)
+				.getByRole('link', { name: fixture.commit.slice(0, 7) })
+				.getAttribute('href'),
+		).toContain(fixture.commit);
+	});
 	it('opens on the main fight length and switches to the others', () => {
 		const leader: Record<number, string> = { 90: 'Orc', 180: 'Human', 360: 'Undead' };
 		const lengths: RaceArenaResults = {
@@ -106,6 +119,7 @@ describe('RaceArenaPage', () => {
 		expect(method.textContent).toContain('October 26 and 27 racial tuning');
 		expect(method.textContent).toContain('Blood Fury has a 2-minute cooldown');
 		expect(method.textContent).toContain('Touch of the Grave has a 15-second internal cooldown');
+		expect(method.textContent).toContain("Troll's Berserking lasts 15 seconds");
 		expect(method.textContent).toContain('Attuned and Charged are removed on entering a raid');
 		expect(method.textContent).toContain('Dwarf and Tauren have no racial crit-damage bonus');
 		expect(getByTestId('tier-legend').querySelectorAll('li')).toHaveLength(5);

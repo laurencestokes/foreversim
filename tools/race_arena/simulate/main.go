@@ -27,9 +27,10 @@ type build struct {
 }
 
 type row struct {
-	Race  string  `json:"race"`
-	Dps   float64 `json:"dps"`
-	Error float64 `json:"error"`
+	Race   string  `json:"race"`
+	Dps    float64 `json:"dps"`
+	Error  float64 `json:"error"`
+	Commit string  `json:"commit,omitempty"`
 }
 
 type list struct {
@@ -53,9 +54,14 @@ func main() {
 	iterations := flag.Int("iterations", 50000, "iterations per race")
 	workers := flag.Int("workers", runtime.NumCPU(), "concurrent simulations")
 	durations := flag.String("durations", "90,180,360", "fight lengths in seconds, comma separated")
+	onlyRace := flag.String("race", "", "only simulate this race, for example Troll")
+	sourceCommit := flag.String("commit", "", "simulator revision, required for a filtered run")
 	flag.Parse()
 	if *iterations < 1 || *workers < 1 {
 		panic("iterations and workers must be positive")
+	}
+	if *onlyRace != "" && *sourceCommit == "" {
+		panic("a filtered run requires -commit to record its simulator revision")
 	}
 	data, err := os.ReadFile(*input)
 	check(err)
@@ -96,18 +102,27 @@ func main() {
 				l := list{Spec: b.Spec, Class: b.Class, Build: b.Build, Gear: b.Gear, Rotation: b.Rotation,
 					Consumables: b.Consumables, Talents: player.TalentsString, Target: strings.TrimPrefix(target.String(), "MobType"), Seconds: seconds, Iterations: *iterations, Setup: b.Setup}
 				for _, race := range core.ClassRaceCapabilities[player.Class] {
+					if *onlyRace != "" && !strings.EqualFold(raceName(race), *onlyRace) {
+						continue
+					}
 					p := gp.Clone(player).(*proto.Player)
 					p.Race = race
 					p.Buffs = gp.Clone(core.FullIndividualBuffs).(*proto.IndividualBuffs)
-					l.Races = append(l.Races, row{Race: raceName(race)})
+					l.Races = append(l.Races, row{Race: raceName(race), Commit: *sourceCommit})
 					jobs = append(jobs, job{len(lists), len(l.Races) - 1, p, target, seconds})
 				}
 				if len(l.Races) == 0 {
+					if *onlyRace != "" {
+						continue
+					}
 					panic("no legal races: " + b.Class)
 				}
 				lists = append(lists, l)
 			}
 		}
+	}
+	if len(jobs) == 0 {
+		panic("no legal matchups for race: " + *onlyRace)
 	}
 	queue := make(chan job)
 	var wg sync.WaitGroup
