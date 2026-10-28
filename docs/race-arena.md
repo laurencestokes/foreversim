@@ -16,12 +16,16 @@ Berserking lasts 15 seconds. The raid baseline uses ordinary Read Leyline and Sk
 Entering a raid removes Attuned and Charged, so the preset export rejects their enhanced casts.
 As in upstream, Plainsrunning and health regeneration are not simulated.
 
-These level-60 presets include development items and mixed gear levels. Warlock uses upstream's
-`preraid` set because its presets provide no gear, matching its regression suites. They are an alpha
-baseline for race choice, and their gear, rotations and tuning can change before release. Gear and
-rotations are not optimized separately for each race. DPS includes pets under full raid, party and
-individual buffs and debuffs, with no value assigned to survival, utility or damage a spec adds to
-other players.
+This is a live-game baseline using upstream's level-60 presets with unequal gear levels. The game
+files and hotfix cache are from live wowf build 1.60.1.70658. Items absent from that cache are omitted
+from the simulator database; cache absence does not establish that an item is unavailable in game.
+Upstream substitutes preset items without gear optimization, and some vanilla-ID replacements do
+not activate the registered Forever set bonuses. See the [data limitations](build-arena.md#live-game-data-and-preset-limitations).
+
+Warlock uses upstream's `preraid` set because its presets provide no gear, matching its regression
+suites. Gear and rotations are not optimized separately for each race. DPS includes pets under full
+raid, party and individual buffs and debuffs, with no value assigned to survival, utility or damage
+a spec adds to other players.
 
 Every race receives 50,000 iterations with seed 101 against a level 63 target with 3,731 armor. The
 matrix covers 90-second, 3-minute and 6-minute fights against Mechanical, Elemental and Beast targets.
@@ -55,6 +59,9 @@ balances shards independently for each fight length using a bounded timing run, 
 coverage and fingerprints, and stages both results before committing them together. Smoke results
 cannot pass publication's 50,000-iteration requirement.
 
+The live-data refresh recomputes every legal race, build and encounter at 50,000 iterations. Its
+presets and game data differ from the October 27 inputs, so those computations cannot be reused.
+
 A change confined to one race can reuse the other races' raw results only when presets, encounter
 and all other combat behavior are equivalent. Run the simulator with `-race Troll -commit REVISION`
 to recompute every legal Troll matchup, then replace those rows in the complete raw matrix. Preserve
@@ -70,8 +77,8 @@ node tools/race_arena/snapshot.mjs /path/to/original-input.json ui/app/race_aren
 
 This reads talent definitions at the results' recorded commit and preserves the numbers and dates.
 A fresh export is not evidence of what an older run equipped. The October 27 source dates and the
-Troll replacement's unknown execution timestamp are documented in
-[Reusing existing computations](build-arena.md#reusing-existing-computations).
+Troll replacement's unknown execution timestamp are documented in the
+[historical October 27 publication](build-arena.md#historical-october-27-publication).
 
 The fork deploys successful `master` publications at `/foreversim/forever/`. Its GitHub-hosted tests
 and Pages workflow replace upstream's private runner and deployment credentials. `tools/site_base.sh`

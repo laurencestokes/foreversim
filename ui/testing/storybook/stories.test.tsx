@@ -1,6 +1,4 @@
-import { readFile } from 'node:fs/promises';
-
-import { Database } from '@sim/proto/database';
+import { UIDatabase } from '@generated/proto/ui';
 import { composeStories, type Meta, setProjectAnnotations, type StoryObj } from '@storybook/react-vite';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -8,16 +6,15 @@ import * as preview from '../../../.storybook/preview';
 
 const annotations = setProjectAnnotations([preview]);
 beforeAll(annotations.beforeAll);
-beforeAll(async () => {
-	// Stories resolve real item icons, but the test harness has no server to serve the database.
-	const json = await readFile('assets/database/db.json', 'utf8');
-	const fetchDatabase = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(json));
-	try {
-		await Database.get();
-	} finally {
-		fetchDatabase.mockRestore();
-	}
-});
+
+// A story that shows an item or spell icon loads the database, which no server answers here, and a
+// failed load rejects after the story's test has ended. The database files get an empty database;
+// every other request goes through unchanged.
+const realFetch = globalThis.fetch;
+const emptyDatabase = UIDatabase.toJson(UIDatabase.create());
+vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) =>
+	String(input).includes('/assets/database/') ? Promise.resolve(Response.json(emptyDatabase)) : realFetch(input, init),
+);
 
 type StoriesModule = { default: Meta } & Record<string, StoryObj>;
 
