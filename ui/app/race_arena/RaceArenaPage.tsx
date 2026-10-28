@@ -1,3 +1,4 @@
+import i18n from '@i18n/config';
 import { textClassName } from '@sim/proto/utils';
 import { formatToNumber, formatToPercent } from '@sim/utils/format';
 import { Button } from '@ui-kit/Button';
@@ -206,6 +207,9 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 			<Button href="/forever/" variant="link">
 				Back to the simulator
 			</Button>
+			<Button href="/forever/build_arena/" variant="link">
+				{i18n.t('title', { ns: 'build_arena' })}
+			</Button>
 			<header>
 				<h1 className="text-3xl font-bold text-brand">Race tier list</h1>
 				<p>
@@ -255,11 +259,11 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 			<h2 className="m-0 text-xl">Tier lists, one fight at a time</h2>
 			<Lists data={data} />
 			<p className="m-0 text-sm text-white/60" data-testid="race-arena-source">
-				Computed from sim{' '}
+				Simulated with engine{' '}
 				<Button variant="link" href={`https://github.com/laurencestokes/foreversim/commit/${data.commit}`}>
 					<code>{data.commit.slice(0, 7)}</code>
 				</Button>{' '}
-				on {data.generated.slice(0, 10)}, {formatToNumber(data.iterations)} iterations per race.
+				; results scored {data.generated.slice(0, 10)}, {formatToNumber(data.iterations)} iterations per race.
 				{Object.entries(data.raceCommits ?? {}).map(([race, revision]) => (
 					<span key={race}>
 						{' '}

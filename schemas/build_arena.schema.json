@@ -1,0 +1,555 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"title",
+		"intro_one",
+		"intro_other",
+		"arenaNavigation",
+		"back",
+		"raceArena",
+		"limitationsTitle",
+		"limitations",
+		"raidSupport",
+		"controls",
+		"duration",
+		"seconds_one",
+		"seconds_other",
+		"target",
+		"targets",
+		"comparison",
+		"allBuilds",
+		"raceMode",
+		"bestRace",
+		"bestRaceHelp",
+		"fixedRaceHelp",
+		"search",
+		"searchPlaceholder",
+		"rankings",
+		"encounterTitle",
+		"reference_one",
+		"reference_other",
+		"omitted_one",
+		"omitted_other",
+		"tierLegend",
+		"tierFirst",
+		"tierRange",
+		"tierLast",
+		"estimateHelp",
+		"tier",
+		"build",
+		"dps",
+		"gap",
+		"race",
+		"spread",
+		"details",
+		"inspect",
+		"inspectBuild",
+		"developmentGear",
+		"status",
+		"indistinguishable",
+		"boundary",
+		"boundaryHelp",
+		"closeRaces_one",
+		"closeRaces_other",
+		"noSearch",
+		"noResults",
+		"method",
+		"methodFight",
+		"methodNoise",
+		"methodSelection",
+		"methodTiers",
+		"published",
+		"upstream",
+		"verified",
+		"dateUnrecorded",
+		"reusedSource",
+		"computedSource",
+		"sourcePublished",
+		"excluded",
+		"gearTalents",
+		"downloadRace",
+		"downloadRequest",
+		"requestHelp",
+		"raceResults",
+		"raceResultsHelp",
+		"raceGap",
+		"precision",
+		"indistinguishableRace",
+		"lowerEstimate",
+		"settings",
+		"settingsHelp",
+		"recordedRotation",
+		"rowProvenance",
+		"setupTitle",
+		"none",
+		"yes",
+		"no",
+		"unknownItem",
+		"unknownSpell",
+		"fields",
+		"computedWindow",
+		"compatibilityEvidence",
+		"recordedLabel"
+	],
+	"properties": {
+		"title": {
+			"type": "string"
+		},
+		"intro_one": {
+			"type": "string"
+		},
+		"intro_other": {
+			"type": "string"
+		},
+		"arenaNavigation": {
+			"type": "string"
+		},
+		"back": {
+			"type": "string"
+		},
+		"raceArena": {
+			"type": "string"
+		},
+		"limitationsTitle": {
+			"type": "string"
+		},
+		"limitations": {
+			"type": "string"
+		},
+		"raidSupport": {
+			"type": "string"
+		},
+		"controls": {
+			"type": "string"
+		},
+		"duration": {
+			"type": "string"
+		},
+		"seconds_one": {
+			"type": "string"
+		},
+		"seconds_other": {
+			"type": "string"
+		},
+		"target": {
+			"type": "string"
+		},
+		"targets": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["Mechanical", "Elemental", "Beast"],
+			"properties": {
+				"Mechanical": {
+					"type": "string"
+				},
+				"Elemental": {
+					"type": "string"
+				},
+				"Beast": {
+					"type": "string"
+				}
+			}
+		},
+		"comparison": {
+			"type": "string"
+		},
+		"allBuilds": {
+			"type": "string"
+		},
+		"raceMode": {
+			"type": "string"
+		},
+		"bestRace": {
+			"type": "string"
+		},
+		"bestRaceHelp": {
+			"type": "string"
+		},
+		"fixedRaceHelp": {
+			"type": "string"
+		},
+		"search": {
+			"type": "string"
+		},
+		"searchPlaceholder": {
+			"type": "string"
+		},
+		"rankings": {
+			"type": "string"
+		},
+		"encounterTitle": {
+			"type": "string"
+		},
+		"reference_one": {
+			"type": "string"
+		},
+		"reference_other": {
+			"type": "string"
+		},
+		"omitted_one": {
+			"type": "string"
+		},
+		"omitted_other": {
+			"type": "string"
+		},
+		"tierLegend": {
+			"type": "string"
+		},
+		"tierFirst": {
+			"type": "string"
+		},
+		"tierRange": {
+			"type": "string"
+		},
+		"tierLast": {
+			"type": "string"
+		},
+		"estimateHelp": {
+			"type": "string"
+		},
+		"tier": {
+			"type": "string"
+		},
+		"build": {
+			"type": "string"
+		},
+		"dps": {
+			"type": "string"
+		},
+		"gap": {
+			"type": "string"
+		},
+		"race": {
+			"type": "string"
+		},
+		"spread": {
+			"type": "string"
+		},
+		"details": {
+			"type": "string"
+		},
+		"inspect": {
+			"type": "string"
+		},
+		"inspectBuild": {
+			"type": "string"
+		},
+		"developmentGear": {
+			"type": "string"
+		},
+		"status": {
+			"type": "string"
+		},
+		"indistinguishable": {
+			"type": "string"
+		},
+		"boundary": {
+			"type": "string"
+		},
+		"boundaryHelp": {
+			"type": "string"
+		},
+		"closeRaces_one": {
+			"type": "string"
+		},
+		"closeRaces_other": {
+			"type": "string"
+		},
+		"noSearch": {
+			"type": "string"
+		},
+		"noResults": {
+			"type": "string"
+		},
+		"method": {
+			"type": "string"
+		},
+		"methodFight": {
+			"type": "string"
+		},
+		"methodNoise": {
+			"type": "string"
+		},
+		"methodSelection": {
+			"type": "string"
+		},
+		"methodTiers": {
+			"type": "string"
+		},
+		"published": {
+			"type": "string"
+		},
+		"upstream": {
+			"type": "string"
+		},
+		"verified": {
+			"type": "string"
+		},
+		"dateUnrecorded": {
+			"type": "string"
+		},
+		"reusedSource": {
+			"type": "string"
+		},
+		"computedSource": {
+			"type": "string"
+		},
+		"sourcePublished": {
+			"type": "string"
+		},
+		"excluded": {
+			"type": "string"
+		},
+		"gearTalents": {
+			"type": "string"
+		},
+		"downloadRace": {
+			"type": "string"
+		},
+		"downloadRequest": {
+			"type": "string"
+		},
+		"requestHelp": {
+			"type": "string"
+		},
+		"raceResults": {
+			"type": "string"
+		},
+		"raceResultsHelp": {
+			"type": "string"
+		},
+		"raceGap": {
+			"type": "string"
+		},
+		"precision": {
+			"type": "string"
+		},
+		"indistinguishableRace": {
+			"type": "string"
+		},
+		"lowerEstimate": {
+			"type": "string"
+		},
+		"settings": {
+			"type": "string"
+		},
+		"settingsHelp": {
+			"type": "string"
+		},
+		"recordedRotation": {
+			"type": "string"
+		},
+		"rowProvenance": {
+			"type": "string"
+		},
+		"setupTitle": {
+			"type": "string"
+		},
+		"none": {
+			"type": "string"
+		},
+		"yes": {
+			"type": "string"
+		},
+		"no": {
+			"type": "string"
+		},
+		"unknownItem": {
+			"type": "string"
+		},
+		"unknownSpell": {
+			"type": "string"
+		},
+		"fields": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"offensivePotId",
+				"action",
+				"petType",
+				"ohWeaponImbueId",
+				"potions",
+				"flaskId",
+				"classOptions",
+				"conjuredId",
+				"prepullActions",
+				"swapMhWeaponImbueId",
+				"spellId",
+				"swapOhImbueId",
+				"targetDebuffs",
+				"mhImbueId",
+				"swapOhWeaponImbueId",
+				"explosiveId",
+				"partyBuffs",
+				"itemId",
+				"raidBuffs",
+				"foodId",
+				"priorityList",
+				"defensivePotId",
+				"conjuredItems",
+				"mhWeaponImbueId",
+				"auraId",
+				"swapMhImbueId",
+				"buffId",
+				"buffs",
+				"consumes",
+				"options",
+				"extraIds",
+				"castSpell",
+				"resourcePotId",
+				"elixirIds",
+				"ohImbueId",
+				"condition",
+				"consumables",
+				"summon",
+				"petUptime",
+				"reactionTimeMs",
+				"distanceFromTarget",
+				"profession1",
+				"profession2"
+			],
+			"properties": {
+				"offensivePotId": {
+					"type": "string"
+				},
+				"action": {
+					"type": "string"
+				},
+				"petType": {
+					"type": "string"
+				},
+				"ohWeaponImbueId": {
+					"type": "string"
+				},
+				"potions": {
+					"type": "string"
+				},
+				"flaskId": {
+					"type": "string"
+				},
+				"classOptions": {
+					"type": "string"
+				},
+				"conjuredId": {
+					"type": "string"
+				},
+				"prepullActions": {
+					"type": "string"
+				},
+				"swapMhWeaponImbueId": {
+					"type": "string"
+				},
+				"spellId": {
+					"type": "string"
+				},
+				"swapOhImbueId": {
+					"type": "string"
+				},
+				"targetDebuffs": {
+					"type": "string"
+				},
+				"mhImbueId": {
+					"type": "string"
+				},
+				"swapOhWeaponImbueId": {
+					"type": "string"
+				},
+				"explosiveId": {
+					"type": "string"
+				},
+				"partyBuffs": {
+					"type": "string"
+				},
+				"itemId": {
+					"type": "string"
+				},
+				"raidBuffs": {
+					"type": "string"
+				},
+				"foodId": {
+					"type": "string"
+				},
+				"priorityList": {
+					"type": "string"
+				},
+				"defensivePotId": {
+					"type": "string"
+				},
+				"conjuredItems": {
+					"type": "string"
+				},
+				"mhWeaponImbueId": {
+					"type": "string"
+				},
+				"auraId": {
+					"type": "string"
+				},
+				"swapMhImbueId": {
+					"type": "string"
+				},
+				"buffId": {
+					"type": "string"
+				},
+				"buffs": {
+					"type": "string"
+				},
+				"consumes": {
+					"type": "string"
+				},
+				"options": {
+					"type": "string"
+				},
+				"extraIds": {
+					"type": "string"
+				},
+				"castSpell": {
+					"type": "string"
+				},
+				"resourcePotId": {
+					"type": "string"
+				},
+				"elixirIds": {
+					"type": "string"
+				},
+				"ohImbueId": {
+					"type": "string"
+				},
+				"condition": {
+					"type": "string"
+				},
+				"consumables": {
+					"type": "string"
+				},
+				"summon": {
+					"type": "string"
+				},
+				"petUptime": {
+					"type": "string"
+				},
+				"reactionTimeMs": {
+					"type": "string"
+				},
+				"distanceFromTarget": {
+					"type": "string"
+				},
+				"profession1": {
+					"type": "string"
+				},
+				"profession2": {
+					"type": "string"
+				}
+			}
+		},
+		"computedWindow": {
+			"type": "string"
+		},
+		"compatibilityEvidence": {
+			"type": "string"
+		},
+		"recordedLabel": {
+			"type": "string"
+		}
+	}
+}

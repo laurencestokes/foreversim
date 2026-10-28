@@ -136,8 +136,8 @@ type fight struct {
 
 // How far a race's number can be trusted, as a percentage of its list's best: the largest
 // standard error of any race's mean, and twice the standard error of the difference between two
-// races that far out. The second is conservative - every race meets the same random rolls, which
-// makes a real difference steadier than two independent errors would suggest.
+// races that far out, using an independent-errors approximation. A shared seed alone supplies no
+// paired covariance measurement.
 type noise struct {
 	MaxError      float64 `json:"maxError"`
 	MaxDifference float64 `json:"maxDifference"`

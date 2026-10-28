@@ -3,6 +3,8 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
+import { resolveBuildId, validateCatalog } from '../build_arena/identity.mjs';
+
 const slots = [
 	'Head',
 	'Neck',
@@ -97,9 +99,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 	const [inputPath, resultsPath] = process.argv.slice(2);
 	assert.ok(inputPath, 'Usage: node tools/race_arena/snapshot.mjs <input.json> [results.json]');
 	const inputs = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
+	const catalog = JSON.parse(fs.readFileSync(new URL('../build_arena/catalog.json', import.meta.url), 'utf8'));
+	validateCatalog(catalog);
 	const results = resultsPath ? JSON.parse(fs.readFileSync(resultsPath, 'utf8')) : undefined;
 	const trees = new Map();
 	for (const build of inputs) {
+		build.id = resolveBuildId(catalog, build.spec, build.build);
 		if (!trees.has(build.class)) {
 			const file = `ui/sim/talents/trees/${build.class.toLowerCase()}.json`;
 			const data = results ? execFileSync('git', ['show', `${results.commit}:${file}`], { encoding: 'utf8' }) : fs.readFileSync(file, 'utf8');

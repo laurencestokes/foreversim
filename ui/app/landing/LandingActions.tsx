@@ -5,6 +5,9 @@ import { Icon } from '@ui-kit/Icon';
 
 export const LandingActions = () => (
 	<div className="flex flex-wrap gap-4" data-testid="landing-actions">
+		<Button href="/forever/build_arena/" variant="unstyled" className="ui-landing-action">
+			{i18n.t('title', { ns: 'build_arena' })}
+		</Button>
 		<Button href="/forever/race_arena/" variant="unstyled" className="ui-landing-action">
 			Race tier list
 		</Button>

@@ -1,8 +1,8 @@
-name: Build Race Arena
+name: Build Arenas
 on:
     workflow_dispatch:
 concurrency:
-    group: build-race-arena-${{ github.ref }}
+    group: build-arenas-${{ github.ref }}
     cancel-in-progress: false
 jobs:
     prepare:
@@ -10,8 +10,23 @@ jobs:
         timeout-minutes: 20
         permissions:
             contents: read
+        outputs:
+            revision: ${{ steps.source.outputs.revision }}
+            upstream: ${{ steps.source.outputs.upstream }}
         steps:
             - uses: actions/checkout@v5
+              with:
+                  fetch-depth: 0
+                  filter: blob:none
+            - name: Record the simulator sources
+              id: source
+              env:
+                  REF_TYPE: ${{ github.ref_type }}
+              run: |
+                  test "$REF_TYPE" = branch
+                  git fetch --no-tags --filter=blob:none https://github.com/wowsims/forever.git master
+                  echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+                  echo "upstream=$(git merge-base HEAD FETCH_HEAD)" >> "$GITHUB_OUTPUT"
             - uses: actions/setup-go@v6
               with:
                   go-version: 1.25.x
@@ -27,27 +42,48 @@ jobs:
                   make sim/core/proto/api.pb.go ui/generated/proto/api.ts go-to-ts
             - name: Export the UI presets
               env:
-                  RACE_ARENA_INPUT: ${{ runner.temp }}/race-arena-input.json
+                  RACE_ARENA_INPUT: ${{ runner.temp }}/arena-input.json
               run: npx vitest run ui/specs/race_arena_export.test.ts
-            - name: Prepare simulation shards
+            - name: Prepare coverage and estimate simulation costs
+              env:
+                  SOURCE_REVISION: ${{ steps.source.outputs.revision }}
               run: |
-                  node tools/race_arena/snapshot.mjs "$RUNNER_TEMP/race-arena-input.json"
-                  mkdir -p "$RUNNER_TEMP/race-arena-job"
-                  go build -tags=with_db -o "$RUNNER_TEMP/race-arena-job/simulate" ./tools/race_arena/simulate
-                  "$RUNNER_TEMP/race-arena-job/simulate" -input "$RUNNER_TEMP/race-arena-input.json" -out "$RUNNER_TEMP/race-arena-job/smoke" -iterations 2
+                  node tools/race_arena/snapshot.mjs "$RUNNER_TEMP/arena-input.json"
+                  mkdir -p "$RUNNER_TEMP/arena-job"
+                  cp "$RUNNER_TEMP/arena-input.json" "$RUNNER_TEMP/arena-job/input.json"
+                  go build -tags=with_db -o "$RUNNER_TEMP/arena-job/simulate" ./tools/race_arena/simulate
+                  "$RUNNER_TEMP/arena-job/simulate" -input "$RUNNER_TEMP/arena-input.json" -commit "$SOURCE_REVISION" -iterations 50000 -manifest "$RUNNER_TEMP/arena-job/manifest.json"
+                  "$RUNNER_TEMP/arena-job/simulate" -input "$RUNNER_TEMP/arena-input.json" -commit "$SOURCE_REVISION" -out "$RUNNER_TEMP/arena-benchmark" -iterations 8 -workers 2
                   node --input-type=module <<'NODE'
                   import fs from 'node:fs';
+                  import assert from 'node:assert/strict';
                   const root = process.env.RUNNER_TEMP;
-                  const builds = JSON.parse(fs.readFileSync(`${root}/race-arena-input.json`, 'utf8'));
-                  for (let shard = 0; shard < 16; shard++) {
-                    fs.writeFileSync(`${root}/race-arena-job/input-${shard}.json`, JSON.stringify(builds.filter((_, i) => i % 16 === shard)));
+                  const builds = JSON.parse(fs.readFileSync(`${root}/arena-input.json`, 'utf8'));
+                  const measurements = JSON.parse(fs.readFileSync(`${root}/arena-benchmark/presets.json`, 'utf8'));
+                  for (const seconds of [90, 180, 360]) {
+                    const costs = new Map();
+                    for (const row of measurements.filter(row => row.seconds === seconds)) {
+                      assert.ok(Number.isFinite(row.elapsedSeconds) && row.elapsedSeconds > 0);
+                      costs.set(row.buildId, (costs.get(row.buildId) ?? 0) + row.elapsedSeconds);
+                    }
+                    assert.equal(costs.size, builds.length);
+                    const shards = Array.from({ length: 16 }, () => ({ cost: 0, builds: [] }));
+                    for (const build of [...builds].sort((a, b) => costs.get(b.id) - costs.get(a.id) || a.id.localeCompare(b.id))) {
+                      assert.ok(costs.has(build.id), build.id);
+                      const shard = shards.reduce((best, candidate) => candidate.cost < best.cost ? candidate : best);
+                      shard.builds.push(build);
+                      shard.cost += costs.get(build.id);
+                    }
+                    shards.forEach((shard, index) => fs.writeFileSync(`${root}/arena-job/input-${index}-${seconds}.json`, JSON.stringify(shard.builds)));
+                    console.log(`${seconds}s: estimated shard costs ${shards.map(shard => shard.cost.toFixed(2)).join(', ')} seconds at eight iterations`);
                   }
                   NODE
             - uses: actions/upload-artifact@v4
               with:
-                  name: race-arena-inputs
-                  path: ${{ runner.temp }}/race-arena-job
+                  name: arena-inputs
+                  path: ${{ runner.temp }}/arena-job
                   retention-days: 7
+                  if-no-files-found: error
 
     simulate:
         needs: prepare
@@ -66,27 +102,29 @@ jobs:
                   node-version: 22
             - uses: actions/download-artifact@v4
               with:
-                  name: race-arena-inputs
-                  path: ${{ runner.temp }}/race-arena-job
+                  name: arena-inputs
+                  path: ${{ runner.temp }}/arena-job
             - name: Simulate every race in the shard
               env:
                   SHARD: ${{ matrix.shard }}
                   DURATION: ${{ matrix.duration }}
+                  SOURCE_REVISION: ${{ needs.prepare.outputs.revision }}
               run: |
-                  cd "$RUNNER_TEMP/race-arena-job"
+                  cd "$RUNNER_TEMP/arena-job"
                   chmod +x simulate
-                  if [ "$(node -p "require('./input-$SHARD.json').length")" = 0 ]; then
-                    mkdir -p out
+                  mkdir -p out
+                  if [ "$(node -p "require('./input-$SHARD-$DURATION.json').length")" = 0 ]; then
                     printf '[]\n' > "out/shard-$SHARD-$DURATION.json"
                   else
-                    ./simulate -input "input-$SHARD.json" -out out -iterations 50000 -durations "$DURATION"
+                    ./simulate -input "input-$SHARD-$DURATION.json" -out out -iterations 50000 -workers 2 -durations "$DURATION" -commit "$SOURCE_REVISION"
                     mv out/presets.json "out/shard-$SHARD-$DURATION.json"
                   fi
             - uses: actions/upload-artifact@v4
               with:
-                  name: race-arena-results-${{ matrix.shard }}-${{ matrix.duration }}
-                  path: ${{ runner.temp }}/race-arena-job/out/shard-*.json
+                  name: arena-results-${{ matrix.shard }}-${{ matrix.duration }}
+                  path: ${{ runner.temp }}/arena-job/out/shard-*.json
                   retention-days: 7
+                  if-no-files-found: error
 
     publish:
         needs: [prepare, simulate]
@@ -97,6 +135,8 @@ jobs:
             actions: write
         steps:
             - uses: actions/checkout@v5
+              with:
+                  ref: ${{ needs.prepare.outputs.revision }}
             - uses: actions/setup-go@v6
               with:
                   go-version: 1.25.x
@@ -106,53 +146,66 @@ jobs:
                   cache: npm
             - uses: actions/download-artifact@v4
               with:
-                  name: race-arena-inputs
-                  path: ${{ runner.temp }}/race-arena-job
+                  name: arena-inputs
+                  path: ${{ runner.temp }}/arena-job
             - uses: actions/download-artifact@v4
               with:
-                  pattern: race-arena-results-*
+                  pattern: arena-results-*
                   merge-multiple: true
-                  path: ${{ runner.temp }}/race-arena-out
-            - name: Verify the complete matrix and score the races
+                  path: ${{ runner.temp }}/arena-raw
+            - name: Check the branch still names the simulated revision
+              env:
+                  BRANCH: ${{ github.ref_name }}
+                  SOURCE_REVISION: ${{ needs.prepare.outputs.revision }}
+              run: |
+                  remote_revision=$(git ls-remote --exit-code origin "refs/heads/$BRANCH" | cut -f1)
+                  test "$remote_revision" = "$SOURCE_REVISION"
+            - name: Validate and score both arenas
+              env:
+                  SOURCE_REVISION: ${{ needs.prepare.outputs.revision }}
+                  UPSTREAM_REVISION: ${{ needs.prepare.outputs.upstream }}
+                  WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                  RACE_ARENA_COMMIT: ${{ needs.prepare.outputs.revision }}
               run: |
                   node --input-type=module <<'NODE'
                   import fs from 'node:fs';
                   import assert from 'node:assert/strict';
                   const root = process.env.RUNNER_TEMP;
-                  const expected = JSON.parse(fs.readFileSync(`${root}/race-arena-job/smoke/presets.json`, 'utf8'));
-                  const files = fs.readdirSync(`${root}/race-arena-out`).filter(name => name.endsWith('.json'));
+                  const files = fs.readdirSync(`${root}/arena-raw`).filter(name => name.endsWith('.json')).sort();
                   assert.equal(files.length, 48);
-                  const actual = files.flatMap(name => JSON.parse(fs.readFileSync(`${root}/race-arena-out/${name}`, 'utf8')));
-                  const key = row => [row.spec, row.build, row.seconds, row.target].join('|');
-                  const byKey = new Map(expected.map(row => [key(row), row]));
-                  assert.equal(actual.length, expected.length);
-                  assert.equal(new Set(actual.map(key)).size, expected.length);
-                  for (const row of actual) {
-                    const reference = byKey.get(key(row));
-                    assert.ok(reference, key(row));
-                    const { races, iterations, ...config } = row;
-                    const { races: expectedRaces, iterations: smokeIterations, ...expectedConfig } = reference;
-                    assert.deepEqual(config, expectedConfig);
-                    assert.equal(iterations, 50000);
-                    assert.deepEqual(races.map(race => race.race), expectedRaces.map(race => race.race));
-                    assert.ok(races.every(race => Number.isFinite(race.dps) && race.dps > 0 && Number.isFinite(race.error) && race.error >= 0));
+                  const raw = files.flatMap(name => JSON.parse(fs.readFileSync(`${root}/arena-raw/${name}`, 'utf8')));
+                  const sources = new Map();
+                  for (const list of raw) {
+                    assert.ok(list.computedAt);
+                    for (const race of list.races) {
+                      assert.equal(race.commit, process.env.SOURCE_REVISION);
+                      const id = `${race.commit}@${list.computedAt}`;
+                      sources.set(id, { id, commit: race.commit, computedAt: list.computedAt, reused: false, note: process.env.WORKFLOW_URL });
+                    }
                   }
-                  console.log(`Verified ${actual.length} lists and ${actual.reduce((count, row) => count + row.races.length, 0)} simulations`);
+                  fs.writeFileSync(`${root}/arena-raw.json`, JSON.stringify(raw));
+                  fs.writeFileSync(`${root}/arena-sources.json`, JSON.stringify({ sources: [...sources.values()] }));
                   NODE
                   npm ci
-                  go run ./tools/race_arena "$RUNNER_TEMP/race-arena-out"
-                  npx oxfmt ui/app/race_arena/results.json
-            - name: Commit and deploy the rankings
+                  mkdir -p "$RUNNER_TEMP/arena-publish"
+                  node tools/build_arena/publish.mjs --manifest "$RUNNER_TEMP/arena-job/manifest.json" --raw "$RUNNER_TEMP/arena-raw.json" --provenance "$RUNNER_TEMP/arena-sources.json" --upstream "$UPSTREAM_REVISION" --verified "$SOURCE_REVISION" --out "$RUNNER_TEMP/arena-publish/build-results.json"
+                  go run ./tools/race_arena "$RUNNER_TEMP/arena-raw" "$RUNNER_TEMP/arena-publish/race-results.json"
+                  npx oxfmt "$RUNNER_TEMP/arena-publish/build-results.json" "$RUNNER_TEMP/arena-publish/race-results.json"
+                  mkdir -p ui/app/build_arena
+                  cp "$RUNNER_TEMP/arena-publish/build-results.json" ui/app/build_arena/results.json
+                  cp "$RUNNER_TEMP/arena-publish/race-results.json" ui/app/race_arena/results.json
+            - name: Commit the complete publication and deploy master
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  BRANCH: ${{ github.ref_name }}
+                  SOURCE_REVISION: ${{ needs.prepare.outputs.revision }}
               run: |
-                  git add ui/app/race_arena/results.json
+                  git add ui/app/build_arena/results.json ui/app/race_arena/results.json
                   if git diff --cached --quiet; then exit 0; fi
                   git config user.name "github-actions[bot]"
                   git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-                  git commit -m "Refresh race arena results from upstream presets"
-                  # A changed branch needs fresh simulations, so a rejected push fails this run.
-                  git push origin HEAD:${{ github.ref_name }}
-                  if [ "${{ github.ref_name }}" = master ]; then
-                    gh workflow run deploy.yml --ref master
+                  git commit -m "Refresh build and race arena results from upstream presets"
+                  git push origin "HEAD:refs/heads/$BRANCH"
+                  if [ "$BRANCH" = master ]; then
+                    gh workflow run deploy.yml --ref master -f "proto_baseline=$SOURCE_REVISION"
                   fi
