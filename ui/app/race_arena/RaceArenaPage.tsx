@@ -221,14 +221,15 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 			<section className="flex flex-col gap-2 border border-surface-border p-4">
 				<h2 className="m-0 text-xl">Method</h2>
 				<p className="m-0">
-					This is a pre-release baseline for choosing a race at level 60. Each build holds gear, enchants, talents, rotation, consumables and buffs
+					This is a live-game baseline for choosing a race at level 60. Each build holds gear, enchants, talents, rotation, consumables and buffs
 					constant across every legal race. Changing the race includes its racial abilities, base attributes and effects on pets. Gear and rotations
 					are not individually optimized for each race.
 				</p>
 				<p className="m-0">
-					We use upstream level-60 presets, including pre-raid and development gear. Warlock uses upstream's preraid test set. View setup on each
-					build shows the gear, enchants, weapon swaps and talent ranks saved with these results. These presets provide a common starting point; they
-					are not a prediction of final release gear.
+					We use upstream level-60 presets with unequal gear levels. The game files and hotfix cache are from live wowf build 1.60.1.70658. Items
+					absent from that cache are omitted from the simulator database; this does not establish that they are unavailable in game. Upstream's
+					replacement preset items have not been gear-optimized. Some vanilla-ID replacements do not activate the registered Forever set bonuses.
+					Warlock uses upstream's preraid test set. View setup shows the equipment, enchants, weapon swaps and talent ranks saved with each result.
 				</p>
 				<p className="m-0">
 					Every simulation is a fixed-length fight ({durationsOf(data).map(fightLabel).join(', ')}; {fightLabel(data.fight.seconds)} is the main view)
@@ -251,8 +252,8 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 					damage between builds.
 				</p>
 				<p className="m-0">
-					Read these as estimates under shared assumptions. Release balance, gear, buffs, fight length and encounter mechanics can change the
-					ordering. Close races may be effectively tied, even when they appear in different tiers.
+					Read these as estimates under shared assumptions. Tuning, gear, buffs, fight length and encounter mechanics can change the ordering. Close
+					races may be effectively tied, even when they appear in different tiers.
 				</p>
 			</section>
 			<RaceArenaExplorer data={data} />

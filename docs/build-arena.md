@@ -5,12 +5,26 @@ gear, enchants, talents, resolved rotation, consumables and class options. Chang
 all of them. These results help choose a setup to investigate; they do not isolate the value of a
 single talent or compare classes in equal gear.
 
-Presets include mixed gear levels and development items. Warlock uses upstream's `preraid` gear
-because its build presets provide no gear, matching the upstream regression suites. A development
-preset, incomplete rotation or missing mechanic can change a ranking substantially. The preset's
+This is a live-game baseline with unequal preset gear levels. Warlock uses upstream's `preraid`
+gear because its build presets provide no gear, matching the upstream regression suites. A preset's
+gear, incomplete rotation or missing mechanic can change a ranking substantially. The preset's
 status and caveats belong beside its score; coverage alone does not establish that a spec is complete.
 The saved setup shows the equipment, suffixes, enchants, weapon swaps and selected talent ranks.
 Links open current item and spell descriptions, which can differ from the saved snapshot.
+
+## Live game data and preset limitations
+
+The game files and hotfix cache are from live wowf build 1.60.1.70658. Upstream uses the live cache
+alone and omits items it does not contain from the simulator database. These omissions do not
+establish that the items are unavailable in game. Later cache updates can restore database entries;
+preset replacements do not automatically switch back.
+
+[Upstream's preset substitutions](https://github.com/wowsims/forever/pull/725) use available items
+with the same name where possible, or a suitable slot, type and source otherwise. They have not
+been gear-optimized. Some same-name replacements use vanilla item IDs whose set IDs differ from
+the registered Forever sets. Darkmantle, Soulforge, Sorcerer's, Heroism and Five Thunders replacements
+therefore do not activate those Forever set bonuses. This affects the presets' damage and limits
+what their rankings say about class balance.
 
 ## Choosing a comparison
 
@@ -82,6 +96,10 @@ branch that has moved from the simulated revision fails publication, and a rejec
 retried by merging unrelated work. A successful publication on `master` starts Pages deployment.
 Runs on other branches only commit their results there.
 
+The live-data refresh recomputes every legal race, build and encounter. The October 27 computations
+cannot be reused because the game data and presets differ. The generated source records identify
+the simulator revision and actual computation dates for the fresh run.
+
 ## Rebuild locally
 
 After installing dependencies and generating the Go and TypeScript sources, use new output paths:
@@ -135,7 +153,12 @@ Preserve the source engine revision and original computation date when data is r
 compatibility check against a newer revision separately. A publication date or file modification
 date is not a computation date. Unknown dates remain unknown.
 
-The October 27 matrix contains 34 builds, 306 fight lists and 2,025 legal race matchups. The original
+## Historical October 27 publication
+
+The following source dates and compatibility checks describe the October 27 computations and their
+later reuse. They do not validate reuse with the live-cache data and substituted presets.
+
+The October 27 matrix contained 34 builds, 306 fight lists and 2,025 legal race matchups. The original
 cloud engine was `932ffdbf86205ac9f388ecd161e89b77206e1989`. GitHub's
 [successful run](https://github.com/laurencestokes/foreversim/actions/runs/40545126193) records its
 48 simulation steps between October 27, 2026, 16:54:32 and 18:17:49 UTC. The 261 Troll matchups were
@@ -143,20 +166,20 @@ replaced using engine `66ef260625b26bdfb388af40abe2c1616500a38d` for the 15-seco
 duration; their exact execution timestamp was not recorded. The combined rankings were scored at
 18:21:25 UTC on October 27. That scoring time must not be presented as the Troll computation time.
 
-The current preset comparison accounts for five display-only Mage group labels and a pseudo-stat
+That publication's preset comparison accounted for five display-only Mage group labels and a pseudo-stat
 array shrinking from 42 to 37 entries. Every entry from index 36 onward was zero in both exports;
-the remaining resolved inputs and all setup snapshots matched exactly. The merged upstream change
-extracts existing crit calculations for the character sheet and preserves the combat expressions.
+the remaining resolved inputs and all setup snapshots matched exactly. The upstream change it checked
+extracted existing crit calculations for the character sheet and preserved the combat expressions.
 A before-and-after run at two iterations matched unrounded DPS and standard error exactly in all
 306 lists and 2,025 race matchups. A longer check at 256 iterations matched both values exactly in
 333 matchups across 42 lists: 14 builds at 180 seconds against all three target types and every legal
 race. It covered both feral builds, three weaving hunter builds, six rogue builds, Enhancement and
-both warrior builds. These bounded checks support reuse together with the input and code comparison;
-they do not test every possible roll sequence. Published estimates retain their original 50,000
-iterations and source dates.
+both warrior builds. These bounded checks supported that reuse together with the input and code
+comparison; they did not test every possible roll sequence. Those estimates retained their original
+50,000 iterations and source dates.
 
-To reproduce that check, build the runner at `66ef260625b26bdfb388af40abe2c1616500a38d` and at the
-verified merged revision with the same Go version, platform and `with_db` tag. Keep each engine's
+To reproduce that check, build the runner at `66ef260625b26bdfb388af40abe2c1616500a38d` and at
+that publication's verified merged revision with the same Go version, platform and `with_db` tag. Keep each engine's
 saved full export, and select the 14 builds above into matching sample inputs. Run each pair into
 separate new directories:
 

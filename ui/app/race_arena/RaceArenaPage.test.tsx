@@ -114,8 +114,10 @@ describe('RaceArenaPage', () => {
 		expect(method.textContent).toContain('wowsims/forever');
 		expect(method.textContent).toContain('actual weapon types');
 		expect(method.textContent).toContain('Both Skyborne races');
-		expect(method.textContent).toContain('pre-release baseline');
-		expect(method.textContent).toContain('development gear');
+		expect(method.textContent).toContain('live-game baseline');
+		expect(method.textContent).toContain('1.60.1.70658');
+		expect(method.textContent).toContain('replacement preset items have not been gear-optimized');
+		expect(method.textContent).toContain('do not activate the registered Forever set bonuses');
 		expect(method.textContent).toContain('October 26 and 27 racial tuning');
 		expect(method.textContent).toContain('Blood Fury has a 2-minute cooldown');
 		expect(method.textContent).toContain('Touch of the Grave has a 15-second internal cooldown');
