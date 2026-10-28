@@ -6,6 +6,12 @@ import { describe, expect, it } from 'vitest';
 import { LandingActions } from './LandingActions';
 
 describe('LandingActions', () => {
+	it('links both arena comparisons', () => {
+		render(<LandingActions />);
+		expect(screen.getByRole('link', { name: i18n.t('title', { ns: 'build_arena' }) }).getAttribute('href')).toBe('/forever/build_arena/');
+		expect(screen.getByRole('link', { name: 'Race tier list' }).getAttribute('href')).toBe('/forever/race_arena/');
+	});
+
 	it('links Discord, GitHub and the exporter addon in a new tab with no opener', () => {
 		render(<LandingActions />);
 		const links: Array<[string, string]> = [

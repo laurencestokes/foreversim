@@ -6,6 +6,8 @@ import { applyIndividualDefaults } from '@features/settings/model/apply_defaults
 import { Player as PlayerProto } from '@generated/proto/api';
 import { Class, EquipmentSpec, Spec } from '@generated/proto/common';
 import { UIDatabase } from '@generated/proto/ui';
+import { LaunchStatus } from '@sim/constants/other';
+import { PlayerSpecs } from '@sim/player/specs';
 import type { PresetBuild } from '@sim/presets/types';
 import type { SpecDefinition } from '@sim/spec_config';
 import balance from '@specs/druid/balance/spec';
@@ -50,6 +52,11 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 		['warrior', warrior],
 	];
 	const inputs = [];
+	const dpsSpecs = Object.values(Spec)
+		.filter((value): value is Spec => typeof value === 'number' && value !== Spec.SpecUnknown)
+		.map(spec => PlayerSpecs.fromProto(spec))
+		.filter(spec => !spec.isTankSpec && !spec.isHealingSpec);
+	expect(definitions.map(([, config]) => config.spec).sort()).toEqual(dpsSpecs.map(spec => spec.specID).sort());
 	for (const [key, config] of definitions) {
 		const builds: PresetBuild[] = [...(config.presets.builds ?? [])];
 		for (const talents of config.presets.talents) {
@@ -71,6 +78,32 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 			if (key === 'warlock') player.setGear(host.sim.db.lookupEquipmentSpec(EquipmentSpec.fromJson(warlockGear)));
 			const exported = player.toProto(false, true);
 			const label = [build.group, build.name].filter(Boolean).join(' / ');
+			const gear = build.gear ?? config.presets.gear.find(gear => gear.gear === config.defaults.gear);
+			const devGear = Boolean(gear?.devOnly);
+			const consumableIds = new Set(
+				Object.values(exported.consumables ?? {})
+					.flat()
+					.filter((value): value is number => typeof value === 'number' && value > 0),
+			);
+			const consumableNames = host.sim.db
+				.getConsumables()
+				.filter(item => consumableIds.has(item.id))
+				.map(({ id, name }) => ({ id, name }))
+				.sort((a, b) => a.id - b.id);
+			expect(consumableNames.length, `${key} / ${label} consumable names`).toBe(consumableIds.size);
+			const caveats = [
+				...(devGear ? ['Uses an upstream gear preset marked for development.'] : []),
+				...(key === 'warlock' ? ['The build preset supplies no gear; uses the upstream preraid regression set.'] : []),
+				...(key === 'hunter' && build.name.includes('Weave')
+					? ['Weaving assumes uninterrupted access to melee range and the movement timing programmed in the preset.']
+					: []),
+				...(key === 'hunter' && build.name === 'SV Melee'
+					? ['The preset moves into melee range and stays there; the result assumes continuous melee access.']
+					: []),
+				...(key === 'feral_druid' && build.name === 'Bearweave (45s fights)'
+					? ['The preset is named for 45-second fights; this arena also measures it at 90, 180 and 360 seconds.']
+					: []),
+			];
 			expect(requestsRegionalRacial(PlayerProto.toJson(exported)), `${key} / ${label}: Attuned and Charged are removed on entering a raid`).toBe(false);
 			expect(exported.equipment?.items.filter(item => item.id).length, `${key} / ${label} gear`).toBeGreaterThan(10);
 			expect(exported.rotation?.priorityList.length, `${key} / ${label} rotation`).toBeGreaterThan(0);
@@ -79,6 +112,10 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 				spec: key === 'priest' ? (label.toLowerCase().includes('smite') ? 'smite_priest' : 'shadow_priest') : key,
 				class: Class[exported.class].replace('Class', ''),
 				build: label,
+				status: LaunchStatus[player.getPlayerSpec().launch.status],
+				devGear,
+				caveats,
+				consumableNames,
 				gear:
 					key === 'warlock'
 						? 'preraid'

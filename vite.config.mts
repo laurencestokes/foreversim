@@ -191,6 +191,7 @@ export default defineConfig(({ command, mode }) => {
 				input: {
 					'ui/index.html': path.resolve(BASE_PATH, 'index.html'),
 					race_arena: path.resolve(BASE_PATH, 'race_arena/index.html'),
+					build_arena: path.resolve(BASE_PATH, 'build_arena/index.html'),
 					// The single spec page. `specPages` copies the processed result to
 					// `<class>/<spec>/index.html` and drops this path from the bundle; the key only
 					// names the page's js/css ([name] in the *FileNames below), not its html output.

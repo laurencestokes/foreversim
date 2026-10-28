@@ -83,8 +83,8 @@ jobs:
             - name: Type check 🧠
               run: npm run type-check
 
-            - name: Test race arena snapshots
-              run: node --test tools/race_arena/snapshot.test.mjs
+            - name: Test arena publication and snapshots
+              run: node --test tools/build_arena/*.test.mjs tools/race_arena/snapshot.test.mjs
 
             - name: Build Storybook 📚
               run: npm run storybook:build
@@ -176,9 +176,9 @@ jobs:
             # The buff manifest, the proto emitter and the buff generator's render and
             # TS tests need no game files database, and the database is not in the repo, so
             # the tests that do need it skip. One shard runs them.
-            - name: Test the buff generator
+            - name: Test generators and arena tools
               if: matrix.shard == 0
-              run: go test ./tools/database/... ./tools/gen_buffs_proto/... ./tools/race_arena/...
+              run: go test ./tools/database/... ./tools/gen_buffs_proto/... ./tools/race_arena/... ./tools/build_arena/...
 
             - name: Test (shard ${{ matrix.shard }})
               env:

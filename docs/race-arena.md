@@ -1,88 +1,79 @@
 # Race arena
 
-The simulator, game data and preset builds follow [wowsims/forever](https://github.com/wowsims/forever),
+The Race Arena compares every legal race on each upstream DPS build. Within a build, gear, talents,
+resolved rotation, consumables and class options stay fixed. The [Build Arena](build-arena.md)
+compares the complete presets against each other and explains the shared inputs, publication checks
+and source provenance.
+
+The simulator, game files and presets follow [wowsims/forever](https://github.com/wowsims/forever),
 including the [October 26 racial tuning](https://www.wowhead.com/forever/news/racial-ability-tuning-pass-for-wow-forever-383597)
-and the [October 27 addendum](https://us.forums.blizzard.com/en/wow/t/2360696/8).
+and [October 27 addendum](https://us.forums.blizzard.com/en/wow/t/2360696/8).
 Human has 1% crit and 10% increased Spirit; Dwarf has 1% physical and spell hit; Tauren retains its
 health bonus with no crit-damage bonus; Orc's Command grants 5% damage to hunter and warlock pets;
 Skyborne has 2% haste. Earth Fury and Savage are removed. There are no fork-specific racial overrides.
-Blood Fury has a 2-minute cooldown; Touch of the Grave has a 15-second internal cooldown.
-Troll's Berserking lasts 15 seconds.
-The raid baseline uses ordinary Read Leyline and Skysight casts. Entering a raid removes Attuned and
-Charged, so the preset export rejects their enhanced casts. As in upstream, Plainsrunning and health
-regeneration are not simulated.
-The race arena compares every legal race on each DPS build. It keeps the preset's gear, talents,
-resolved rotation, consumables and class options fixed. Warlock presets contain no gear, so they use
-the upstream `preraid` set, as the warlock regression suites do. Development gear sets are included.
+Blood Fury has a 2-minute cooldown, Touch of the Grave has a 15-second internal cooldown, and Troll's
+Berserking lasts 15 seconds. The raid baseline uses ordinary Read Leyline and Skysight casts.
+Entering a raid removes Attuned and Charged, so the preset export rejects their enhanced casts.
+As in upstream, Plainsrunning and health regeneration are not simulated.
 
-The aim is a controlled level-60 baseline for race choice ahead of release. These are the upstream
-presets, including development items, rather than a claim about final release gear. Only the race
-changes within a build; gear and rotations are not optimized separately for each race. Rankings
-measure damage, including pets, with no value assigned to survival or utility. Changes to gear,
-balance, buffs or the encounter can change the ordering.
+These level-60 presets include development items and mixed gear levels. Warlock uses upstream's
+`preraid` set because its presets provide no gear, matching its regression suites. They are an alpha
+baseline for race choice, and their gear, rotations and tuning can change before release. Gear and
+rotations are not optimized separately for each race. DPS includes pets under full raid, party and
+individual buffs and debuffs, with no value assigned to survival, utility or damage a spec adds to
+other players.
 
-The page opens on **Best race for your fights**. A reader picks fight lengths and target types, and
-each build names the race whose largest gap behind the best race, across those fights, is smallest:
-the race that is never far off, rather than the best on average. Races within the noise figure of it
-are named as level with it. **Show detail** opens a heatmap of every race against every fight (tier
-letter in each cell, shaded on a one-hue ramp validated against the page surface; unpicked fights are
-faded) and a chart of each race's gap by fight length at one target. The per-fight tier lists follow.
+Every race receives 50,000 iterations with seed 101 against a level 63 target with 3,731 armor. The
+matrix covers 90-second, 3-minute and 6-minute fights against Mechanical, Elemental and Beast targets.
+Both Skyborne races are included, and weapon types stay unchanged.
 
-Each build's **View setup** dialog shows the equipped items, random suffixes, enchants, active weapon
-swap gear and selected talent ranks. These are saved with the results. Item names come from the
-exported player's own database; talent names and ranks come from the matching talent definitions.
-The item and spell links open current game descriptions, which may change after the snapshot.
+## Reading the page
 
-Every run uses the engine's full raid, party and individual buffs and debuffs, seed 101, and a fixed
-length fight against a level 63 target with 3,731 armor: 90 seconds, 3 minutes and 6 minutes, with 3
-minutes the page's main view. Each build is run against Mechanical, Elemental and Beast targets at
-each length. The runner's `-durations` flag (default `90,180,360`) sets the lengths. Both Skyborne races are included. Weapon types are unchanged.
+The page opens on **Best race for your fights**. The reader chooses fight lengths and target types.
+For each build, the recommendation minimizes a race's largest percentage gap behind the best race
+across those fights. Races within the displayed noise estimate are named as level with it.
+**Show detail** opens the race-by-fight heatmap and each race's gap by fight length at one target.
+Per-fight tier lists follow.
 
-The preset export goes through the UI's existing defaults, build application and player serialization.
-Its test checks that each build has gear, talents and a resolved rotation before writing any input.
-The Go runner uses the same engine as the simulator.
+Each build's **View setup** dialog shows its saved equipment, random suffixes, enchants, active weapon
+swap gear and selected talent ranks. Item names come from the exported player's own database;
+talent names and ranks come from the matching definitions. Item and spell links open current game
+descriptions, which may change after the snapshot.
 
-## Rebuild
+The race page's noise figure is the largest standard error of a race's mean, relative to the winning
+DPS in its fight. Its difference estimate is twice the square root of two times that value. This is
+an independent-error approximation, not a measured paired interval. A shared seed alone does not
+establish covariance, and the estimate does not cover model errors or guarantee every comparison
+simultaneously. Choosing a leader from noisy means also favors positive sampling noise. Races called
+level should not be treated as proven identical or uniquely optimal.
 
-After installing the dependencies and generating Go and TypeScript sources:
+## Rebuild and publication
+
+The manual **Build Arenas** workflow computes one complete raw matrix and publishes both arenas
+from it. See [the rebuild commands and validation rules](build-arena.md#rebuild-locally). The workflow
+balances shards independently for each fight length using a bounded timing run, validates legal
+coverage and fingerprints, and stages both results before committing them together. Smoke results
+cannot pass publication's 50,000-iteration requirement.
+
+A change confined to one race can reuse the other races' raw results only when presets, encounter
+and all other combat behavior are equivalent. Run the simulator with `-race Troll -commit REVISION`
+to recompute every legal Troll matchup, then replace those rows in the complete raw matrix. Preserve
+the source revisions and recorded dates, and validate the merged matrix before scoring either arena.
+The Race Arena's `raceCommits` records a replacement revision separately from the original engine.
+The Build Arena's sources retain each computation's provenance and any separate compatibility check.
+
+For older results, attach setup snapshots using the original saved input:
 
 ```sh
-RACE_ARENA_INPUT=/tmp/race-arena-input.json npx vitest run ui/specs/race_arena_export.test.ts
-node tools/race_arena/snapshot.mjs /tmp/race-arena-input.json
-go run -tags=with_db ./tools/race_arena/simulate -input /tmp/race-arena-input.json -out /tmp/race-arena-out
-go run ./tools/race_arena /tmp/race-arena-out
-npx oxfmt ui/app/race_arena/results.json
+node tools/race_arena/snapshot.mjs /path/to/original-input.json ui/app/race_arena/results.json
 ```
 
-Use an empty output directory. The runner defaults to 50,000 iterations per race; `-iterations 2`
-checks that every build can run, but those results must not replace the published rankings.
-Three fight lengths make a full run three times as long as a single one.
-`-workers` limits concurrent simulations. A failed simulation stops the run before writing results.
+This reads talent definitions at the results' recorded commit and preserves the numbers and dates.
+A fresh export is not evidence of what an older run equipped. The October 27 source dates and the
+Troll replacement's unknown execution timestamp are documented in
+[Reusing existing computations](build-arena.md#reusing-existing-computations).
 
-The runner carries each setup snapshot into its raw results, and the scorer saves one copy per build
-across target types. Missing or inconsistent snapshots stop publication. Run
-`node --test tools/race_arena/snapshot.test.mjs` to check the snapshot extraction.
-
-To attach setups to older results, use the original saved input from that simulation run:
-`node tools/race_arena/snapshot.mjs /path/to/original-input.json ui/app/race_arena/results.json`.
-This reads talent definitions at the results' recorded commit and preserves the DPS, ranks, generation
-date and engine revision. Do not substitute a fresh export after presets have changed.
-
-The manual **Build Race Arena** workflow exports the presets once and distributes the builds across
-16 groups, each with a separate job for every fight length. Splitting the durations keeps the slowest
-builds from holding up a whole group. Before scoring, it checks every race, setup and fight against a complete smoke
-run and requires 50,000 iterations in every result. It then commits the result and starts the Pages
-deployment on `master`. A concurrent branch update rejects the push so results cannot be published
-under an engine revision they did not use.
-
-A change confined to one race can reuse the other races' raw results when the presets, encounter and
-all other simulator behavior are unchanged. Run the simulator with `-race Troll -commit <revision>`
-to recompute every legal Troll matchup. Replace that race's rows in the complete raw matrix, preserving
-their `commit` fields, then score with `RACE_ARENA_COMMIT` set to the original run's revision.
-The scorer rejects mixed revisions within one race. The result's `raceCommits` records each replacement
-revision, and the page links it beside the original run's source.
-
-The fork deploys on pushes to `master` at `/foreversim/forever/`. Its GitHub-hosted test and Pages
-workflows replace upstream's private runner and deployment credentials. `tools/site_base.sh`
-adjusts the built assets to this path; the source simulator retains upstream's `/forever/` paths.
-Upstream's scheduled maintenance, webhook, labeler and preview cleanup jobs run only in `wowsims/forever`.
+The fork deploys successful `master` publications at `/foreversim/forever/`. Its GitHub-hosted tests
+and Pages workflow replace upstream's private runner and deployment credentials. `tools/site_base.sh`
+adjusts built asset paths; the simulator source retains upstream's `/forever/` paths. Upstream's
+scheduled maintenance, webhook, labeler and preview cleanup jobs run only in `wowsims/forever`.
