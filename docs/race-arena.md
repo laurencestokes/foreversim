@@ -17,15 +17,18 @@ Entering a raid removes Attuned and Charged, so the preset export rejects their 
 As in upstream, Plainsrunning and health regeneration are not simulated.
 
 This is a live-game baseline using upstream's level-60 presets with unequal gear levels. The game
-files and hotfix cache are from live wowf build 1.60.1.70658. Items absent from that cache are omitted
-from the simulator database; cache absence does not establish that an item is unavailable in game.
+files are from live wowf build 1.60.1.70707 with hotfixes through push 113562. Missing entries in the
+simulator database do not establish that those items are unavailable in game.
 Upstream substitutes preset items without gear optimization, and some vanilla-ID replacements do
 not activate the registered Forever set bonuses. See the [data limitations](build-arena.md#live-game-data-and-preset-limitations).
 
 Warlock uses upstream's `preraid` set because its presets provide no gear, matching its regression
 suites. Gear and rotations are not optimized separately for each race. DPS includes pets under full
-raid, party and individual buffs and debuffs, with no value assigned to survival, utility or damage
-a spec adds to other players.
+raid, party and individual buffs and debuffs as defined by upstream's shared test baseline. That
+baseline uses trainer-rank Strength of Earth, Grace of Air, Greater Blessing of Might and Wisdom,
+and external Battle Shout rank 6. Each preset keeps its own spell-rank choices, including book ranks
+where selected. The support inputs stay fixed across races; the resolved rotation determines what
+each race casts. No value is assigned to survival, utility or damage a spec adds to other players.
 
 Every race receives 50,000 iterations with seed 101 against a level 63 target with 3,731 armor. The
 matrix covers 90-second, 3-minute and 6-minute fights against Mechanical, Elemental and Beast targets.
@@ -59,8 +62,9 @@ balances shards independently for each fight length using a bounded timing run, 
 coverage and fingerprints, and stages both results before committing them together. Smoke results
 cannot pass publication's 50,000-iteration requirement.
 
-The live-data refresh recomputes every legal race, build and encounter at 50,000 iterations. Its
-presets and game data differ from the October 27 inputs, so those computations cannot be reused.
+The current refresh recomputes every legal race, build and encounter at 50,000 iterations. Its
+presets, game data and support ranks differ from the earlier inputs, so those computations cannot
+be reused. The generated results record the actual engine revision and computation dates.
 
 A change confined to one race can reuse the other races' raw results only when presets, encounter
 and all other combat behavior are equivalent. Run the simulator with `-race Troll -commit REVISION`

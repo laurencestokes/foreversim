@@ -8,6 +8,13 @@ import "shaman.proto";
 import "warlock.proto";
 
 // Rotation options are based heavily on APL. See https://github.com/simulationcraft/simc/wiki/ActionLists.
+//
+// SIML (sim/siml/SPEC.md §8) writes every action and value kind here from this file, so a new kind needs no SIML
+// edit. After a change here, run `make siml`, which writes the wowsims-siml skill again and checks the .siml files
+// under ui/specs. Taking out or renaming a kind or a field breaks the .siml files that use it: the check names them, and
+// they take the new form by hand. For the short accessor form `[unit.]aura(x).prop`, name a value kind
+// `<head>_<prop>` (heads aura, dot, spell, boss_spell, sequence) and give it one ActionID field (one string for
+// sequence) and at most one UnitReference; any other kind is written `kind(field=value, …)`.
 
 message APLRotation {
     enum Type {
@@ -129,6 +136,7 @@ message APLValue {
         APLValueBossSpellIsCasting boss_spell_is_casting = 65;
         APLValueBossCurrentTarget boss_current_target = 120;
         APLValueTargetIsMobType target_is_mob_type = 133;
+        APLValueTargetIsBleedImmune target_is_bleed_immune = 143;
 
         // Resource values
         APLValueCurrentHealth current_health = 26;
@@ -511,6 +519,9 @@ message APLValueTargetIsMobType {
     UnitReference target_unit = 1;
     MobType mob_type = 2;
 }
+message APLValueTargetIsBleedImmune {
+    UnitReference target_unit = 1;
+}
 message APLValueEncounterInArea {
     AreaType area_type = 1;
 }
@@ -861,6 +872,7 @@ message APLValueActiveItemSwapSet {
 
 message APLValueSelectedPotion {
 	ActionID potion_id = 1;
+	OtherAction slot = 2; // The potion placeholder whose pick to read; unset reads every slot.
 }
 
 message APLValueSelectedConjured {

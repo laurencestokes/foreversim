@@ -40,6 +40,8 @@ jobs:
                   npm ci
                   go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
                   make sim/core/proto/api.pb.go ui/generated/proto/api.ts go-to-ts
+                  go build -o "$RUNNER_TEMP/wowsimcli" ./cmd/wowsimcli
+                  echo "WOWSIMCLI=$RUNNER_TEMP/wowsimcli" >> "$GITHUB_ENV"
             - name: Export the UI presets
               env:
                   RACE_ARENA_INPUT: ${{ runner.temp }}/arena-input.json

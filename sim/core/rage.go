@@ -10,10 +10,10 @@ import (
 // ResourceMetrics.NoThreat and makes none; a new rage source that comes from damage sets NoThreat too.
 const ThreatPerRageGained = 5
 
-// Damage taken grants DamageTakenRageFactor * (1 - A) * damage / c rage, where damage is the hit before any of the
-// defender's mitigation (armor, block and absorbs included), c is the rage conversion value at the attacker's level
-// (230.6 at 60) and A is the armor reduction the game assumes in place of the defender's own. The defender's level,
-// health and armor play no part.
+// Damage taken grants DamageTakenRageFactor * (1 - A) * damage / c rage, where damage is the hit after the defender's
+// damage taken multipliers (Defensive Stance's 10% less, a debuff's more) and before armor, resistances, flat damage
+// taken bonuses, block and absorbs, c is the rage conversion value at the attacker's level (230.6 at 60) and A is the
+// armor reduction the game assumes in place of the defender's own. The defender's level, health and armor play no part.
 const DamageTakenRageFactor = 2.5
 
 // A by the attacker's level: 20% up to level 42, 30% at 44, 36% at 46 and 38% at 50, measured on combat logs, and
@@ -53,10 +53,10 @@ const (
 	BaseRageHitFactor     = 3.46
 	TwoHandRageHitFactor  = 4.5
 	TwoHandRageMultiplier = TwoHandRageHitFactor / BaseRageHitFactor
-	// A critical auto attack adds this share of its rage before the two-hand multiplier, for every rage
-	// user (the game files' Rule of Rage (DND) 1322574 states 100; the spell store does not carry it).
-	// TODO: Ingame test needed -- confirm with a dual-wield combat log that an off-hand crit's bonus is
-	// the off-hand swing's own rage, the off-hand halving included.
+	// A critical auto attack adds this share of its whole rage, the two-hand multiplier and the off-hand
+	// halving included, for every rage user (the game files' Rule of Rage (DND) 1322574 states 100; the
+	// spell store does not carry it). Combat logs show a two-hand crit at twice the swing's rage, and an
+	// off-hand crit at twice the off-hand's halved share.
 	CritRageBonus = 1.0
 )
 
@@ -99,7 +99,7 @@ func (unit *Unit) EnableRageBar(options RageBarOptions) {
 		}
 
 		attackerLevel := spell.Unit.Level
-		generatedRage := DamageTakenRageFactor * (1 - damageTakenRageArmorReduction(attackerLevel)) * result.PreMitigationDamage /
+		generatedRage := DamageTakenRageFactor * (1 - damageTakenRageArmorReduction(attackerLevel)) * result.PreArmorDamage /
 			rageConversion(attackerLevel) * unit.rageBar.damageTakenRageMultiplier
 
 		unit.AddRage(sim, generatedRage, rageFromDamageTakenMetrics)
@@ -137,14 +137,12 @@ func (unit *Unit) EnableRageBar(options RageBarOptions) {
 			}
 
 			// rage is normalized so it only depends on weapon swing speed and some multipliers
-			swingRage := hitFactor * weapon.SwingSpeed * options.BaseRageMultiplier * handMultiplier
-			generatedRage := swingRage
+			generatedRage := hitFactor * weapon.SwingSpeed * options.BaseRageMultiplier * handMultiplier
 			if options.TwoHandRage || weapon.NormalizedSwingSpeed == TwoHandNormalizedSwingSpeed {
 				generatedRage *= TwoHandRageMultiplier
 			}
-			// The crit bonus scales the swing's rage without the two-hand multiplier; the off-hand factors stay in it.
 			if result.DidCrit() {
-				generatedRage += CritRageBonus * swingRage
+				generatedRage *= 1 + CritRageBonus
 			}
 
 			var metrics *ResourceMetrics

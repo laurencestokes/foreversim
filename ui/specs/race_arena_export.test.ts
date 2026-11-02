@@ -66,6 +66,7 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 		}
 		expect(builds.length, key).toBeGreaterThan(0);
 		for (const build of builds) {
+			const wholeBuild = config.presets.builds?.includes(build);
 			const { player, host } = await makeIndividualSim({ spec: config.spec as Spec, config });
 			applyIndividualDefaults(
 				Object.assign(host, {
@@ -73,13 +74,61 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 					statSweepSettings: { applyDefaults() {} },
 				}) as unknown as Parameters<typeof applyIndividualDefaults>[0],
 			);
-			applyBuild(build, host);
+			if (wholeBuild) {
+				applyBuild(build, host);
+			} else {
+				// A talent preset leaves the page's default weapon swap enabled; applying a build without swap gear disables it.
+				player.setTalentsString(build.talents!.data.talentsString);
+			}
 			// Warlock presets contain no gear; its regression suites use this upstream preraid set.
 			if (key === 'warlock') player.setGear(host.sim.db.lookupEquipmentSpec(EquipmentSpec.fromJson(warlockGear)));
 			const exported = player.toProto(false, true);
 			const label = [build.group, build.name].filter(Boolean).join(' / ');
 			const gear = build.gear ?? config.presets.gear.find(gear => gear.gear === config.defaults.gear);
+			const rotation = build.rotation ?? config.presets.rotations.find(preset => preset.rotation.rotation === config.defaults.aplRotation);
 			const devGear = Boolean(gear?.devOnly);
+			const expectedGear = key === 'warlock' ? EquipmentSpec.fromJson(warlockGear) : (build.gear?.gear ?? config.defaults.gear);
+			for (const [slot, item] of expectedGear.items.entries()) {
+				expect(exported.equipment?.items[slot], `${key} / ${label} equipment slot ${slot}`).toMatchObject({
+					id: item.id,
+					enchant: item.enchant,
+					randomSuffix: item.randomSuffix,
+				});
+			}
+			const expectedSwap = build.itemSwap?.itemSwap ?? build.settings?.playerOptions?.itemSwap ?? (!wholeBuild ? config.defaults.itemSwap : undefined);
+			if (expectedSwap) {
+				expect(exported.enableItemSwap, `${key} / ${label} weapon swap enabled`).toBe(build.settings?.playerOptions?.enableItemSwap ?? true);
+				for (const [slot, item] of expectedSwap.items.entries()) {
+					if (!item.id) continue;
+					expect(exported.itemSwap?.items[slot], `${key} / ${label} swap slot ${slot}`).toMatchObject({
+						id: item.id,
+						enchant: item.enchant,
+						randomSuffix: item.randomSuffix,
+					});
+				}
+			}
+			for (const item of [...(exported.equipment?.items ?? []), ...(exported.itemSwap?.items ?? [])]) {
+				if (!item.id) continue;
+				expect(
+					exported.database?.items.some(row => row.id === item.id),
+					`${key} / ${label} item ${item.id} in request database`,
+				).toBe(true);
+				if (item.enchant)
+					expect(
+						exported.database?.enchants.some(row => row.effectId === item.enchant),
+						`${key} / ${label} enchant ${item.enchant} in request database`,
+					).toBe(true);
+				if (item.randomSuffix)
+					expect(
+						exported.database?.randomSuffixes.some(row => row.id === item.randomSuffix),
+						`${key} / ${label} suffix ${item.randomSuffix} in request database`,
+					).toBe(true);
+			}
+			expect(player.specTypeFunctions.optionsFromPlayer(exported), `${key} / ${label} spec options`).toEqual({
+				...config.defaults.specOptions,
+				...build.settings?.specOptions,
+			});
+			expect(exported.talentsString, `${key} / ${label} talents`).toBe(build.talents?.data.talentsString ?? config.defaults.talents.talentsString);
 			const consumableIds = new Set(
 				Object.values(exported.consumables ?? {})
 					.flat()
@@ -100,14 +149,10 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 				...(key === 'hunter' && build.name === 'SV Melee'
 					? ['The preset moves into melee range and stays there; the result assumes continuous melee access.']
 					: []),
-				...(key === 'feral_druid' && build.name === 'Bearweave (45s fights)'
-					? ['The preset is named for 45-second fights; this arena also measures it at 90, 180 and 360 seconds.']
-					: []),
 			];
 			expect(requestsRegionalRacial(PlayerProto.toJson(exported)), `${key} / ${label}: Attuned and Charged are removed on entering a raid`).toBe(false);
 			expect(exported.equipment?.items.filter(item => item.id).length, `${key} / ${label} gear`).toBeGreaterThan(10);
 			expect(exported.rotation?.priorityList.length, `${key} / ${label} rotation`).toBeGreaterThan(0);
-			expect(exported.talentsString, `${key} / ${label} talents`).not.toBe('');
 			inputs.push({
 				spec: key === 'priest' ? (label.toLowerCase().includes('smite') ? 'smite_priest' : 'shadow_priest') : key,
 				class: Class[exported.class].replace('Class', ''),
@@ -120,7 +165,7 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 					key === 'warlock'
 						? 'preraid'
 						: (build.gear?.name ?? config.presets.gear.find(gear => gear.gear === config.defaults.gear)?.name ?? 'Default'),
-				rotation: build.rotation?.name ?? 'Default',
+				rotation: rotation?.name ?? 'Default',
 				consumables: 'Preset consumables',
 				player: PlayerProto.toJson(exported),
 			});

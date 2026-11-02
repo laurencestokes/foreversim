@@ -21,7 +21,7 @@ type SpellResult struct {
 	ArmorAndResistanceMultiplier float64 // Armor multiplier
 	PostOutcomeDamage            float64 // Damage done by this cast after Outcome is applied
 	BlockedDamage                float64 // Damage a block took off this cast
-	PreMitigationDamage          float64 // Damage done by this cast with the Outcome's multiplier but before the target's armor, resistances, damage taken modifiers, block and absorbs
+	PreArmorDamage               float64 // Damage done by this cast with the Outcome's multiplier and the target's damage taken multipliers but before the target's armor, resistances, flat damage taken bonuses, block and absorbs
 
 	inUse           bool
 	castResultDealt bool
@@ -79,7 +79,7 @@ func (spell *Spell) NewResult(target *Unit) *SpellResult {
 	result.ArmorAndResistanceMultiplier = 0
 	result.PostOutcomeDamage = 0
 	result.BlockedDamage = 0
-	result.PreMitigationDamage = 0
+	result.PreArmorDamage = 0
 	result.castResultDealt = false
 
 	return result
@@ -98,7 +98,7 @@ func (spell *Spell) CloneResult(result *SpellResult) *SpellResult {
 	newResult.ArmorAndResistanceMultiplier = result.ArmorAndResistanceMultiplier
 	newResult.PostOutcomeDamage = result.PostOutcomeDamage
 	newResult.BlockedDamage = result.BlockedDamage
-	newResult.PreMitigationDamage = result.PreMitigationDamage
+	newResult.PreArmorDamage = result.PreArmorDamage
 
 	return newResult
 }
@@ -355,9 +355,29 @@ func (spell *Spell) CalcOutcome(sim *Simulation, target *Unit, outcomeApplier Ou
 	attackTable := spell.Unit.AttackTables[target.UnitIndex]
 	result := spell.NewResult(target)
 
-	outcomeApplier(sim, result, attackTable)
+	if spell.missesImmune(target) {
+		spell.missInFull(result)
+	} else {
+		outcomeApplier(sim, result, attackTable)
+	}
 	result.Threat = spell.ThreatFromDamage(sim, result.Outcome, result.Damage, attackTable)
 	return result
+}
+
+// A bleed on a bleed-immune target, or a stun on a stun-immune one: the target is immune to the whole
+// spell, its damage included.
+func (spell *Spell) missesImmune(target *Unit) bool {
+	return spell.Flags.Matches(SpellFlagBleed) && target.BleedImmune ||
+		spell.Flags.Matches(SpellFlagStun) && target.stunImmune()
+}
+
+// A miss with no hit or crit roll, as a full resist or a bleed on a bleed-immune target is.
+func (spell *Spell) missInFull(result *SpellResult) {
+	result.Outcome = OutcomeMiss
+	result.Damage = 0
+	if !spell.expecting {
+		spell.SpellMetrics[result.Target.UnitIndex].Misses++
+	}
 }
 
 func (spell *Spell) calcDamageInternal(sim *Simulation, target *Unit, baseDamage float64, attackerMultiplier float64, isPeriodic bool, outcomeApplier OutcomeApplier) *SpellResult {
@@ -369,7 +389,7 @@ func (spell *Spell) calcDamageInternal(sim *Simulation, target *Unit, baseDamage
 	afterAttackMods := result.Damage
 	result.applyResistances(sim, spell, isPeriodic, attackTable)
 	afterResistances := result.Damage
-	result.applyTargetModifiers(sim, spell, attackTable, isPeriodic)
+	targetMultiplier := result.applyTargetModifiers(sim, spell, attackTable, isPeriodic)
 	afterTargetMods := result.Damage
 
 	// Save partial outcome which comes from applyResistances call
@@ -379,13 +399,9 @@ func (spell *Spell) calcDamageInternal(sim *Simulation, target *Unit, baseDamage
 	}
 
 	// A full resist is a miss, as a binary spell's resist is: it rolls no hit or crit and lands nothing.
-	if partialOutcome.ResistedTenths() == 10 {
+	if partialOutcome.ResistedTenths() == 10 || (!isPeriodic && spell.missesImmune(target)) {
 		partialOutcome = OutcomeEmpty
-		result.Outcome = OutcomeMiss
-		result.Damage = 0
-		if !spell.expecting {
-			spell.SpellMetrics[target.UnitIndex].Misses++
-		}
+		spell.missInFull(result)
 	} else {
 		outcomeApplier(sim, result, attackTable)
 	}
@@ -393,9 +409,9 @@ func (spell *Spell) calcDamageInternal(sim *Simulation, target *Unit, baseDamage
 
 	// The outcome scales the mitigated damage by its multiplier and then takes the block off, so the
 	// multiplier is the blocked and unblocked damage over the damage before the outcome.
-	result.PreMitigationDamage = afterAttackMods
+	result.PreArmorDamage = afterAttackMods * targetMultiplier
 	if afterTargetMods > 0 {
-		result.PreMitigationDamage = afterAttackMods * (afterOutcome + result.BlockedDamage) / afterTargetMods
+		result.PreArmorDamage = result.PreArmorDamage * (afterOutcome + result.BlockedDamage) / afterTargetMods
 	}
 
 	// Restore partial outcome
@@ -899,9 +915,9 @@ func (spell *Spell) attackerDamageMultiplierInternal(attackTable *AttackTable) f
 		attackTable.DamageDealtMultiplier
 }
 
-func (result *SpellResult) applyTargetModifiers(sim *Simulation, spell *Spell, attackTable *AttackTable, isPeriodic bool) {
+func (result *SpellResult) applyTargetModifiers(sim *Simulation, spell *Spell, attackTable *AttackTable, isPeriodic bool) float64 {
 	if spell.Flags.Matches(SpellFlagIgnoreTargetModifiers) {
-		return
+		return 1
 	}
 
 	if spell.SpellSchool.Matches(SpellSchoolPhysical) {
@@ -917,7 +933,9 @@ func (result *SpellResult) applyTargetModifiers(sim *Simulation, spell *Spell, a
 		result.Damage += spell.takenBonusCoefficient(attackTable.Defender, isPeriodic) * attackTable.Defender.PseudoStats.SchoolBonusSpellDamage[spell.SchoolIndex]
 	}
 
-	result.Damage *= spell.TargetDamageMultiplier(sim, attackTable, isPeriodic)
+	targetMultiplier := spell.TargetDamageMultiplier(sim, attackTable, isPeriodic)
+	result.Damage *= targetMultiplier
+	return targetMultiplier
 }
 
 // The coefficient the target's flat school bonus is taken at: a tick's dot coefficient, the

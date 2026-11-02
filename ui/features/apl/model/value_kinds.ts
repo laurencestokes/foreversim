@@ -100,6 +100,7 @@ import {
 	APLValueSpellTravelTime,
 	APLValueTalentIsKnown,
 	APLValueTalentRank,
+	APLValueTargetIsBleedImmune,
 	APLValueTargetIsMobType,
 	APLValueTimeToNextEnergyTick,
 	APLValueTotemRemainingTime,
@@ -133,6 +134,7 @@ import {
 	minIcdInput,
 	mobTypeFieldConfig,
 	placeholderNameFieldConfig,
+	potionSlotFieldConfig,
 	reactionTimeCheckbox,
 	statTypeFieldConfig,
 	stringFieldConfig,
@@ -337,6 +339,13 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		shortDescription: i18n.t('rotation_tab.apl.values.target_is_mob_type.tooltip'),
 		newValue: APLValueTargetIsMobType.create,
 		fields: [unitFieldConfig('targetUnit', 'targets'), mobTypeFieldConfig('mobType')],
+	}),
+	targetIsBleedImmune: inputBuilder({
+		label: i18n.t('rotation_tab.apl.values.target_is_bleed_immune.label'),
+		submenu: ['boss'],
+		shortDescription: i18n.t('rotation_tab.apl.values.target_is_bleed_immune.tooltip'),
+		newValue: APLValueTargetIsBleedImmune.create,
+		fields: [unitFieldConfig('targetUnit', 'targets')],
 	}),
 
 	// Unit
@@ -1208,7 +1217,7 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		shortDescription: i18n.t('rotation_tab.apl.values.selected_potion.tooltip'),
 		newValue: APLValueSelectedPotion.create,
 		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
-		fields: [actionIdFieldConfig('potionId', 'potions')],
+		fields: [actionIdFieldConfig('potionId', 'potions'), potionSlotFieldConfig('slot')],
 	}),
 	selectedConjured: inputBuilder({
 		label: i18n.t('rotation_tab.apl.values.selected_conjured.label'),
