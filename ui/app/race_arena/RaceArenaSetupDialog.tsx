@@ -71,7 +71,9 @@ export const RaceArenaSetupDialog = ({
 						{!!setup.itemSwap?.length && (
 							<section className="flex flex-col gap-2">
 								<h3 className="m-0 text-lg">Weapon swaps</h3>
-								<p className="m-0 text-sm text-white/70">The rotation swaps these items in during the fight. Every race uses the same swaps.</p>
+								<p className="m-0 text-sm text-white/70">
+									The rotation can swap these items in before or during the fight. Every race uses the same swaps.
+								</p>
 								<Equipment slots={setup.itemSwap} />
 							</section>
 						)}
