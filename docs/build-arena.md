@@ -14,10 +14,9 @@ Links open current item and spell descriptions, which can differ from the saved 
 
 ## Live game data and preset limitations
 
-The game files and hotfix cache are from live wowf build 1.60.1.70658. Upstream uses the live cache
-alone and omits items it does not contain from the simulator database. These omissions do not
-establish that the items are unavailable in game. Later cache updates can restore database entries;
-preset replacements do not automatically switch back.
+The game files are from live wowf build 1.60.1.70707 with hotfixes through push 113562. The simulator
+database reflects the captured game data; a missing entry does not establish that an item is
+unavailable in game. Later data updates can restore entries, while preset replacements may remain.
 
 [Upstream's preset substitutions](https://github.com/wowsims/forever/pull/725) use available items
 with the same name where possible, or a suitable slot, type and source otherwise. They have not
@@ -30,8 +29,15 @@ what their rankings say about class balance.
 
 The page compares one fight length and target type at a time. It offers 90-second, 3-minute and
 6-minute fights against Mechanical, Elemental and Beast targets. The target is level 63 with 3,731
-armor. Every simulation uses seed 101 and the engine's full raid, party and individual buffs and
-debuffs. Each legal race receives 50,000 iterations for each build and fight.
+armor. Every simulation uses seed 101 and the engine's shared raid, party and individual buff and
+debuff baseline. Each legal race receives 50,000 iterations for each build and fight.
+
+The support baseline follows upstream's `FullRaidBuffs`, `FullPartyBuffs`, `FullIndividualBuffs` and
+`FullDebuffs`. Here, "full" names that shared configuration, including support a build cannot supply
+itself. It does not mean the highest book rank: Strength of Earth is rank 4, Grace of Air rank 2,
+Greater Blessing of Might and Wisdom rank 1, and external Battle Shout rank 6. Salvation and Blessing
+of Light apply no effect. Each build retains the spell ranks chosen by its resolved preset; some
+presets cast book ranks. The recorded request shows the actual choices.
 
 The default selects the highest observed mean DPS among each build's legal races. Choosing a race
 instead compares that race and excludes builds its class cannot use. Class selection changes the
@@ -39,8 +45,8 @@ comparison population. Search filters the displayed rows after the leader has be
 hiding a name does not silently change the reference score. The [Race Arena](race-arena.md) compares
 races while keeping the build fixed.
 
-DPS includes the player's pets and measures personal damage under full buffs. Raid buffs and debuffs
-that a spec provides are already present in that baseline. The comparison therefore does not price
+DPS includes the player's pets and measures personal damage under the shared support baseline. Raid
+buffs and debuffs that a spec provides are already present in that baseline. The comparison does not price
 that spec's contribution to other players, survival, utility, movement or target mechanics. The
 presets and races are not optimized separately for these encounters.
 
@@ -70,8 +76,9 @@ that two builds are identical.
 
 ## Inputs and publication
 
-`ui/specs/race_arena_export.test.ts` applies the UI defaults and each preset through the same build
-application and serialization used by the simulator. `tools/race_arena/snapshot.mjs` attaches the
+`ui/specs/race_arena_export.test.ts` applies the UI defaults and each preset through the simulator's
+settings and serialization. A talent alternative without a complete build keeps the page's default
+gear, rotation and options. `tools/race_arena/snapshot.mjs` attaches the
 saved setup and a stable build identity from `tools/build_arena/catalog.json`. A build's identity
 survives a display-label change. Its input fingerprint records the content of its resolved request;
 a matching name or identity cannot substitute for matching inputs. Display aliases are kept separate
@@ -96,9 +103,9 @@ branch that has moved from the simulated revision fails publication, and a rejec
 retried by merging unrelated work. A successful publication on `master` starts Pages deployment.
 Runs on other branches only commit their results there.
 
-The live-data refresh recomputes every legal race, build and encounter. The October 27 computations
-cannot be reused because the game data and presets differ. The generated source records identify
-the simulator revision and actual computation dates for the fresh run.
+The current refresh recomputes every legal race, build and encounter using the updated game data,
+presets and support ranks. Earlier computations cannot be reused across those changes. The generated
+source records identify the simulator revision and actual computation dates for the fresh run.
 
 ## Rebuild locally
 

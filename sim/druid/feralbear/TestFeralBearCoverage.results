@@ -2,11 +2,11 @@ casts_results: {
  key: "TestFeralBearCoverage-Casts"
  value: {
   casts: {
-   key: "other_id:OtherActionAttack tag:1"
+   key: "other_id:OtherActionAttack tag:14"
    value: 69
   }
   casts: {
-   key: "other_id:OtherActionAttack tag:2"
+   key: "other_id:OtherActionAttack tag:15"
    value: 0
   }
   casts: {
@@ -26,16 +26,12 @@ casts_results: {
    value: 38
   }
   casts: {
-   key: "spell_id:1235827 rank:3"
+   key: "spell_id:1235827 rank:5"
    value: 7
   }
   casts: {
-   key: "spell_id:1238073 rank:4"
+   key: "spell_id:1238070 rank:3"
    value: 1
-  }
-  casts: {
-   key: "spell_id:1238122"
-   value: 0
   }
   casts: {
    key: "spell_id:1259799"
@@ -43,6 +39,10 @@ casts_results: {
   }
   casts: {
    key: "spell_id:1322605"
+   value: 0
+  }
+  casts: {
+   key: "spell_id:16979"
    value: 0
   }
   casts: {
@@ -54,7 +54,7 @@ casts_results: {
    value: 3
   }
   casts: {
-   key: "spell_id:22829 rank:4"
+   key: "spell_id:22829 rank:5"
    value: 0
   }
   casts: {
@@ -66,8 +66,12 @@ casts_results: {
    value: 0
   }
   casts: {
-   key: "spell_id:417141"
-   value: 1
+   key: "spell_id:31018 rank:6"
+   value: 0
+  }
+  casts: {
+   key: "spell_id:414924"
+   value: 0
   }
   casts: {
    key: "spell_id:5209"

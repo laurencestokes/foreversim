@@ -53,7 +53,7 @@ resolver builds for that call. Each field shows the step that filled it (the row
 the row pick is substituted through the package's declarations.
 
 The same reading is available as an editor hover. `go run ./tools/spelldata -lsp` is a language server
-on stdio. A hover on an id in any of the forms Go, APL JSON and TS state it (`MustFind(11574)`,
+on stdio. A hover on an id in any of the forms Go, JSON and TS state it (`MustFind(11574)`,
 `SpellID: 11574`, `"spellId": 11574`, `fromSpellId(23563)`) shows the row, with the header and the
 effects as tables. In Go, a `spellData.<Family>` token shows the ladder, a name bound to a ladder chain
 shows the rank or the value it reads (substituted through the names it stands on, read from the open
@@ -196,10 +196,9 @@ the effects the curve covers; an effect the curve has no row for keeps the spell
 `MustFind` every id, so a family that loses a spell fails at startup rather than registering nothing.
 
 The curve's value keeps the sign the game files state, also where the row's base points and the tooltip
-state the opposite. Instrument of Law's threat (effect 2: row -20, curve 10/20) raises the threat the
-paladin generates by 20% at 2/2 while Righteous Fury is off, where the tooltip says it reduces it. Iron
-Will's Stun and Fear duration has the same shape, a positive curve under a reducing tooltip, and reads the
-curve too.
+state the opposite. Iron Will 12962's first mechanic duration mod (effect 0: row -15, curve 3/6/9/12/15)
+lengthens that mechanic's duration by 15% at 5/5, where the tooltip says the talent reduces Stun and
+Fear. Its second effect has no curve row and keeps the row's -15.
 
 |                                          |                                                                                         |
 | ---------------------------------------- | --------------------------------------------------------------------------------------- |

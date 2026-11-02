@@ -115,7 +115,11 @@ describe('RaceArenaPage', () => {
 		expect(method.textContent).toContain('actual weapon types');
 		expect(method.textContent).toContain('Both Skyborne races');
 		expect(method.textContent).toContain('live-game baseline');
-		expect(method.textContent).toContain('1.60.1.70658');
+		expect(method.textContent).toContain('1.60.1.70707');
+		expect(method.textContent).toContain('113562');
+		expect(method.textContent).toContain('Strength of Earth is rank 4');
+		expect(method.textContent).toContain('external Battle Shout rank 6');
+		expect(method.textContent).toContain('do not assume the highest book ranks');
 		expect(method.textContent).toContain('replacement preset items have not been gear-optimized');
 		expect(method.textContent).toContain('do not activate the registered Forever set bonuses');
 		expect(method.textContent).toContain('October 26 and 27 racial tuning');

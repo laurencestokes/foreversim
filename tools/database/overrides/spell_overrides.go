@@ -274,6 +274,29 @@ var Spells = []Override{
 		Reason:  "Seal of Light Rank 4: Rank 1's measured rate",
 		Source:  "combat log, Seal of Light Rank 1, 2026-10-14 and 2026-10-15",
 	},
+	// Seal of Wisdom carries Seal of Light's measured rate until a log measures it. Every source that
+	// gives the two seals a rate gives them the same one.
+	{
+		SpellID: 20166,
+		Field:   PPM,
+		Value:   15, // TODO: Measure Seal of Wisdom Rank 1 in game.
+		Reason:  "Seal of Wisdom Rank 1: Seal of Light Rank 1's measured rate",
+		Source:  "estimate",
+	},
+	{
+		SpellID: 20356,
+		Field:   PPM,
+		Value:   15, // TODO: Measure Seal of Wisdom Rank 2 in game.
+		Reason:  "Seal of Wisdom Rank 2: Seal of Light Rank 1's measured rate",
+		Source:  "estimate",
+	},
+	{
+		SpellID: 20357,
+		Field:   PPM,
+		Value:   15, // TODO: Measure Seal of Wisdom Rank 3 in game.
+		Reason:  "Seal of Wisdom Rank 3: Seal of Light Rank 1's measured rate",
+		Source:  "estimate",
+	},
 	{
 		SpellID: 20185,
 		Field:   ProcChancePct,
@@ -474,51 +497,57 @@ var Spells = []Override{
 		Reason:  "Placeholder: Ferocious Bite attack power per combo point; the game files state none",
 		Source:  "classic-carryover",
 	},
+	{
+		SpellID: 31018,
+		Field:   APCoefDirect,
+		Value:   0.03,
+		Reason:  "Placeholder: Ferocious Bite attack power per combo point, as rank 5; the game files state none",
+		Source:  "classic-carryover",
+	},
 
-	// Revenge's Attack Power shares, read off how its non-crit hits move with Attack Power inside each
-	// log, with Defensive Stance's 10% and Improved Revenge taken out. Only Ranks 1 and 2 were measured;
-	// the other ranks carry their share until a log at their level says otherwise.
+	// Revenge's Attack Power share, the $APR its tooltip states: 0.225 in Defensive Stance is the stance's
+	// own 10%, which stays out of these values. Combat logs on Ranks 1 and 2 taken before that tooltip fit 0.28.
 	{
 		SpellID: 6572,
 		Field:   APCoefDirect,
-		Value:   0.28,
-		Reason:  "Revenge Rank 1: hits deal 22 +/- 15% + 0.28 x Attack Power, before armor",
-		Source:  "combat logs, Revenge Rank 1, 2026-09-25 and 2026-09-29",
+		Value:   0.25, // TODO: Measure Revenge Rank 1 in game.
+		Reason:  "Revenge Rank 1: the tooltip's $APR outside Defensive Stance",
+		Source:  "tooltip",
 	},
 	{
 		SpellID: 6574,
 		Field:   APCoefDirect,
-		Value:   0.28,
-		Reason:  "Revenge Rank 2: 0.24 to 0.30 x Attack Power with Improved Revenge 3/3 taken out, Rank 1's 0.28 within it",
-		Source:  "combat log, Revenge Rank 2, 2026-10-03",
+		Value:   0.25, // TODO: Measure Revenge Rank 2 in game.
+		Reason:  "Revenge Rank 2: the tooltip's $APR outside Defensive Stance",
+		Source:  "tooltip",
 	},
 	{
 		SpellID: 7379,
 		Field:   APCoefDirect,
-		Value:   0.28, // TODO: Measure Revenge Rank 3 in game.
-		Reason:  "Revenge Rank 3: Ranks 1 and 2's measured share",
-		Source:  "combat logs, Revenge Ranks 1 and 2, 2026-09-25 to 2026-10-03",
+		Value:   0.25, // TODO: Measure Revenge Rank 3 in game.
+		Reason:  "Revenge Rank 3: the tooltip's $APR outside Defensive Stance",
+		Source:  "tooltip",
 	},
 	{
 		SpellID: 11600,
 		Field:   APCoefDirect,
-		Value:   0.28, // TODO: Measure Revenge Rank 4 in game.
-		Reason:  "Revenge Rank 4: Ranks 1 and 2's measured share",
-		Source:  "combat logs, Revenge Ranks 1 and 2, 2026-09-25 to 2026-10-03",
+		Value:   0.25, // TODO: Measure Revenge Rank 4 in game.
+		Reason:  "Revenge Rank 4: the tooltip's $APR outside Defensive Stance",
+		Source:  "tooltip",
 	},
 	{
 		SpellID: 11601,
 		Field:   APCoefDirect,
-		Value:   0.28, // TODO: Measure Revenge Rank 5 in game.
-		Reason:  "Revenge Rank 5: Ranks 1 and 2's measured share",
-		Source:  "combat logs, Revenge Ranks 1 and 2, 2026-09-25 to 2026-10-03",
+		Value:   0.25, // TODO: Measure Revenge Rank 5 in game.
+		Reason:  "Revenge Rank 5: the tooltip's $APR outside Defensive Stance",
+		Source:  "tooltip",
 	},
 	{
 		SpellID: 25288,
 		Field:   APCoefDirect,
-		Value:   0.28, // TODO: Measure Revenge Rank 6 in game.
-		Reason:  "Revenge Rank 6: Ranks 1 and 2's measured share",
-		Source:  "combat logs, Revenge Ranks 1 and 2, 2026-09-25 to 2026-10-03",
+		Value:   0.25, // TODO: Measure Revenge Rank 6 in game.
+		Reason:  "Revenge Rank 6: the tooltip's $APR outside Defensive Stance",
+		Source:  "tooltip",
 	},
 
 	// Sunder Armor's threat grows with the sheet's Attack Power: measured on Rank 1 at 132, 158, 170 and

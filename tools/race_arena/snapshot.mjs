@@ -104,7 +104,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 	const results = resultsPath ? JSON.parse(fs.readFileSync(resultsPath, 'utf8')) : undefined;
 	const trees = new Map();
 	for (const build of inputs) {
-		build.id = resolveBuildId(catalog, build.spec, build.build);
+		// Historical results keep their recorded labels, including presets absent from the current catalog.
+		if (!results) build.id = resolveBuildId(catalog, build.spec, build.build);
 		if (!trees.has(build.class)) {
 			const file = `ui/sim/talents/trees/${build.class.toLowerCase()}.json`;
 			const data = results ? execFileSync('git', ['show', `${results.commit}:${file}`], { encoding: 'utf8' }) : fs.readFileSync(file, 'utf8');

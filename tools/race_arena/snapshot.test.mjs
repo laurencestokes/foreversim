@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
+import { execFileSync, spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { attachSetups, snapshotBuild } from './snapshot.mjs';
 
@@ -75,4 +80,38 @@ test('attaches one setup across targets without changing results or provenance',
 	assert.deepEqual(result, { ...original, setups: { 'test|Build': input.setup } });
 	assert.throws(() => attachSetups(original, [{ ...input, player: { talentsString: '1' } }]), /Talents differ/);
 	assert.throws(() => attachSetups(original, []), /Missing setup/);
+});
+
+test('historical snapshots use recorded talent trees without requiring a current build identity', t => {
+	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'arena-snapshot-'));
+	t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+	const git = (...args) => execFileSync('git', args, { cwd: directory, encoding: 'utf8' }).trim();
+	git('init', '--quiet');
+	const treePath = path.join(directory, 'ui/sim/talents/trees/test.json');
+	fs.mkdirSync(path.dirname(treePath), { recursive: true });
+	fs.writeFileSync(treePath, JSON.stringify(trees));
+	git('add', '.');
+	git('-c', 'user.name=Snapshot Test', '-c', 'user.email=snapshot@example.invalid', 'commit', '--quiet', '-m', 'Record test talent trees');
+	const original = {
+		commit: git('rev-parse', 'HEAD'),
+		generated: 'recorded-date',
+		lists: [{ spec: 'retired-spec', build: 'Retired build', gear: 'Gear', rotation: 'Rotation', talents: '2--1', races: [{ race: 'Dwarf', dps: 123 }] }],
+	};
+	const inputPath = path.join(directory, 'input.json');
+	const resultsPath = path.join(directory, 'results.json');
+	fs.writeFileSync(
+		inputPath,
+		JSON.stringify([{ spec: 'retired-spec', class: 'Test', build: 'Retired build', gear: 'Gear', rotation: 'Rotation', player: player() }]),
+	);
+	fs.writeFileSync(resultsPath, JSON.stringify(original));
+	fs.writeFileSync(treePath, '[]');
+	const command = fileURLToPath(new URL('./snapshot.mjs', import.meta.url));
+	execFileSync(process.execPath, [command, inputPath, resultsPath], { cwd: directory });
+	assert.deepEqual(JSON.parse(fs.readFileSync(resultsPath, 'utf8')), {
+		...original,
+		setups: { 'retired-spec|Retired build': snapshotBuild(player(), trees) },
+	});
+	const fresh = spawnSync(process.execPath, [command, inputPath], { cwd: directory, encoding: 'utf8' });
+	assert.notEqual(fresh.status, 0);
+	assert.match(fresh.stderr, /Expected one catalog entry for retired-spec \/ Retired build/);
 });

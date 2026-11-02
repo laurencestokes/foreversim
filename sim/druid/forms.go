@@ -106,7 +106,8 @@ func (druid *Druid) feralWeapon(swingSpeed float64) core.Weapon {
 
 // A bear's auto attack takes the two-hander rage factor: a combat log shows 11.25 rage a swing at the
 // bear's 2.5 seconds, 4.5 rage per second of swing. No druid row states a rage multiplier of its own.
-// TODO: Ingame test needed -- whether a bear holding a one-hander takes the one-hand factor instead.
+// TODO: Ingame test needed -- whether a bear holding a one-hander takes the one-hand factor instead, and
+// whether a bear's crit doubles the whole swing as a two-hand warrior's does (measured on warriors only).
 const BearRageIsTwoHanded = true
 
 func (druid *Druid) GetBearWeapon() core.Weapon {
@@ -149,21 +150,10 @@ func (druid *Druid) RegisterBearFormAura() {
 func (druid *Druid) registerBearAura(form *spelldata.Spell, passive *spelldata.Spell, kind DruidForm, starting bool) *core.Aura {
 	aura := druid.registerFormAura(form, starting)
 	aura.AttachStatDependency(druid.NewDynamicStatDependency(stats.FeralAttackPower, stats.AttackPower, 1))
-	// Armor from items, health, attack power and the Faerie Fire spell mods are parsed.
+	// Armor from items, base and bonus, health, attack power and the Faerie Fire spell mods are parsed.
 	// TODO: Ingame research needed -- effect 4 of Bear Form and Dire Bear Form is aura 668, which core
 	// does not name.
 	spelldata.ParseEffects(&druid.Character, aura, passive)
-	// The parser leaves A_MOD_BONUS_ARMOR_PCT alone: the items' bonus armor ("+N Armor") scales by the
-	// same 180% or 360% as their base armor ("Armor contribution from items").
-	if e := passive.FindEffect(dbcenums.E_APPLY_AURA, dbcenums.A_MOD_BONUS_ARMOR_PCT, 0); e != spelldata.NilEffect {
-		bonusArmor := 1 + e.Percent()
-		aura.ApplyOnGain(func(_ *core.Aura, sim *core.Simulation) {
-			druid.ApplyDynamicEquipScaling(sim, stats.BonusArmor, bonusArmor)
-		})
-		aura.ApplyOnExpire(func(_ *core.Aura, sim *core.Simulation) {
-			druid.RemoveDynamicEquipScaling(sim, stats.BonusArmor, bonusArmor)
-		})
-	}
 	aura.ApplyOnGain(func(_ *core.Aura, sim *core.Simulation) {
 		druid.pauseCatEnergy(sim)
 		druid.setForm(kind)
@@ -171,12 +161,16 @@ func (druid *Druid) registerBearAura(form *spelldata.Spell, passive *spelldata.S
 		druid.SetCurrentPowerBar(core.RageBar)
 		if !druid.Env.MeasuringStats {
 			druid.AutoAttacks.SetMH(druid.GetBearWeapon())
+			// A swing replacement also asks the rotation to queue an attack before the swing.
+			// Only Bear forms can queue Maul.
+			druid.AutoAttacks.SetReplaceMHSwing(druid.TryMaul)
 		}
-		druid.furorRageOnEnterBear(sim)
 		druid.PseudoStats.ThreatMultiplier *= bearFormThreatMultiplier
 	})
 	aura.ApplyOnExpire(func(_ *core.Aura, sim *core.Simulation) {
 		druid.PseudoStats.ThreatMultiplier /= bearFormThreatMultiplier
+		druid.AutoAttacks.SetReplaceMHSwing(nil)
+		druid.cancelMaulQueue(sim)
 		if druid.HasEnergyBar() && !druid.Env.MeasuringStats {
 			druid.EnergyPerTick = druid.furorEnergyPerTick
 			druid.rememberCatEnergy(sim, druid.furorStoredEnergy)
@@ -245,7 +239,7 @@ func (druid *Druid) registerShapeshiftSpell(rank *spelldata.Spell, aura *core.Au
 	config := spelldata.SpellConfig(&druid.Unit, rank)
 	config.Flags |= core.SpellFlagAPL
 	config.ExtraCastCondition = func(_ *core.Simulation, _ *core.Unit) bool {
-		return aura != nil && !aura.IsActive()
+		return aura != nil && (aura == druid.BearFormAura || aura == druid.DireBearFormAura || !aura.IsActive())
 	}
 	// A shift into Bear or Dire Bear Form starts the rage bar at 0, and Furor's rage comes on top. The
 	// starting form is not cast, so the pull keeps the starting rage.
@@ -259,6 +253,9 @@ func (druid *Druid) registerShapeshiftSpell(rank *spelldata.Spell, aura *core.Au
 			druid.SpendRage(sim, druid.CurrentRage(), rageMetrics)
 		}
 		aura.Activate(sim)
+		if rageMetrics != nil {
+			druid.furorRageOnEnterBear(sim)
+		}
 	}
 	return druid.RegisterSpell(config)
 }
@@ -350,9 +347,8 @@ func (druid *Druid) RegisterMoonkinFormAura() {
 		return
 	}
 	druid.MoonkinFormAura = druid.registerFormAura(spellData.MoonkinForm.Highest(), druid.StartingForm.Matches(Moonkin))
-	// Moonkin Form (Passive) 24905 states the form's armor from items; its A_MOD_BONUS_ARMOR_PCT has no sim
-	// kind and is reported as skipped. The spell crit of Moonkin Aura 24907 is the raid buff AddRaidBuffs
-	// turns on.
+	// Moonkin Form (Passive) 24905 states the form's armor from items, base and bonus. The crit of
+	// Moonkin Aura 24907 is the raid buff AddRaidBuffs turns on.
 	spelldata.ParseEffects(&druid.Character, druid.MoonkinFormAura, spellData.MoonkinFormTriggered.ByID(24905))
 	// Of the form's own effects only Omen of Clarity's proc chance and proc cooldown have a sim kind.
 	spelldata.ParseEffects(&druid.Character, druid.MoonkinFormAura, spellData.MoonkinForm.Highest(), spelldata.Effects(5, 6))

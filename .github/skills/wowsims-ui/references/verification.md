@@ -48,6 +48,11 @@ commit.
 `ui/features/gear/components/FiltersMenu/FiltersMenu.test.tsx`) that passes alone. Rerun that file alone, then the
 whole suite once; call the change red only if it fails again.
 
+**A tooltip that never opens in a test may be the debounce.** react-tooltip opens on the leading edge of a 50 ms
+debounce that every `focusin` and `mouseover` on the page feeds, so a test that focuses or hovers two anchors in the
+same tick drops the second and finds no `role="tooltip"`. Wait past the window between the two; real key presses are
+always further apart.
+
 ## The tree-wide gates
 
 The `ui/*.test.ts` files at the root of `ui/` are not component tests: they scan the tree from disk under
@@ -65,10 +70,14 @@ List the opt-outs with `/usr/bin/grep -rn "smoke: false" ui --include=*.stories.
 
 `.github/workflows/run_tests.yml` has three jobs, `build-ui`, `test-ui` and `test`:
 
-- **`build-ui`**: `make skills-check`, `npm ci`, `test:locales`, `fmt`, `lint:js`, `lint:css`,
-  `make ui/generated/proto/api.ts go-to-ts`, `type-check`, the race arena snapshot tests, `storybook:build`,
-  and `make dist/forever/.dirstamp`. This fork uses GitHub-hosted runners and GitHub Pages; see `docs/race-arena.md`.
-- **`test-ui`**: `test:unit`, sharded, each shard after `make ui/generated/proto/api.ts go-to-ts`.
+- **`build-ui`**: `make skills-check`, `npm ci` and `test:locales`, then `fmt`, `lint:js`, `lint:css`,
+  `make ui/generated/proto/api.ts go-to-ts`, a `go build` of `wowsimcli` exported as `WOWSIMCLI` for the SIML imports
+  (`running-locally.md`), `type-check`, arena publication and snapshot tests, the SIML extension's `npm run check`
+  and `npm test` in `tools/vscode-apl`, the grammar's `npm run check` in `tools/tree-sitter-siml`, `storybook:build`,
+  and `make dist/forever/.dirstamp`, with `BUILD_COMMIT` set to the pull request's head. This fork uses GitHub-hosted
+  runners and GitHub Pages; see `docs/race-arena.md`.
+- **`test-ui`**: `test:unit`, sharded, each shard after `make ui/generated/proto/api.ts go-to-ts` and the same
+  `wowsimcli` build for the SIML imports.
 - **`test`**: the Go side, sharded; its steps are `wowsims-testing` `## The gates`.
 
 The cheap UI gates run first, so a formatting slip reports in about a minute. `deploy.yml` and `release.yml` reuse the
@@ -126,11 +135,16 @@ the PR what you ran or clicked, with the screenshots.
 For a kit or stylesheet change, also diff the production CSS against the parent commit's, as `ui/STYLING.md` §7
 describes: a new selector with no source change behind it is a class leaking in from a story, fixture or docs page.
 
+happy-dom applies the `inert` attribute to focus only. A click inside an inert subtree still reaches its handlers in a
+unit test, so such a test asserts `inert` and the refused focus, and a real browser checks that clicks are blocked.
+`AplEntryView` (`ui/features/apl/components/AplEntryView/`) is the case that hit it.
+
 ## A fresh checkout needs generated files first
 
 `type-check` and every build need files that Go tooling generates and a fresh checkout lacks: `ui/generated/proto/*`
 (`make ui/generated/proto/api.ts`) and the untracked `*_auto_gen.ts` files among the ones `make go-to-ts` writes
-(`go run ./tools/database/gen_db -gen=go-to-ts`). Copying them from a built checkout also works. The makefile's
+(`go run ./tools/database/gen_db -gen=go-to-ts`). Copying them from a built checkout also works. Every build,
+`vitest` run and Storybook build also needs Go itself, for the `.siml` imports (`running-locally.md`). The makefile's
 `AUTO_GEN_FILES_TS` must list exactly what that generator writes; a stale entry makes every dependent `make` rerun
 `gen_db`. Compare the generator's outputs with the makefile and with what git tracks:
 
@@ -143,3 +157,7 @@ describes: a new selector with no source change behind it is a class leaking in 
 The tracked ones that `go-to-ts` does not write come from the full database generation, which needs the game files
 database that CI does not have, so they are committed. Never hand-edit any of them, and never run two `gen_db`
 processes at once.
+
+`bin/wowsimcli` goes stale without a word. The SIML plugin runs it whenever the file exists and never checks its age, so
+after a change to Go or `sim/siml/names.json`, vitest fails on `.siml` imports with wrong-type and unknown-field errors
+that point at no real fault. Run `make bin/wowsimcli` before vitest (`running-locally.md`).

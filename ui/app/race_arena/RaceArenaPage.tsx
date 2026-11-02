@@ -226,17 +226,22 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 					are not individually optimized for each race.
 				</p>
 				<p className="m-0">
-					We use upstream level-60 presets with unequal gear levels. The game files and hotfix cache are from live wowf build 1.60.1.70658. Items
-					absent from that cache are omitted from the simulator database; this does not establish that they are unavailable in game. Upstream's
-					replacement preset items have not been gear-optimized. Some vanilla-ID replacements do not activate the registered Forever set bonuses.
-					Warlock uses upstream's preraid test set. View setup shows the equipment, enchants, weapon swaps and talent ranks saved with each result.
+					We use upstream level-60 presets with unequal gear levels. The game files are from live wowf build 1.60.1.70707 with hotfixes through push
+					113562. Missing simulator database entries do not establish that an item is unavailable in game. Upstream's replacement preset items have
+					not been gear-optimized. Some vanilla-ID replacements do not activate the registered Forever set bonuses. Warlock uses upstream's preraid
+					test set. View setup shows the equipment, enchants, weapon swaps and talent ranks saved with each result.
 				</p>
 				<p className="m-0">
 					Every simulation is a fixed-length fight ({durationsOf(data).map(fightLabel).join(', ')}; {fightLabel(data.fight.seconds)} is the main view)
-					against one level {data.fight.targetLevel} target with {formatToNumber(data.fight.targetArmor)} armor, with full raid, party and individual
-					buffs and debuffs. The neutral target is the main comparison; Elemental and Beast views show the relevant creature-type racials. Both
-					Skyborne races appear wherever their class is legal. Cooldown racials follow the preset rotation. Rankings measure damage, including pets;
-					survival and utility are outside this comparison.
+					against one level {data.fight.targetLevel} target with {formatToNumber(data.fight.targetArmor)} armor, with the same raid, party and
+					individual buff and debuff inputs for every race. The neutral target is the main comparison; Elemental and Beast views show creature-type
+					effects. Both Skyborne races appear wherever their class is legal. Cooldown racials follow the preset rotation. Rankings measure damage,
+					including pets; survival and utility are outside this comparison.
+				</p>
+				<p className="m-0">
+					The shared support baseline follows upstream's full-buff test settings, including support the build cannot supply itself. Strength of Earth
+					is rank 4, Grace of Air rank 2, Greater Blessing of Might and Wisdom rank 1, and external Battle Shout rank 6. These settings do not assume
+					the highest book ranks. Each build keeps its preset's spell ranks and rotation choices; the recorded setup shows what it uses.
 				</p>
 				<p className="m-0">
 					The gear keeps its actual weapon types for every race. The engine follows wowsims/forever and the October 26 and 27 racial tuning: Human
