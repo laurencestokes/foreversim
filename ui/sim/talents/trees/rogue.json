@@ -77,7 +77,7 @@
           "colIdx": 0
         },
         "spellId": 14983,
-        "definitionId": 135248,
+        "definitionId": 135250,
         "maxPoints": 2
       },
       {
@@ -87,8 +87,8 @@
           "rowIdx": 2,
           "colIdx": 1
         },
-        "spellId": 0,
-        "otherAction": 30,
+        "spellId": 1329256,
+        "definitionId": 135248,
         "maxPoints": 1
       },
       {
@@ -147,7 +147,7 @@
           "colIdx": 0
         },
         "spellId": 14179,
-        "definitionId": 135289,
+        "definitionId": 145964,
         "maxPoints": 5
       },
       {
@@ -157,7 +157,7 @@
           "rowIdx": 4,
           "colIdx": 1
         },
-        "spellId": 1310703,
+        "spellId": 1329328,
         "definitionId": 135242,
         "maxPoints": 1
       },
@@ -190,9 +190,13 @@
           "rowIdx": 6,
           "colIdx": 1
         },
-        "spellId": 1310707,
+        "spellId": 399956,
         "definitionId": 135239,
-        "maxPoints": 1
+        "maxPoints": 1,
+        "prereqLocation": {
+          "rowIdx": 4,
+          "colIdx": 1
+        }
       }
     ]
   },
@@ -308,10 +312,10 @@
         "fancyName": "Composure",
         "location": {
           "rowIdx": 2,
-          "colIdx": 2
+          "colIdx": 3
         },
-        "spellId": 0,
-        "otherAction": 31,
+        "spellId": 1329265,
+        "definitionId": 135289,
         "maxPoints": 2
       },
       {
@@ -345,7 +349,11 @@
         },
         "spellId": 30919,
         "definitionId": 135256,
-        "maxPoints": 2
+        "maxPoints": 2,
+        "prereqLocation": {
+          "rowIdx": 1,
+          "colIdx": 2
+        }
       },
       {
         "fieldName": "aggression",
@@ -366,12 +374,8 @@
           "colIdx": 0
         },
         "spellId": 13715,
-        "definitionId": 135270,
-        "maxPoints": 2,
-        "prereqLocation": {
-          "rowIdx": 1,
-          "colIdx": 2
-        }
+        "definitionId": 145965,
+        "maxPoints": 2
       },
       {
         "fieldName": "bladeFlurry",
@@ -402,8 +406,8 @@
           "rowIdx": 5,
           "colIdx": 2
         },
-        "spellId": 0,
-        "otherAction": 32,
+        "spellId": 1329284,
+        "definitionId": 135270,
         "maxPoints": 5
       },
       {
@@ -415,7 +419,11 @@
         },
         "spellId": 13750,
         "definitionId": 135254,
-        "maxPoints": 1
+        "maxPoints": 1,
+        "prereqLocation": {
+          "rowIdx": 4,
+          "colIdx": 1
+        }
       }
     ]
   },
@@ -479,26 +487,26 @@
         "maxPoints": 3
       },
       {
-        "fieldName": "dirtyTricks",
-        "fancyName": "Dirty Tricks",
-        "location": {
-          "rowIdx": 1,
-          "colIdx": 2
-        },
-        "spellId": 1224782,
-        "definitionId": 135287,
-        "maxPoints": 2
-      },
-      {
         "fieldName": "improvedAmbush",
         "fancyName": "Improved Ambush",
         "location": {
           "rowIdx": 1,
-          "colIdx": 3
+          "colIdx": 2
         },
         "spellId": 14079,
         "definitionId": 135279,
         "maxPoints": 3
+      },
+      {
+        "fieldName": "dirtyTricks",
+        "fancyName": "Dirty Tricks",
+        "location": {
+          "rowIdx": 1,
+          "colIdx": 3
+        },
+        "spellId": 1224782,
+        "definitionId": 135287,
+        "maxPoints": 2
       },
       {
         "fieldName": "initiative",
@@ -560,11 +568,15 @@
         "fancyName": "Quick Getaway",
         "location": {
           "rowIdx": 3,
-          "colIdx": 2
+          "colIdx": 3
         },
-        "spellId": 0,
-        "otherAction": 34,
-        "maxPoints": 2
+        "spellId": 1310728,
+        "definitionId": 142619,
+        "maxPoints": 2,
+        "prereqLocation": {
+          "rowIdx": 1,
+          "colIdx": 3
+        }
       },
       {
         "fieldName": "heightenedSenses",
@@ -610,19 +622,24 @@
           "rowIdx": 5,
           "colIdx": 2
         },
-        "spellId": 0,
-        "otherAction": 33,
+        "spellId": 1329286,
+        "definitionId": 135280,
         "maxPoints": 5
       },
       {
         "fieldName": "deathMark",
         "fancyName": "Death Mark",
-        "spellId": 1316709,
         "location": {
           "rowIdx": 6,
           "colIdx": 1
         },
-        "maxPoints": 1
+        "spellId": 1316709,
+        "definitionId": 142618,
+        "maxPoints": 1,
+        "prereqLocation": {
+          "rowIdx": 4,
+          "colIdx": 1
+        }
       }
     ]
   }

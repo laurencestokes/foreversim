@@ -1,6 +1,8 @@
 package warlock
 
 import (
+	"slices"
+
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
@@ -209,19 +211,13 @@ func (warlock *Warlock) applyShadowAndFlame() {
 		},
 	})
 
-	buffOnHit := func(buffRow *spelldata.Spell, hitBy spelldata.Ladder) {
-		// TODO: patch preview: the notes double the damage bonus to 4% a point; the buff rows
-		// still state the old 10% maximum. Keep the replacement local until the rows reach 20%.
-		if buffRow.EffectN(1).BaseValue() == 10 {
-			preview := *buffRow
-			preview.Effects = append([]spelldata.Effect(nil), buffRow.Effects...)
-			preview.EffectN(1).BasePoints = 20
-			buffRow = &preview
-		}
+	// The talent prices each school buff at the selected rank.
+	buffOnHit := func(buffRow *spelldata.Spell, amount *spelldata.Effect, hitBy spelldata.Ladder) {
 		buff := warlock.RegisterAura(spelldata.AuraConfig(buffRow))
-		// The buff row states the five-point value; each selected point grants a fifth of it.
-		spelldata.ParseEffects(&warlock.Character, buff, buffRow,
-			spelldata.ScaledByRanks(warlock.Talents.ShadowAndFlame, spellData.ShadowAndFlame.Len()))
+		priced := *buffRow
+		priced.Effects = slices.Clone(buffRow.Effects)
+		priced.EffectN(1).BasePoints = amount.BasePoints
+		spelldata.ParseEffects(&warlock.Character, buff, &priced)
 
 		warlock.MakeProcTriggerAura(core.ProcTrigger{
 			Name:     buffRow.Name + " - Trigger",
@@ -235,8 +231,8 @@ func (warlock *Warlock) applyShadowAndFlame() {
 			},
 		})
 	}
-	buffOnHit(spellData.ShadowAndFlameTriggered.ByID(1293816), spellData.Conflagrate)
-	buffOnHit(spellData.ShadowAndFlameTriggered.ByID(426311), spellData.Shadowburn)
+	buffOnHit(spellData.ShadowAndFlameTriggered.ByID(1293816), rank.EffectN(3), spellData.Conflagrate)
+	buffOnHit(spellData.ShadowAndFlameTriggered.ByID(426311), rank.EffectN(4), spellData.Shadowburn)
 }
 
 // --- Tier 7 ---

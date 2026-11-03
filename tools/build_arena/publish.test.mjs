@@ -6,6 +6,7 @@ import { test } from 'node:test';
 
 import { inputFingerprint, resolveBuildId, validateCatalog } from './identity.mjs';
 import { publish, writeAtomic } from './publish.mjs';
+import { combineResults, selectBuilds } from './select.mjs';
 
 const commit = 'a'.repeat(40);
 const date = '2026-10-28T12:00:00Z';
@@ -286,5 +287,141 @@ test('writes a complete JSON file and replaces an existing publication', () => {
 		assert.deepEqual(fs.readdirSync(directory), ['results.json']);
 	} finally {
 		fs.rmSync(directory, { recursive: true, force: true });
+	}
+});
+
+function mixedFixture() {
+	const input = fixture();
+	const previous = structuredClone(publish(input));
+	const nextCommit = 'b'.repeat(40);
+	const nextDate = '2026-11-03T12:00:00Z';
+	input.manifest.commit = nextCommit;
+	input.manifest.launchPreview = { launchDate: '2026-11-04', upstreamCommit: commit, drafts: [{ pullRequest: 824, commit: nextCommit }] };
+	const newBuild = { ...structuredClone(input.manifest.builds[0]), id: 'new-build', name: 'Fire / Other' };
+	input.manifest.builds.push(newBuild);
+	input.catalog.builds.push({ id: newBuild.id, spec: 'mage', aliases: ['Other'] });
+	const fresh = input.raw.map(list => ({
+		...list,
+		buildId: newBuild.id,
+		build: newBuild.name,
+		computedAt: nextDate,
+		races: list.races.map(row => ({ ...row, dps: row.dps + 10, commit: nextCommit })),
+	}));
+	const plan = {
+		schemaVersion: 1,
+		baseVerifiedCommit: commit,
+		rerun: [newBuild.id],
+		reuse: ['test-build'],
+		reason: 'The engine change affects the new build only.',
+		evidence: 'docs/build-arena.md',
+	};
+	return { ...input, fresh, plan, previous, verifiedCommit: nextCommit, publishedAt: nextDate };
+}
+
+const merge = input => combineResults({ ...input, selection: selectBuilds(input), workflowUrl: 'Fresh workflow run.' });
+
+test('selects only the new build and publishes every fight with its original source', () => {
+	const input = mixedFixture();
+	const selected = selectBuilds(input);
+	assert.deepEqual(selected.rerun, ['new-build']);
+	assert.deepEqual(selectBuilds({ ...input, plan: undefined }).rerun, ['new-build', 'test-build']);
+	const result = publish({ ...input, ...merge(input) });
+	assert.deepEqual(
+		result.rows.filter(row => row.buildId === 'test-build'),
+		input.previous.rows,
+	);
+	assert.equal(result.rows.filter(row => row.buildId === 'new-build').length, 18);
+	assert.deepEqual(
+		result.sources.find(source => source.id === 'current'),
+		{ ...input.previous.sources[0], reused: true, publishedAt: input.previous.publishedAt },
+	);
+	assert.deepEqual(result.reuse, input.plan);
+	const again = selectBuilds({ ...input, previous: result, plan: { ...input.plan, baseVerifiedCommit: result.verifiedCommit } });
+	assert.deepEqual(again.sources, selected.sources);
+});
+
+test('rejects undeclared, incomplete and changed inputs before benchmarking', () => {
+	for (const mutate of [
+		input => {
+			input.plan.baseVerifiedCommit = input.verifiedCommit;
+		},
+		input => {
+			input.plan.rerun = [];
+		},
+		input => {
+			input.plan.reuse.push('new-build');
+		},
+		input => {
+			[input.plan.rerun, input.plan.reuse] = [input.plan.reuse, input.plan.rerun];
+		},
+		input => {
+			input.plan.evidence = '';
+		},
+		input => {
+			input.plan.evidence = '.git';
+		},
+		input => {
+			input.manifest.builds[0].request.raid.parties[0].players[0].name = 'Other';
+		},
+		input => {
+			input.manifest.builds[0].inputFingerprint = 'changed';
+		},
+		input => {
+			input.manifest.builds[0].gear = 'Other';
+		},
+		input => {
+			input.manifest.builds[0].setup.equipment[0].slot = 'Other';
+		},
+		input => {
+			input.manifest.builds[0].legalRaces.pop();
+		},
+		input => {
+			input.manifest.builds[0].legalRaces[0].name = 'Other';
+		},
+		input => {
+			input.previous.rows[0].sourceId = 'unknown';
+		},
+		input => {
+			input.previous.rows[0].iterations = 8;
+		},
+		input => {
+			input.previous.rows[0] = input.previous.rows[1];
+		},
+	]) {
+		const input = mixedFixture();
+		mutate(input);
+		assert.throws(() => selectBuilds(input));
+	}
+});
+
+test('rejects altered measurements, missing fresh fights and reuse outside the plan', () => {
+	const input = mixedFixture();
+	assert.throws(() => combineResults({ ...input, fresh: input.raw, selection: selectBuilds(input) }), /Undeclared fresh build/);
+	input.fresh[0].races[0].sourceId = 'current';
+	assert.throws(() => merge(input), /identifies a different source/);
+	for (const mutate of [
+		result => {
+			result.raw.find(list => list.buildId === 'test-build').races[0].dps += 1;
+		},
+		result => {
+			result.provenance.sources.find(source => source.reused).computedAt = input.publishedAt;
+		},
+		result => {
+			result.raw.pop();
+		},
+		result => {
+			result.raw.at(-1).races.pop();
+		},
+		result => {
+			delete result.provenance.reuse;
+		},
+		result => {
+			result.provenance.compatibility.method = 'Different';
+		},
+	]) {
+		const run = mixedFixture();
+		const combined = merge(run);
+		mutate(combined);
+		assert.throws(() => publish({ ...run, ...combined }));
 	}
 });

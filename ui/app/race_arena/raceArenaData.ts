@@ -1,7 +1,8 @@
+import type { ArenaSource } from '../arena/ArenaSource';
 import type { LaunchPreview } from '../arena/launchPreview';
 import type { RaceArenaSetup } from './RaceArenaSetupDialog';
 
-export type RaceResult = { race: string; dps: number; behind: number; tier: string; relabelled?: string; racials: string };
+export type RaceResult = { sourceId?: string; race: string; dps: number; behind: number; tier: string; relabelled?: string; racials: string };
 export type RaceList = {
 	spec: string;
 	class: string;
@@ -22,6 +23,8 @@ export type RaceArenaResults = {
 	launchPreview?: LaunchPreview;
 	commit: string;
 	raceCommits?: Record<string, string>;
+	sources?: ArenaSource[];
+	compatibility?: { method: string; evidence: string };
 	generated: string;
 	iterations: number;
 	fight: { seconds: number; durations?: Array<number>; targetLevel: number; targetArmor: number };

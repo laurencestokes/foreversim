@@ -81,7 +81,9 @@
   "settings": "Recorded class, pet, consumable and support settings",
   "settingsHelp": "These are the saved request values. Nested headings follow the recorded settings; omitted fields use the Go message defaults. The download contains every field, including the rotation and database.",
   "recordedRotation": "Recorded rotation actions and conditions",
-  "rowProvenance": "Source {{source}} · {{iterations}} iterations · {{date}}",
+  "rowIterations": "{{iterations}} iterations",
+  "measurementFresh": "Simulated {{date}}",
+  "measurementReused": "Reused result · simulated {{date}}",
   "setupTitle": "{{name}}: recorded gear and talents",
   "none": "None",
   "yes": "Yes",
@@ -136,6 +138,9 @@
   "computedWindow": "{{start}} to {{end}}",
   "compatibilityEvidence": "Compatibility evidence",
   "recordedLabel": "Recorded preset label: {{name}}",
+  "hotfixPreviewSummary": "Class spell data uses game build 1.60.1.70755 with hotfix push 113583. Shaman keeps the announced tuning where the game files still carry older values.",
+  "hotfixPreviewDetails": "The Rogue comparison includes the original six builds and five upstream talent allocations. Each new allocation uses its counterpart’s gear. Wrack and Destruction retain their pre-raid sets.",
+  "hotfixPreviewLimits": "Death Mark’s cap uses the tooltip formula. Shank’s effect timing, some Feral damage increases and parts of the Shaman model still need in-game measurements.",
   "launchPreviewTitle": "{{date}} launch projection",
   "launchPreviewSummary": "Hunter uses live hotfix data and retuned presets. Feral includes partial changes from the development notes, with approximate damage increases still awaiting game data. Shaman uses a provisional model of the patch notes, built from game build 1.60.1.70707 and hotfix push 113562.",
   "launchPreviewGaps": "Rogue and Warrior use the launch talent trees. The fork also applies November 2 changes to Balance, Retribution, Shadow, Mage, Shaman and Warlock.",
@@ -147,6 +152,6 @@
   "launchPreviewLimitations": "These level-60 presets have unequal gear levels and replacement items that have not been gear-optimized. Missing simulator database entries do not establish unavailability in game. Some vanilla-ID replacements do not activate the registered Forever set bonuses. Rankings measure personal single-target DPS, including pets, for these exact setups; they do not establish absolute class balance.",
   "launchPreviewShamanSlot": "Death Mark’s crit scaling, Shank’s attack timing, Reckless Swings and some Feral and Shaman values still need in-game measurements. These can change DPS and race order.",
   "launchPreviewLimitationsTitle": "Preset and model limitations",
-  "launchPreviewEngine": "Arena engine",
+  "launchPreviewEngine": "Verified arena engine",
   "launchPreviewNotes": "Blizzard’s November 2 notes"
 }

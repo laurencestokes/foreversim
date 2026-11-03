@@ -31,7 +31,7 @@ export const PreBiSThreatGear = PresetUtils.makePresetGear('Pre-BiS (Threat)', P
 
 export const ProtectionTalents = PresetUtils.makePresetTalents(
 	'Protection',
-	SavedTalents.create({ talentsString: '35301003002-03-050530120301011351', talentLayout: TalentLayout.TalentLayoutLaunch }),
+	SavedTalents.create({ talentsString: '35301003002-03-050530120301011351', talentLayout: TalentLayout.TalentLayoutHotfix }),
 );
 
 // Measured on each gear set with the Protection talents: 0.6 x the threat weights (Strength = 1) plus 1.15 x the

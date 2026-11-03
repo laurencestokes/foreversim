@@ -81,7 +81,9 @@
 		"settings",
 		"settingsHelp",
 		"recordedRotation",
-		"rowProvenance",
+		"rowIterations",
+		"measurementFresh",
+		"measurementReused",
 		"setupTitle",
 		"none",
 		"yes",
@@ -93,6 +95,9 @@
 		"compatibilityEvidence",
 		"recordedLabel",
 		"launchPreviewTitle",
+		"hotfixPreviewSummary",
+		"hotfixPreviewDetails",
+		"hotfixPreviewLimits",
 		"launchPreviewSummary",
 		"launchPreviewGaps",
 		"launchPreviewCoverageLink",
@@ -354,7 +359,13 @@
 		"recordedRotation": {
 			"type": "string"
 		},
-		"rowProvenance": {
+		"rowIterations": {
+			"type": "string"
+		},
+		"measurementFresh": {
+			"type": "string"
+		},
+		"measurementReused": {
 			"type": "string"
 		},
 		"setupTitle": {
@@ -565,6 +576,15 @@
 			"type": "string"
 		},
 		"launchPreviewTitle": {
+			"type": "string"
+		},
+		"hotfixPreviewSummary": {
+			"type": "string"
+		},
+		"hotfixPreviewDetails": {
+			"type": "string"
+		},
+		"hotfixPreviewLimits": {
 			"type": "string"
 		},
 		"launchPreviewSummary": {

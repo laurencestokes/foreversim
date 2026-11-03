@@ -1,6 +1,11 @@
 name: Build Arenas
 on:
     workflow_dispatch:
+        inputs:
+            selection:
+                description: Repository JSON plan declaring rerun/reuse build IDs and compatibility evidence; blank runs every build
+                required: false
+                default: ''
 concurrency:
     group: build-arenas-${{ github.ref }}
     cancel-in-progress: false
@@ -18,6 +23,10 @@ jobs:
               with:
                   fetch-depth: 0
                   filter: blob:none
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 22
+                  cache: npm
             - name: Record the simulator sources
               id: source
               env:
@@ -26,14 +35,18 @@ jobs:
                   test "$REF_TYPE" = branch
                   git fetch --no-tags --filter=blob:none https://github.com/wowsims/forever.git master
                   echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-                  echo "upstream=$(git merge-base HEAD FETCH_HEAD)" >> "$GITHUB_OUTPUT"
+                  if [ -f tools/build_arena/launch-preview.json ]; then
+                    upstream=$(node -e "const sha = require('./tools/build_arena/launch-preview.json').upstreamCommit; require('node:assert/strict').match(sha, /^[a-f0-9]{40}$/); process.stdout.write(sha)")
+                    test "$(git cat-file -t "$upstream")" = commit
+                    git merge-base --is-ancestor "$upstream" HEAD
+                    git merge-base --is-ancestor "$upstream" FETCH_HEAD
+                  else
+                    upstream=$(git merge-base HEAD FETCH_HEAD)
+                  fi
+                  echo "upstream=$upstream" >> "$GITHUB_OUTPUT"
             - uses: actions/setup-go@v6
               with:
                   go-version: 1.25.x
-            - uses: actions/setup-node@v5
-              with:
-                  node-version: 22
-                  cache: npm
             - uses: ./.github/actions/setup-protoc
             - name: Prepare the simulator
               run: |
@@ -50,13 +63,20 @@ jobs:
               env:
                   SOURCE_REVISION: ${{ steps.source.outputs.revision }}
                   UPSTREAM_REVISION: ${{ steps.source.outputs.upstream }}
+                  SELECTION_PLAN: ${{ inputs.selection }}
               run: |
                   node tools/race_arena/snapshot.mjs "$RUNNER_TEMP/arena-input.json"
                   mkdir -p "$RUNNER_TEMP/arena-job"
                   cp "$RUNNER_TEMP/arena-input.json" "$RUNNER_TEMP/arena-job/input.json"
                   go build -tags=with_db -o "$RUNNER_TEMP/arena-job/simulate" ./tools/race_arena/simulate
                   "$RUNNER_TEMP/arena-job/simulate" -input "$RUNNER_TEMP/arena-input.json" -commit "$SOURCE_REVISION" -iterations 50000 -manifest "$RUNNER_TEMP/arena-job/manifest.json"
-                  "$RUNNER_TEMP/arena-job/simulate" -input "$RUNNER_TEMP/arena-input.json" -commit "$SOURCE_REVISION" -out "$RUNNER_TEMP/arena-benchmark" -iterations 8 -workers 2
+                  node tools/build_arena/select.mjs --manifest "$RUNNER_TEMP/arena-job/manifest.json" --inputs "$RUNNER_TEMP/arena-input.json" --plan "$SELECTION_PLAN" --out "$RUNNER_TEMP/arena-job/selected-input.json"
+                  mkdir -p "$RUNNER_TEMP/arena-benchmark"
+                  if [ "$(node -p "require('$RUNNER_TEMP/arena-job/selected-input.json').length")" -gt 0 ]; then
+                    "$RUNNER_TEMP/arena-job/simulate" -input "$RUNNER_TEMP/arena-job/selected-input.json" -commit "$SOURCE_REVISION" -out "$RUNNER_TEMP/arena-benchmark" -iterations 8 -workers 2
+                  else
+                    printf '[]\n' > "$RUNNER_TEMP/arena-benchmark/presets.json"
+                  fi
                   node --input-type=module <<'NODE'
                   import fs from 'node:fs';
                   import assert from 'node:assert/strict';
@@ -75,7 +95,7 @@ jobs:
                     manifest.launchPreview = preview;
                     fs.writeFileSync(path, JSON.stringify(manifest));
                   }
-                  const builds = JSON.parse(fs.readFileSync(`${root}/arena-input.json`, 'utf8'));
+                  const builds = JSON.parse(fs.readFileSync(`${root}/arena-job/selected-input.json`, 'utf8'));
                   const measurements = JSON.parse(fs.readFileSync(`${root}/arena-benchmark/presets.json`, 'utf8'));
                   for (const seconds of [90, 180, 360]) {
                     const costs = new Map();
@@ -183,6 +203,7 @@ jobs:
                   UPSTREAM_REVISION: ${{ needs.prepare.outputs.upstream }}
                   WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
                   RACE_ARENA_COMMIT: ${{ needs.prepare.outputs.revision }}
+                  SELECTION_PLAN: ${{ inputs.selection }}
               run: |
                   node --input-type=module <<'NODE'
                   import fs from 'node:fs';
@@ -191,22 +212,14 @@ jobs:
                   const files = fs.readdirSync(`${root}/arena-raw`).filter(name => name.endsWith('.json')).sort();
                   assert.equal(files.length, 48);
                   const raw = files.flatMap(name => JSON.parse(fs.readFileSync(`${root}/arena-raw/${name}`, 'utf8')));
-                  const sources = new Map();
-                  for (const list of raw) {
-                    assert.ok(list.computedAt);
-                    for (const race of list.races) {
-                      assert.equal(race.commit, process.env.SOURCE_REVISION);
-                      const id = `${race.commit}@${list.computedAt}`;
-                      sources.set(id, { id, commit: race.commit, computedAt: list.computedAt, reused: false, note: process.env.WORKFLOW_URL });
-                    }
-                  }
-                  fs.writeFileSync(`${root}/arena-raw.json`, JSON.stringify(raw));
-                  fs.writeFileSync(`${root}/arena-sources.json`, JSON.stringify({ sources: [...sources.values()] }));
+                  fs.writeFileSync(`${root}/arena-fresh.json`, JSON.stringify(raw));
                   NODE
                   npm ci
                   mkdir -p "$RUNNER_TEMP/arena-publish"
-                  node tools/build_arena/publish.mjs --manifest "$RUNNER_TEMP/arena-job/manifest.json" --raw "$RUNNER_TEMP/arena-raw.json" --provenance "$RUNNER_TEMP/arena-sources.json" --upstream "$UPSTREAM_REVISION" --verified "$SOURCE_REVISION" --out "$RUNNER_TEMP/arena-publish/build-results.json"
-                  go run ./tools/race_arena "$RUNNER_TEMP/arena-raw" "$RUNNER_TEMP/arena-publish/race-results.json" "$RUNNER_TEMP/arena-publish/build-results.json"
+                  mkdir -p "$RUNNER_TEMP/arena-score"
+                  node tools/build_arena/select.mjs --manifest "$RUNNER_TEMP/arena-job/manifest.json" --plan "$SELECTION_PLAN" --fresh "$RUNNER_TEMP/arena-fresh.json" --workflow "$WORKFLOW_URL" --raw-out "$RUNNER_TEMP/arena-score/presets.json" --provenance-out "$RUNNER_TEMP/arena-sources.json"
+                  node tools/build_arena/publish.mjs --manifest "$RUNNER_TEMP/arena-job/manifest.json" --raw "$RUNNER_TEMP/arena-score/presets.json" --provenance "$RUNNER_TEMP/arena-sources.json" --previous ui/app/build_arena/results.json --upstream "$UPSTREAM_REVISION" --verified "$SOURCE_REVISION" --out "$RUNNER_TEMP/arena-publish/build-results.json"
+                  go run ./tools/race_arena "$RUNNER_TEMP/arena-score" "$RUNNER_TEMP/arena-publish/race-results.json" "$RUNNER_TEMP/arena-publish/build-results.json"
                   npx oxfmt "$RUNNER_TEMP/arena-publish/build-results.json" "$RUNNER_TEMP/arena-publish/race-results.json"
                   mkdir -p ui/app/build_arena
                   cp "$RUNNER_TEMP/arena-publish/build-results.json" ui/app/build_arena/results.json

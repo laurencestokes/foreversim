@@ -23,6 +23,7 @@ const (
 	talentsKey          = "talents" // The talents line, which counts as a section where files are put together.
 	talentsCategory     = "t"
 	launchTalentsPrefix = "launch:"
+	hotfixTalentsPrefix = "hotfix:"
 	rotationCategory    = "r"
 	categoryOrder       = "gtrcmxeu" // The site's import categories, in its order (SIM_CATEGORY_KEYS).
 )
@@ -113,10 +114,13 @@ func typeFile(ix *schemaIndex, names *Names, tree *syntaxTree, kind Kind, u *use
 	for _, s := range tree.top {
 		if s, ok := s.(*talentsStmt); ok {
 			digits, launch := strings.CutPrefix(s.talents.value, launchTalentsPrefix)
-			f.player().TalentsString = digits
 			if launch {
 				f.player().TalentLayout = proto.TalentLayout_TalentLayoutLaunch
+			} else if rest, ok := strings.CutPrefix(digits, hotfixTalentsPrefix); ok {
+				digits = rest
+				f.player().TalentLayout = proto.TalentLayout_TalentLayoutHotfix
 			}
+			f.player().TalentsString = digits
 			pop := t.in("player", "talentsString")
 			t.mark(s.talents.span)
 			pop()

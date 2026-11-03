@@ -100,6 +100,26 @@ describe('RaceArenaPage', () => {
 		const { queryByRole } = render(<RaceArenaPage data={fixture} />);
 		expect(queryByRole('complementary', { name: /launch projection/ })).toBeNull();
 	});
+	it('shows the original engine and computation time for each measured race', () => {
+		const old = { id: 'old', commit: 'a'.repeat(40), computedAt: '2026-10-28T12:00:00Z', reused: true, note: 'Previous run.' };
+		const fresh = { id: 'fresh', commit: fixture.commit, computedAt: '2026-11-03T12:00:00Z', reused: false, note: 'Current run.' };
+		const data = {
+			...fixture,
+			sources: [old, fresh],
+			lists: fixture.lists.map(list => ({
+				...list,
+				races: list.races.map(race => ({ ...race, sourceId: list.spec === 'warrior' && race.race === 'Human' ? old.id : fresh.id })),
+			})),
+		};
+		const { getByRole, getByTestId } = render(<RaceArenaPage data={data} />);
+		const warrior = getByRole('heading', { name: 'Fury 17/34/0' }).closest('section')!;
+		const mage = getByRole('heading', { name: 'Frost 14/0/37' }).closest('section')!;
+		expect(warrior.textContent).toContain(`Human · Reused result · simulated ${old.computedAt}`);
+		expect(within(warrior).getByRole('link', { name: 'aaaaaaa' }).getAttribute('href')).toContain(old.commit);
+		expect(mage.textContent).toContain(`Simulated ${fresh.computedAt}`);
+		expect(mage.textContent).not.toContain(old.computedAt);
+		expect(getByTestId('race-arena-source').textContent).toContain('Verified against engine');
+	});
 	it('links the source of a recomputed race beside the original simulation', () => {
 		const { getByTestId } = render(<RaceArenaPage data={{ ...fixture, raceCommits: { Troll: 'updated-troll-revision' } }} />);
 		const source = getByTestId('race-arena-source');

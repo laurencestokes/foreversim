@@ -17,8 +17,7 @@ func TestValueTargetActivity(t *testing.T) {
 		&proto.Target{Name: "second target", Level: 63, MobType: proto.MobType_MobTypeHumanoid, SwingSpeed: 2},
 		&proto.Target{Name: "down target", Level: 63, MobType: proto.MobType_MobTypeHumanoid, SwingSpeed: 2, DisabledAtStart: true},
 	)
-	sim := setupFakeRageSimFrom(request)
-	rot := sim.Raid.Parties[0].Players[0].(*FakeRageWarrior).Rotation
+	sim, _, rot := setupFakeRageRotationFrom(request, func(*Character) {})
 	sim.CurrentTime = sim.Duration / 4
 
 	isActive := func(index int32) APLValue {
@@ -63,9 +62,7 @@ func TestValueTargetActivity(t *testing.T) {
 	bossDown.Encounter.Targets[0].DisabledAtStart = true
 	bossDown.Encounter.Targets = append(bossDown.Encounter.Targets,
 		&proto.Target{Name: "add", Level: 63, MobType: proto.MobType_MobTypeHumanoid, SwingSpeed: 2})
-	bossDownSim := setupFakeRageSimFrom(bossDown)
-	bossDownRot := bossDownSim.Raid.Parties[0].Players[0].(*FakeRageWarrior).Rotation
-	if got := bossDownRot.newValueNumActiveAdds(&proto.APLValueNumActiveAdds{}, nil).GetInt(bossDownSim); got != 1 {
+	if got := adds.GetInt(setupFakeRageSimFrom(bossDown)); got != 1 {
 		t.Errorf("Num Active Adds with the boss down = %d, want 1 for the add", got)
 	}
 }

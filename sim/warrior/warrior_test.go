@@ -888,7 +888,7 @@ func launchWarriorPlayer(talents, gear string) *proto.Player {
 	return &proto.Player{
 		Class: proto.Class_ClassWarrior, Race: proto.Race_RaceOrc,
 		Equipment:     core.GetGearSet(gearPath, gear).GearSet,
-		TalentsString: talents, TalentLayout: proto.TalentLayout_TalentLayoutLaunch,
+		TalentsString: talents, TalentLayout: proto.TalentLayout_TalentLayoutHotfix,
 		Spec: &proto.Player_DpsWarrior{DpsWarrior: &proto.DpsWarrior{Options: &proto.DpsWarrior_Options{
 			ClassOptions: &proto.WarriorOptions{StartingRage: 40, DefaultStance: proto.WarriorStance_WarriorStanceBerserker},
 		}}},
@@ -910,33 +910,55 @@ func launchWarriorSim(t *testing.T, points map[string]int, gear string, targets 
 	return sim, sim.Raid.Parties[0].Players[0].(*dps.DpsWarrior)
 }
 
-func TestRecklessSwingsSpendsOneChargePerMeleeAttack(t *testing.T) {
+func TestRecklessSwingsSpendsChargesOnLandedWhiteHits(t *testing.T) {
 	sim, war := launchWarriorSim(t, map[string]int{"recklessSwings": 1}, "prebis_fury", 3)
-	spell := war.GetSpell(core.ActionID{OtherID: proto.OtherAction_OtherActionRecklessSwings})
-	before, gcd := war.CurrentHealth(), war.GCD.ReadyAt()
+	war.AutoAttacks.CancelAutoSwing(sim)
+	spell := war.GetSpell(core.ActionID{SpellID: 1329555})
+	before := war.CurrentHealth()
 	if !spell.Cast(sim, war.CurrentTarget) {
 		t.Fatal("Reckless Swings cannot cast")
 	}
 	if got, want := before-war.CurrentHealth(), war.GetBaseStats()[stats.Health]*0.25; math.Abs(got-want) > 1e-8 {
 		t.Fatalf("health cost = %v, want %v", got, want)
 	}
-	if war.GCD.ReadyAt() != gcd || spell.CD.TimeToReady(sim) != 15*time.Second {
-		t.Fatal("Reckless Swings does not preserve the GCD and start its 15-second cooldown")
+	if war.GCD.TimeToReady(sim) != time.Second || spell.CD.TimeToReady(sim) != 15*time.Second {
+		t.Fatal("Reckless Swings does not start its one-second GCD and 15-second cooldown")
+	}
+	for sim.CurrentTime < time.Second {
+		sim.Step()
 	}
 	whirlwind := war.GetSpell(core.ActionID{SpellID: 1680}.WithHand(proto.ItemSlot_ItemSlotMainHand))
 	if !whirlwind.Cast(sim, war.CurrentTarget) {
 		t.Fatal("Whirlwind cannot cast")
 	}
-	aura := spell.RelatedSelfBuff
-	if aura.GetStacks() != 3 || war.CurrentRage() != 20 {
-		t.Fatalf("three-target, two-weapon Whirlwind leaves %d charges and %v rage, want 3 and 20", aura.GetStacks(), war.CurrentRage())
-	}
 	white := war.AutoAttacks.MHAuto()
-	for range 3 {
-		white.CalcAndDealDamage(sim, war.CurrentTarget, 100, white.OutcomeAlwaysMiss)
+	white.CalcAndDealDamage(sim, war.CurrentTarget, 100, white.OutcomeAlwaysMiss)
+	for sim.CurrentTime < 2*time.Second {
+		sim.Step()
 	}
-	if aura.IsActive() || war.CurrentRage() != 35 {
-		t.Fatalf("three missed attacks leave active=%v and %v rage, want false and 35", aura.IsActive(), war.CurrentRage())
+	aura := spell.RelatedSelfBuff
+	if aura.GetStacks() != 4 {
+		t.Fatalf("a special and a missed swing leave %d charges, want 4", aura.GetStacks())
+	}
+	for range 5 {
+		white.CalcAndDealDamage(sim, war.CurrentTarget, 100, white.OutcomeAlwaysHit)
+	}
+	for sim.CurrentTime < 3*time.Second {
+		sim.Step()
+	}
+	if aura.IsActive() {
+		t.Fatal("four landed swings do not consume the buff")
+	}
+	var gained float64
+	var procs int32
+	for _, resource := range war.Metrics.ToProto().Resources {
+		if resource.Id.GetSpellId() == 1329554 {
+			gained += resource.Gain
+			procs += resource.Events
+		}
+	}
+	if procs != 4 || gained != 20 {
+		t.Fatalf("five queued hits grant %v rage in %d procs, want 20 in 4", gained, procs)
 	}
 	spell.CD.Reset()
 	war.SetCurrentHealthPercent((war.GetBaseStats()[stats.Health] * 0.25) / war.MaxHealth())
@@ -1098,12 +1120,17 @@ func TestBloodthrillLaunchRanksProcFromMainHandAttacksOnRend(t *testing.T) {
 
 func TestLaunchWarriorPresetsCastRecklessSwings(t *testing.T) {
 	for _, tc := range []struct{ name, talents, gear string }{
-		{"arms", "30323213132215201-25050120011", "prebis_arms"},
-		{"fury", "30303213002-2505310051122100321", "prebis_fury"},
+		{"arms", "30323213132215201-3505012001", "prebis_arms"},
+		{"fury", "30303213002-350531005122100231", "prebis_fury"},
+		{"legacy-action", "30323213132215201-3505012001", "prebis_arms"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			player := launchWarriorPlayer(tc.talents, tc.gear)
-			player.Rotation = core.GetAplRotation("../../ui/specs/warrior/dps/apls", tc.name).Rotation
+			if tc.name == "legacy-action" {
+				player.Rotation = &proto.APLRotation{Type: proto.APLRotation_TypeAPL, PriorityList: []*proto.APLListItem{{Action: &proto.APLAction{Action: &proto.APLAction_CastSpell{CastSpell: &proto.APLActionCastSpell{SpellId: &proto.ActionID{RawId: &proto.ActionID_OtherId{OtherId: proto.OtherAction_OtherActionRecklessSwings}}}}}}}}
+			} else {
+				player.Rotation = core.GetAplRotation("../../ui/specs/warrior/dps/apls", tc.name).Rotation
+			}
 			raid := core.SinglePlayerRaidProto(player, core.FullPartyBuffs, core.FullRaidBuffs, core.FullDebuffs)
 			encounter := core.MakeSingleTargetEncounter(0)
 			encounter.Duration = 60
@@ -1120,7 +1147,7 @@ func TestLaunchWarriorPresetsCastRecklessSwings(t *testing.T) {
 			result := core.RunRaidSim(&proto.RaidSimRequest{Raid: raid, Encounter: encounter, SimOptions: &proto.SimOptions{Iterations: 1, RandomSeed: 1}})
 			var casts int32
 			for _, action := range result.RaidMetrics.Parties[0].Players[0].Actions {
-				if action.Id.GetOtherId() == proto.OtherAction_OtherActionRecklessSwings {
+				if action.Id.GetSpellId() == 1329555 {
 					for _, target := range action.Targets {
 						casts += target.Casts
 					}

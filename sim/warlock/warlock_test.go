@@ -317,18 +317,14 @@ func TestDemonHealthFollowsOwnerStamina(t *testing.T) {
 	t.Logf("demon health from 40 owner Stamina=%g", pet.MaxHealth()-before)
 }
 
-func TestWrackPreviewDamageFollowsLevelAndSpellPower(t *testing.T) {
-	stored := *spelldata.MustFind(1316697).PeriodicEffect()
+func TestWrackDamageFollowsLevelAndSpellPower(t *testing.T) {
+	tick := spelldata.MustFind(1316697).PeriodicEffect()
 	sim, warlock := newWarlockSim("00000000000000001", &proto.WarlockOptions{}, core.MakeSingleTargetEncounter(0))
-	after := spelldata.MustFind(1316697).PeriodicEffect()
-	if after.BasePoints != stored.BasePoints || after.PPL != stored.PPL || after.SPCoef != stored.SPCoef {
-		t.Fatal("the channel changed the shared spell row")
-	}
 	target := warlock.CurrentTarget
 	wrack := warlock.Wrack
 	dot := wrack.Dot(target)
-	if math.Abs(dot.BonusCoefficient-0.286) > 1e-6 {
-		t.Errorf("Wrack tick coefficient=%g, want the launch preview coefficient", dot.BonusCoefficient)
+	if dot.BonusCoefficient != tick.SPCoef {
+		t.Errorf("Wrack tick coefficient=%g, want the spell row’s %g", dot.BonusCoefficient, tick.SPCoef)
 	}
 	warlock.AddStatDynamic(sim, stats.SpellCritPercent, -100)
 	damage := func(level int32) float64 {
@@ -341,8 +337,8 @@ func TestWrackPreviewDamageFollowsLevelAndSpellPower(t *testing.T) {
 	}
 	warlock.AddStatDynamic(sim, stats.SpellDamage, 100)
 	powered := damage(60)
-	if math.Abs((powered-high)-28.6) > 1e-6 {
-		t.Errorf("Wrack tick gained %g from spell power, want the launch preview scaling", powered-high)
+	if math.Abs((powered-high)-100*tick.SPCoef) > 1e-6 {
+		t.Errorf("Wrack tick gained %g from spell power, want %g", powered-high, 100*tick.SPCoef)
 	}
 	t.Logf("Wrack ticks: level50=%g level60=%g level60+100SP=%g", low, high, powered)
 }

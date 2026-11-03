@@ -18,43 +18,79 @@ import P1SlowMhGear from './gear_sets/p1_slowmh.gear.json';
 export const TALENTS_MUTILATE_ASN = {
 	name: 'Asn Muti',
 	data: SavedTalents.create({
-		talentLayout: TalentLayout.TalentLayoutLaunch,
-		talentsString: '00530221250551031--0052303003',
+		talentLayout: TalentLayout.TalentLayoutHotfix,
+		talentsString: '00530221250551031--0052330003',
 	}),
 };
 export const TALENTS_MUTILATE_COM = {
 	name: 'Combat Muti',
 	data: SavedTalents.create({
-		talentLayout: TalentLayout.TalentLayoutLaunch,
+		talentLayout: TalentLayout.TalentLayoutHotfix,
 		talentsString: '00530221250511031-32030302020122',
 	}),
 };
 export const TALENTS_COMBAT_SS = {
 	name: 'Combat SS',
 	data: SavedTalents.create({
-		talentLayout: TalentLayout.TalentLayoutLaunch,
+		talentLayout: TalentLayout.TalentLayoutHotfix,
 		talentsString: '005302212-3200330202012321151-005',
 	}),
 };
 export const TALENTS_COMBAT_BS = {
 	name: 'Combat BS',
 	data: SavedTalents.create({
-		talentLayout: TalentLayout.TalentLayoutLaunch,
+		talentLayout: TalentLayout.TalentLayoutHotfix,
 		talentsString: '005302212-3203030202012321151-005',
 	}),
 };
 export const TALENTS_SUB_HEMO = {
 	name: 'Subtlety Hemo',
 	data: SavedTalents.create({
-		talentLayout: TalentLayout.TalentLayoutLaunch,
-		talentsString: '005302212-32-005230311321021151',
+		talentLayout: TalentLayout.TalentLayoutHotfix,
+		talentsString: '005302212-32-005233011321021151',
 	}),
 };
 export const TALENTS_SUB_BS = {
 	name: 'Subtlety BS',
 	data: SavedTalents.create({
-		talentLayout: TalentLayout.TalentLayoutLaunch,
-		talentsString: '005302212-32-005230311321021151',
+		talentLayout: TalentLayout.TalentLayoutHotfix,
+		talentsString: '005302212-32-005233011321021151',
+	}),
+};
+
+export const TALENTS_MUTILATE_ASN_UPSTREAM = {
+	name: 'Asn Muti (Upstream)',
+	data: SavedTalents.create({
+		talentLayout: TalentLayout.TalentLayoutHotfix,
+		talentsString: '00530320251511031-30230322000103',
+	}),
+};
+export const TALENTS_COMBAT_SS_UPSTREAM = {
+	name: 'Combat SS (Upstream)',
+	data: SavedTalents.create({
+		talentLayout: TalentLayout.TalentLayoutHotfix,
+		talentsString: '005303202014-3203032201012321501',
+	}),
+};
+export const TALENTS_COMBAT_BS_UPSTREAM = {
+	name: 'Combat BS (Upstream)',
+	data: SavedTalents.create({
+		talentLayout: TalentLayout.TalentLayoutHotfix,
+		talentsString: '005303202012-3203032201012321501-002',
+	}),
+};
+export const TALENTS_SUB_HEMO_UPSTREAM = {
+	name: 'Subtlety Hemo (Upstream)',
+	data: SavedTalents.create({
+		talentLayout: TalentLayout.TalentLayoutHotfix,
+		talentsString: '005303202014--3352330313210011',
+	}),
+};
+export const TALENTS_SUB_BS_UPSTREAM = {
+	name: 'Subtlety BS (Upstream)',
+	data: SavedTalents.create({
+		talentLayout: TalentLayout.TalentLayoutHotfix,
+		talentsString: '005303202-3203-0352330313210011',
 	}),
 };
 
@@ -238,6 +274,42 @@ export const PRESET_BUILD_SUB_HEMO = PresetUtils.makePresetBuild('Subtlety Hemo'
 
 export const PRESET_BUILD_SUB_BS = PresetUtils.makePresetBuild('Subtlety BS', {
 	talents: TALENTS_SUB_BS,
+	rotation: SIMPLE_BACKSTAB_BUILD_ROTATION,
+	gear: P1_BS_SUB_GEAR,
+	settings: IP_MH_Settings,
+	epWeights: EP_PRESET_SUBTLETY,
+});
+
+export const PRESET_BUILD_MUTILATE_ASN_UPSTREAM = PresetUtils.makePresetBuild('Asn Muti (Upstream)', {
+	talents: TALENTS_MUTILATE_ASN_UPSTREAM,
+	rotation: SIMPLE_ROTATION,
+	gear: P1_MUTI_GEAR,
+	settings: IP_MH_Settings,
+	epWeights: EP_PRESET_ASSASSINATION,
+});
+export const PRESET_BUILD_COMBAT_SS_UPSTREAM = PresetUtils.makePresetBuild('Combat SS (Upstream)', {
+	talents: TALENTS_COMBAT_SS_UPSTREAM,
+	rotation: SIMPLE_ROTATION,
+	gear: P1_SLOW_MH_GEAR,
+	settings: IP_MH_Settings,
+	epWeights: EP_PRESET_COMBAT_SINISTER,
+});
+export const PRESET_BUILD_COMBAT_BS_UPSTREAM = PresetUtils.makePresetBuild('Combat BS (Upstream)', {
+	talents: TALENTS_COMBAT_BS_UPSTREAM,
+	rotation: SIMPLE_BACKSTAB_BUILD_ROTATION,
+	gear: P1_BS_COMBAT_GEAR,
+	settings: IP_MH_Settings,
+	epWeights: EP_PRESET_COMBAT_DAGS,
+});
+export const PRESET_BUILD_SUB_HEMO_UPSTREAM = PresetUtils.makePresetBuild('Subtlety Hemo (Upstream)', {
+	talents: TALENTS_SUB_HEMO_UPSTREAM,
+	rotation: SIMPLE_ROTATION,
+	gear: P1_SLOW_MH_GEAR,
+	settings: IP_MH_Settings,
+	epWeights: EP_PRESET_SUBTLETY,
+});
+export const PRESET_BUILD_SUB_BS_UPSTREAM = PresetUtils.makePresetBuild('Subtlety BS (Upstream)', {
+	talents: TALENTS_SUB_BS_UPSTREAM,
 	rotation: SIMPLE_BACKSTAB_BUILD_ROTATION,
 	gear: P1_BS_SUB_GEAR,
 	settings: IP_MH_Settings,

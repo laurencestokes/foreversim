@@ -25,7 +25,7 @@ func newLaunchRogue(t *testing.T, talents string, consumables *proto.ConsumesSpe
 	player := core.WithSpec(&proto.Player{
 		Class: proto.Class_ClassRogue, Race: proto.Race_RaceHuman,
 		Equipment:     core.GetGearSet("../../ui/specs/rogue/dps/gear_sets", "p1_muti").GearSet,
-		TalentsString: talents, TalentLayout: proto.TalentLayout_TalentLayoutLaunch,
+		TalentsString: talents, TalentLayout: proto.TalentLayout_TalentLayoutHotfix,
 		Consumables: consumables, Rotation: &proto.APLRotation{},
 	}, DefaultOptions)
 	sim := core.NewSim(&proto.RaidSimRequest{
@@ -74,7 +74,7 @@ func TestShankUsesTheOffHandAndLaunchPassives(t *testing.T) {
 		points        int32
 	}{
 		{"Flash of Steel", DefaultTalents, 40, 8 * time.Second, 0},
-		{"Boot Knife", "005302212-32-005230311321021151", 25, 10 * time.Second, 2},
+		{"Boot Knife", "005302212-32-005233011321021151", 25, 10 * time.Second, 2},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			sim, rogue := newLaunchRogue(t, tc.talents, nil)
@@ -118,7 +118,7 @@ func TestPresetShankLeavesRoomForBootKnife(t *testing.T) {
 	if shank == nil {
 		t.Fatal("the Rogue preset has no Shank action")
 	}
-	const bootKnife = "005302212-32-005230311321021151"
+	const bootKnife = "005302212-32-005233011321021151"
 	for _, tc := range []struct {
 		name, talents string
 		points        int32
@@ -128,14 +128,14 @@ func TestPresetShankLeavesRoomForBootKnife(t *testing.T) {
 		{"no Boot Knife at five points", DefaultTalents, 5, 60, true},
 		{"Boot Knife at three points", bootKnife, 3, 60, true},
 		{"Boot Knife at four points", bootKnife, 4, 60, false},
-		{"one rank of Boot Knife at four points", "005302212-32-005230311321021111", 4, 60, false},
+		{"one rank of Boot Knife at four points", "005302212-32-005233011321021111", 4, 60, false},
 		{"no Boot Knife above the Energy limit", DefaultTalents, 5, 61, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			player := core.WithSpec(&proto.Player{
 				Class: proto.Class_ClassRogue, Race: proto.Race_RaceHuman,
 				Equipment:     core.GetGearSet("../../ui/specs/rogue/dps/gear_sets", "p1_muti").GearSet,
-				TalentsString: tc.talents, TalentLayout: proto.TalentLayout_TalentLayoutLaunch,
+				TalentsString: tc.talents, TalentLayout: proto.TalentLayout_TalentLayoutHotfix,
 				Rotation: &proto.APLRotation{Type: proto.APLRotation_TypeAPL, PriorityList: []*proto.APLListItem{shank}},
 			}, DefaultOptions)
 			sim := core.NewSim(&proto.RaidSimRequest{
@@ -155,7 +155,7 @@ func TestPresetShankLeavesRoomForBootKnife(t *testing.T) {
 }
 
 func TestVenomComesFromShankWithoutSpendingPoints(t *testing.T) {
-	sim, rogue := newLaunchRogue(t, "00530221250551031--0052303003", &proto.ConsumesSpec{MhWeaponImbueId: 8928, OhWeaponImbueId: 8985})
+	sim, rogue := newLaunchRogue(t, "00530221250551031--0052330003", &proto.ConsumesSpec{MhWeaponImbueId: 8928, OhWeaponImbueId: 8985})
 	rogue.PoisedAura.Deactivate(sim)
 	rogue.AddComboPoints(sim, 3, rogue.NewComboPointMetrics(core.ActionID{}))
 	rogue.SpendEnergy(sim, 70, rogue.NewEnergyMetrics(core.ActionID{}))
@@ -198,18 +198,22 @@ func TestBloodSplatterExtendsBothBleeds(t *testing.T) {
 }
 
 func TestGhostlyStrikeOpensOneStealthAbility(t *testing.T) {
-	sim, rogue := newLaunchRogue(t, "005302212-32-005230311321021151", nil)
+	sim, rogue := newLaunchRogue(t, "005302212-32-005233011321021151", nil)
 	rogue.PoisedAura.Deactivate(sim)
 	dodge := rogue.GetAuraByID(core.ActionID{SpellID: ghostlyStrikeRank.ID, Tag: 1})
+	legacy := rogue.GetAuraByID(core.ActionID{SpellID: ghostlyStrikeRank.ID})
 	if rogue.Ambush.CanCast(sim, rogue.CurrentTarget) || rogue.Garrote.CanCast(sim, rogue.CurrentTarget) {
 		t.Fatal("a stealth opener is available without Stealth or Ghostly Strike")
 	}
 	if !rogue.GhostlyStrike.Cast(sim, rogue.CurrentTarget) {
 		t.Fatal("Ghostly Strike did not cast")
 	}
+	if !legacy.IsActive() || rogue.GhostlyStrikeAura.ActionID.SpellID != 1329326 {
+		t.Fatal("the official and saved opener identities disagree")
+	}
 	sim.CurrentTime += rogue.GCD.TimeToReady(sim)
 	rogue.AddEnergy(sim, rogue.MaximumEnergy(), rogue.NewEnergyMetrics(core.ActionID{}))
-	if !rogue.Garrote.Cast(sim, rogue.CurrentTarget) || rogue.GhostlyStrikeAura.IsActive() {
+	if !rogue.Garrote.Cast(sim, rogue.CurrentTarget) || rogue.GhostlyStrikeAura.IsActive() || legacy.IsActive() {
 		t.Fatal("Ghostly Strike did not grant and spend the opener window")
 	}
 	if !dodge.IsActive() || dodge.Duration != 7*time.Second {
@@ -224,7 +228,7 @@ func TestGhostlyStrikeOpensOneStealthAbility(t *testing.T) {
 }
 
 func TestDeathMarkStoresBleedsTwiceAndDoesNotStoreItself(t *testing.T) {
-	sim, rogue := newLaunchRogue(t, "005302212-32-005230311321021151", nil)
+	sim, rogue := newLaunchRogue(t, "005302212-32-005233011321021151", nil)
 	rogue.PoisedAura.Deactivate(sim)
 	target := rogue.CurrentTarget
 	rogue.AddComboPoints(sim, 5, rogue.NewComboPointMetrics(core.ActionID{}))
@@ -262,7 +266,7 @@ func TestDeathMarkStoresBleedsTwiceAndDoesNotStoreItself(t *testing.T) {
 }
 
 func TestHemorrhageAmplifiesBothCasterBleeds(t *testing.T) {
-	sim, rogue := newLaunchRogue(t, "005302212-32-005230311321021151", nil)
+	sim, rogue := newLaunchRogue(t, "005302212-32-005233011321021151", nil)
 	rogue.PoisedAura.Deactivate(sim)
 	target := rogue.CurrentTarget
 	before := []float64{}
@@ -282,7 +286,7 @@ func TestHemorrhageAmplifiesBothCasterBleeds(t *testing.T) {
 }
 
 func TestSealFateSharesItsCooldownAcrossMutilateStrikes(t *testing.T) {
-	sim, rogue := newLaunchRogue(t, "00530221250551031--0052303003", nil)
+	sim, rogue := newLaunchRogue(t, "00530221250551031--0052330003", nil)
 	rogue.AddStatDynamic(sim, stats.PhysicalCritPercent, 200)
 	if !rogue.Mutilate.Cast(sim, rogue.CurrentTarget) {
 		t.Fatal("Mutilate did not cast with two daggers")
@@ -407,11 +411,11 @@ func TestRogue(t *testing.T) {
 			OtherTalentSets: []core.TalentsCombo{
 				{
 					Label:   "Subtlety BS",
-					Talents: "005302212-32-005230311321021151",
+					Talents: "005302212-32-005233011321021151",
 				},
 				{
 					Label:   "Asn Muti",
-					Talents: "00530221250551031--0052303003",
+					Talents: "00530221250551031--0052330003",
 				},
 			},
 			Consumables: DefaultConsumables,
@@ -472,7 +476,7 @@ func newTankSim(t *testing.T, talents string) (*core.Simulation, *Rogue, []*core
 		Class:         proto.Class_ClassRogue,
 		Equipment:     core.GetGearSet("../../ui/specs/rogue/dps/gear_sets", "p1_muti").GearSet,
 		TalentsString: talents,
-		TalentLayout:  proto.TalentLayout_TalentLayoutLaunch,
+		TalentLayout:  proto.TalentLayout_TalentLayoutHotfix,
 		Spec:          DefaultOptions,
 		Rotation:      &proto.APLRotation{},
 	}
@@ -729,7 +733,9 @@ func TestSetupUsesItsLaunchChanceOnTheCurrentTargetsDodges(t *testing.T) {
 				gained := int32(0)
 				for range attempts {
 					rogue.SpendComboPoints(sim, metrics)
-					aura.Icd.Reset()
+					if aura.Icd != nil {
+						aura.Icd.Reset()
+					}
 					swingAt(sim, rogue, targets[tc.from], tc.outcome)
 					passBatchWindow(t, sim)
 					gained += rogue.ComboPoints()
@@ -739,6 +745,111 @@ func TestSetupUsesItsLaunchChanceOnTheCurrentTargetsDodges(t *testing.T) {
 					t.Errorf("%s proc chance = %g, want %g", tc.name, got, tc.chance)
 				}
 				t.Logf("rank=%d %s: points=%d attempts=%d rate=%g", rank, tc.name, gained, attempts, got)
+			}
+		})
+	}
+}
+
+func TestDeathMarkCapSnapshotsPlayerMeleeCrit(t *testing.T) {
+	for _, crit := range []float64{0, 50} {
+		t.Run(fmt.Sprint(crit), func(t *testing.T) {
+			sim, rogue := newLaunchRogue(t, "005302212-32-005233011321021151", nil)
+			rogue.AddStatDynamic(sim, stats.PhysicalCritPercent, crit-rogue.GetStat(stats.PhysicalCritPercent))
+			rogue.AddComboPoints(sim, 5, rogue.NewComboPointMetrics(core.ActionID{}))
+			target := rogue.CurrentTarget
+			if !rogue.DeathMark.Cast(sim, target) {
+				t.Fatal("Death Mark did not cast")
+			}
+			rogue.SinisterStrike.CalcAndDealDamage(sim, target, 100000, rogue.SinisterStrike.OutcomeAlwaysHit)
+			coup := spellData.CoupDeGrace.Rank(rogue.Talents.ImprovedEviscerate).EffectN(2).Percent() + 1
+			want := (156 + 245*5 + 0.04*rogue.DeathMark.MeleeAttackPower(target)*5) * (1 + crit/100) * coup
+			rogue.AddStatDynamic(sim, stats.PhysicalCritPercent, 40)
+			before := rogue.DeathMark.SpellMetrics[target.UnitIndex].TotalDamage
+			rogue.DeathMark.Dot(target).TickOnce(sim)
+			got := rogue.DeathMark.SpellMetrics[target.UnitIndex].TotalDamage - before
+			if math.Abs(got-want) > 1e-6 {
+				t.Errorf("cap at %g%% melee crit = %g, want %g", crit, got, want)
+			}
+			t.Logf("applicationCrit=%g%% critAfterCast=%g%% cap=%g", crit, rogue.GetStat(stats.PhysicalCritPercent), got)
+		})
+	}
+}
+
+func TestShankUsesCapturedAvoidanceRules(t *testing.T) {
+	sim, rogue := newLaunchRogue(t, "005302212-32-005233011321021151", nil)
+	rogue.PoisedAura.Deactivate(sim)
+	rogue.SpendEnergy(sim, 70, rogue.NewEnergyMetrics(core.ActionID{}))
+	target := rogue.CurrentTarget
+	rogue.AttackTables[target.UnitIndex].Hand(rogue.Shank).BaseDodgeChance = 2
+	before := rogue.CurrentEnergy()
+	if !rogue.Shank.Cast(sim, target) {
+		t.Fatal("Shank did not cast")
+	}
+	if rogue.Shank.SpellMetrics[target.UnitIndex].Dodges != 1 {
+		t.Fatal("the strike was not dodged")
+	}
+	data := spelldata.MustFind(1329549)
+	cost := float64(rogue.Shank.Cost.BaseCost)
+	want := data.EffectN(2).BaseValue() - cost + cost*data.MissRefund()
+	if got := rogue.CurrentEnergy() - before; math.Abs(got-want) > 1e-9 {
+		t.Errorf("avoided Shank changed Energy by %g, want %g", got, want)
+	}
+	if rogue.ComboPoints() != 0 {
+		t.Fatal("a dodged Shank granted Boot Knife points")
+	}
+	if !rogue.Shank.Flags.Matches(core.SpellFlagSuppressWeaponProcs) {
+		t.Fatal("Shank does not suppress weapon procs")
+	}
+	if rogue.TalentRank(1329286) != 5 {
+		t.Fatal("the official Boot Knife talent identity is absent")
+	}
+	t.Logf("dodgedShankNetEnergy=%g refund=%g BootKnifePoints=%d weaponProcsSuppressed=true", rogue.CurrentEnergy()-before, cost*data.MissRefund(), rogue.ComboPoints())
+}
+
+func TestMutilateHitsUseTheCapturedWeaponAndFlatDamage(t *testing.T) {
+	sim, rogue := newLaunchRogue(t, "00530221250551031--0052330003", nil)
+	for _, weapon := range []*core.Weapon{rogue.AutoAttacks.MH(), rogue.AutoAttacks.OH()} {
+		weapon.BaseDamageMax = weapon.BaseDamageMin
+	}
+	target := rogue.CurrentTarget
+	expected := []float64{}
+	for i, hit := range []*core.Spell{rogue.MutilateMH, rogue.MutilateOH} {
+		row := mutilateCastRank.EffectN(i + 2).Trigger()
+		weapon := rogue.MHNormalizedWeaponDamage(sim, hit.MeleeAttackPower(target))
+		if i == 1 {
+			weapon = rogue.OHNormalizedWeaponDamage(sim, hit.MeleeAttackPower(target))
+		}
+		expected = append(expected, hit.CalcDamage(sim, target, row.EffectN(1).BaseValue()+weapon, hit.OutcomeAlwaysHit).Damage)
+		if hit.DamageMultiplier != row.EffectN(2).Percent() {
+			t.Fatal("Mutilate's weapon multiplier differs from its row")
+		}
+	}
+	if !rogue.Mutilate.Cast(sim, target) {
+		t.Fatal("Mutilate did not cast")
+	}
+	for i, hit := range []*core.Spell{rogue.MutilateMH, rogue.MutilateOH} {
+		if got := hit.SpellMetrics[target.UnitIndex].TotalDamage; math.Abs(got-expected[i]) > 1e-9 {
+			t.Errorf("Mutilate hand %d dealt %g, want %g", i, got, expected[i])
+		}
+	}
+	t.Logf("MutilateCastRank=%d flatDamage=%g weaponShare=%g mh=%g oh=%g", rogue.Mutilate.Rank, mutilateCastRank.EffectN(2).Trigger().EffectN(1).BaseValue(), rogue.MutilateMH.DamageMultiplier, expected[0], expected[1])
+}
+
+func TestSavedMutilateRankFiltersStillCast(t *testing.T) {
+	for _, rank := range []int32{3, 4} {
+		t.Run(fmt.Sprint(rank), func(t *testing.T) {
+			id := &proto.ActionID{RawId: &proto.ActionID_SpellId{SpellId: 1241584}, Rank: rank}
+			rotation := &proto.APLRotation{Type: proto.APLRotation_TypeAPL, PriorityList: []*proto.APLListItem{{Action: &proto.APLAction{
+				Condition: &proto.APLValue{Value: &proto.APLValue_SpellIsKnown{SpellIsKnown: &proto.APLValueSpellIsKnown{SpellId: id}}},
+				Action:    &proto.APLAction_CastSpell{CastSpell: &proto.APLActionCastSpell{SpellId: id}},
+			}}}}
+			player := core.WithSpec(&proto.Player{Class: proto.Class_ClassRogue, Race: proto.Race_RaceHuman, Equipment: core.GetGearSet("../../ui/specs/rogue/dps/gear_sets", "p1_muti").GearSet, TalentsString: "00530221250551031--0052330003", TalentLayout: proto.TalentLayout_TalentLayoutHotfix, Rotation: rotation}, DefaultOptions)
+			sim := core.NewSim(&proto.RaidSimRequest{Raid: core.SinglePlayerRaidProto(player, nil, nil, nil), Encounter: core.MakeSingleTargetEncounter(0), SimOptions: &proto.SimOptions{RandomSeed: 1}}, simsignals.CreateSignals())
+			sim.Reset()
+			rogue := sim.Raid.Parties[0].Players[0].(*Rogue)
+			rogue.Rotation.DoNextAction(sim)
+			if casts := rogue.Mutilate.SpellMetrics[rogue.CurrentTarget.UnitIndex].Casts; casts != 1 {
+				t.Errorf("saved rank %d cast %d times, want one", rank, casts)
 			}
 		})
 	}

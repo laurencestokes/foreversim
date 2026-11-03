@@ -1,8 +1,6 @@
 package warrior
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
@@ -11,9 +9,12 @@ import (
 var whirlwindRank = spellData.Whirlwind.Highest()
 
 func (warrior *Warrior) registerWhirlwind() {
-	// The launch notes give the closest enemy 15% extra damage per point. The sim represents it
+	// The talent buffs the closest enemy. The sim represents it
 	// with the selected target because it has no positions for individual enemies.
-	primaryMultiplier := 1 + 0.15*float64(warrior.Talents.ImprovedWhirlwind)
+	primaryMultiplier := 1.0
+	if warrior.Talents.ImprovedWhirlwind > 0 {
+		primaryMultiplier += spellData.ImprovedWhirlwind.Rank(warrior.Talents.ImprovedWhirlwind).EffectN(2).Percent()
+	}
 	calcDamage := func(sim *core.Simulation, target *core.Unit, spell *core.Spell, baseDamage float64) core.SpellResultSlice {
 		first := true
 		return spell.CalcCleaveDamageWithVariance(sim, target, int32(whirlwindRank.MaxTargets), spell.OutcomeMeleeWeaponSpecialHitAndCrit,
@@ -45,8 +46,6 @@ func (warrior *Warrior) registerWhirlwind() {
 	// The cast is the main-hand strike, so a rotation casts the main-hand copy.
 	config := spelldata.SpellConfig(&warrior.Unit, whirlwindRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
 	config.ActionID = config.ActionID.WithHand(proto.ItemSlot_ItemSlotMainHand)
-	// TODO: Read the new talent's cooldown modifier from its game row when available.
-	config.Cast.CD.Duration -= time.Duration(warrior.Talents.ImprovedWhirlwind) * time.Second
 
 	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 		baseDamage := warrior.MHNormalizedWeaponDamage(sim, spell.MeleeAttackPower(target))

@@ -143,7 +143,8 @@ only. Either line in any other file kind is `misplaced-statement`, so a section 
 Rogue, Warrior and Shaman use new talent positions for launch. In those builds, `talents "launch:..."`
 holds the digits from the launch tree and sets `Player.talent_layout` to `TalentLayoutLaunch`.
 A bare string keeps its original layout. The sim maps its ranks by talent name, drops retired talents,
-and caps ranks at their new limits. Both forms belong to category t, including in a talents-only export.
+and caps ranks at their new limits. The updated Rogue and Warrior layouts use `talents "hotfix:..."`.
+The launch prefix retains the earlier positions. All three forms belong to category t, including in a talents-only export.
 
 A line whose first word is `siml`, `spec`, `talents`, `use`, `var` or `def` and whose next token is `=` is none of
 these statements. It reads as a line of its section, so `var = 1` under `apl:` is an entry (`unknown-field`).

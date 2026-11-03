@@ -2,17 +2,17 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 
 import { canonical, inputFingerprint, resolveBuildId, validateCatalog } from './identity.mjs';
+import { durations, selectBuilds, targets } from './select.mjs';
 
-const durations = [90, 180, 360];
-const targets = ['Mechanical', 'Elemental', 'Beast'];
 const tiers = [{ name: 'S', maxBehind: 5 }, { name: 'A', maxBehind: 10 }, { name: 'B', maxBehind: 20 }, { name: 'C', maxBehind: 30 }, { name: 'D' }];
 const revision = value => assert.match(value ?? '', /^[a-f0-9]{40}$/, 'A full simulator commit is required');
 const date = (value, label) =>
 	assert.ok(typeof value === 'string' && /^\d{4}-\d\d-\d\dT/.test(value) && Number.isFinite(Date.parse(value)), `Invalid ${label}`);
 
-export function publish({ manifest, raw, provenance, catalog, upstreamCommit, verifiedCommit, publishedAt = new Date().toISOString() }) {
+export function publish({ manifest, raw, provenance, previous, catalog, upstreamCommit, verifiedCommit, publishedAt = new Date().toISOString() }) {
 	validateCatalog(catalog);
 	revision(upstreamCommit);
 	revision(verifiedCommit);
@@ -82,8 +82,8 @@ export function publish({ manifest, raw, provenance, catalog, upstreamCommit, ve
 			pulls.add(draft.pullRequest);
 		}
 		assert.ok(
-			provenance.sources.every(source => !source.reused && source.commit === verifiedCommit),
-			'Launch previews require fresh measurements',
+			provenance.reuse || provenance.sources.every(source => !source.reused && source.commit === verifiedCommit),
+			'Launch previews require fresh measurements or an explicit reuse plan',
 		);
 	}
 	for (const source of provenance.sources) {
@@ -100,9 +100,33 @@ export function publish({ manifest, raw, provenance, catalog, upstreamCommit, ve
 		}
 		assert.ok(source.reused || source.computedAt, 'A new source requires its computation date');
 		if (source.reused) assert.ok(source.publishedAt, 'A reused source requires its original publication date');
+		else assert.equal(source.commit, verifiedCommit, 'A fresh source must use the verified engine');
 		sources.set(source.id, source);
 	}
-	if ([...sources.values()].some(source => source.commit !== verifiedCommit)) {
+	const reusedIds = new Set(provenance.reuse?.reuse);
+	if (provenance.reuse || (previous && [...sources.values()].some(source => source.reused))) {
+		assert.ok(previous && provenance.reuse, 'Reused measurements require the previous publication and an explicit selection plan');
+		const selected = selectBuilds({ plan: provenance.reuse, manifest, previous, catalog });
+		for (const source of selected.sources) {
+			assert.ok(isDeepStrictEqual(sources.get(source.id), source), 'Original source provenance changed');
+		}
+		assert.deepEqual(
+			[...sources.values()]
+				.filter(source => source.reused)
+				.map(source => source.id)
+				.sort(),
+			selected.sources.map(source => source.id).sort(),
+			'Reused sources differ from the declaration',
+		);
+		const key = list => `${list.buildId}|${list.seconds}|${list.target}`;
+		const original = new Map(selected.raw.map(list => [key(list), list]));
+		for (const list of raw.filter(list => reusedIds.has(list.buildId))) {
+			assert.ok(isDeepStrictEqual(list, original.get(key(list))), 'Reused measurements differ from the original publication');
+		}
+		assert.equal(provenance.compatibility?.evidence, provenance.reuse.evidence, 'Compatibility evidence differs from the selection');
+		assert.equal(provenance.compatibility?.method, provenance.reuse.reason, 'Compatibility reason differs from the selection');
+	}
+	if (provenance.reuse || [...sources.values()].some(source => source.reused || source.commit !== verifiedCommit)) {
 		const proof = provenance.compatibility;
 		assert.equal(proof?.verifiedCommit, verifiedCommit, 'Mixed engines require current compatibility evidence');
 		assert.ok(proof.method?.trim() && proof.evidence?.trim(), 'Missing compatibility method or evidence');
@@ -131,6 +155,7 @@ export function publish({ manifest, raw, provenance, catalog, upstreamCommit, ve
 		assert.equal(resolveBuildId(catalog, list.spec, list.build), build.id, `Raw build alias differs for ${build.id}`);
 		assert.equal(list.gear, build.gear, `Raw gear preset differs for ${build.id}`);
 		assert.equal(list.rotation, build.rotation, `Raw rotation preset differs for ${build.id}`);
+		if (build.consumables !== undefined) assert.equal(list.consumables, build.consumables, `Raw consumables label differs for ${build.id}`);
 		assert.equal(list.talents, build.request.raid.parties[0].players[0].talentsString, `Raw talents differ for ${build.id}`);
 		assert.equal(canonical(list.setup), canonical(build.setup), `Raw setup differs for ${build.id}`);
 		assert.equal(canonical(list.consumableNames), canonical(build.consumableNames), `Raw consumable names differ for ${build.id}`);
@@ -156,6 +181,7 @@ export function publish({ manifest, raw, provenance, catalog, upstreamCommit, ve
 			assert.equal(matches.length, 1, `Ambiguous or missing source for ${build.id} / ${row.race}`);
 			const source = matches[0];
 			assert.equal(source.commit, row.commit, 'Row revision differs from its source');
+			if (provenance.reuse) assert.equal(source.reused, reusedIds.has(build.id), 'Row source differs from the declared selection');
 			if (!source.reused) assert.equal(list.computedAt, source.computedAt, 'Computation date differs from its source');
 			const key = `${build.id}|${list.seconds}|${list.target}|${race.value}`;
 			assert.ok(!seen.has(key), `Duplicate matchup ${key}`);
@@ -196,6 +222,7 @@ export function publish({ manifest, raw, provenance, catalog, upstreamCommit, ve
 		tiers,
 		sources: [...sources.values()],
 		...(provenance.compatibility ? { compatibility: provenance.compatibility } : {}),
+		...(provenance.reuse ? { reuse: provenance.reuse } : {}),
 		builds: [...builds.values()].map(({ legalRaces, ...build }) => build),
 		rows,
 		excluded: catalog.excluded ?? [],
@@ -220,10 +247,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 		'Usage: node tools/build_arena/publish.mjs --manifest manifest.json --raw presets.json --provenance sources.json --upstream <commit> --verified <commit> --out results.json [--catalog catalog.json] [--published-at <date>]',
 	);
 	const read = file => JSON.parse(fs.readFileSync(file, 'utf8'));
+	const provenance = read(args['--provenance']);
 	const result = publish({
 		manifest: read(args['--manifest']),
 		raw: read(args['--raw']),
-		provenance: read(args['--provenance']),
+		provenance,
+		previous: args['--previous'] && (provenance.reuse || provenance.sources.some(source => source.reused)) ? read(args['--previous']) : undefined,
 		catalog: read(args['--catalog'] ?? new URL('./catalog.json', import.meta.url)),
 		upstreamCommit: args['--upstream'],
 		verifiedCommit: args['--verified'],

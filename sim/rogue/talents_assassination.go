@@ -28,7 +28,7 @@ func (rogue *Rogue) registerImprovedEviscerate() {
 	}
 
 	spelldata.ParseStatic(&rogue.Character,
-		spellData.ImprovedEviscerate.Rank(rogue.Talents.ImprovedEviscerate))
+		spellData.CoupDeGrace.Rank(rogue.Talents.ImprovedEviscerate))
 }
 
 var remorselessRank = spellData.RemorselessAttacksTriggered.Highest()
@@ -87,11 +87,7 @@ func (rogue *Rogue) registerLethality() {
 		return
 	}
 
-	// The November 2 development notes give the two-rank talent ten percent per point.
-	rogue.AddStaticMod(core.SpellModConfig{
-		Kind: core.SpellMod_CritMultiplier_Flat, ClassMask: RogueSpellLethality,
-		FloatValue: []float64{0, 0.1, 0.2}[rogue.Talents.Lethality],
-	})
+	spelldata.ParseStatic(&rogue.Character, spellData.Lethality.Rank(rogue.Talents.Lethality))
 }
 
 func (rogue *Rogue) registerVilePoisons() {
@@ -155,7 +151,7 @@ func (rogue *Rogue) registerSealFate() {
 			if result.Outcome.Matches(core.OutcomeCrit) {
 				rogue.AddComboPoints(sim, 1, sfMetrics)
 			}
-		}, spelldata.Chance([]float64{0, 0.33, 0.66, 1}[rogue.Talents.SealFate]))
+		})
 	trigger.Name = "Seal Fate - Trigger"
 	trigger.SpellFlags = SpellFlagBuilder
 	trigger.TriggerImmediately = true
@@ -218,9 +214,7 @@ func (rogue *Rogue) newMutilateHitSpell(isMH bool) *core.Spell {
 	for i := range config.ClassFlags.Mask {
 		config.ClassFlags.Mask[i] |= mutilateCastRank.ClassFlags.Mask[i]
 	}
-	// The November 2 development notes set the weapon share to ninety percent. They do not state
-	// the flat increase, so the captured rank's flat damage remains until that amount is known.
-	config.DamageMultiplier = 0.9
+	config.DamageMultiplier = hitRank.EffectN(2).Percent()
 
 	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 		baseDamage := mutilateHitBaseDamage
@@ -243,7 +237,7 @@ func (rogue *Rogue) newMutilateHitSpell(isMH bool) *core.Spell {
 	return rogue.RegisterSpell(config)
 }
 
-var venomRank = spellData.Venom.Highest()
+var venomRank = spellData.VenomTriggered.Highest()
 
 func (rogue *Rogue) registerVenom() {
 	if !rogue.Talents.Venom {
@@ -251,10 +245,5 @@ func (rogue *Rogue) registerVenom() {
 	}
 
 	rogue.VenomAura = rogue.RegisterAura(spelldata.AuraConfig(venomRank))
-	spelldata.ParseEffects(&rogue.Character, rogue.VenomAura, venomRank, spelldata.Effects(2, 3))
-	// The November 2 development notes make Venom a Shank buff with twenty percentage points of
-	// poison application chance. Its captured row still names ten.
-	rogue.VenomAura.AttachSpellMod(core.SpellModConfig{
-		Kind: core.SpellMod_ProcChance_Flat, ClassFlags: venomRank.EffectN(4).ClassFlags, FloatValue: 20,
-	})
+	spelldata.ParseEffects(&rogue.Character, rogue.VenomAura, venomRank)
 }

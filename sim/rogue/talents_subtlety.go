@@ -1,8 +1,6 @@
 package rogue
 
 import (
-	"slices"
-
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
@@ -29,11 +27,7 @@ func (rogue *Rogue) registerOpportunity() {
 		return
 	}
 
-	// The November 2 development notes give the five-rank talent four percent per point.
-	rogue.AddStaticMod(core.SpellModConfig{
-		Kind: core.SpellMod_DamageDone_Flat, ClassMask: RogueSpellBackstab | RogueSpellGarrote | RogueSpellAmbush | RogueSpellMutilateHit,
-		FloatValue: []float64{0, 0.04, 0.08, 0.12, 0.16, 0.2}[rogue.Talents.Opportunity],
-	})
+	spelldata.ParseStatic(&rogue.Character, spellData.Opportunity.Rank(rogue.Talents.Opportunity))
 }
 
 func (rogue *Rogue) registerInitiative() {
@@ -56,6 +50,7 @@ func (rogue *Rogue) registerInitiative() {
 }
 
 var ghostlyStrikeRank = spellData.GhostlyStrike.Highest()
+var ghostlyStrikeTriggered = spellData.GhostlyStrikeTriggered.Highest()
 
 func (rogue *Rogue) registerGhostlyStrike() {
 	if !rogue.Talents.GhostlyStrike {
@@ -68,22 +63,27 @@ func (rogue *Rogue) registerGhostlyStrike() {
 	config.DamageMultiplier = core.TernaryFloat64(rogue.HasDagger(core.MainHand), ghostlyStrikeRank.EffectN(4).Percent(), ghostlyStrikeRank.EffectN(1).Percent())
 
 	// Dodge lasts for the full duration even after an opener consumes its permission.
-	// The untagged aura remains the opener window read by the rotation.
 	dodgeConfig := spelldata.AuraConfig(ghostlyStrikeRank)
 	dodgeConfig.ActionID = dodgeConfig.ActionID.WithTag(1)
 	dodgeBuff := rogue.RegisterAura(dodgeConfig)
 	spelldata.ParseEffects(&rogue.Character, dodgeBuff, ghostlyStrikeRank, spelldata.Effects(2))
 	config.RelatedSelfBuff = dodgeBuff
 
+	// Saved rotations read the untagged strike ID as the one-use opener window.
+	legacyOpener := rogue.RegisterAura(core.Aura{
+		Label: "Ghostly Strike - Opener (Legacy)", ActionID: core.ActionID{SpellID: ghostlyStrikeRank.ID},
+		Duration: ghostlyStrikeTriggered.Duration(),
+	})
 	// The next Ambush or Garrote in the seven-second window can be cast outside Stealth.
-	rogue.GhostlyStrikeAura = rogue.RegisterAura(spelldata.AuraConfig(ghostlyStrikeRank, spelldata.Label("Ghostly Strike - Opener"))).
+	rogue.GhostlyStrikeAura = rogue.RegisterAura(spelldata.AuraConfig(ghostlyStrikeTriggered, spelldata.Label("Ghostly Strike - Opener"))).
 		ApplyOnGain(func(_ *core.Aura, _ *core.Simulation) {
 			rogue.Ambush.CastRequirement.CasterForm = true
 			rogue.Garrote.CastRequirement.CasterForm = true
 		}).
-		ApplyOnExpire(func(_ *core.Aura, _ *core.Simulation) {
+		ApplyOnExpire(func(_ *core.Aura, sim *core.Simulation) {
 			rogue.Ambush.CastRequirement.CasterForm = false
 			rogue.Garrote.CastRequirement.CasterForm = false
+			legacyOpener.Deactivate(sim)
 		})
 	rogue.GhostlyStrikeAura.OnCastComplete = func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
 		if spell.Matches(RogueSpellAmbush | RogueSpellGarrote) {
@@ -93,7 +93,7 @@ func (rogue *Rogue) registerGhostlyStrike() {
 
 	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 		rogue.BreakStealth(sim)
-		baseDamage := spell.Unit.MHWeaponDamage(sim, spell.MeleeAttackPower(target)) // Data suggests un-normalized
+		baseDamage := spell.Unit.MHNormalizedWeaponDamage(sim, spell.MeleeAttackPower(target))
 
 		result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
 
@@ -102,6 +102,7 @@ func (rogue *Rogue) registerGhostlyStrike() {
 			dodgeBuff.Activate(sim)
 			rogue.AddComboPoints(sim, int32(ghostlyStrikeRank.ProcEnergizeEffect().Roll(sim)), spell.ComboPointMetrics())
 			rogue.GhostlyStrikeAura.Activate(sim)
+			legacyOpener.Activate(sim)
 		} else {
 			spell.IssueRefund(sim)
 		}
@@ -204,13 +205,7 @@ func (rogue *Rogue) registerHemorrhage() {
 
 	hemoAuras := rogue.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		hemoAura := target.GetOrRegisterAura(spelldata.AuraConfig(hemorrhageRank, spelldata.Label(hemorrhageRank.Name+" - "+rogue.Label)))
-		// The November 2 development notes extend the caster's bleed bonus to Garrote.
-		rank := *hemorrhageRank
-		rank.Effects = slices.Clone(hemorrhageRank.Effects)
-		for i, flags := range garroteRank.ClassFlags.Mask {
-			rank.Effects[2].ClassFlags.Mask[i] |= flags
-		}
-		spelldata.ParseEffects(nil, hemoAura, &rank,
+		spelldata.ParseEffects(nil, hemoAura, hemorrhageRank,
 			spelldata.FromCaster(&rogue.Unit, DDBC_Hemorrhage, DDBC_Total))
 		return hemoAura
 	})
@@ -269,8 +264,7 @@ func (rogue *Rogue) registerSetup() {
 	trigger := spelldata.ProcTrigger(&rogue.Character, setupRank,
 		func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
 			rogue.AddComboPoints(sim, int32(setupTriggered.ProcEnergizeEffect().Roll(sim)), setupMetrics)
-		}, spelldata.Chance([]float64{0, 0.15, 0.30, 0.45}[rogue.Talents.Setup]))
-	// The November 2 development notes give a fifteen-percent chance per point.
+		})
 	// TODO: Fully resisted spells become indistinguishable from misses in core, so only dodges trigger Setup.
 	trigger.Outcome = core.OutcomeDodge
 	trigger.RequireDamageDealt = false

@@ -89,7 +89,9 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 			if (key === 'warlock') player.setGear(host.sim.db.lookupEquipmentSpec(EquipmentSpec.fromJson(warlockGear)));
 			const exported = player.toProto(false, true);
 			if (['rogue', 'warrior', 'elemental_shaman', 'enhancement_shaman'].includes(key)) {
-				expect(exported.talentLayout, `${key} / ${build.name} talent layout`).toBe(TalentLayout.TalentLayoutLaunch);
+				expect(exported.talentLayout, `${key} / ${build.name} talent layout`).toBe(
+					key === 'rogue' || key === 'warrior' ? TalentLayout.TalentLayoutHotfix : TalentLayout.TalentLayoutLaunch,
+				);
 				expect(player.getBrokenTalentNames(), `${key} / ${build.name} launch talent prerequisites`).toEqual([]);
 				const points = [...exported.talentsString].reduce((sum, digit) => sum + (Number(digit) || 0), 0);
 				expect(points, `${key} / ${build.name} level-60 talent points`).toBe(51);
@@ -202,7 +204,7 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 			});
 		}
 	}
-	expect(inputs).toHaveLength(35);
+	expect(inputs).toHaveLength(40);
 	expect(inputs.filter(input => input.spec === 'warlock').map(input => input.build)).toEqual(expect.arrayContaining(['Aff (Wrack)', 'Destro']));
 	const destination = process.env.RACE_ARENA_INPUT;
 	if (destination) {

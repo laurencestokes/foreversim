@@ -1073,3 +1073,41 @@ func TestProwlSpeedChangePreservesMovementDestination(t *testing.T) {
 		t.Fatalf("arrived at %g yards, want 4", cat.DistanceFromTarget)
 	}
 }
+
+func TestPoisedDiscountsClawAndCowerOnlyOnce(t *testing.T) {
+	for _, name := range []string{"Claw", "Cower"} {
+		t.Run(name, func(t *testing.T) {
+			sim, cat := newCat(t, "", nil)
+			spell := cat.Claw
+			if name == "Cower" {
+				spell = cat.Cower
+			}
+			spell.BonusHitPercent, spell.BonusExpertisePercent = 100, 100
+			fillResource(sim, cat)
+			cat.OnEncounterStart(sim)
+			discount := -spelldata.MustFind(1328827).EffectN(1).BaseValue()
+			for cast := range 2 {
+				before := cat.CurrentEnergy()
+				cost := spell.DefaultCast.Cost
+				if cast == 0 {
+					cost -= discount
+				}
+				if !spell.Cast(sim, cat.CurrentTarget) {
+					t.Fatal("ability cannot cast")
+				}
+				if got := before - cat.CurrentEnergy(); got != cost {
+					t.Fatalf("cast %d cost = %v, want %v", cast+1, got, cost)
+				}
+				if cat.PoisedAura.IsActive() {
+					t.Fatal("the ability does not spend Poised")
+				}
+				fillResource(sim, cat)
+				wait := cat.GCD.TimeToReady(sim)
+				if spell.CD.Timer != nil {
+					wait = max(wait, spell.CD.TimeToReady(sim))
+				}
+				sim.CurrentTime += wait
+			}
+		})
+	}
+}

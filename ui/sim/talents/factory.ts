@@ -13,6 +13,7 @@ import { priestTalentsConfig } from './priest';
 import { rogueTalentsConfig } from './rogue';
 import { shamanTalentsConfig } from './shaman';
 import { parseTalentsString, serializeTalentsString } from './talents_string';
+import launchLayouts from './trees/history/launch.json';
 import previousLayouts from './trees/history/prelaunch.json';
 import { warlockTalentsConfig } from './warlock';
 import { warriorTalentsConfig } from './warrior';
@@ -42,12 +43,20 @@ const previousPositions: Partial<Record<Class, string[][]>> = {
 	[Class.ClassShaman]: previousLayouts.shaman,
 };
 
-export const currentTalentLayout = (classID: Class): TalentLayout =>
-	previousPositions[classID] ? TalentLayout.TalentLayoutLaunch : TalentLayout.TalentLayoutLegacy;
+const launchPositions: Partial<Record<Class, string[][]>> = {
+	[Class.ClassRogue]: launchLayouts.rogue,
+	[Class.ClassWarrior]: launchLayouts.warrior,
+};
+
+export function currentTalentLayout(classID: Class): TalentLayout {
+	if (launchPositions[classID]) return TalentLayout.TalentLayoutHotfix;
+	return previousPositions[classID] ? TalentLayout.TalentLayoutLaunch : TalentLayout.TalentLayoutLegacy;
+}
 
 export function loadSavedTalentString(classID: Class, digits: string, layout: TalentLayout): string {
-	const previous = previousPositions[classID];
-	if (!previous || layout !== TalentLayout.TalentLayoutLegacy || !digits) return digits;
+	if (!digits || layout >= currentTalentLayout(classID)) return digits;
+	const previous = layout === TalentLayout.TalentLayoutLaunch ? launchPositions[classID] : previousPositions[classID];
+	if (!previous) return digits;
 	const points = new Map<string, number>();
 	digits.split('-').forEach((tree, ti) => {
 		for (const [i, rank] of Array.from(tree).entries()) {
