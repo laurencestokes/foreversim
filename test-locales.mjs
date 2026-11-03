@@ -25,13 +25,15 @@ const loadSchemaFiles = async () => {
 const validateSchemas = async () => {
 	const schemas = await loadSchemaFiles();
 	let hasError = false;
+	let filesChecked = 0;
 
 	for (const [name, schema] of Object.entries(schemas)) {
 		const validate = ajv.compile(schema);
-		const filePaths = await glob(path.join(__dirname, localesPath, `**/${name}.json`));
+		const filePaths = await glob(`**/${name}.json`, { cwd: path.join(__dirname, localesPath), absolute: true });
+		filesChecked += filePaths.length;
 
 		for (const filePath of filePaths) {
-			const relativePath = filePath.split(localesPath)[1].replace('/', '');
+			const relativePath = path.relative(path.join(__dirname, localesPath), filePath);
 			const data = await fs.readFile(filePath, 'utf-8');
 
 			const valid = validate(JSON.parse(data));
@@ -49,6 +51,7 @@ const validateSchemas = async () => {
 			}
 		}
 	}
+	if (!filesChecked) throw new Error('No locale files were checked');
 	if (hasError) process.exit(1);
 };
 
