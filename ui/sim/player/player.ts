@@ -63,7 +63,13 @@ import { ItemSwapSettings } from '../settings/item_swap_settings';
 import { Sim, type StatWeightsOptions } from '../sim';
 import { batch } from '../state/batch';
 import { deleteKeyed, patchKeyed, PLAYER_FIELDS, PlayerField, PlayerSlice, seedKeyed, zeroVersions } from '../state/sim_store';
-import { playerBrokenTalentNames, playerNormalizedTalentsString, playerTalentStringToProto } from '../talents/factory';
+import {
+	currentTalentLayout,
+	loadSavedTalentString,
+	playerBrokenTalentNames,
+	playerNormalizedTalentsString,
+	playerTalentStringToProto,
+} from '../talents/factory';
 import { arrayEquals, omitDeep, stringComparator } from '../utils/collections';
 import { WorkerProgressCallback } from '../workers/worker_pool';
 import { PlayerClass } from './player_class';
@@ -1443,6 +1449,7 @@ export class Player<SpecType extends Spec> {
 		if (exportCategory(SimSettingCategories.Talents)) {
 			PlayerProto.mergePartial(player, {
 				talentsString: this.getTalentsString(),
+				talentLayout: currentTalentLayout(this.getClass()),
 			});
 		}
 		if (exportCategory(SimSettingCategories.Rotation)) {
@@ -1497,7 +1504,7 @@ export class Player<SpecType extends Spec> {
 				//this.setBulkEquipmentSpec(BulkEquipmentSpec.create()); // Do not persist the bulk equipment settings.
 			}
 			if (loadCategory(SimSettingCategories.Talents)) {
-				this.setTalentsString(proto.talentsString);
+				this.setTalentsString(loadSavedTalentString(this.getClass(), proto.talentsString, proto.talentLayout));
 			}
 			if (loadCategory(SimSettingCategories.Rotation)) {
 				if (proto.rotation?.type == APLRotationType.TypeUnknown) {

@@ -13,12 +13,12 @@ func (rot *APLRotation) newValueTalentIsKnown(config *proto.APLValueTalentIsKnow
 		return nil
 	}
 
-	spellID := config.TalentId.GetSpellId()
+	id := ProtoToActionID(config.TalentId)
 	rank := max(config.TalentId.Rank, 1)
 
-	known := rot.talentRank(spellID) >= rank
+	known := rot.talentRank(id) >= rank
 	if !known {
-		rot.ValidationMessage(proto.LogLevel_Warning, "%s does not know talent %s (Rank %d)", rot.unit.Label, ActionID{SpellID: spellID}, rank)
+		rot.ValidationMessage(proto.LogLevel_Warning, "%s does not know talent %s (Rank %d)", rot.unit.Label, id, rank)
 	}
 
 	return rot.newValueConst(&proto.APLValueConst{
@@ -37,8 +37,8 @@ func (rot *APLRotation) newValueTalentRank(config *proto.APLValueTalentRank, _ *
 		return nil
 	}
 
-	talentID := ActionID{SpellID: config.TalentId.GetSpellId()}
-	rank := rot.talentRank(talentID.SpellID)
+	talentID := ProtoToActionID(config.TalentId)
+	rank := rot.talentRank(talentID)
 	if rank == 0 {
 		rot.ValidationMessage(proto.LogLevel_Warning, "%s does not know talent %s", rot.unit.Label, talentID)
 	}
@@ -62,9 +62,9 @@ func (value *APLValueTalentRank) String() string {
 }
 
 // The rank the rotation's player holds in the talent, 0 for a unit that is not a player.
-func (rot *APLRotation) talentRank(spellID int32) int32 {
+func (rot *APLRotation) talentRank(id ActionID) int32 {
 	if agent := rot.unit.Env.Raid.GetPlayerFromUnit(rot.unit); agent != nil {
-		return agent.GetCharacter().TalentRank(spellID)
+		return agent.GetCharacter().talentActionRank(id)
 	}
 	return 0
 }

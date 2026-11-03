@@ -137,14 +137,14 @@
       },
       {
         "fieldName": "lavaBurst",
-        "fancyName": "Lava Burst",
+        "fancyName": "Call of Thunder",
         "location": {
           "rowIdx": 4,
           "colIdx": 1
         },
-        "spellId": 408490,
-        "definitionId": 134221,
-        "maxPoints": 1
+        "spellId": 0,
+        "maxPoints": 1,
+        "otherAction": 35
       },
       {
         "fieldName": "lightningOverload",
@@ -178,7 +178,7 @@
       },
       {
         "fieldName": "elementalMastery",
-        "fancyName": "Elemental Mastery",
+        "fancyName": "Lightning Mastery",
         "location": {
           "rowIdx": 6,
           "colIdx": 1
@@ -251,17 +251,6 @@
         "spellId": 415140,
         "definitionId": 134216,
         "maxPoints": 3
-      },
-      {
-        "fieldName": "improvedGhostWolf",
-        "fancyName": "Improved Ghost Wolf",
-        "location": {
-          "rowIdx": 1,
-          "colIdx": 2
-        },
-        "spellId": 16262,
-        "definitionId": 134213,
-        "maxPoints": 2
       },
       {
         "fieldName": "improvedLightningShield",
@@ -343,6 +332,17 @@
         "spellId": 17364,
         "definitionId": 134204,
         "maxPoints": 1
+      },
+      {
+        "fieldName": "improvedGhostWolf",
+        "fancyName": "Improved Ghost Wolf",
+        "location": {
+          "rowIdx": 3,
+          "colIdx": 3
+        },
+        "spellId": 16262,
+        "definitionId": 134213,
+        "maxPoints": 2
       },
       {
         "fieldName": "spiritWeapons",

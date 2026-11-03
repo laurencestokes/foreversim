@@ -39,24 +39,18 @@ func (shaman *Shaman) newChainLightningSpellConfig(rank *spelldata.Spell, overlo
 			spell.DamageMultiplier *= bounce
 		}
 
-		// Each target the cast hits rolls its own overload, at a third of Lightning Bolt's chance. An
-		// overload rolls none of its own. DealDamage disposes the result, so Landed is read first.
-		//
-		// TODO: Ingame test needed: the tooltip of 408438 states one chance for both spells.
-		var overloadTargets []*core.Unit
+		// The talent gives both spells one chance to cast a copy on the same target. The launch
+		// model rolls on the primary hit once per cast; extra rolls on bounces are unverified.
+		canOverload := overload != nil && len(results) > 0 && results[0].Landed()
 		for _, result := range results {
-			landed, hitTarget := result.Landed(), result.Target
 			spell.DealDamage(sim, result)
 			spell.DamageMultiplier /= bounce
-			if overload != nil && landed && sim.Proc(shaman.GetOverloadChance()/3, "Lightning Overload") {
-				overloadTargets = append(overloadTargets, hitTarget)
-			}
 		}
 
 		// The overloads are priced once every hit of the cast has landed, so a debuff charge one of
 		// those hits spends, such as Stormstrike's, does not also raise an overload that jumps there.
-		for _, overloadTarget := range overloadTargets {
-			overload.Cast(sim, overloadTarget)
+		if canOverload && sim.Proc(shaman.GetOverloadChance(), "Lightning Overload") {
+			overload.Cast(sim, target)
 		}
 	}
 

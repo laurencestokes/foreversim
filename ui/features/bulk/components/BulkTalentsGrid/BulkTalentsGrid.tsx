@@ -12,7 +12,7 @@ export interface BulkTalentsGridProps {
 
 // The icon lookup leaves the rank out: a talent is one spell with one icon.
 const TalentCell = ({ talent, points }: { talent: TalentConfig<any>; points: number }) => {
-	const { iconUrl } = useActionId(ActionId.fromTalent(talent.spellId, 1, talent.definitionId ?? 0));
+	const { iconUrl } = useActionId(ActionId.fromTalent(talent.spellId, 1, talent.definitionId ?? 0, talent.otherAction));
 	return (
 		<li data-testid="bulk-talents-grid-talent">
 			<div

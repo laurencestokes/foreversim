@@ -54,6 +54,7 @@ const mount = ({ powerTools }: { powerTools: boolean }) => {
 		storeKey: STORE_KEY,
 		getGear: () => gear,
 		getPlayerSpec: () => PlayerSpecs.DpsWarrior,
+		getClass: () => PlayerSpecs.DpsWarrior.classID,
 		aplRotation: APLRotation.create(),
 		getResolvedAplRotationForBuild: ({ rotation }: { rotation: APLRotation }) => rotation,
 	} as unknown as Player<any>;

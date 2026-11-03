@@ -1,3 +1,4 @@
+import { TalentLayout } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import type { IndividualSimHost } from '@sim/sim_host';
 import { makeBulkPlayer } from '@testing/sim/bulk_player';
@@ -14,7 +15,7 @@ const ARMS = '3030500130';
 const FURY = '-0505000540501';
 const LIVE = '30305001302';
 
-const saved = (talentsString: string) => SavedTalents.create({ talentsString });
+const saved = (talentsString: string) => SavedTalents.create({ talentsString, talentLayout: TalentLayout.TalentLayoutLaunch });
 
 const writeSaved = (player: ReturnType<typeof makeBulkPlayer>, record: Record<string, string>) =>
 	player.sim.env.storage.setItem(

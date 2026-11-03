@@ -1,3 +1,4 @@
+import type { LaunchPreview } from '../arena/launchPreview';
 import type { RaceArenaSetup } from './RaceArenaSetupDialog';
 
 export type RaceResult = { race: string; dps: number; behind: number; tier: string; relabelled?: string; racials: string };
@@ -18,6 +19,7 @@ export type RaceList = {
 };
 export type Tier = { name: string; maxBehind?: number };
 export type RaceArenaResults = {
+	launchPreview?: LaunchPreview;
 	commit: string;
 	raceCommits?: Record<string, string>;
 	generated: string;

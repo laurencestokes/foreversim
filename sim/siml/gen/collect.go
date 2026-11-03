@@ -23,6 +23,7 @@ import (
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/siml"
+	"github.com/wowsims/forever/ui/sim/talents/trees"
 )
 
 // Builds every spec the sim can build and reads the database. root is the repository's root, which holds the
@@ -227,7 +228,7 @@ type optionVariant func(m protoreflect.Message)
 
 // A player of the spec with no gear, its options at their defaults but for variant.
 func (s *specBuild) player(race proto.Race, talents string, variant optionVariant) *proto.Player {
-	player := &proto.Player{Class: s.info.Class, Race: race, TalentsString: talents, Equipment: &proto.EquipmentSpec{Items: make([]*proto.ItemSpec, core.NumItemSlots)}}
+	player := &proto.Player{Class: s.info.Class, Race: race, TalentsString: talents, TalentLayout: trees.CurrentVersion(s.info.Class), Equipment: &proto.EquipmentSpec{Items: make([]*proto.ItemSpec, core.NumItemSlots)}}
 	for i := range player.Equipment.Items {
 		player.Equipment.Items[i] = &proto.ItemSpec{}
 	}

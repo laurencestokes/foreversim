@@ -210,6 +210,14 @@ func (warlock *Warlock) applyShadowAndFlame() {
 	})
 
 	buffOnHit := func(buffRow *spelldata.Spell, hitBy spelldata.Ladder) {
+		// TODO: patch preview: the notes double the damage bonus to 4% a point; the buff rows
+		// still state the old 10% maximum. Keep the replacement local until the rows reach 20%.
+		if buffRow.EffectN(1).BaseValue() == 10 {
+			preview := *buffRow
+			preview.Effects = append([]spelldata.Effect(nil), buffRow.Effects...)
+			preview.EffectN(1).BasePoints = 20
+			buffRow = &preview
+		}
 		buff := warlock.RegisterAura(spelldata.AuraConfig(buffRow))
 		// The buff rows state the 5/5 value; the talent's effects 3 and 4 price it at each rank.
 		spelldata.ParseEffects(&warlock.Character, buff, buffRow,

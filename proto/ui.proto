@@ -457,6 +457,7 @@ message SavedSettings {
 
 message SavedTalents {
 	string talents_string = 1;
+	TalentLayout talent_layout = 2;
 }
 
 message SavedRotation {

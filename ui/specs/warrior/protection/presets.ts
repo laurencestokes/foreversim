@@ -1,6 +1,6 @@
 import * as PresetUtils from '@app/preset_utils';
 import * as Consumables from '@features/settings/model/consumables_auto_gen';
-import { ConsumesSpec, HealingModel, Profession, PseudoStat, Race, Stat } from '@generated/proto/common';
+import { ConsumesSpec, HealingModel, Profession, PseudoStat, Race, Stat, TalentLayout } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import { ProtectionWarrior_Options as ProtectionWarriorOptions, WarriorStance } from '@generated/proto/warrior';
 import { Stats } from '@sim/proto/stats';
@@ -29,7 +29,10 @@ export const PreBiSGear = PresetUtils.makePresetGear('Pre-BiS (Defense Cap)', Pr
 // Heart of the Scale drops in Lower Blackrock Spire; Cutthroat's Signet is sold by the Undermine Trader.
 export const PreBiSThreatGear = PresetUtils.makePresetGear('Pre-BiS (Threat)', PreBiSThreatGearJson, { devOnly: true });
 
-export const ProtectionTalents = PresetUtils.makePresetTalents('Protection', SavedTalents.create({ talentsString: '35301003002-03-050530120301011351' }));
+export const ProtectionTalents = PresetUtils.makePresetTalents(
+	'Protection',
+	SavedTalents.create({ talentsString: '35301003002-03-050530120301011351', talentLayout: TalentLayout.TalentLayoutLaunch }),
+);
 
 // Measured on each gear set with the Protection talents: 0.6 x the threat weights (Strength = 1) plus 1.15 x the
 // TMI weights (Stamina = 1). On the defense cap gear, defense is its value past the cap; on the threat gear, hit is

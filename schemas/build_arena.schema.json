@@ -91,7 +91,20 @@
 		"fields",
 		"computedWindow",
 		"compatibilityEvidence",
-		"recordedLabel"
+		"recordedLabel",
+		"launchPreviewTitle",
+		"launchPreviewSummary",
+		"launchPreviewGaps",
+		"launchPreviewCoverageLink",
+		"launchPreviewStatus",
+		"launchPreviewSources",
+		"launchPreviewBase",
+		"launchPreviewDraft",
+		"launchPreviewLimitations",
+		"launchPreviewShamanSlot",
+		"launchPreviewLimitationsTitle",
+		"launchPreviewEngine",
+		"launchPreviewNotes"
 	],
 	"properties": {
 		"title": {
@@ -549,6 +562,45 @@
 			"type": "string"
 		},
 		"recordedLabel": {
+			"type": "string"
+		},
+		"launchPreviewTitle": {
+			"type": "string"
+		},
+		"launchPreviewSummary": {
+			"type": "string"
+		},
+		"launchPreviewGaps": {
+			"type": "string"
+		},
+		"launchPreviewCoverageLink": {
+			"type": "string"
+		},
+		"launchPreviewStatus": {
+			"type": "string"
+		},
+		"launchPreviewSources": {
+			"type": "string"
+		},
+		"launchPreviewBase": {
+			"type": "string"
+		},
+		"launchPreviewDraft": {
+			"type": "string"
+		},
+		"launchPreviewLimitations": {
+			"type": "string"
+		},
+		"launchPreviewShamanSlot": {
+			"type": "string"
+		},
+		"launchPreviewLimitationsTitle": {
+			"type": "string"
+		},
+		"launchPreviewEngine": {
+			"type": "string"
+		},
+		"launchPreviewNotes": {
 			"type": "string"
 		}
 	}

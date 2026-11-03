@@ -2,13 +2,16 @@ package mage
 
 import (
 	"fmt"
+	"math"
 	"testing"
+	"time"
 
 	"github.com/wowsims/forever/sim/common" // imported to get item effects included.
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/simsignals"
 	"github.com/wowsims/forever/sim/core/spelldata"
+	"github.com/wowsims/forever/sim/core/stats"
 )
 
 func init() {
@@ -49,6 +52,86 @@ func TestFingersOfFrostGivesBlizzardTicksNoShatterBonus(t *testing.T) {
 	if ticksWith != ticksWithout {
 		t.Errorf("Blizzard tick crits moved with Shatter: %d without, %d with", ticksWithout, ticksWith)
 	}
+}
+
+func newMageSim(talents string) (*core.Simulation, *Mage) {
+	suite := arcaneSuite()
+	player := core.WithSpec(&proto.Player{
+		Class: suite.Class, Race: suite.Race, Equipment: &proto.EquipmentSpec{},
+		TalentsString: talents, Rotation: &proto.APLRotation{},
+	}, suite.SpecOptions.SpecOptions)
+	sim := core.NewSim(&proto.RaidSimRequest{
+		Raid:       core.SinglePlayerRaidProto(player, &proto.PartyBuffs{}, &proto.RaidBuffs{}, &proto.Debuffs{}),
+		Encounter:  &proto.Encounter{Duration: 600, Targets: []*proto.Target{core.NewDefaultTarget()}},
+		SimOptions: &proto.SimOptions{RandomSeed: 1},
+	}, simsignals.CreateSignals())
+	sim.Reset()
+	return sim, sim.Raid.Parties[0].Players[0].(*Mage)
+}
+
+func TestArcaneMissilesPreservesClearcastingWithBarrage(t *testing.T) {
+	for _, rank := range []int32{arcaneMissilesTrainerRank.ID, arcaneMissilesBookRank.ID} {
+		for _, barrage := range []bool{false, true} {
+			t.Run(fmt.Sprintf("rank=%d/barrage=%v", rank, barrage), func(t *testing.T) {
+				sim, mage := newMageSim("0000052")
+				barrageAura := mage.GetAuraByID(core.ActionID{SpellID: spellData.MissileBarrageTriggered.Highest().ID})
+				mage.ClearCasting.Activate(sim)
+				if barrage {
+					barrageAura.Activate(sim)
+				}
+				before := mage.CurrentMana()
+				if !mage.GetSpell(core.ActionID{SpellID: rank}).Cast(sim, mage.CurrentTarget) {
+					t.Fatal("Arcane Missiles could not start")
+				}
+				if mage.ClearCasting.IsActive() != barrage {
+					t.Errorf("Clearcasting active=%v after starting channel, want %v", mage.ClearCasting.IsActive(), barrage)
+				}
+				if barrageAura.IsActive() {
+					t.Error("Missile Barrage remains active after the channel starts")
+				}
+				if spent := before - mage.CurrentMana(); math.Abs(spent) > 1e-9 {
+					t.Errorf("free channel spent %g mana", spent)
+				}
+				t.Logf("Clearcasting=%v Barrage=%v channel mana=%g", mage.ClearCasting.IsActive(), barrageAura.IsActive(), before-mage.CurrentMana())
+			})
+		}
+	}
+}
+
+func TestArcaneMissilesCanGrantClearcasting(t *testing.T) {
+	sim, mage := newMageSim("000005")
+	mage.AddStatDynamic(sim, stats.SpellHitPercent, 100)
+	missile := mage.GetSpell(core.ActionID{SpellID: arcaneMissilesTrainerRank.PeriodicEffect().TriggerID})
+	procs := 0
+	for range 100 {
+		mage.ClearCasting.Deactivate(sim)
+		missile.SkipCastAndApplyEffects(sim, mage.CurrentTarget)
+		for end := sim.CurrentTime + 2*time.Second; sim.CurrentTime < end && !sim.Step(); {
+		}
+		if mage.ClearCasting.IsActive() {
+			procs++
+		}
+	}
+	if procs == 0 {
+		t.Fatal("landed Arcane Missiles never granted Clearcasting")
+	}
+	t.Logf("Clearcasting procs from 100 missiles=%d", procs)
+}
+
+func TestFlamestrikeBurnCanIgnite(t *testing.T) {
+	sim, mage := newMageSim("-005")
+	mage.AddStatsDynamic(sim, stats.Stats{stats.SpellHitPercent: 100, stats.SpellCritPercent: 100})
+	burn := mage.GetSpell(core.ActionID{SpellID: spellData.Flamestrike.Highest().ID, Tag: 1})
+	burn.SkipCastAndApplyEffects(sim, mage.CurrentTarget)
+	if mage.Ignite.Dot(mage.CurrentTarget).IsActive() {
+		t.Fatal("starting the burn ignited without dealing damage")
+	}
+	burn.AOEDot().TickOnce(sim)
+	ignite := mage.Ignite.Dot(mage.CurrentTarget)
+	if !ignite.IsActive() || ignite.SnapshotBaseDamage <= 0 {
+		t.Fatal("a critical Flamestrike burn tick did not ignite")
+	}
+	t.Logf("Ignite damage per tick from Flamestrike burn=%g", ignite.SnapshotBaseDamage)
 }
 
 // Each book rank registers beside the trainer's top rank, Arcane Missiles with its own missile. Both ranks of Frost

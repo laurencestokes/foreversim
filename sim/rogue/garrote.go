@@ -1,6 +1,8 @@
 package rogue
 
 import (
+	"time"
+
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
@@ -16,10 +18,14 @@ func (rogue *Rogue) registerGarrote() {
 	config.Flags |= SpellFlagBuilder
 	config.ClassSpellMask = RogueSpellGarrote
 	config.ExtraCastCondition = func(sim *core.Simulation, target *core.Unit) bool {
-		return (!rogue.PseudoStats.InFrontOfTarget || rogue.Talents.DirtyDeeds > 0) && rogue.IsStealthed()
+		return (!rogue.PseudoStats.InFrontOfTarget || rogue.Talents.DirtyDeeds > 0) && (rogue.IsStealthed() || rogue.GhostlyStrikeAura.IsActive())
 	}
 
 	config.Dot = spelldata.DotConfig(garroteRank, tick)
+	if rogue.Talents.BloodSplatter {
+		// The November 2 development notes extend the bleed without changing its tick damage.
+		config.Dot.NumberOfTicks += int32(9 * time.Second / tick.Period())
+	}
 	config.Dot.OnTick = func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 		dot.Spell.CalcAndDealPeriodicDamage(sim, target, tick.Average()+dot.Spell.MeleeAttackPower(target)*apScaling, garroteRank.TickOutcome(dot))
 	}

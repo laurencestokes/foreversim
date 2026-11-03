@@ -20,10 +20,11 @@ import (
 // IndividualSimSettings, what a present section sets, the categories, and the files use takes in.
 
 const (
-	talentsKey       = "talents" // The talents line, which counts as a section where files are put together.
-	talentsCategory  = "t"
-	rotationCategory = "r"
-	categoryOrder    = "gtrcmxeu" // The site's import categories, in its order (SIM_CATEGORY_KEYS).
+	talentsKey          = "talents" // The talents line, which counts as a section where files are put together.
+	talentsCategory     = "t"
+	launchTalentsPrefix = "launch:"
+	rotationCategory    = "r"
+	categoryOrder       = "gtrcmxeu" // The site's import categories, in its order (SIM_CATEGORY_KEYS).
 )
 
 // A typed file, before its diagnostics decide whether it yields a proto.
@@ -111,7 +112,11 @@ func typeFile(ix *schemaIndex, names *Names, tree *syntaxTree, kind Kind, u *use
 	t.readDefs(tree)
 	for _, s := range tree.top {
 		if s, ok := s.(*talentsStmt); ok {
-			f.player().TalentsString = s.talents.value
+			digits, launch := strings.CutPrefix(s.talents.value, launchTalentsPrefix)
+			f.player().TalentsString = digits
+			if launch {
+				f.player().TalentLayout = proto.TalentLayout_TalentLayoutLaunch
+			}
 			pop := t.in("player", "talentsString")
 			t.mark(s.talents.span)
 			pop()

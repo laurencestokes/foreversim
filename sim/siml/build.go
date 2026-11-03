@@ -21,6 +21,7 @@ func LoadBuild(s, b *proto.IndividualSimSettings) {
 	}
 	if bp.TalentsString != "" {
 		p.TalentsString = bp.TalentsString
+		p.TalentLayout = bp.TalentLayout
 	}
 	if bp.Consumables != nil {
 		p.Consumables = bp.Consumables

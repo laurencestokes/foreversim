@@ -11,6 +11,14 @@ type Extra struct {
 
 // The spells the generator adds to the store's roots by hand.
 var ExtraSpells = []Extra{
+	{SpellID: 1328825, Reason: "the Rogue Poised passive", Source: "wowf 1.60.1.70753"},
+	{SpellID: 1328826, Reason: "the Rogue Poised energy discount", Source: "wowf 1.60.1.70753"},
+	{SpellID: 1328829, Reason: "the Druid Poised passive", Source: "wowf 1.60.1.70753"},
+	{SpellID: 1328827, Reason: "the Druid Poised energy discount", Source: "wowf 1.60.1.70753"},
+	{SpellID: 1316709, Reason: "Death Mark rank 1 for the Rogue launch tree", Source: "wowf 1.60.1.70753"},
+	{SpellID: 1325756, Reason: "Death Mark rank 2 for the Rogue launch tree", Source: "wowf 1.60.1.70753"},
+	{SpellID: 1325757, Reason: "Death Mark rank 3 for the Rogue launch tree", Source: "wowf 1.60.1.70753"},
+	{SpellID: 1325758, Reason: "Death Mark rank 4 for the Rogue launch tree", Source: "wowf 1.60.1.70753"},
 	{SpellID: 16979, Reason: "Bear form Feral Charge", Source: "game files"},
 	{SpellID: 414924, Reason: "Cat form Feral Charge", Source: "game files"},
 	{SpellID: 1293697, Reason: "Demonic Brand's Shadow damage when a demon consumes the brand; nothing links it to the talent", Source: "Spell 1293697 description"},

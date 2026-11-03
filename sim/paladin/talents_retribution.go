@@ -223,19 +223,27 @@ func (paladin *Paladin) applySacredArbiter() {
 	})
 }
 
-// Two-Handed Weapon Specialization - Increases the physical damage you deal by 2/4/6%, and reduces
+// Two-Handed Weapon Specialization - Increases the Physical and Holy damage you deal by 2/4/6%, and reduces
 // all threat you generate by 7/14/20% while a two-handed melee weapon is equipped.
 func (paladin *Paladin) applyTwoHandedWeaponSpecialization() {
 	if paladin.Talents.TwoHandedWeaponSpecialization == 0 {
 		return
 	}
 
-	spelldata.ParseStatic(&paladin.Character,
-		spellData.TwoHandedWeaponSpecialization.Rank(paladin.Talents.TwoHandedWeaponSpecialization))
+	rank := spellData.TwoHandedWeaponSpecialization.Rank(paladin.Talents.TwoHandedWeaponSpecialization)
+	// The November 2 notes extend the damage bonus to Holy spells as well as Physical attacks.
+	// TODO: Read the school mask directly once the game files carry that change.
+	if rank.EffectN(1).Misc == int32(core.SpellSchoolPhysical) {
+		preview := *rank
+		preview.Effects = append([]spelldata.Effect(nil), rank.Effects...)
+		preview.EffectN(1).Misc |= int32(core.SpellSchoolHoly)
+		rank = &preview
+	}
+	spelldata.ParseStatic(&paladin.Character, rank)
 }
 
 // Vengeance - Increases your Physical and Holy damage dealt by 1/2/3% for 30 sec after landing a
-// non-periodic critical strike. Stacks up to 3 times.
+// non-periodic critical strike. Stacks up to 5 times.
 func (paladin *Paladin) applyVengeance() {
 	if paladin.Talents.Vengeance == 0 {
 		return
@@ -243,6 +251,12 @@ func (paladin *Paladin) applyVengeance() {
 
 	rank := spellData.VengeanceTriggered.Highest()
 	perStack := spellData.Vengeance.FractionAt(paladin.Talents.Vengeance)
+	maxStacks := int32(rank.MaxStack)
+	// The November 2 notes raise the old three-stack cap to five.
+	// TODO: Read the cap directly once the game files carry that change.
+	if maxStacks == 3 {
+		maxStacks = 5
+	}
 
 	damageMod := paladin.AddDynamicMod(core.SpellModConfig{
 		School:     core.SpellSchoolHoly | core.SpellSchoolPhysical,
@@ -254,7 +268,7 @@ func (paladin *Paladin) applyVengeance() {
 		Label:     "Vengeance" + paladin.Label,
 		ActionID:  core.ActionID{SpellID: rank.ID},
 		Duration:  rank.Duration(),
-		MaxStacks: int32(rank.MaxStack),
+		MaxStacks: maxStacks,
 		OnGain: func(_ *core.Aura, _ *core.Simulation) {
 			damageMod.Activate()
 		},

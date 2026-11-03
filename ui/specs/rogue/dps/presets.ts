@@ -1,6 +1,6 @@
 import * as PresetUtils from '@app/preset_utils';
 import * as Consumables from '@features/settings/model/consumables_auto_gen';
-import { ConsumesSpec, PseudoStat, Spec, Stat } from '@generated/proto/common';
+import { ConsumesSpec, PseudoStat, Spec, Stat, TalentLayout } from '@generated/proto/common';
 import { Rogue_Options as RogueOptions, Rogue_Rotation as RogueRotation } from '@generated/proto/rogue';
 import { SavedTalents } from '@generated/proto/ui';
 import { Stats } from '@sim/proto/stats';
@@ -18,37 +18,43 @@ import P1SlowMhGear from './gear_sets/p1_slowmh.gear.json';
 export const TALENTS_MUTILATE_ASN = {
 	name: 'Asn Muti',
 	data: SavedTalents.create({
-		talentsString: '00532310151501031-302303202014',
+		talentLayout: TalentLayout.TalentLayoutLaunch,
+		talentsString: '00530221250551031--0052303003',
 	}),
 };
 export const TALENTS_MUTILATE_COM = {
 	name: 'Combat Muti',
 	data: SavedTalents.create({
-		talentsString: '00532310101401-302303202015152-001',
+		talentLayout: TalentLayout.TalentLayoutLaunch,
+		talentsString: '00530221250511031-32030302020122',
 	}),
 };
 export const TALENTS_COMBAT_SS = {
 	name: 'Combat SS',
 	data: SavedTalents.create({
-		talentsString: '005323101012-32030320201515231',
+		talentLayout: TalentLayout.TalentLayoutLaunch,
+		talentsString: '005302212-3200330202012321151-005',
 	}),
 };
 export const TALENTS_COMBAT_BS = {
 	name: 'Combat BS',
 	data: SavedTalents.create({
-		talentsString: '00532310101-32030320201515231-002',
+		talentLayout: TalentLayout.TalentLayoutLaunch,
+		talentsString: '005302212-3203030202012321151-005',
 	}),
 };
 export const TALENTS_SUB_HEMO = {
 	name: 'Subtlety Hemo',
 	data: SavedTalents.create({
-		talentsString: '005323101014--4323200300013211501',
+		talentLayout: TalentLayout.TalentLayoutLaunch,
+		talentsString: '005302212-32-005230311321021151',
 	}),
 };
 export const TALENTS_SUB_BS = {
 	name: 'Subtlety BS',
 	data: SavedTalents.create({
-		talentsString: '0053031-3203-4320203300013211051',
+		talentLayout: TalentLayout.TalentLayoutLaunch,
+		talentsString: '005302212-32-005230311321021151',
 	}),
 };
 

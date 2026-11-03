@@ -24,8 +24,10 @@ export default defineSpec<Spec.SpecRogue>({
 	cssScheme: PlayerClasses.getCssScheme(PlayerClasses.Rogue),
 	// List any known bugs / issues here and they'll be shown on the site.
 	knownIssues: [
-		'The APL is in constant flux due to bug fixes and new findings; if your DPS drops dramatically, reset it back to "Auto" in the Rotation tab!',
-		'Mutilate does not have a default APL currently. It will not be automatically used when talented.',
+		'Launch preview: Shank uses a one-second global cooldown and normal off-hand damage. It cannot miss, can be dodged or parried, and grants Energy on cast. These details await in-game verification.',
+		'Death Mark includes its published storage rate and the game files’ base and Attack Power cap. Its unverified critical-strike contribution adds zero to that cap, which can change rotation choices as well as damage.',
+		'Mutilate uses the announced 90% weapon damage. Its additional flat damage remains at the captured value because the announced increase has no confirmed amount.',
+		'Hemorrhage and Ghostly Strike use the available game files’ dagger multipliers. The announced dagger damage fix still needs an in-game check.',
 	],
 
 	// All stats for which EP should be calculated.

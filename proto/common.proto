@@ -19,6 +19,7 @@ extend google.protobuf.MessageOptions {
 // names a talent by this id, so it outlives a rename of the field.
 extend google.protobuf.FieldOptions {
 	int32 talent_spell_id = 50001;
+	OtherAction talent_other_action = 50002;
 }
 
 message ProtoVersion {
@@ -140,6 +141,12 @@ enum Class {
 	ClassExtra4 = 15;
 	ClassExtra5 = 16;
 	ClassExtra6 = 17;
+}
+
+// Talent digits follow the tree order in use when a setup was saved.
+enum TalentLayout {
+	TalentLayoutLegacy = 0;
+	TalentLayoutLaunch = 1;
 }
 
 enum Profession {
@@ -782,6 +789,16 @@ enum OtherAction {
 	OtherActionResourcePotion = 24;
 	OtherActionDefensivePotion = 25;
 	OtherActionOffensivePotion = 26;
+	// November 2 abilities whose game spell IDs are missing from the captured rows.
+	OtherActionRecklessSwings = 27;
+	OtherActionImprovedWhirlwind = 28;
+	OtherActionShank = 29;
+	OtherActionBloodSplatter = 30;
+	OtherActionComposure = 31;
+	OtherActionFlashOfSteel = 32;
+	OtherActionBootKnife = 33;
+	OtherActionQuickGetaway = 34;
+	OtherActionCallOfThunder = 35;
 }
 
 message ActionID {

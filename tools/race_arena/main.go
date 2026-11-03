@@ -1,5 +1,5 @@
 // Scores the race arena simulations and writes the committed tier lists.
-// Usage: go run ./tools/race_arena <output-directory> [ui/app/race_arena/results.json]
+// Usage: go run ./tools/race_arena <output-directory> [race-results.json [build-results.json]]
 package main
 
 import (
@@ -115,15 +115,16 @@ type list struct {
 }
 
 type output struct {
-	Commit      string                     `json:"commit"`
-	RaceCommits map[string]string          `json:"raceCommits,omitempty"`
-	Generated   time.Time                  `json:"generated"`
-	Iterations  int                        `json:"iterations"`
-	Fight       fight                      `json:"fight"`
-	Tiers       []tier                     `json:"tiers"`
-	Noise       noise                      `json:"noise"`
-	Lists       []list                     `json:"lists"`
-	Setups      map[string]json.RawMessage `json:"setups"`
+	Commit        string                     `json:"commit"`
+	LaunchPreview json.RawMessage            `json:"launchPreview,omitempty"`
+	RaceCommits   map[string]string          `json:"raceCommits,omitempty"`
+	Generated     time.Time                  `json:"generated"`
+	Iterations    int                        `json:"iterations"`
+	Fight         fight                      `json:"fight"`
+	Tiers         []tier                     `json:"tiers"`
+	Noise         noise                      `json:"noise"`
+	Lists         []list                     `json:"lists"`
+	Setups        map[string]json.RawMessage `json:"setups"`
 }
 
 type fight struct {
@@ -144,11 +145,11 @@ type noise struct {
 }
 
 func main() {
-	if len(os.Args) < 2 || len(os.Args) > 3 {
-		fail("usage: go run ./tools/race_arena <race-arena-out-dir> [ui/app/race_arena/results.json]")
+	if len(os.Args) < 2 || len(os.Args) > 4 {
+		fail("usage: go run ./tools/race_arena <race-arena-out-dir> [race-results.json [build-results.json]]")
 	}
 	inDir, outPath := os.Args[1], "ui/app/race_arena/results.json"
-	if len(os.Args) == 3 {
+	if len(os.Args) >= 3 {
 		outPath = os.Args[2]
 	}
 
@@ -217,6 +218,21 @@ func main() {
 		}
 	}
 	slices.Sort(out.Fight.Durations)
+	if len(os.Args) == 4 {
+		var paired struct {
+			VerifiedCommit string          `json:"verifiedCommit"`
+			Iterations     int             `json:"iterations"`
+			LaunchPreview  json.RawMessage `json:"launchPreview"`
+		}
+		read(os.Args[3], &paired)
+		if out.Commit == "" || paired.VerifiedCommit != out.Commit || (len(paired.LaunchPreview) > 0 && len(out.RaceCommits) > 0) {
+			fail("the paired Build Arena publication must use the same simulator revision")
+		}
+		if paired.Iterations != out.Iterations {
+			fail("the paired Build Arena publication ran %d iterations, Race Arena ran %d", paired.Iterations, out.Iterations)
+		}
+		out.LaunchPreview = paired.LaunchPreview
+	}
 	if !slices.Contains(out.Fight.Durations, defaultSeconds) {
 		out.Fight.Seconds = out.Fight.Durations[0]
 	}

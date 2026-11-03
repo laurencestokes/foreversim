@@ -1,7 +1,13 @@
+import i18n from '@i18n/config';
+import { launchPreviewFixture } from '@testing/launch_preview_fixture';
 import { fireEvent, render, waitFor, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import english from '../../../assets/locales/en/build_arena.json';
 import { RaceArenaPage, type RaceArenaResults, type RaceList, tierRange } from './RaceArenaPage';
+
+beforeAll(() => i18n.addResourceBundle('en', 'build_arena', english, true, true));
+afterAll(() => i18n.removeResourceBundle('en', 'build_arena'));
 
 const TIERS = [{ name: 'S', maxBehind: 0.5 }, { name: 'A', maxBehind: 1 }, { name: 'B', maxBehind: 1.5 }, { name: 'C', maxBehind: 2.5 }, { name: 'D' }];
 
@@ -72,6 +78,28 @@ const chipsIn = (row: Element) => [...row.querySelectorAll('[data-testid="race-c
 const rowOf = (card: HTMLElement, tier: string) => card.querySelector(`[data-testid="tier-row"][data-tier="${tier}"]`)!;
 
 describe('RaceArenaPage', () => {
+	it('shows launch projections only for recorded preview results without changing their source', () => {
+		const { getByRole, getByTestId } = render(<RaceArenaPage data={{ ...fixture, launchPreview: launchPreviewFixture }} />);
+		const notice = getByRole('complementary', { name: 'November 4, 2026 launch projection' });
+		expect(notice.textContent).toContain('Shaman uses a provisional model');
+		expect(notice.textContent).toContain('1.60.1.70707 and hotfix push 113562');
+		for (const source of launchPreviewFixture.drafts) {
+			expect(
+				within(notice)
+					.getByRole('link', { name: source.commit.slice(0, 7) })
+					.getAttribute('href'),
+			).toBe(`https://github.com/wowsims/forever/commit/${source.commit}`);
+		}
+		const method = getByRole('heading', { name: 'Method' }).closest('section')!;
+		expect(method.textContent).toContain('launch projection for choosing a race');
+		expect(method.textContent).not.toContain('live-game baseline');
+		expect(getByTestId('race-arena-source').textContent).toContain(fixture.commit.slice(0, 7));
+		expect(getByTestId('race-arena-source').textContent).toContain(fixture.generated.slice(0, 10));
+	});
+	it('keeps historical results free of launch-preview labels', () => {
+		const { queryByRole } = render(<RaceArenaPage data={fixture} />);
+		expect(queryByRole('complementary', { name: /launch projection/ })).toBeNull();
+	});
 	it('links the source of a recomputed race beside the original simulation', () => {
 		const { getByTestId } = render(<RaceArenaPage data={{ ...fixture, raceCommits: { Troll: 'updated-troll-revision' } }} />);
 		const source = getByTestId('race-arena-source');
@@ -149,6 +177,25 @@ describe('RaceArenaPage', () => {
 		expect(talents.textContent).toContain(fixture.setups['warrior|Fury 17/34/0'].talentsString);
 		fireEvent.keyDown(dialog, { key: 'Escape' });
 		await waitFor(() => expect(queryByRole('dialog')).toBeNull());
+	});
+
+	it('shows separate synthetic talents without linking them to game spells', async () => {
+		const data = structuredClone(fixture);
+		const tree = data.setups['warrior|Fury 17/34/0'].talents[0];
+		tree.points = 3;
+		tree.talents = [
+			{ id: 0, otherAction: 27, name: 'Reckless Swings', rank: 2, maxRank: 5 },
+			{ id: 0, otherAction: 28, name: 'Improved Whirlwind', rank: 1, maxRank: 2 },
+		];
+		const { getByRole, findByRole } = render(<RaceArenaPage data={data} />);
+		fireEvent.click(getByRole('button', { name: 'View setup for Warrior: Fury 17/34/0' }));
+		const dialog = await findByRole('dialog', { name: 'Warrior: Fury 17/34/0' });
+		fireEvent.click(within(dialog).getByRole('tab', { name: 'Talents (3/0)' }));
+		const talents = within(dialog).getByRole('tabpanel', { name: 'Talents (3/0)' });
+		for (const name of ['Reckless Swings', 'Improved Whirlwind']) {
+			expect(within(talents).getByText(name)).toBeTruthy();
+			expect(within(talents).queryByRole('link', { name })).toBeNull();
+		}
 	});
 
 	it('puts every race in its tier row, grouped by class, on the neutral target first', () => {

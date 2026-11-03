@@ -9,6 +9,7 @@ import { SearchField } from '@ui-kit/TextField';
 import clsx from 'clsx';
 import { useState } from 'react';
 
+import { LaunchPreviewNotice } from '../arena/LaunchPreviewNotice';
 import { LandingFooter } from '../landing/LandingFooter';
 import { LandingHeader } from '../landing/LandingHeader';
 import { specName } from '../race_arena/raceArenaData';
@@ -282,9 +283,12 @@ export const BuildArenaPageView = ({ data }: { data: BuildArenaResults }) => {
 					<h1 className="m-0 text-3xl font-bold text-brand">{t('title')}</h1>
 					<p className="mb-0">{t('intro', { count: data.builds.length })}</p>
 				</header>
-				<aside className="flex flex-col gap-2 border border-orange bg-orange/10 p-4" aria-label={t('limitationsTitle')}>
-					<h2 className="m-0 text-lg text-orange">{t('limitationsTitle')}</h2>
-					<p className="m-0">{t('limitations')}</p>
+				{data.launchPreview && <LaunchPreviewNotice preview={data.launchPreview} commit={data.verifiedCommit} />}
+				<aside
+					className="flex flex-col gap-2 border border-orange bg-orange/10 p-4"
+					aria-label={t(data.launchPreview ? 'launchPreviewLimitationsTitle' : 'limitationsTitle')}>
+					<h2 className="m-0 text-lg text-orange">{t(data.launchPreview ? 'launchPreviewLimitationsTitle' : 'limitationsTitle')}</h2>
+					<p className="m-0">{t(data.launchPreview ? 'launchPreviewLimitations' : 'limitations')}</p>
 					<p className="m-0">{t('raidSupport')}</p>
 				</aside>
 				<section className="flex flex-col gap-4 border border-surface-border p-4" aria-label={t('controls')}>

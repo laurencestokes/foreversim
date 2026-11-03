@@ -120,6 +120,24 @@ test('rejects incomplete coverage and duplicate rows', () => {
 	assert.throws(() => publish(race), /Missing matchup/);
 });
 
+test('keeps draft sources with fresh launch results and refuses a different upstream base', () => {
+	const input = fixture();
+	assert.equal(publish(input).launchPreview, undefined);
+	const preview = { launchDate: '2026-11-04', upstreamCommit: commit, drafts: [{ pullRequest: 824, commit: 'b'.repeat(40) }] };
+	input.manifest.launchPreview = preview;
+	assert.deepEqual(publish(input).launchPreview, preview);
+	preview.notesUrl = 'https://us.forums.blizzard.com/en/wow/t/2360696/9';
+	assert.deepEqual(publish(input).launchPreview, preview);
+	preview.notesUrl = 'https://example.com/tuning';
+	assert.throws(() => publish(input), /Blizzard source/);
+	delete preview.notesUrl;
+	input.provenance.sources[0].reused = true;
+	assert.throws(() => publish(input), /fresh measurements/);
+	input.provenance.sources[0].reused = false;
+	preview.upstreamCommit = 'c'.repeat(40);
+	assert.throws(() => publish(input), /upstream revision differs/);
+});
+
 test('rejects duplicate lists even when their race rows are disjoint', () => {
 	const input = fixture();
 	const duplicate = structuredClone(input.raw[0]);

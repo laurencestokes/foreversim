@@ -4,8 +4,44 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Database } from '../database';
 import { ActionId } from '.';
+import { actionIdWowheadTooltipData } from './tooltip_data';
 
 afterEach(() => vi.restoreAllMocks());
+
+describe('launch actions', () => {
+	const names = [
+		'Reckless Swings',
+		'Improved Whirlwind',
+		'Shank',
+		'Blood Splatter',
+		'Composure',
+		'Flash of Steel',
+		'Boot Knife',
+		'Quick Getaway',
+		'Call of Thunder',
+	];
+	it('fills synthetic names and icons without asking for a game spell', async () => {
+		const lookup = vi.spyOn(ActionId, 'getTooltipData');
+		const tooltip = vi.spyOn(ActionId, 'makeSpellTooltipData');
+		for (const [index, name] of names.entries()) {
+			const action = await ActionId.fromOtherId((27 + index) as OtherAction).fill();
+			expect(action.name).toBe(name);
+			expect(action.iconUrl).toMatch(/^https:\/\/.+\.jpg$/);
+			expect(action.spellId).toBe(0);
+			expect(await actionIdWowheadTooltipData(action)).toBe('');
+		}
+		expect(lookup).not.toHaveBeenCalled();
+		expect(tooltip).not.toHaveBeenCalled();
+	});
+
+	it('round-trips a synthetic talent rank and keeps its identity when the rank is removed', () => {
+		const talent = ActionId.fromTalent(0, 3, 0, OtherAction.OtherActionRecklessSwings);
+		expect(talent.name).toContain('Reckless Swings');
+		expect(ActionId.fromProto(talent.toProto()).equalsAtRank(talent)).toBe(true);
+		expect(talent.withoutRank().otherId).toBe(OtherAction.OtherActionRecklessSwings);
+		expect(talent.withoutRank().rank).toBe(0);
+	});
+});
 
 const filledName = async (actionId: ActionId, name: string) => {
 	vi.spyOn(ActionId, 'getTooltipData').mockImplementation(async () => ({ name, icon: '' }) as never);
@@ -63,6 +99,34 @@ describe('ActionId.fill', () => {
 		for (const [actionId, baseName, name] of cases) {
 			expect(await filledName(actionId, baseName)).toBe(name);
 		}
+	});
+
+	it("names a seal's hit that Unsealed Wrath's Echo casts after the Echo, without the seal's rank", async () => {
+		vi.spyOn(ActionId, 'getTooltipData').mockImplementation(
+			async actionId =>
+				({
+					name: actionId.spellId === 20424 ? 'Seal of Command' : 'Seal of Righteousness',
+					icon: '',
+					rank: actionId.spellId === 20424 ? 0 : 8,
+				}) as never,
+		);
+		const echoNames: Record<number, string> = { 1311703: 'Echo of Command', 1311704: 'Echo of Righteousness' };
+		vi.spyOn(Database, 'getSpellIconData').mockImplementation(async id => ({ name: echoNames[id] ?? '' }) as never);
+		const rank = i18n.t('common.action_tags.rank', { rank: 8 });
+
+		const echoHit = await ActionId.fromSpellId(25713, 0, 1311704).fill();
+		expect(echoHit.name).toBe('Echo of Righteousness');
+		expect(echoHit.rank).toBe(8);
+		expect(echoHit.withoutTag().name).toBe(`Seal of Righteousness (${rank})`);
+		expect((await ActionId.fromSpellId(25713).fill()).name).toBe(`Seal of Righteousness (${rank})`);
+		expect((await ActionId.fromSpellId(20424, 0, 1311703).fill()).name).toBe('Echo of Command');
+	});
+
+	it("names a seal's Echo hit by the seal when the Echo's name does not load", async () => {
+		vi.spyOn(ActionId, 'getTooltipData').mockImplementation(async () => ({ name: 'Seal of Fury', icon: '', rank: 7 }) as never);
+		vi.spyOn(Database, 'getSpellIconData').mockRejectedValue(new Error('offline'));
+		const rank = i18n.t('common.action_tags.rank', { rank: 7 });
+		expect((await ActionId.fromSpellId(20418, 0, 1311701).fill()).name).toBe(`Seal of Fury (${i18n.t('common.action_tags.echo')}) (${rank})`);
 	});
 
 	it('names the hand of an aura read from the combat log', async () => {

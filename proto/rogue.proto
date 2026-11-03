@@ -65,6 +65,15 @@ message RogueTalents {
     int32 quietus = 51 [(talent_spell_id) = 1310728];
     int32 cutthroat = 52 [(talent_spell_id) = 462708];
     bool thousand_cuts = 53 [(talent_spell_id) = 1310721];
+
+    // Talent field numbers remain stable across tree layouts.
+    int32 relentless_strikes_points = 54 [(talent_spell_id) = 14179];
+    bool blood_splatter = 55 [(talent_other_action) = OtherActionBloodSplatter];
+    int32 composure = 56 [(talent_other_action) = OtherActionComposure];
+    int32 flash_of_steel = 57 [(talent_other_action) = OtherActionFlashOfSteel];
+    int32 quick_getaway = 58 [(talent_other_action) = OtherActionQuickGetaway];
+    int32 boot_knife = 59 [(talent_other_action) = OtherActionBootKnife];
+    bool death_mark = 60 [(talent_spell_id) = 1316709];
 }
 
 // END GENERATED

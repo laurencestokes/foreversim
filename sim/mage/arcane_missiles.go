@@ -42,6 +42,7 @@ func (mage *Mage) registerArcaneMissilesRank(rank *spelldata.Spell) {
 	spellConfig.Dot = dotConfig
 
 	spellConfig.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+		mage.arcaneMissilesWithBarrage = mage.missileBarrageAura != nil && mage.missileBarrageAura.IsActive()
 		// The channel never misses; each missile rolls its own hit.
 		spell.CalcAndDealOutcome(sim, target, spell.OutcomeAlwaysHit)
 

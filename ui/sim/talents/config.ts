@@ -32,6 +32,8 @@ export type TalentConfig<TalentsProto> = {
 
 	// The one spell every rank of this talent reports; the rank rides along as ?rank=N.
 	spellId: number;
+	// A preview talent without a game spell row uses a simulator action instead of a Wowhead link.
+	otherAction?: number;
 
 	definitionId?: number;
 

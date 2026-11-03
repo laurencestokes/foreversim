@@ -24,8 +24,8 @@ export const TalentPicker = <TalentsProto,>({ config, points, canAdd, broken, al
 	// The icon lookup leaves the rank out, so spending a point does not re-seed it and blank the
 	// cell for a frame -- a talent is one spell with one icon. Only the wowhead link carries the
 	// rank, and that needs no lookup at all.
-	const { iconUrl } = useActionId(ActionId.fromTalent(config.spellId, 1, definitionId));
-	const href = ActionId.makeSpellUrl(config.spellId, Math.max(points, 1), definitionId);
+	const { iconUrl } = useActionId(ActionId.fromTalent(config.spellId, 1, definitionId, config.otherAction));
+	const href = config.spellId && !config.otherAction ? ActionId.makeSpellUrl(config.spellId, Math.max(points, 1), definitionId) : undefined;
 	const isFull = points >= config.maxPoints;
 
 	const spend = () => onSetPoints(points + 1);
@@ -82,6 +82,10 @@ export const TalentPicker = <TalentsProto,>({ config, points, canAdd, broken, al
 			className="ui-talent-picker-root"
 			testId="talent-picker-root"
 			href={href || undefined}
+			aria-label={config.fancyName}
+			title={config.otherAction ? config.fancyName : undefined}
+			role={config.otherAction ? 'button' : undefined}
+			tabIndex={config.otherAction ? 0 : undefined}
 			data-points={String(points)}
 			data-max-points={String(config.maxPoints)}
 			data-can-add={String(canAdd)}
@@ -96,6 +100,12 @@ export const TalentPicker = <TalentsProto,>({ config, points, canAdd, broken, al
 			}}
 			// `mousedown` rather than the click commits, which is why a right click reaches it at all, so the click only cancels the wowhead link.
 			navigate={false}
+			onKeyDown={event => {
+				if (config.otherAction && (event.key === 'Enter' || event.key === ' ')) {
+					event.preventDefault();
+					handlers.current.spend();
+				}
+			}}
 			onContextMenu={event => event.preventDefault()}
 			onMouseDown={event => (isRightClick(event.nativeEvent) ? handlers.current.unspend() : handlers.current.spend())}>
 			<span className="ui-talent-picker-points" data-testid="talent-picker-points">

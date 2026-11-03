@@ -7,6 +7,7 @@ export function actionIdWowheadTooltipData(
 	actionId: ActionId,
 	params?: Omit<WowheadTooltipItemParams, 'itemId'> | Omit<WowheadTooltipSpellParams, 'spellId'>,
 ): Promise<string> {
+	if (!actionId.itemId && !actionId.spellId) return Promise.resolve('');
 	return actionId.itemId
 		? ActionId.makeItemTooltipData(actionId.itemId, params)
 		: ActionId.makeSpellTooltipData(actionId.spellIdTooltipOverride || actionId.spellId, params);

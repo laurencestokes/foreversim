@@ -19,11 +19,18 @@ var battleStancePassive = spellData.BattleStancePassive.Highest()
 var defensiveStancePassive = spellData.DefensiveStancePassive.Highest()
 var berserkerStancePassive = spellData.BerserkerStancePassive.Highest()
 
+func improvedTacticalMasteryRetention(points int32) float64 {
+	if points == 0 {
+		return 0
+	}
+	return launchTalent(spellData.ImprovedTacticalMastery.Rank(points), points).EffectN(1).BaseValue()
+}
+
 // The three stance rows share category 47, so their 1 s category cooldown runs off one timer.
 func (warrior *Warrior) makeStanceSpell(rank *spelldata.Spell, aura *core.Aura) *core.Spell {
 	form := rank.ShapeshiftForm()
 	rageMetrics := warrior.NewRageMetrics(aura.ActionID)
-	maxRetainedRage := spellData.TacticalMastery.ValueAt(1) + spellData.ImprovedTacticalMastery.ValueAt(warrior.Talents.ImprovedTacticalMastery)
+	maxRetainedRage := spellData.TacticalMastery.ValueAt(1) + improvedTacticalMasteryRetention(warrior.Talents.ImprovedTacticalMastery)
 
 	config := spelldata.SpellConfig(&warrior.Unit, rank, spelldata.Flags(core.SpellFlagNoOnCastComplete|core.SpellFlagAPL))
 	config.MenuGroup = "stances"
@@ -74,14 +81,23 @@ func (warrior *Warrior) registerDefensiveStanceAura() *core.Aura {
 	config.BuildPhase = core.Ternary(warrior.DefaultStance == proto.WarriorStance_WarriorStanceDefensive, core.CharacterBuildPhaseBuffs, core.CharacterBuildPhaseNone)
 
 	aura := warrior.RegisterAura(config)
-	spelldata.ParseEffects(&warrior.Character, aura, defensiveStancePassive)
+	passive := defensiveStancePassive
+	// The launch notes grant 80% threat in Defensive Stance.
+	// TODO: Read the raw effect when the game files carry the launch value.
+	if passive.EffectN(3).BaseValue() == 30 {
+		copy := *passive
+		copy.Effects = append([]spelldata.Effect(nil), passive.Effects...)
+		copy.EffectN(3).BasePoints = 80
+		passive = &copy
+	}
+	spelldata.ParseEffects(&warrior.Character, aura, passive)
 
 	if warrior.Talents.Defiance > 0 {
 		// The stance the talent's threat applies in is the aura it hangs on. The row states the
 		// shield, but the parse never scopes to a shield, so it is the caller's condition, re-read
 		// on an off-hand swap.
 		defiance := spelldata.ParseEffects(&warrior.Character, aura,
-			spellData.Defiance.Rank(warrior.Talents.Defiance),
+			launchTalent(spellData.Defiance.Rank(warrior.Talents.Defiance), warrior.Talents.Defiance),
 			spelldata.Conditional(func() bool { return warrior.PseudoStats.CanBlock }))
 
 		warrior.RegisterItemSwapCallback([]proto.ItemSlot{proto.ItemSlot_ItemSlotOffHand}, func(sim *core.Simulation, _ proto.ItemSlot) {

@@ -1,4 +1,5 @@
 import { ActionCategory } from '@generated/proto/api';
+import { OtherAction } from '@generated/proto/common';
 import type { UnitMetadata } from '@sim/player/player';
 import { ActionId } from '@sim/proto/action_id';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -147,6 +148,18 @@ describe('talents', () => {
 	const talentNames: Record<number, string> = { 40: 'Anger Management', 41: 'Cruelty' };
 	const talentMetadata = (talents: Array<ActionId>) => ({ getTalents: () => talents }) as unknown as UnitMetadata;
 	afterEach(() => vi.restoreAllMocks());
+
+	it('offers synthetic talent ranks with their OtherAction identity', async () => {
+		const held = ActionId.fromTalent(0, 3, 0, OtherAction.OtherActionRecklessSwings);
+		const options = await actionIdSets.talents.getActionIDs(talentMetadata([held]));
+		expect(options.map(option => [option.value.otherId, option.value.rank])).toEqual([
+			[27, 3],
+			[27, 1],
+			[27, 2],
+		]);
+		expect(options.every(option => option.value.spellId === 0 && option.value.name.includes('Reckless Swings'))).toBe(true);
+		expect((await actionIdSets.talent_ranks.getActionIDs(talentMetadata([held])))[0].value.toProto().rawId).toEqual({ oneofKind: 'otherId', otherId: 27 });
+	});
 
 	it('offers each held talent at its rank, with the lower ranks behind it', async () => {
 		// The lower ranks are built and filled by the set itself; the tooltip lookup is not reachable here.

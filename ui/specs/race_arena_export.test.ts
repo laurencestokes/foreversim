@@ -4,7 +4,7 @@ import path from 'node:path';
 import { applyBuild } from '@features/settings/model/apply_build';
 import { applyIndividualDefaults } from '@features/settings/model/apply_defaults';
 import { Player as PlayerProto } from '@generated/proto/api';
-import { Class, EquipmentSpec, Spec } from '@generated/proto/common';
+import { Class, EquipmentSpec, Spec, Stat, TalentLayout } from '@generated/proto/common';
 import { UIDatabase } from '@generated/proto/ui';
 import { LaunchStatus } from '@sim/constants/other';
 import { PlayerSpecs } from '@sim/player/specs';
@@ -83,6 +83,14 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 			// Warlock presets contain no gear; its regression suites use this upstream preraid set.
 			if (key === 'warlock') player.setGear(host.sim.db.lookupEquipmentSpec(EquipmentSpec.fromJson(warlockGear)));
 			const exported = player.toProto(false, true);
+			if (['rogue', 'warrior', 'elemental_shaman', 'enhancement_shaman'].includes(key)) {
+				expect(exported.talentLayout, `${key} / ${build.name} talent layout`).toBe(TalentLayout.TalentLayoutLaunch);
+				expect(player.getBrokenTalentNames(), `${key} / ${build.name} launch talent prerequisites`).toEqual([]);
+				const points = [...exported.talentsString].reduce((sum, digit) => sum + (Number(digit) || 0), 0);
+				expect(points, `${key} / ${build.name} level-60 talent points`).toBe(51);
+			}
+			// Ranked fights use each preset's normal mana pool.
+			expect(exported.bonusStats?.stats[Stat.StatMana] ?? 0, `${key} / ${build.name} bonus mana`).toBe(0);
 			const label = [build.group, build.name].filter(Boolean).join(' / ');
 			const gear = build.gear ?? config.presets.gear.find(gear => gear.gear === config.defaults.gear);
 			const rotation = build.rotation ?? config.presets.rotations.find(preset => preset.rotation.rotation === config.defaults.aplRotation);

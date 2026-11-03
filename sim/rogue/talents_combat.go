@@ -8,34 +8,19 @@ import (
 )
 
 func (rogue *Rogue) registerCombatTalents() {
-	// Tier 1
 	rogue.registerImprovedEviscerate()
 	rogue.registerImprovedSinisterStrike()
-	// Lightning Reflexes NYI
-
-	// Tier 2
 	rogue.registerPuncturingWounds()
-	// Deflection NYI
 	rogue.registerPrecision()
-
-	// Tier 3
-	// None in this tier implemented
-
-	// Tier 4
-	// Improved Kick NYI
 	rogue.registerFlawlessExecution()
-	rogue.registerDualWieldSpecialization()
-
-	// Tier 5
-	rogue.registerBladeFlurry()
-	rogue.registerHackAndSlash()
-
-	// Tier 6
 	rogue.registerWeaponExpertise()
 	rogue.registerAggression()
-
-	// Tier 7
+	rogue.registerDualWieldSpecialization()
+	rogue.registerBladeFlurry()
+	rogue.registerHackAndSlash()
 	rogue.registerAdrenalineRush()
+	// Composure changes Poised; Flash of Steel changes Shank. Defensive and movement talents
+	// are outside the damage rotation.
 }
 
 func (rogue *Rogue) registerImprovedSinisterStrike() {
@@ -43,8 +28,11 @@ func (rogue *Rogue) registerImprovedSinisterStrike() {
 		return
 	}
 
-	spelldata.ParseStatic(&rogue.Character,
-		spellData.ImprovedSinisterStrike.Rank(rogue.Talents.ImprovedSinisterStrike))
+	// Efficient Strikes discounts both abilities by the amounts in the November 2 development notes.
+	rogue.AddStaticMod(core.SpellModConfig{
+		Kind: core.SpellMod_PowerCost_Flat, ClassMask: RogueSpellSinisterStrike | RogueSpellHemorrhage,
+		IntValue: []int32{0, -3, -5}[rogue.Talents.ImprovedSinisterStrike],
+	})
 }
 
 func (rogue *Rogue) registerPuncturingWounds() {
@@ -72,8 +60,8 @@ func (rogue *Rogue) registerFlawlessExecution() {
 		return
 	}
 
-	spelldata.ParseStatic(&rogue.Character,
-		spellData.FlawlessExecution.Rank(1))
+	// The November 2 development notes state a fifteen-Energy reduction.
+	rogue.AddStaticMod(core.SpellModConfig{Kind: core.SpellMod_PowerCost_Flat, ClassMask: RogueSpellEviscerate, IntValue: -15})
 }
 
 func (rogue *Rogue) registerDualWieldSpecialization() {
@@ -81,8 +69,11 @@ func (rogue *Rogue) registerDualWieldSpecialization() {
 		return
 	}
 
-	spelldata.ParseStatic(&rogue.Character,
-		spellData.DualWieldSpecialization.Rank(rogue.Talents.DualWieldSpecialization))
+	// The November 2 development notes give the two-rank talent twenty-five percent per point.
+	rogue.AddStaticMod(core.SpellModConfig{
+		Kind: core.SpellMod_DamageDone_Pct, ProcMask: core.ProcMaskMeleeOH,
+		FloatValue: []float64{0, 0.25, 0.5}[rogue.Talents.DualWieldSpecialization],
+	})
 }
 
 var bladeFlurryRank = spellData.BladeFlurry.Highest()
@@ -253,8 +244,11 @@ func (rogue *Rogue) registerAggression() {
 		return
 	}
 
-	spelldata.ParseStatic(&rogue.Character,
-		spellData.Aggression.Rank(rogue.Talents.Aggression))
+	// The November 2 development notes name Sinister Strike and Eviscerate at five percent per point.
+	rogue.AddStaticMod(core.SpellModConfig{
+		Kind: core.SpellMod_DamageDone_Flat, ClassMask: RogueSpellSinisterStrike | RogueSpellEviscerate,
+		FloatValue: []float64{0, 0.05, 0.1, 0.15}[rogue.Talents.Aggression],
+	})
 }
 
 var adrenalineRushRank = spellData.AdrenalineRush.Highest()

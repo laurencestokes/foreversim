@@ -1,6 +1,7 @@
 package priest
 
 import (
+	"math"
 	"testing"
 
 	"github.com/wowsims/forever/sim/common"
@@ -148,4 +149,73 @@ func TestPrayerOfFortitudeCountsOnceWithTheRaidBuff(t *testing.T) {
 			t.Errorf("stamina is %v with both copies up, want the raid buff's %v counted once", got, stamina)
 		}
 	})
+}
+
+func TestShadowWordDeathBacklashesOnlyAfterANonkillingHit(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		miss          bool
+		healthFight   bool
+		trackedTarget bool
+		backlash      bool
+	}{
+		{name: "miss", miss: true},
+		{name: "landed in a timed fight", backlash: true},
+		{name: "finishes a health fight", healthFight: true},
+		{name: "kills a tracked target", trackedTarget: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			player := &proto.Player{
+				Class: proto.Class_ClassPriest, Race: proto.Race_RaceHuman,
+				Equipment:     &proto.EquipmentSpec{},
+				TalentsString: shadowTestingBuild.Talents,
+				Spec: &proto.Player_DpsPriest{DpsPriest: &proto.DpsPriest{Options: &proto.DpsPriest_Options{
+					ClassOptions: &proto.PriestOptions{PreShadowform: true},
+				}}},
+				Rotation: &proto.APLRotation{},
+			}
+			sim := core.NewSim(&proto.RaidSimRequest{
+				Raid:      core.SinglePlayerRaidProto(player, &proto.PartyBuffs{}, &proto.RaidBuffs{}, &proto.Debuffs{}),
+				Encounter: core.MakeSingleTargetEncounter(0), SimOptions: &proto.SimOptions{RandomSeed: 1},
+			}, simsignals.CreateSignals())
+			sim.Reset()
+			priest := sim.Raid.Parties[0].Players[0].(*Priest)
+			rank := spellData.ShadowWordDeath.Highest()
+			spell := priest.GetSpell(core.ActionID{SpellID: rank.ID})
+			if spell == nil {
+				t.Fatal("Shadow Word: Death is not registered")
+			}
+			spell.BonusHitPercent = 100
+			if tc.miss {
+				spell.BonusHitPercent = -100
+			}
+			target := priest.CurrentTarget
+			if tc.healthFight {
+				sim.Encounter.EndFightAtHealth = 1
+			}
+			if tc.trackedTarget {
+				target.EnableHealthBar()
+				target.SetCurrentHealthPercent(1e-8)
+			}
+			before := priest.CurrentHealth()
+			if !spell.Cast(sim, target) {
+				t.Fatal("Shadow Word: Death cannot cast")
+			}
+			want := 0.0
+			if tc.backlash {
+				want = priest.MaxHealth() * rank.EffectN(3).Percent()
+			}
+			if spent := before - priest.CurrentHealth(); math.Abs(spent-want) > 1e-8 {
+				t.Errorf("backlash spent %v health, want %v", spent, want)
+			}
+			metrics := spell.SpellMetrics[target.UnitIndex]
+			if tc.miss && metrics.Misses != 1 {
+				t.Fatalf("the cast missed %d times, want one", metrics.Misses)
+			}
+			if !tc.miss && metrics.TotalDamage <= 0 {
+				t.Fatal("the landed cast dealt no damage")
+			}
+			t.Logf("damage=%v backlash=%v", metrics.TotalDamage, before-priest.CurrentHealth())
+		})
+	}
 }

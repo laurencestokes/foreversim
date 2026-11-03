@@ -9,6 +9,7 @@ import (
 
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/stats"
+	"github.com/wowsims/forever/ui/sim/talents/trees"
 	"google.golang.org/protobuf/encoding/protowire"
 	googleproto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -785,27 +786,68 @@ func (character *Character) FillTalentsProto(data protoreflect.Message, talentsS
 			if fd == nil {
 				panic(fmt.Sprintf("Couldn't find proto field for talent #%d, full string: %s", talentOffset, talentsStr))
 			}
-			rank := int32(talentVal)
-			if fd.Kind() == protoreflect.BoolKind {
-				rank = TernaryInt32(talentVal == 1, 1, 0)
-				data.Set(fd, protoreflect.ValueOfBool(rank == 1))
-			} else { // Int32Kind
-				data.Set(fd, protoreflect.ValueOfInt32(rank))
-			}
-			if spellID := googleproto.GetExtension(fd.Options(), proto.E_TalentSpellId).(int32); spellID != 0 && rank > 0 {
-				id := ActionID{SpellID: spellID}.ToProto()
-				id.Rank = rank
-				character.talents = append(character.talents, id)
-			}
+			character.setTalentRank(data, fd, int32(talentVal))
 		}
 		offset += treeSizes[treeIdx]
 	}
 }
 
+// In a revised tree the displayed positions can move while the proto fields keep their numbers.
+func (character *Character) FillTalentsProtoFromTree(data protoreflect.Message, talentsStr string) {
+	layout := trees.ForClass(character.Class.String())
+	if layout == nil {
+		panic("missing talent layout for " + character.Class.String())
+	}
+	character.talents = nil
+	for ti, digits := range strings.Split(talentsStr, "-") {
+		if ti >= len(layout.Current) {
+			break
+		}
+		talents := layout.Current[ti].Talents
+		for i := 0; i < len(digits) && i < len(talents); i++ {
+			talent := talents[i]
+			if talent.FieldName == "" || digits[i] < '0' || digits[i] > '9' {
+				continue
+			}
+			fd := data.Descriptor().Fields().ByJSONName(talent.FieldName)
+			if fd == nil {
+				panic("unknown talent field " + talent.FieldName)
+			}
+			character.setTalentRank(data, fd, int32(min(int(digits[i]-'0'), talent.MaxPoints)))
+		}
+	}
+}
+
+func (character *Character) setTalentRank(data protoreflect.Message, fd protoreflect.FieldDescriptor, rank int32) {
+	if fd.Kind() == protoreflect.BoolKind {
+		rank = TernaryInt32(rank == 1, 1, 0)
+		data.Set(fd, protoreflect.ValueOfBool(rank == 1))
+	} else {
+		data.Set(fd, protoreflect.ValueOfInt32(rank))
+	}
+	if rank == 0 {
+		return
+	}
+	id := ActionID{SpellID: googleproto.GetExtension(fd.Options(), proto.E_TalentSpellId).(int32)}
+	if id.SpellID == 0 {
+		id.OtherID = googleproto.GetExtension(fd.Options(), proto.E_TalentOtherAction).(proto.OtherAction)
+	}
+	if id.IsEmptyAction() {
+		return
+	}
+	talent := id.ToProto()
+	talent.Rank = rank
+	character.talents = append(character.talents, talent)
+}
+
 // The points held in the talent whose field carries this talent_spell_id, or 0.
 func (character *Character) TalentRank(spellID int32) int32 {
+	return character.talentActionRank(ActionID{SpellID: spellID})
+}
+
+func (character *Character) talentActionRank(id ActionID) int32 {
 	for _, talent := range character.talents {
-		if talent.GetSpellId() == spellID {
+		if ProtoToActionID(talent).SameActionIgnoreTag(id) {
 			return talent.Rank
 		}
 	}

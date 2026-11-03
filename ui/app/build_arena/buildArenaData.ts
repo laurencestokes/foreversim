@@ -1,3 +1,4 @@
+import type { LaunchPreview } from '../arena/launchPreview';
 import type { RaceArenaSetup } from '../race_arena/RaceArenaSetupDialog';
 
 export type BuildArenaRow = {
@@ -28,6 +29,7 @@ export type BuildArenaBuild = {
 	request: Record<string, unknown>;
 };
 export type BuildArenaResults = {
+	launchPreview?: LaunchPreview;
 	schemaVersion: 1;
 	compatibility?: { method: string; evidence: string };
 	publishedAt: string;

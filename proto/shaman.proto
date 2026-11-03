@@ -22,7 +22,7 @@ message ShamanTalents {
     int32 eye_of_the_storm = 10 [(talent_spell_id) = 29062];
     bool earthbound = 11 [(talent_spell_id) = 1222988];
     int32 elemental_reach = 12 [(talent_spell_id) = 28999];
-    bool lava_burst = 13 [(talent_spell_id) = 408490];
+    bool lava_burst = 13 [(talent_other_action) = OtherActionCallOfThunder];
     int32 lightning_overload = 14 [(talent_spell_id) = 408438];
     int32 elemental_fury = 15 [(talent_spell_id) = 16089];
     bool elemental_mastery = 16 [(talent_spell_id) = 16166];

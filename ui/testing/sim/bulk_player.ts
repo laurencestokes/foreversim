@@ -13,6 +13,7 @@ export const makeBulkPlayer = ({ sim, ...parts }: { sim?: object } & Record<stri
 		storeKey: 0,
 		sim: { store: createSimStore(), env: { storage: memoryEnv().storage }, ...sim },
 		getPlayerSpec: () => PlayerSpecs.DpsWarrior,
+		getClass: () => PlayerSpecs.DpsWarrior.classID,
 		...parts,
 	} as unknown as Player<any>;
 	seedBulkSettings(player);

@@ -62,6 +62,7 @@ export function snapshotBuild(player, trees) {
 				? [
 						{
 							id: talent.spellId,
+							...(talent.otherAction ? { otherAction: talent.otherAction } : {}),
 							...(talent.definitionId ? { definitionId: talent.definitionId } : {}),
 							name: talent.fancyName,
 							rank,

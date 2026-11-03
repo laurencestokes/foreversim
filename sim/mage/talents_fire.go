@@ -113,6 +113,17 @@ func (mage *Mage) registerIgnite() {
 	}
 
 	mage.MakeProcTriggerAura(trigger)
+
+	// Flamestrike's later hits are periodic damage from its burn spell, so they need the periodic
+	// callback and permission to hear that triggered spell. Other periodic effects keep their own rules.
+	flamestrikeTrigger := trigger
+	flamestrikeTrigger.Name = "Ignite - Flamestrike Trigger"
+	flamestrikeTrigger.Callback = core.CallbackOnPeriodicDamageDealt
+	flamestrikeTrigger.CanProcFromProcs = true
+	flamestrikeTrigger.ExtraCondition = func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
+		return spell.Matches(MageSpellFlamestrikeDot)
+	}
+	mage.MakeProcTriggerAura(flamestrikeTrigger)
 }
 
 func (mage *Mage) registerFlameThrowing() {

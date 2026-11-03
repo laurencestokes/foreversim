@@ -3,6 +3,7 @@ package rogue
 import (
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/spelldata"
+	"time"
 )
 
 var ruptureRank = spellData.Rupture.Highest()
@@ -13,6 +14,10 @@ func (rogue *Rogue) registerRupture() {
 	tickBase := tick.Average()
 	tickPerPoint := float64(tick.PointsPerResource)
 	baseTicks := int32(ruptureRank.Duration() / tick.Period())
+	if rogue.Talents.BloodSplatter {
+		// The November 2 development notes extend the bleed without changing its tick damage.
+		baseTicks += int32(6 * time.Second / tick.Period())
+	}
 	var comboPoints int32
 
 	config := spelldata.SpellConfig(&rogue.Unit, ruptureRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))

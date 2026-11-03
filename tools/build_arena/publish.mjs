@@ -66,6 +66,26 @@ export function publish({ manifest, raw, provenance, catalog, upstreamCommit, ve
 	assert.deepEqual([...builds.keys()].sort(), catalog.builds.map(build => build.id).sort(), 'Manifest does not cover the catalog');
 	const sources = new Map();
 	assert.ok(provenance.sources?.length, 'Missing source provenance');
+	const preview = manifest.launchPreview;
+	if (preview) {
+		assert.equal(preview.upstreamCommit, upstreamCommit, 'Launch preview upstream revision differs');
+		if (preview.notesUrl) {
+			const source = new URL(preview.notesUrl);
+			assert.equal(source.origin, 'https://us.forums.blizzard.com', 'Launch notes require a Blizzard source');
+		}
+		assert.match(preview.launchDate, /^\d{4}-\d{2}-\d{2}$/);
+		assert.ok(preview.drafts?.length, 'Launch preview requires draft revisions');
+		const pulls = new Set();
+		for (const draft of preview.drafts) {
+			revision(draft.commit);
+			assert.ok(Number.isInteger(draft.pullRequest) && draft.pullRequest > 0 && !pulls.has(draft.pullRequest), 'Invalid launch preview PR');
+			pulls.add(draft.pullRequest);
+		}
+		assert.ok(
+			provenance.sources.every(source => !source.reused && source.commit === verifiedCommit),
+			'Launch previews require fresh measurements',
+		);
+	}
 	for (const source of provenance.sources) {
 		assert.ok(source.id && !sources.has(source.id), `Duplicate source ${source.id}`);
 		revision(source.commit);
@@ -170,6 +190,7 @@ export function publish({ manifest, raw, provenance, catalog, upstreamCommit, ve
 		publishedAt,
 		upstreamCommit,
 		verifiedCommit,
+		...(preview ? { launchPreview: preview } : {}),
 		iterations: 50000,
 		fight: { seconds: 180, durations, targetLevel: 63, targetArmor: 3731, targets },
 		tiers,

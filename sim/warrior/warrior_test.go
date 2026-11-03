@@ -1,6 +1,8 @@
 package warrior_test
 
 import (
+	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/wowsims/forever/sim/warrior"
 	"github.com/wowsims/forever/sim/warrior/dps"
 	"github.com/wowsims/forever/sim/warrior/protection"
+	"github.com/wowsims/forever/ui/sim/talents/trees"
 	googleProto "google.golang.org/protobuf/proto"
 )
 
@@ -820,5 +823,272 @@ func TestExplosiveDropsTheCleavePressInsideTheQueueDelay(t *testing.T) {
 	}
 	if !queueCleave.Cast(sim, war.CurrentTarget) {
 		t.Error("Cleave could not be queued again after the throw")
+	}
+}
+
+func launchWarriorTalents(points map[string]int) string {
+	layout := trees.ForClass(proto.Class_ClassWarrior.String())
+	parts := make([]string, len(layout.Current))
+	for ti, tree := range layout.Current {
+		digits := make([]byte, len(tree.Talents))
+		for i, talent := range tree.Talents {
+			digits[i] = byte('0' + points[talent.FieldName])
+		}
+		parts[ti] = strings.TrimRight(string(digits), "0")
+	}
+	return strings.TrimRight(strings.Join(parts, "-"), "-")
+}
+
+func launchWarriorPlayer(talents, gear string) *proto.Player {
+	gearPath := "../../ui/specs/warrior/dps/gear_sets"
+	if gear == "protection" {
+		gearPath, gear = "../../ui/specs/warrior/protection/gear_sets", "prebis"
+	}
+	return &proto.Player{
+		Class: proto.Class_ClassWarrior, Race: proto.Race_RaceOrc,
+		Equipment:     core.GetGearSet(gearPath, gear).GearSet,
+		TalentsString: talents, TalentLayout: proto.TalentLayout_TalentLayoutLaunch,
+		Spec: &proto.Player_DpsWarrior{DpsWarrior: &proto.DpsWarrior{Options: &proto.DpsWarrior_Options{
+			ClassOptions: &proto.WarriorOptions{StartingRage: 40, DefaultStance: proto.WarriorStance_WarriorStanceBerserker},
+		}}},
+		Rotation: &proto.APLRotation{},
+	}
+}
+
+func launchWarriorSim(t *testing.T, points map[string]int, gear string, targets int) (*core.Simulation, *dps.DpsWarrior) {
+	t.Helper()
+	encounter := core.MakeSingleTargetEncounter(0)
+	for len(encounter.Targets) < targets {
+		encounter.Targets = append(encounter.Targets, core.FreshDefaultTargetConfig())
+	}
+	sim := core.NewSim(&proto.RaidSimRequest{
+		Raid:      core.SinglePlayerRaidProto(launchWarriorPlayer(launchWarriorTalents(points), gear), &proto.PartyBuffs{}, &proto.RaidBuffs{}, &proto.Debuffs{}),
+		Encounter: encounter, SimOptions: &proto.SimOptions{RandomSeed: 1},
+	}, simsignals.CreateSignals())
+	sim.Reset()
+	return sim, sim.Raid.Parties[0].Players[0].(*dps.DpsWarrior)
+}
+
+func TestRecklessSwingsSpendsOneChargePerMeleeAttack(t *testing.T) {
+	sim, war := launchWarriorSim(t, map[string]int{"recklessSwings": 1}, "prebis_fury", 3)
+	spell := war.GetSpell(core.ActionID{OtherID: proto.OtherAction_OtherActionRecklessSwings})
+	before, gcd := war.CurrentHealth(), war.GCD.ReadyAt()
+	if !spell.Cast(sim, war.CurrentTarget) {
+		t.Fatal("Reckless Swings cannot cast")
+	}
+	if got, want := before-war.CurrentHealth(), war.GetBaseStats()[stats.Health]*0.25; math.Abs(got-want) > 1e-8 {
+		t.Fatalf("health cost = %v, want %v", got, want)
+	}
+	if war.GCD.ReadyAt() != gcd || spell.CD.TimeToReady(sim) != 15*time.Second {
+		t.Fatal("Reckless Swings does not preserve the GCD and start its 15-second cooldown")
+	}
+	whirlwind := war.GetSpell(core.ActionID{SpellID: 1680}.WithHand(proto.ItemSlot_ItemSlotMainHand))
+	if !whirlwind.Cast(sim, war.CurrentTarget) {
+		t.Fatal("Whirlwind cannot cast")
+	}
+	aura := spell.RelatedSelfBuff
+	if aura.GetStacks() != 3 || war.CurrentRage() != 20 {
+		t.Fatalf("three-target, two-weapon Whirlwind leaves %d charges and %v rage, want 3 and 20", aura.GetStacks(), war.CurrentRage())
+	}
+	white := war.AutoAttacks.MHAuto()
+	for range 3 {
+		white.CalcAndDealDamage(sim, war.CurrentTarget, 100, white.OutcomeAlwaysMiss)
+	}
+	if aura.IsActive() || war.CurrentRage() != 35 {
+		t.Fatalf("three missed attacks leave active=%v and %v rage, want false and 35", aura.IsActive(), war.CurrentRage())
+	}
+	spell.CD.Reset()
+	war.SetCurrentHealthPercent((war.GetBaseStats()[stats.Health] * 0.25) / war.MaxHealth())
+	if spell.Cast(sim, war.CurrentTarget) {
+		t.Fatal("Reckless Swings casts without enough health to survive its cost")
+	}
+}
+
+func TestImprovedWhirlwindBuffsOnlyTheSelectedEnemy(t *testing.T) {
+	for _, rank := range []int{1, 2} {
+		sim, war := launchWarriorSim(t, map[string]int{"improvedWhirlwind": rank}, "prebis_fury", 3)
+		war.AddStatDynamic(sim, stats.PhysicalDamage, 100)
+		mh := war.GetSpell(core.ActionID{SpellID: 1680}.WithHand(proto.ItemSlot_ItemSlotMainHand))
+		oh := war.GetSpell(core.ActionID{SpellID: 1680}.WithHand(proto.ItemSlot_ItemSlotOffHand))
+		for _, spell := range []*core.Spell{mh, oh} {
+			spell.BonusHitPercent, spell.BonusExpertisePercent, spell.BonusCritPercent = 100, 100, -100
+		}
+		if !mh.Cast(sim, war.CurrentTarget) {
+			t.Fatal("Whirlwind cannot cast")
+		}
+		if got, want := mh.CD.TimeToReady(sim), time.Duration(10-rank)*time.Second; got != want {
+			t.Errorf("rank %d cooldown = %v, want %v", rank, got, want)
+		}
+		for _, spell := range []*core.Spell{mh, oh} {
+			primary := spell.SpellMetrics[war.CurrentTarget.UnitIndex].TotalDamage
+			secondary := spell.SpellMetrics[sim.Encounter.AllTargetUnits[1].UnitIndex].TotalDamage
+			if got, want := primary/secondary, 1+0.15*float64(rank); secondary <= 0 || math.Abs(got-want) > 1e-8 {
+				t.Errorf("rank %d %v primary/secondary damage = %v, want %v", rank, spell.ActionID, got, want)
+			}
+		}
+	}
+}
+
+func TestLaunchWarriorTalentRanksReachRegisteredAbilities(t *testing.T) {
+	for rank := 1; rank <= 3; rank++ {
+		sim, war := launchWarriorSim(t, map[string]int{"improvedTacticalMastery": rank, "flurry": rank}, "prebis_fury", 1)
+		war.BattleStance.Cast(sim, war.CurrentTarget)
+		if want := float64(10 + 5*rank); war.CurrentRage() != want {
+			t.Errorf("Tactical Mastery rank %d retains %v rage, want %v", rank, war.CurrentRage(), want)
+		}
+		before := war.PseudoStats.MeleeSpeedMultiplier
+		white := war.AutoAttacks.MHAuto()
+		white.BonusCritPercent = 100
+		white.CalcAndDealDamage(sim, war.CurrentTarget, 100, white.OutcomeMeleeSpecialCritOnly)
+		if got, want := war.PseudoStats.MeleeSpeedMultiplier/before, 1+0.1*float64(rank); math.Abs(got-want) > 1e-8 {
+			t.Errorf("Flurry rank %d speed = %v, want %v", rank, got, want)
+		}
+		if aura := war.GetAura("Flurry"); aura.GetStacks() != 3 {
+			t.Errorf("Flurry rank %d holds %d charges, want 3", rank, aura.GetStacks())
+		}
+	}
+	for rank := 0; rank <= 2; rank++ {
+		_, war := launchWarriorSim(t, map[string]int{"improvedSlam": rank}, "prebis_arms", 1)
+		slam := war.GetSpell(core.ActionID{SpellID: 11605})
+		if got, want := slam.CD.Duration, 15*time.Second-time.Duration(rank)*2500*time.Millisecond; got != want {
+			t.Errorf("Improved Slam rank %d cooldown = %v, want %v", rank, got, want)
+		}
+	}
+}
+
+func TestLaunchWarriorDamageAndThreatModifiers(t *testing.T) {
+	for rank := 1; rank <= 3; rank++ {
+		sim, war := launchWarriorSim(t, map[string]int{"twoHandedWeaponSpecialization": rank}, "prebis_arms", 1)
+		baseSim, base := launchWarriorSim(t, nil, "prebis_arms", 1)
+		attack, baseline := war.AutoAttacks.MHAuto(), base.AutoAttacks.MHAuto()
+		attack.CalcAndDealDamage(sim, war.CurrentTarget, 100, attack.OutcomeAlwaysHit)
+		baseline.CalcAndDealDamage(baseSim, base.CurrentTarget, 100, baseline.OutcomeAlwaysHit)
+		got := attack.SpellMetrics[war.CurrentTarget.UnitIndex].TotalDamage / baseline.SpellMetrics[base.CurrentTarget.UnitIndex].TotalDamage
+		if want := 1 + 0.02*float64(rank); math.Abs(got-want) > 1e-8 {
+			t.Errorf("two-handed rank %d damage ratio = %v, want %v", rank, got, want)
+		}
+	}
+	for rank, bonus := range []float64{0, 0.07, 0.13, 0.20} {
+		sim, war := launchWarriorSim(t, map[string]int{"defiance": rank}, "protection", 1)
+		if !war.DefensiveStance.Cast(sim, war.CurrentTarget) {
+			t.Fatal("Defensive Stance cannot cast")
+		}
+		if got, want := war.PseudoStats.ThreatMultiplier, 1.8*(1+bonus); math.Abs(got-want) > 1e-8 {
+			t.Errorf("Defiance rank %d threat multiplier = %v, want %v", rank, got, want)
+		}
+	}
+	_, base := launchWarriorSim(t, map[string]int{"piercingHowl": 1}, "prebis_fury", 1)
+	baseCost := base.GetSpell(core.ActionID{SpellID: 12323}).Cost.GetCurrentCost()
+	for rank := 1; rank <= 5; rank++ {
+		_, war := launchWarriorSim(t, map[string]int{"piercingHowl": 1, "boomingVoice": rank}, "prebis_fury", 1)
+		if got, want := war.GetSpell(core.ActionID{SpellID: 12323}).Cost.GetCurrentCost(), baseCost*(1-0.05*float64(rank)); math.Abs(got-want) > 1e-8 {
+			t.Errorf("Booming Voice rank %d Piercing Howl cost = %v, want %v", rank, got, want)
+		}
+	}
+}
+
+func TestLaunchWarriorSelfHealingGeneratesNoThreat(t *testing.T) {
+	sim, war := launchWarriorSim(t, map[string]int{"bloodCraze": 3, "goreDrinker": 2}, "prebis_fury", 1)
+	war.SetCurrentHealthPercent(0.5)
+	before := war.CurrentHealth()
+	bloodCraze := war.GetSpell(core.ActionID{SpellID: 16488})
+	bloodCraze.SelfHot().Apply(sim)
+	bloodCraze.SelfHot().TickOnce(sim)
+	goreDrinker := war.GetSpell(core.ActionID{SpellID: 1323968})
+	if !goreDrinker.Cast(sim, &war.Unit) {
+		t.Fatal("Gore Drinker healing cannot cast")
+	}
+	if war.CurrentHealth() <= before {
+		t.Fatal("the self-heals restore no health")
+	}
+	for _, spell := range []*core.Spell{bloodCraze, goreDrinker} {
+		metrics := spell.SpellMetrics[war.UnitIndex]
+		if metrics.TotalHealing <= 0 || metrics.TotalThreat != 0 {
+			t.Errorf("%v healing = %v, threat = %v; want positive healing and zero threat", spell.ActionID, metrics.TotalHealing, metrics.TotalThreat)
+		}
+	}
+}
+
+func TestBloodthrillLaunchRanksProcFromMainHandAttacksOnRend(t *testing.T) {
+	for _, tc := range []struct {
+		rank          int
+		rend, offhand bool
+	}{
+		{rank: 1, rend: true}, {rank: 2, rend: true}, {rank: 2}, {rank: 2, rend: true, offhand: true},
+	} {
+		sim, war := launchWarriorSim(t, map[string]int{"bloodthrill": tc.rank}, "prebis_fury", 1)
+		war.AutoAttacks.CancelAutoSwing(sim)
+		attack := war.AutoAttacks.MHAuto()
+		if tc.offhand {
+			attack = war.AutoAttacks.OHAuto()
+		}
+		procs := 0
+		const attacks = 1200
+		for range attacks {
+			war.OverpowerAura.Deactivate(sim)
+			if tc.rend {
+				war.Rend.Dot(war.CurrentTarget).Apply(sim)
+			}
+			at := sim.CurrentTime
+			attack.CalcAndDealDamage(sim, war.CurrentTarget, 100, attack.OutcomeAlwaysHit)
+			for sim.CurrentTime < at+core.SpellBatchWindow {
+				if sim.Step() {
+					t.Fatal("the encounter ended before the proc was resolved")
+				}
+			}
+			if war.OverpowerAura.IsActive() {
+				procs++
+			}
+		}
+		if !tc.rend || tc.offhand {
+			if procs != 0 {
+				t.Errorf("Rend=%v offhand=%v produced %d Bloodthrill procs", tc.rend, tc.offhand, procs)
+			}
+			continue
+		}
+		chance := 0.1 * float64(tc.rank)
+		want := attacks * chance
+		if math.Abs(float64(procs)-want) > 6*math.Sqrt(attacks*chance*(1-chance)) {
+			t.Errorf("Bloodthrill rank %d produced %d procs from %d attacks, want a %v chance", tc.rank, procs, attacks, chance)
+		}
+		t.Logf("Bloodthrill rank %d: %d/%d procs", tc.rank, procs, attacks)
+	}
+}
+
+func TestLaunchWarriorPresetsCastRecklessSwings(t *testing.T) {
+	for _, tc := range []struct{ name, talents, gear string }{
+		{"arms", "30323213132215201-25050120011", "prebis_arms"},
+		{"fury", "30303213002-2505310051122100321", "prebis_fury"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			player := launchWarriorPlayer(tc.talents, tc.gear)
+			player.Rotation = core.GetAplRotation("../../ui/specs/warrior/dps/apls", tc.name).Rotation
+			raid := core.SinglePlayerRaidProto(player, core.FullPartyBuffs, core.FullRaidBuffs, core.FullDebuffs)
+			encounter := core.MakeSingleTargetEncounter(0)
+			encounter.Duration = 60
+			computed := core.ComputeStats(&proto.ComputeStatsRequest{Raid: raid, Encounter: encounter})
+			rotation := computed.RaidStats.Parties[0].Players[0].RotationStats
+			for _, action := range append(rotation.PrepullActions, rotation.PriorityList...) {
+				for _, validation := range action.Validations {
+					t.Logf("APL %v: %s", validation.LogLevel, validation.Validation)
+					if strings.Contains(validation.Validation, "Reckless") || strings.Contains(validation.Validation, "OtherAction: 27") {
+						t.Errorf("Reckless Swings APL validation: %s", validation.Validation)
+					}
+				}
+			}
+			result := core.RunRaidSim(&proto.RaidSimRequest{Raid: raid, Encounter: encounter, SimOptions: &proto.SimOptions{Iterations: 1, RandomSeed: 1}})
+			var casts int32
+			for _, action := range result.RaidMetrics.Parties[0].Players[0].Actions {
+				if action.Id.GetOtherId() == proto.OtherAction_OtherActionRecklessSwings {
+					for _, target := range action.Targets {
+						casts += target.Casts
+					}
+				}
+			}
+			if casts == 0 {
+				t.Fatal("the preset casts no Reckless Swings")
+			}
+			t.Logf("Reckless Swings casts = %d", casts)
+		})
 	}
 }

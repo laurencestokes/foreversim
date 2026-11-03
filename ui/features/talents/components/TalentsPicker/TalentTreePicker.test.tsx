@@ -12,9 +12,9 @@ import { TalentTreePicker } from './TalentTreePicker';
 const { lookedUpRanks } = vi.hoisted(() => ({ lookedUpRanks: [] as Array<number | undefined> }));
 
 vi.mock('@sim/hooks/useActionId', () => ({
-	useActionId: (actionId: { spellId?: number; rank?: number }) => {
+	useActionId: (actionId: { spellId?: number; rank?: number; otherId?: number }) => {
 		lookedUpRanks.push(actionId.rank);
-		return { iconUrl: `icon-${actionId.spellId}`, name: '', href: '', ready: true };
+		return { iconUrl: actionId.otherId ? `other-${actionId.otherId}` : `icon-${actionId.spellId}`, name: '', href: '', ready: true };
 	},
 }));
 
@@ -102,6 +102,22 @@ describe('TalentTreePicker layout', () => {
 });
 
 describe('TalentTreePicker icons', () => {
+	it('renders a synthetic talent as a named control without a game-spell link', () => {
+		const previewConfig: TalentsConfig<Fake> = [
+			{
+				name: 'Preview',
+				backgroundUrl: '',
+				talents: [mkTalent(0, { spellId: 0, otherAction: OtherAction.OtherActionRecklessSwings, fancyName: 'Reckless Swings' })],
+			},
+		];
+		const onChange = vi.fn();
+		render(<TalentTreePicker config={previewConfig} graph={buildTalentGraph(previewConfig)} points={[[0]]} treeIdx={0} onChange={onChange} />);
+		const talent = screen.getByRole('button', { name: 'Reckless Swings' });
+		expect(talent.hasAttribute('href')).toBe(false);
+		expect(talent.style.backgroundImage).toBe('url("other-27")');
+		fireEvent.keyDown(talent, { key: 'Enter' });
+		expect(onChange.mock.calls.at(-1)![0]).toEqual([[1]]);
+	});
 	it('asks for the talent spell, which is the same at every rank', () => {
 		tree('');
 		expect(talents()[0].style.backgroundImage).toBe('url("icon-1")');
@@ -292,3 +308,4 @@ describe('TalentTreePicker reset', () => {
 		expect(serializeTalentsString(onChange.mock.calls.at(-1)![0])).toBe('-5-5');
 	});
 });
+import { OtherAction } from '@generated/proto/common';
