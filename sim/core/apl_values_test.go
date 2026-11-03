@@ -390,11 +390,11 @@ func TestValueEncounter(t *testing.T) {
 		{proto.APLValueIsExecutePhase_E20, 35, false},
 		{proto.APLValueIsExecutePhase_E35, 20, true},
 		{proto.APLValueIsExecutePhase_E35, 35, true},
-		{proto.APLValueIsExecutePhase_E35, 100, false},
+		{proto.APLValueIsExecutePhase_E35, 0, false},
 	}
 	for _, tt := range thresholds {
 		value := rot.newValueIsExecutePhase(&proto.APLValueIsExecutePhase{Threshold: tt.threshold}, nil)
-		sim.executePhase = tt.phase
+		rot.unit.CurrentTarget.executePhase = tt.phase
 		if got := value.GetBool(sim); got != tt.want {
 			t.Errorf("Is Execute Phase %v in the %d phase = %t, want %t", tt.threshold, tt.phase, got, tt.want)
 		}
@@ -475,6 +475,10 @@ func TestValueBoss(t *testing.T) {
 
 	if isCasting.GetBool(sim) {
 		t.Fatalf("Boss Spell Is Casting before any cast = true, want false")
+	}
+	missingTarget := &proto.UnitReference{Type: proto.UnitReference_Target, Index: 5}
+	if rot.newValueBossSpellIsCasting(&proto.APLValueBossSpellIsCasting{TargetUnit: missingTarget, SpellId: id}, nil) != nil {
+		t.Fatalf("Boss Spell Is Casting on a target the encounter lacks resolved, want nil")
 	}
 	target.Hardcast = Hardcast{ActionID: bossSpellID, Expires: 3 * time.Second}
 	if !isCasting.GetBool(sim) {

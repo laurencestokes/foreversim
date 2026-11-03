@@ -34,6 +34,11 @@ function requestsRegionalRacial(value: unknown): boolean {
 	return Object.values(value).some(requestsRegionalRacial);
 }
 
+function talentReferences(value: unknown): unknown[] {
+	if (!value || typeof value !== 'object') return [];
+	return Object.entries(value).flatMap(([key, child]) => (key === 'talentId' ? [child] : talentReferences(child)));
+}
+
 // Export the same resolved players the simulator sends to Go, including simple rotations and build options.
 // RACE_ARENA_INPUT turns this check into the input step for tools/race_arena/simulate.
 it('resolves every DPS preset for the race arena with its gear and rotation', async () => {
@@ -80,7 +85,7 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 				// A talent preset leaves the page's default weapon swap enabled; applying a build without swap gear disables it.
 				player.setTalentsString(build.talents!.data.talentsString);
 			}
-			// Warlock presets contain no gear; its regression suites use this upstream preraid set.
+			// Ranked Warlock builds, including Wrack and Destruction, use this shared pre-raid gear.
 			if (key === 'warlock') player.setGear(host.sim.db.lookupEquipmentSpec(EquipmentSpec.fromJson(warlockGear)));
 			const exported = player.toProto(false, true);
 			if (['rogue', 'warrior', 'elemental_shaman', 'enhancement_shaman'].includes(key)) {
@@ -93,7 +98,11 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 			expect(exported.bonusStats?.stats[Stat.StatMana] ?? 0, `${key} / ${build.name} bonus mana`).toBe(0);
 			const label = [build.group, build.name].filter(Boolean).join(' / ');
 			const gear = build.gear ?? config.presets.gear.find(gear => gear.gear === config.defaults.gear);
-			const rotation = build.rotation ?? config.presets.rotations.find(preset => preset.rotation.rotation === config.defaults.aplRotation);
+			const selectedApl = config.autoRotation(player);
+			const rotation =
+				build.rotation ??
+				config.presets.rotations.find(preset => preset.rotation.rotation === selectedApl) ??
+				config.presets.rotations.find(preset => preset.rotation.rotation === config.defaults.aplRotation);
 			const devGear = Boolean(gear?.devOnly);
 			const expectedGear = key === 'warlock' ? EquipmentSpec.fromJson(warlockGear) : (build.gear?.gear ?? config.defaults.gear);
 			for (const [slot, item] of expectedGear.items.entries()) {
@@ -113,6 +122,16 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 						enchant: item.enchant,
 						randomSuffix: item.randomSuffix,
 					});
+				}
+			}
+			if (key === 'retribution_paladin') {
+				const talents = player.getTalents();
+				const holyShock = 'holyShock' in talents && talents.holyShock;
+				expect(rotation?.name, `${label} selected rotation`).toBe(holyShock ? 'Holy Shock' : 'Default');
+				expect(exported.enableItemSwap, `${label} weapon swap`).toBe(holyShock);
+				for (const name of ['Use Seal of Command', 'Use Seal of Righteousness']) {
+					const value = exported.rotation?.valueVariables.find(variable => variable.name === name)?.value?.value;
+					expect(value?.oneofKind === 'const' ? value.const.val : undefined, `${label} / ${name}`).toMatch(/^(true|false)$/);
 				}
 			}
 			for (const item of [...(exported.equipment?.items ?? []), ...(exported.itemSwap?.items ?? [])]) {
@@ -150,7 +169,7 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 			expect(consumableNames.length, `${key} / ${label} consumable names`).toBe(consumableIds.size);
 			const caveats = [
 				...(devGear ? ['Uses an upstream gear preset marked for development.'] : []),
-				...(key === 'warlock' ? ['The build preset supplies no gear; uses the upstream preraid regression set.'] : []),
+				...(key === 'warlock' ? ['Ranked warlock builds use the shared pre-raid gear, including Wrack and Destruction.'] : []),
 				...(key === 'hunter' && build.name.includes('Weave')
 					? ['Weaving assumes uninterrupted access to melee range and the movement timing programmed in the preset.']
 					: []),
@@ -158,7 +177,11 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 					? ['The preset moves into melee range and stays there; the result assumes continuous melee access.']
 					: []),
 			];
-			expect(requestsRegionalRacial(PlayerProto.toJson(exported)), `${key} / ${label}: Attuned and Charged are removed on entering a raid`).toBe(false);
+			const playerJson = PlayerProto.toJson(exported);
+			if (key === 'rogue') {
+				expect(talentReferences(playerJson), `${label} Boot Knife condition`).toContainEqual({ otherId: 'OtherActionBootKnife', rank: 1 });
+			}
+			expect(requestsRegionalRacial(playerJson), `${key} / ${label}: Attuned and Charged are removed on entering a raid`).toBe(false);
 			expect(exported.equipment?.items.filter(item => item.id).length, `${key} / ${label} gear`).toBeGreaterThan(10);
 			expect(exported.rotation?.priorityList.length, `${key} / ${label} rotation`).toBeGreaterThan(0);
 			inputs.push({
@@ -175,10 +198,12 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 						: (build.gear?.name ?? config.presets.gear.find(gear => gear.gear === config.defaults.gear)?.name ?? 'Default'),
 				rotation: rotation?.name ?? 'Default',
 				consumables: 'Preset consumables',
-				player: PlayerProto.toJson(exported),
+				player: playerJson,
 			});
 		}
 	}
+	expect(inputs).toHaveLength(35);
+	expect(inputs.filter(input => input.spec === 'warlock').map(input => input.build)).toEqual(expect.arrayContaining(['Aff (Wrack)', 'Destro']));
 	const destination = process.env.RACE_ARENA_INPUT;
 	if (destination) {
 		fs.mkdirSync(path.dirname(destination), { recursive: true });

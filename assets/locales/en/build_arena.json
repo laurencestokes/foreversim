@@ -143,7 +143,7 @@
   "launchPreviewStatus": "Skyborne base attributes remain unverified. The launch date describes the projection. The source records show when the simulations ran.",
   "launchPreviewSources": "Launch projection source versions",
   "launchPreviewBase": "Upstream baseline",
-  "launchPreviewDraft": "Draft #{{number}}",
+  "launchPreviewDraft": "PR #{{number}}",
   "launchPreviewLimitations": "These level-60 presets have unequal gear levels and replacement items that have not been gear-optimized. Missing simulator database entries do not establish unavailability in game. Some vanilla-ID replacements do not activate the registered Forever set bonuses. Rankings measure personal single-target DPS, including pets, for these exact setups; they do not establish absolute class balance.",
   "launchPreviewShamanSlot": "Death Mark’s crit scaling, Shank’s attack timing, Reckless Swings and some Feral and Shaman values still need in-game measurements. These can change DPS and race order.",
   "launchPreviewLimitationsTitle": "Preset and model limitations",

@@ -1,11 +1,16 @@
 {
 	"launchDate": "2026-11-04",
 	"notesUrl": "https://us.forums.blizzard.com/en/wow/t/2360696/9",
-	"upstreamCommit": "137665be41ec5277d8f12e9793a76420f5211557",
+	"upstreamCommit": "6e69a7f4f239c591e9dec4124a93fca6329c240f",
 	"drafts": [
+		{ "pullRequest": 830, "commit": "13813515eac567fc37b48d9a06801f767296ebb4" },
+		{ "pullRequest": 828, "commit": "abcfd33da90e0b8a7cbbf0ddeb549acae3f9d372" },
+		{ "pullRequest": 827, "commit": "b8cbeea8043357e84d6bafaeac86ad527b3ec4f6" },
+		{ "pullRequest": 826, "commit": "8243f47db2ea68fdce907bc22fab12b682d584c6" },
 		{ "pullRequest": 824, "commit": "a6b9f132c9cece3a44ac093d61659c9951fcf62c" },
 		{ "pullRequest": 823, "commit": "ac807d93bb80bf50d379066b2fb0c131321b7277" },
 		{ "pullRequest": 822, "commit": "c8a275b336d5537404c7156a574324dd5008f91e" },
-		{ "pullRequest": 821, "commit": "2fa33170006905ea188b1f9835a2bee89e90c874" }
+		{ "pullRequest": 821, "commit": "2fa33170006905ea188b1f9835a2bee89e90c874" },
+		{ "pullRequest": 803, "commit": "393c297a9d0433d97d7ef33dbb53bb8f82385ad1" }
 	]
 }

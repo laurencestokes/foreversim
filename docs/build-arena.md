@@ -6,11 +6,17 @@ Results marked **November 4, 2026 launch projection** use the Hunter hotfix, Fer
 
 Both arenas link the official notes, the fork commit behind the scores and these upstream revisions.
 
-- [Upstream baseline `137665be4`](https://github.com/wowsims/forever/commit/137665be41ec5277d8f12e9793a76420f5211557).
+- [Upstream baseline `6e69a7f4f`](https://github.com/wowsims/forever/commit/6e69a7f4f239c591e9dec4124a93fca6329c240f).
 - [Hunter #824](https://github.com/wowsims/forever/pull/824), at [`a6b9f132c`](https://github.com/wowsims/forever/commit/a6b9f132c9cece3a44ac093d61659c9951fcf62c).
 - [Partial Feral #823](https://github.com/wowsims/forever/pull/823), at [`ac807d93b`](https://github.com/wowsims/forever/commit/ac807d93bb80bf50d379066b2fb0c131321b7277).
 - [Bear threat #822](https://github.com/wowsims/forever/pull/822), at [`c8a275b33`](https://github.com/wowsims/forever/commit/c8a275b336d5537404c7156a574324dd5008f91e).
 - [Provisional Shaman #821](https://github.com/wowsims/forever/pull/821), at [`2fa331700`](https://github.com/wowsims/forever/commit/2fa33170006905ea188b1f9835a2bee89e90c874).
+
+- [Mage Clearcasting #803](https://github.com/wowsims/forever/pull/803), at [`393c297a9`](https://github.com/wowsims/forever/commit/393c297a9d0433d97d7ef33dbb53bb8f82385ad1).
+- [Target deaths and execute phases #826](https://github.com/wowsims/forever/pull/826), at [`8243f47db`](https://github.com/wowsims/forever/commit/8243f47db2ea68fdce907bc22fab12b682d584c6).
+- [Warlock presets #827](https://github.com/wowsims/forever/pull/827), at [`b8cbeea80`](https://github.com/wowsims/forever/commit/b8cbeea8043357e84d6bafaeac86ad527b3ec4f6).
+- [Remaining cast time #828](https://github.com/wowsims/forever/pull/828), at [`abcfd33da`](https://github.com/wowsims/forever/commit/abcfd33da90e0b8a7cbbf0ddeb549acae3f9d372).
+- [Target activity #830](https://github.com/wowsims/forever/pull/830), at [`13813515e`](https://github.com/wowsims/forever/commit/13813515eac567fc37b48d9a06801f767296ebb4).
 
 Both arenas show these source links only when the recorded results carry `launchPreview` metadata.
 The launch date describes the projection. Each source's computation date and simulator revision
@@ -22,8 +28,8 @@ gear, enchants, talents, resolved rotation, consumables and class options. Chang
 all of them. These results help choose a setup to investigate; they do not isolate the value of a
 single talent or compare classes in equal gear.
 
-The comparison uses unequal preset gear levels. Warlock uses upstream's `preraid`
-gear because its build presets provide no gear, matching the upstream regression suites. A preset's
+The comparison uses unequal preset gear levels. Every ranked Warlock uses the existing `preraid` set.
+Wrack and Destruction use the revised upstream rotations. Their upstream regression tests use raid gear. A preset's
 gear, incomplete rotation or missing mechanic can change a ranking substantially. The preset's
 status and caveats belong beside its score; coverage alone does not establish that a spec is complete.
 The saved setup shows the equipment, suffixes, enchants, weapon swaps and selected talent ranks.
