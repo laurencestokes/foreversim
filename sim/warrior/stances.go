@@ -23,7 +23,7 @@ func improvedTacticalMasteryRetention(points int32) float64 {
 	if points == 0 {
 		return 0
 	}
-	return launchTalent(spellData.ImprovedTacticalMastery.Rank(points), points).EffectN(1).BaseValue()
+	return spellData.ImprovedTacticalMastery.Rank(points).EffectN(1).BaseValue()
 }
 
 // The three stance rows share category 47, so their 1 s category cooldown runs off one timer.

@@ -144,6 +144,13 @@ func ProtoToActionID(protoID *proto.ActionID) ActionID {
 		panic("protoID is nil")
 	}
 
+	// Saved launch rotations identify these Warrior talents and their effects by simulator action.
+	switch protoID.GetOtherId() {
+	case proto.OtherAction_OtherActionRecklessSwings:
+		return ActionID{SpellID: 1329555, Tag: protoID.Tag}
+	case proto.OtherAction_OtherActionImprovedWhirlwind:
+		return ActionID{SpellID: 1310315, Tag: protoID.Tag}
+	}
 	return ActionID{
 		ItemID:  protoID.GetItemId(),
 		SpellID: protoID.GetSpellId(),
@@ -194,10 +201,10 @@ func RegisterAgentFactory(emptyOptions interface{}, spec proto.Spec, factory Age
 
 // Constructs a new Agent.
 func NewAgent(party *Party, partyIndex int, player *proto.Player, raidConfig *proto.Raid) Agent {
-	if layout := trees.ForClass(player.Class.String()); layout != nil && player.TalentLayout == proto.TalentLayout_TalentLayoutLegacy && player.TalentsString != "" {
+	if layout := trees.ForClass(player.Class.String()); layout != nil && player.TalentLayout < trees.CurrentVersion(player.Class) && player.TalentsString != "" {
 		player = gp.Clone(player).(*proto.Player)
-		player.TalentsString = layout.FromLegacy(player.TalentsString)
-		player.TalentLayout = proto.TalentLayout_TalentLayoutLaunch
+		player.TalentsString = layout.Migrate(player.TalentsString, player.TalentLayout)
+		player.TalentLayout = trees.CurrentVersion(player.Class)
 	}
 	typeName := reflect.TypeOf(player.GetSpec()).Elem().Name()
 

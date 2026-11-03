@@ -15,8 +15,8 @@ func (rogue *Rogue) registerRupture() {
 	tickPerPoint := float64(tick.PointsPerResource)
 	baseTicks := int32(ruptureRank.Duration() / tick.Period())
 	if rogue.Talents.BloodSplatter {
-		// The November 2 development notes extend the bleed without changing its tick damage.
-		baseTicks += int32(6 * time.Second / tick.Period())
+		// The duration modifier adds ticks without changing their damage.
+		baseTicks += int32(time.Duration(spellData.BloodSplatter.Highest().EffectN(1).BaseValue()) * time.Millisecond / tick.Period())
 	}
 	var comboPoints int32
 

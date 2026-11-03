@@ -105,6 +105,32 @@ describe('Build Arena', () => {
 		await pick(container, 'Target type', 'Beast');
 		expect(getByText(/Reference: Warrior: Arms/)).toBeTruthy();
 	});
+	it('shows the selected measurement source when races came from different runs', async () => {
+		const old = buildArenaFixture.sources[0];
+		const fresh = { ...old, id: 'fresh', commit: 'fedcba987654', computedAt: '2026-11-03T12:00:00Z', reused: false };
+		const data = {
+			...buildArenaFixture,
+			sources: [old, fresh],
+			rows: buildArenaFixture.rows.map(row => (row.race === 'Orc' ? { ...row, sourceId: fresh.id } : row)),
+		};
+		const user = userEvent.setup();
+		const { getByRole } = render(<BuildArenaPageView data={data} />);
+		await user.click(getByRole('button', { name: 'Inspect Warrior: Fury' }));
+		const dialog = getByRole('dialog', { name: 'Warrior: Fury' });
+		expect(dialog.textContent).toContain(`Reused result · simulated ${old.computedAt}`);
+		expect(
+			within(dialog)
+				.getByRole('link', { name: old.commit.slice(0, 7) })
+				.getAttribute('href'),
+		).toContain(old.commit);
+		await pick(dialog, 'Race for saved request', 'Orc');
+		expect(dialog.textContent).toContain(`Simulated ${fresh.computedAt}`);
+		expect(
+			within(dialog)
+				.getByRole('link', { name: fresh.commit.slice(0, 7) })
+				.getAttribute('href'),
+		).toContain(fresh.commit);
+	});
 	it('opens recorded details, downloads the selected request and returns focus from gear inspection', async () => {
 		const user = userEvent.setup();
 		const { getByRole } = render(<BuildArenaPageView data={buildArenaFixture} />);

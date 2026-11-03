@@ -7,7 +7,7 @@
 	{"action":{"groupReference":{"groupName":"Pre-pull: Move"}},"doAtValue":{"const":{"val":"-0.9s"}}}
 	],
 	"priorityList": [
-	{"action":{"condition":{"and":{"vals":[{"talentIsKnown":{"talentId":{"otherId":"OtherActionRecklessSwings"}}},{"cmp":{"op":"OpLe","lhs":{"currentRage":{}},"rhs":{"const":{"val":"75"}}}}]}},"castSpell":{"spellId":{"otherId":"OtherActionRecklessSwings"}}}},
+	{"action":{"condition":{"and":{"vals":[{"talentIsKnown":{"talentId":{"spellId":1329555}}},{"cmp":{"op":"OpLe","lhs":{"currentRage":{}},"rhs":{"const":{"val":"75"}}}}]}},"castSpell":{"spellId":{"spellId":1329555}}}},
 	{"hide":true,"action":{"groupReference":{"groupName":"Recklessness ON/OFF"}}},
 	{"action":{"groupReference":{"groupName":"Rend Weave ON/OFF"}}},
 	{"action":{"groupReference":{"groupName":"Hamstring Weave ON/OFF"}}},

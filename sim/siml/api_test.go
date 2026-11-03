@@ -64,7 +64,7 @@ func TestTalentsOnlyExportKeepsLayout(t *testing.T) {
 	for _, tc := range []struct {
 		prefix string
 		layout proto.TalentLayout
-	}{{"", proto.TalentLayout_TalentLayoutLegacy}, {"launch:", proto.TalentLayout_TalentLayoutLaunch}} {
+	}{{"", proto.TalentLayout_TalentLayoutLegacy}, {"launch:", proto.TalentLayout_TalentLayoutLaunch}, {"hotfix:", proto.TalentLayout_TalentLayoutHotfix}} {
 		text := "siml 1\nspec dps_warrior\ntalents \"" + tc.prefix + "0053\"\n"
 		parsed := ParseRequest(&proto.SimlParseRequest{Path: "warrior.siml", Text: text}, names)
 		player := parsed.GetSettings().GetPlayer()

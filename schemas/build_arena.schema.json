@@ -81,7 +81,9 @@
 		"settings",
 		"settingsHelp",
 		"recordedRotation",
-		"rowProvenance",
+		"rowIterations",
+		"measurementFresh",
+		"measurementReused",
 		"setupTitle",
 		"none",
 		"yes",
@@ -354,7 +356,13 @@
 		"recordedRotation": {
 			"type": "string"
 		},
-		"rowProvenance": {
+		"rowIterations": {
+			"type": "string"
+		},
+		"measurementFresh": {
+			"type": "string"
+		},
+		"measurementReused": {
 			"type": "string"
 		},
 		"setupTitle": {

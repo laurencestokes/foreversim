@@ -5,6 +5,7 @@ import { Button } from '@ui-kit/Button';
 import clsx from 'clsx';
 import { useState } from 'react';
 
+import { type ArenaSource, MeasurementSource } from '../arena/ArenaSource';
 import { LaunchPreviewNotice } from '../arena/LaunchPreviewNotice';
 import { LandingFooter } from '../landing/LandingFooter';
 import { LandingHeader } from '../landing/LandingHeader';
@@ -64,8 +65,22 @@ const RaceChip = ({ race }: { race: RaceResult }) => (
 	</span>
 );
 
-const TierList = ({ list, tiers, setup, commit }: { list: RaceList; tiers: Array<Tier>; setup?: RaceArenaSetup; commit: string }) => {
+const TierList = ({
+	list,
+	tiers,
+	setup,
+	commit,
+	sources,
+}: {
+	list: RaceList;
+	tiers: Array<Tier>;
+	setup?: RaceArenaSetup;
+	commit: string;
+	sources?: ArenaSource[];
+}) => {
 	const [setupOpen, setSetupOpen] = useState(false);
+	const listSources = sources?.filter(source => list.races.some(race => race.sourceId === source.id)) ?? [];
+	const sourceCommits = new Set(listSources.map(source => source.commit));
 	return (
 		<section className="flex flex-col gap-2 border border-surface-border bg-black/30 p-2" data-testid="race-list">
 			<header className="flex flex-col">
@@ -76,6 +91,20 @@ const TierList = ({ list, tiers, setup, commit }: { list: RaceList; tiers: Array
 					{list.keptWeaponType && ', weapons kept as shipped for every race'}
 					{list.weaponType && `, weapons run as ${list.weaponType} for every race`}
 				</span>
+				{listSources.map(source => (
+					<span key={source.id} className="text-xs text-white/60">
+						{list.races.some(race => race.sourceId !== source.id) && (
+							<>
+								{list.races
+									.filter(race => race.sourceId === source.id)
+									.map(race => race.race)
+									.join(', ')}{' '}
+								·{' '}
+							</>
+						)}
+						<MeasurementSource source={source} />
+					</span>
+				))}
 				{setup && (
 					<Button
 						variant="secondary"
@@ -95,7 +124,7 @@ const TierList = ({ list, tiers, setup, commit }: { list: RaceList; tiers: Array
 					gear={list.gear}
 					rotation={list.rotation}
 					setup={setup}
-					commit={commit}
+					commit={sourceCommits.size === 1 ? listSources[0].commit : commit}
 				/>
 			)}
 			<div className="flex flex-col">
@@ -192,6 +221,7 @@ const Lists = ({ data }: { data: RaceArenaResults }) => {
 									tiers={data.tiers}
 									setup={data.setups[`${list.spec}|${list.build}`]}
 									commit={data.commit}
+									sources={data.sources}
 								/>
 							))}
 					</div>
@@ -274,11 +304,23 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 			<h2 className="m-0 text-xl">Tier lists, one fight at a time</h2>
 			<Lists data={data} />
 			<p className="m-0 text-sm text-white/60" data-testid="race-arena-source">
-				Simulated with engine{' '}
+				{data.sources?.length ? 'Verified against engine ' : 'Simulated with engine '}
 				<Button variant="link" href={`https://github.com/laurencestokes/foreversim/commit/${data.commit}`}>
 					<code>{data.commit.slice(0, 7)}</code>
-				</Button>{' '}
-				; results scored {data.generated.slice(0, 10)}, {formatToNumber(data.iterations)} iterations per race.
+				</Button>
+				. Results scored {data.generated.slice(0, 10)}, {formatToNumber(data.iterations)} iterations per race.
+				{data.compatibility && (
+					<>
+						{' '}
+						{data.compatibility.method}{' '}
+						<Button
+							variant="link"
+							href={`https://github.com/laurencestokes/foreversim/blob/${data.commit}/${data.compatibility.evidence}`}
+							target="_blank">
+							{i18n.t('compatibilityEvidence', { ns: 'build_arena' })}
+						</Button>
+					</>
+				)}
 				{Object.entries(data.raceCommits ?? {}).map(([race, revision]) => (
 					<span key={race}>
 						{' '}

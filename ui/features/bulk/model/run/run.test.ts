@@ -475,14 +475,14 @@ describe('runBulkBatch', () => {
 		]);
 	});
 
-	it('runs the latest saved talents after moving the old ranks to the launch tree', async () => {
+	it('runs the latest saved talents after moving the old ranks to the hotfix tree', async () => {
 		const host = batchHost({ bundles: [bundleOf({ talents: BulkTalentRef.create({ name: 'Fury' }) })] });
 		writeSavedTalents(host, { Fury: FURY_EDITED });
 		vi.mocked(runCoreBulkSim).mockResolvedValue(CORE_RESULT as never);
 
 		await runBulkBatch(host);
 
-		expect(sentTalents()).toEqual([LIVE, '-05050000510201']);
+		expect(sentTalents()).toEqual([LIVE, '-0505000050201']);
 	});
 
 	it('asks the sim for every candidate of each Builds request by default, and ranks every row', async () => {

@@ -1,3 +1,4 @@
+import type { ArenaSource } from '../arena/ArenaSource';
 import type { LaunchPreview } from '../arena/launchPreview';
 import type { RaceArenaSetup } from '../race_arena/RaceArenaSetupDialog';
 
@@ -32,21 +33,14 @@ export type BuildArenaResults = {
 	launchPreview?: LaunchPreview;
 	schemaVersion: 1;
 	compatibility?: { method: string; evidence: string };
+	reuse?: { rerun: string[]; reuse: string[] };
 	publishedAt: string;
 	upstreamCommit: string;
 	verifiedCommit: string;
 	iterations: number;
 	fight: { seconds: number; durations: number[]; targetLevel: number; targetArmor: number; targets: string[] };
 	tiers: Array<{ name: string; maxBehind?: number }>;
-	sources: Array<{
-		id: string;
-		commit: string;
-		publishedAt?: string;
-		computedAt?: string;
-		computedWindow?: { start: string; end: string };
-		reused: boolean;
-		note: string;
-	}>;
+	sources: ArenaSource[];
 	builds: BuildArenaBuild[];
 	rows: BuildArenaRow[];
 	excluded: Array<{ spec: string; reason: string }>;

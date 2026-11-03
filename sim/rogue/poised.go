@@ -6,13 +6,13 @@ import (
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-// Composure adds five or ten to the buff's discount in the November 2 development notes.
-// The resource filter also reaches the sim's Shank action, which the game files do not name.
+// The Energy filter also reaches the saved Shank action.
 func (rogue *Rogue) registerPoised() {
-	if rogue.Level < 18 {
+	passive := spelldata.MustFind(1328825)
+	if rogue.Level < int32(passive.SpellLevel) {
 		return
 	}
-	rank := spelldata.MustFind(1328826)
+	rank := passive.Refs()[0]
 	config := spelldata.AuraConfig(rank)
 	config.OnCastComplete = func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
 		if spell.Cost != nil && spell.Cost.BaseCost > 0 {
@@ -23,7 +23,7 @@ func (rogue *Rogue) registerPoised() {
 	}
 	rogue.PoisedAura = rogue.RegisterAura(config).AttachSpellMod(core.SpellModConfig{
 		Kind: core.SpellMod_PowerCost_Flat, ResourceType: proto.ResourceType_ResourceTypeEnergy,
-		IntValue: int32(rank.EffectN(1).BasePoints) - []int32{0, 5, 10}[rogue.Talents.Composure],
+		IntValue: int32(rank.EffectN(1).BasePoints + spellData.Composure.ValueAt(rogue.Talents.Composure)),
 	})
 }
 

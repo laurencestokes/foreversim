@@ -334,6 +334,7 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		submenu: ['encounter'],
 		shortDescription: i18n.t('rotation_tab.apl.values.time_until_target_active.tooltip'),
 		newValue: APLValueTimeUntilTargetActive.create,
+		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [unitFieldConfig('targetUnit', 'targets')],
 	}),
 	timeUntilTargetDies: inputBuilder({
@@ -341,6 +342,7 @@ export const valueKinds: { [f in ValidAPLValueKind]: ValueKindModel<APLValueImpl
 		submenu: ['encounter'],
 		shortDescription: i18n.t('rotation_tab.apl.values.time_until_target_dies.tooltip'),
 		newValue: APLValueTimeUntilTargetDies.create,
+		includeIf: (_: Player<any>, isPrepull: boolean) => !isPrepull,
 		fields: [unitFieldConfig('targetUnit', 'targets')],
 	}),
 

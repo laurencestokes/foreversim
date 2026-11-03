@@ -1490,8 +1490,11 @@ func printFile(ix *schemaIndex, names *Names, kind Kind, spec *SpecInfo, s *prot
 		p.class = spec.Class
 	}
 	if talents := s.GetPlayer().GetTalentsString(); own == "" && (given != nil && given[talentsCategory] || given == nil && talents != "") {
-		if s.GetPlayer().GetTalentLayout() == proto.TalentLayout_TalentLayoutLaunch {
+		switch s.GetPlayer().GetTalentLayout() {
+		case proto.TalentLayout_TalentLayoutLaunch:
 			talents = launchTalentsPrefix + talents
+		case proto.TalentLayout_TalentLayoutHotfix:
+			talents = hotfixTalentsPrefix + talents
 		}
 		items = append(items, &item{line: "talents " + jsonString(talents)})
 	}

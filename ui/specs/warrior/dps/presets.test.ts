@@ -9,11 +9,11 @@ import { describe, expect, it } from 'vitest';
 import { ProtectionTalents } from '../protection/presets';
 import { ArmsTalents, FuryTalents } from './presets';
 
-describe('Warrior launch presets', () => {
+describe('Warrior hotfix presets', () => {
 	for (const preset of [ArmsTalents, FuryTalents]) {
-		it(`${preset.name} spends 51 legal points in the launch tree`, () => {
+		it(`${preset.name} spends 51 legal points in the hotfix tree`, () => {
 			const points = parseTalentsString(warriorTalentsConfig, preset.data.talentsString);
-			expect(preset.data.talentLayout).toBe(TalentLayout.TalentLayoutLaunch);
+			expect(preset.data.talentLayout).toBe(TalentLayout.TalentLayoutHotfix);
 			expect(totalPointsSpent(points)).toBe(51);
 			expect(brokenTalentNames(warriorTalentsConfig, points)).toEqual([]);
 			const talents = playerTalentStringToProto(DpsWarrior, preset.data.talentsString);
@@ -36,9 +36,9 @@ describe('Warrior launch presets', () => {
 		expect(talents.improvedSlam).toBe(2);
 	});
 
-	it('Protection retains 51 legal points in the launch tree', () => {
+	it('Protection retains 51 legal points in the hotfix tree', () => {
 		const points = parseTalentsString(warriorTalentsConfig, ProtectionTalents.data.talentsString);
-		expect(ProtectionTalents.data.talentLayout).toBe(TalentLayout.TalentLayoutLaunch);
+		expect(ProtectionTalents.data.talentLayout).toBe(TalentLayout.TalentLayoutHotfix);
 		expect(totalPointsSpent(points)).toBe(51);
 		expect(brokenTalentNames(warriorTalentsConfig, points)).toEqual([]);
 	});

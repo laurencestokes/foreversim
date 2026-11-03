@@ -231,14 +231,6 @@ func (paladin *Paladin) applyTwoHandedWeaponSpecialization() {
 	}
 
 	rank := spellData.TwoHandedWeaponSpecialization.Rank(paladin.Talents.TwoHandedWeaponSpecialization)
-	// The November 2 notes extend the damage bonus to Holy spells as well as Physical attacks.
-	// TODO: Read the school mask directly once the game files carry that change.
-	if rank.EffectN(1).Misc == int32(core.SpellSchoolPhysical) {
-		preview := *rank
-		preview.Effects = append([]spelldata.Effect(nil), rank.Effects...)
-		preview.EffectN(1).Misc |= int32(core.SpellSchoolHoly)
-		rank = &preview
-	}
 	spelldata.ParseStatic(&paladin.Character, rank)
 }
 
@@ -252,11 +244,6 @@ func (paladin *Paladin) applyVengeance() {
 	rank := spellData.VengeanceTriggered.Highest()
 	perStack := spellData.Vengeance.FractionAt(paladin.Talents.Vengeance)
 	maxStacks := int32(rank.MaxStack)
-	// The November 2 notes raise the old three-stack cap to five.
-	// TODO: Read the cap directly once the game files carry that change.
-	if maxStacks == 3 {
-		maxStacks = 5
-	}
 
 	damageMod := paladin.AddDynamicMod(core.SpellModConfig{
 		School:     core.SpellSchoolHoly | core.SpellSchoolPhysical,

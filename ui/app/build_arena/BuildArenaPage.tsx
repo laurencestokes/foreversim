@@ -9,6 +9,7 @@ import { SearchField } from '@ui-kit/TextField';
 import clsx from 'clsx';
 import { useState } from 'react';
 
+import { MeasurementSource, sourceDate } from '../arena/ArenaSource';
 import { LaunchPreviewNotice } from '../arena/LaunchPreviewNotice';
 import { LandingFooter } from '../landing/LandingFooter';
 import { LandingHeader } from '../landing/LandingHeader';
@@ -30,8 +31,6 @@ import results from './results.json';
 const t = (key: string, values?: Record<string, unknown>) => i18n.t(`build_arena:${key}`, values);
 const number = (value: number, digits = 1) =>
 	new Intl.NumberFormat(i18n.language, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
-const sourceDate = (source: BuildArenaResults['sources'][number] | undefined) =>
-	source?.computedAt ?? (source?.computedWindow ? t('computedWindow', source.computedWindow) : t('dateUnrecorded'));
 const COLORS: Record<string, string> = {
 	S: 'border-brand text-brand',
 	A: 'border-expansion text-expansion',
@@ -236,11 +235,7 @@ const BuildDetails = ({ standing, data, onClose }: { standing: BuildStanding; da
 				</div>
 			</details>
 			<p className="m-0 text-xs text-white/60">
-				{t('rowProvenance', {
-					source: source?.id,
-					iterations: number(row.iterations, 0),
-					date: sourceDate(source),
-				})}
+				{source && <MeasurementSource source={source} />} · {t('rowIterations', { iterations: number(row.iterations, 0) })}
 			</p>
 			<RaceArenaSetupDialog
 				open={setupOpen}
@@ -473,7 +468,7 @@ export const BuildArenaPageView = ({ data }: { data: BuildArenaResults }) => {
 							{data.compatibility.method}{' '}
 							<Button
 								variant="link"
-								href={`https://github.com/laurencestokes/foreversim/blob/${BUILD_INFO.commit || 'master'}/${data.compatibility.evidence}`}
+								href={`https://github.com/laurencestokes/foreversim/blob/${data.reuse ? data.verifiedCommit : BUILD_INFO.commit || 'master'}/${data.compatibility.evidence}`}
 								target="_blank">
 								{t('compatibilityEvidence')}
 							</Button>

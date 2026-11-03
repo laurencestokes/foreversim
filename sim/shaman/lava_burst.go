@@ -5,7 +5,8 @@ import (
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
-var lavaBurstRanks = castableRanks(spellData.LavaBurst)
+// The talent names rank 1, and ranks 2–4 have no skill-line entries.
+var lavaBurstRanks = castableRanks(spelldata.Ranked(408490, 1238299, 1238300, 1326047))
 
 func (shaman *Shaman) registerLavaBurstSpells() {
 	lavaBurstRanks.Each(func(_ int32, rank *spelldata.Spell) { shaman.registerLavaBurstSpell(rank) })

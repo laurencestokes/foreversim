@@ -312,25 +312,14 @@
         "maxPoints": 5
       },
       {
-        "fieldName": "ragingBlows",
-        "fancyName": "Raging Blows",
-        "location": {
-          "rowIdx": 3,
-          "colIdx": 1
-        },
-        "spellId": 1310315,
-        "definitionId": 135508,
-        "maxPoints": 1
-      },
-      {
         "fieldName": "recklessSwings",
         "fancyName": "Reckless Swings",
         "location": {
           "rowIdx": 3,
-          "colIdx": 2
+          "colIdx": 1
         },
-        "spellId": 0,
-        "otherAction": 27,
+        "spellId": 1329555,
+        "definitionId": 145966,
         "maxPoints": 1
       },
       {
@@ -393,26 +382,26 @@
         "maxPoints": 2
       },
       {
-        "fieldName": "flurry",
-        "fancyName": "Flurry",
-        "location": {
-          "rowIdx": 5,
-          "colIdx": 1
-        },
-        "spellId": 12319,
-        "definitionId": 135459,
-        "maxPoints": 3
-      },
-      {
         "fieldName": "improvedWhirlwind",
         "fancyName": "Improved Whirlwind",
         "location": {
           "rowIdx": 5,
+          "colIdx": 0
+        },
+        "spellId": 1310315,
+        "definitionId": 135508,
+        "maxPoints": 2
+      },
+      {
+        "fieldName": "flurry",
+        "fancyName": "Flurry",
+        "location": {
+          "rowIdx": 5,
           "colIdx": 2
         },
-        "spellId": 0,
-        "otherAction": 28,
-        "maxPoints": 2
+        "spellId": 12319,
+        "definitionId": 135459,
+        "maxPoints": 3
       },
       {
         "fieldName": "bloodthirst",

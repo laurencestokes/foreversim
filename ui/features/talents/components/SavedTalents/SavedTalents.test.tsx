@@ -30,7 +30,7 @@ vi.mock('../../../../tracking/utils', () => ({ trackEvent }));
 
 const STORAGE_KEY = 'tbc-warrior-savedTalents';
 
-const talentsWith = (talentsString: string) => SavedTalentsProto.create({ talentsString, talentLayout: TalentLayout.TalentLayoutLaunch });
+const talentsWith = (talentsString: string) => SavedTalentsProto.create({ talentsString, talentLayout: TalentLayout.TalentLayoutHotfix });
 const storedJson = (talentsString: string) => SavedTalentsProto.toJson(talentsWith(talentsString));
 
 class FakePlayer {

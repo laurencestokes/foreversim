@@ -58,6 +58,8 @@ func tierFor(behind float64) string {
 
 // The lists written by tools/race_arena/simulate.
 type rawList struct {
+	BuildID        string          `json:"buildId"`
+	ComputedAt     string          `json:"computedAt"`
 	Spec           string          `json:"spec"`
 	Class          string          `json:"class"`
 	Build          string          `json:"build"`
@@ -75,6 +77,7 @@ type rawList struct {
 }
 
 type rawRow struct {
+	SourceID      string  `json:"sourceId,omitempty"`
 	Race          string  `json:"race"`
 	Commit        string  `json:"commit,omitempty"`
 	Dps           float64 `json:"dps"`
@@ -86,8 +89,9 @@ type rawRow struct {
 
 // What the page renders.
 type race struct {
-	Race string  `json:"race"`
-	Dps  float64 `json:"dps"`
+	SourceID string  `json:"sourceId,omitempty"`
+	Race     string  `json:"race"`
+	Dps      float64 `json:"dps"`
 	// Percent behind the list's best race, two decimals.
 	Behind float64 `json:"behind"`
 	Tier   string  `json:"tier"`
@@ -115,6 +119,8 @@ type list struct {
 }
 
 type output struct {
+	Compatibility json.RawMessage            `json:"compatibility,omitempty"`
+	Sources       []json.RawMessage          `json:"sources,omitempty"`
 	Commit        string                     `json:"commit"`
 	LaunchPreview json.RawMessage            `json:"launchPreview,omitempty"`
 	RaceCommits   map[string]string          `json:"raceCommits,omitempty"`
@@ -125,6 +131,75 @@ type output struct {
 	Noise         noise                      `json:"noise"`
 	Lists         []list                     `json:"lists"`
 	Setups        map[string]json.RawMessage `json:"setups"`
+}
+
+type matchup struct {
+	BuildID string `json:"buildId"`
+	Seconds int    `json:"seconds"`
+	Target  string `json:"target"`
+	Race    string `json:"race"`
+}
+
+type pairedRow struct {
+	matchup
+	SourceID string  `json:"sourceId"`
+	Dps      float64 `json:"dps"`
+	Error    float64 `json:"error"`
+}
+
+type pairedPublication struct {
+	Compatibility  json.RawMessage   `json:"compatibility"`
+	VerifiedCommit string            `json:"verifiedCommit"`
+	Iterations     int               `json:"iterations"`
+	LaunchPreview  json.RawMessage   `json:"launchPreview"`
+	Sources        []json.RawMessage `json:"sources"`
+	Rows           []pairedRow       `json:"rows"`
+}
+
+// One race can have measurements from different engines across builds or fights.
+func applyOrigins(raw []rawList, paired pairedPublication) error {
+	type source struct{ ID, Commit, ComputedAt string }
+	sources := map[string]source{}
+	for _, encoded := range paired.Sources {
+		var origin source
+		if err := json.Unmarshal(encoded, &origin); err != nil {
+			return err
+		}
+		if _, exists := sources[origin.ID]; exists || origin.ID == "" || origin.Commit == "" {
+			return fmt.Errorf("missing or duplicate paired source %q", origin.ID)
+		}
+		sources[origin.ID] = origin
+	}
+	pending := make(map[matchup]pairedRow, len(paired.Rows))
+	for _, row := range paired.Rows {
+		if _, exists := pending[row.matchup]; exists {
+			return fmt.Errorf("duplicate paired matchup %+v", row.matchup)
+		}
+		pending[row.matchup] = row
+	}
+	for _, list := range raw {
+		for i := range list.Races {
+			row := &list.Races[i]
+			key := matchup{list.BuildID, list.Seconds, list.Target, row.Race}
+			expected, exists := pending[key]
+			if !exists {
+				return fmt.Errorf("unexpected or duplicate raw matchup %+v", key)
+			}
+			source, exists := sources[expected.SourceID]
+			if !exists || source.Commit != row.Commit || (row.SourceID != "" && row.SourceID != expected.SourceID) || row.Dps != expected.Dps || row.Error != expected.Error {
+				return fmt.Errorf("raw result differs from its paired source for %+v", key)
+			}
+			if list.ComputedAt != "" && list.ComputedAt != source.ComputedAt {
+				return fmt.Errorf("raw computation date differs from its paired source for %+v", key)
+			}
+			row.SourceID = expected.SourceID
+			delete(pending, key)
+		}
+	}
+	if len(pending) != 0 {
+		return fmt.Errorf("missing raw results for %d paired matchups", len(pending))
+	}
+	return nil
 }
 
 type fight struct {
@@ -169,26 +244,39 @@ func main() {
 	if len(raw) == 0 {
 		fail("no lists in %s, so there is nothing to publish", inDir)
 	}
+	var paired pairedPublication
+	if len(os.Args) == 4 {
+		read(os.Args[3], &paired)
+		if len(paired.Sources) > 0 {
+			if err := applyOrigins(raw, paired); err != nil {
+				fail("%s", err)
+			}
+		}
+	}
 
 	out := output{
-		Commit:      commit(),
-		RaceCommits: make(map[string]string),
-		Generated:   time.Now().UTC().Truncate(time.Second),
-		Fight:       fight{Seconds: defaultSeconds, TargetLevel: targetLevel, TargetArmor: targetArmor},
-		Tiers:       tiers,
-		Setups:      make(map[string]json.RawMessage),
+		Commit:        commit(),
+		RaceCommits:   make(map[string]string),
+		Generated:     time.Now().UTC().Truncate(time.Second),
+		Fight:         fight{Seconds: defaultSeconds, TargetLevel: targetLevel, TargetArmor: targetArmor},
+		Tiers:         tiers,
+		Setups:        make(map[string]json.RawMessage),
+		Sources:       paired.Sources,
+		Compatibility: paired.Compatibility,
 	}
 	for _, r := range raw {
 		key := r.Spec + "|" + r.Build
-		for _, row := range r.Races {
-			revision := row.Commit
-			if revision == "" {
-				revision = out.Commit
+		if len(paired.Sources) == 0 {
+			for _, row := range r.Races {
+				revision := row.Commit
+				if revision == "" {
+					revision = out.Commit
+				}
+				if previous, exists := out.RaceCommits[row.Race]; exists && previous != revision {
+					fail("%s has results from different simulator revisions; rerun every matchup for that race", row.Race)
+				}
+				out.RaceCommits[row.Race] = revision
 			}
-			if previous, exists := out.RaceCommits[row.Race]; exists && previous != revision {
-				fail("%s has results from different simulator revisions; rerun every matchup for that race", row.Race)
-			}
-			out.RaceCommits[row.Race] = revision
 		}
 		if len(r.Setup) == 0 || bytes.Equal(r.Setup, []byte("null")) {
 			fail("%s: missing setup snapshot", key)
@@ -219,12 +307,6 @@ func main() {
 	}
 	slices.Sort(out.Fight.Durations)
 	if len(os.Args) == 4 {
-		var paired struct {
-			VerifiedCommit string          `json:"verifiedCommit"`
-			Iterations     int             `json:"iterations"`
-			LaunchPreview  json.RawMessage `json:"launchPreview"`
-		}
-		read(os.Args[3], &paired)
 		if out.Commit == "" || paired.VerifiedCommit != out.Commit || (len(paired.LaunchPreview) > 0 && len(out.RaceCommits) > 0) {
 			fail("the paired Build Arena publication must use the same simulator revision")
 		}
@@ -291,6 +373,7 @@ func score(r rawList) (list, float64) {
 	for _, row := range rows {
 		behind := roundTo((1-row.Dps/best)*100, 2)
 		scored.Races = append(scored.Races, race{
+			SourceID:   row.SourceID,
 			Race:       row.Race,
 			Dps:        roundTo(row.Dps, 1),
 			Behind:     behind,

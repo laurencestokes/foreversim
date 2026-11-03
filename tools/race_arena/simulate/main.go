@@ -94,7 +94,7 @@ func main() {
 		request := makeRequest(player, 180, proto.MobType_MobTypeMechanical, *iterations)
 		requestJSON, err := protojson.Marshal(request)
 		check(err)
-		entry := manifestBuild{ID: b.ID, InputFingerprint: fingerprint(requestJSON), Spec: b.Spec, Class: b.Class, Name: b.Build, Gear: b.Gear, Rotation: b.Rotation, Status: b.Status, DevGear: b.DevGear, Caveats: b.Caveats, ConsumableNames: b.ConsumableNames, Setup: b.Setup, Request: requestJSON}
+		entry := manifestBuild{ID: b.ID, InputFingerprint: fingerprint(requestJSON), Spec: b.Spec, Class: b.Class, Name: b.Build, Gear: b.Gear, Rotation: b.Rotation, Consumables: b.Consumables, Status: b.Status, DevGear: b.DevGear, Caveats: b.Caveats, ConsumableNames: b.ConsumableNames, Setup: b.Setup, Request: requestJSON}
 		if entry.Caveats == nil {
 			entry.Caveats = []string{}
 		}
@@ -224,6 +224,7 @@ type consumableName struct {
 }
 
 type manifestBuild struct {
+	Consumables      string           `json:"consumables"`
 	ConsumableNames  []consumableName `json:"consumableNames"`
 	ID               string           `json:"id"`
 	InputFingerprint string           `json:"inputFingerprint"`

@@ -407,7 +407,10 @@
 											"not": {
 												"val": {
 													"talentIsKnown": {
-														"talentId": { "otherId": "OtherActionBootKnife", "rank": 1 }
+														"talentId": {
+															"otherId": "OtherActionBootKnife",
+															"rank": 1
+														}
 													}
 												}
 											}
@@ -415,8 +418,14 @@
 										{
 											"cmp": {
 												"op": "OpLe",
-												"lhs": { "currentComboPoints": {} },
-												"rhs": { "const": { "val": "3" } }
+												"lhs": {
+													"currentComboPoints": {}
+												},
+												"rhs": {
+													"const": {
+														"val": "3"
+													}
+												}
 											}
 										}
 									]
@@ -650,7 +659,7 @@
 									"val": {
 										"auraIsActive": {
 											"auraId": {
-												"spellId": 14278
+												"spellId": 1329326
 											},
 											"includeReactionTime": true
 										}
@@ -894,7 +903,7 @@
 									"val": {
 										"talentIsKnown": {
 											"talentId": {
-												"spellId": 1310707,
+												"spellId": 399956,
 												"rank": 1
 											}
 										}
@@ -1003,7 +1012,7 @@
 									{
 										"talentIsKnown": {
 											"talentId": {
-												"spellId": 1310707,
+												"spellId": 399956,
 												"rank": 1
 											}
 										}

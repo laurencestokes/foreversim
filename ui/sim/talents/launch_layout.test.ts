@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { classTalentsConfig, currentTalentLayout, loadSavedTalentString } from './factory';
 import { parseTalentsString } from './talents_string';
+import launch from './trees/history/launch.json';
 import previous from './trees/history/prelaunch.json';
 
 const oldString = (trees: string[][], ranks: Record<string, number>) =>
@@ -27,6 +28,26 @@ describe('saved talent layouts', () => {
 		expect(point('deathWish')).toBe(1);
 		expect(point('recklessSwings')).toBe(0);
 		expect(loadSavedTalentString(Class.ClassWarrior, migrated, currentTalentLayout(Class.ClassWarrior))).toBe(migrated);
+	});
+
+	it('keeps Warrior launch ranks on their talents when Raging Blows leaves the tree', () => {
+		const config = classTalentsConfig[Class.ClassWarrior];
+		const before = oldString(launch.warrior, { ragingBlows: 1, flurry: 3, improvedWhirlwind: 2 });
+		const migrated = loadSavedTalentString(Class.ClassWarrior, before, TalentLayout.TalentLayoutLaunch);
+		const ranks = parseTalentsString(config, migrated)[1];
+		expect(ranks[config[1].talents.findIndex(t => t.fieldName === 'flurry')]).toBe(3);
+		expect(ranks[config[1].talents.findIndex(t => t.fieldName === 'improvedWhirlwind')]).toBe(2);
+		expect(ranks.reduce((sum, rank) => sum + rank, 0)).toBe(5);
+		expect(loadSavedTalentString(Class.ClassWarrior, migrated, TalentLayout.TalentLayoutHotfix)).toBe(migrated);
+	});
+
+	it('keeps Improved Ambush and Dirty Tricks distinct in saved Rogue launch builds', () => {
+		const config = classTalentsConfig[Class.ClassRogue];
+		const before = oldString(launch.rogue, { improvedAmbush: 2, dirtyTricks: 1 });
+		const migrated = loadSavedTalentString(Class.ClassRogue, before, TalentLayout.TalentLayoutLaunch);
+		const ranks = parseTalentsString(config, migrated)[2];
+		expect(ranks[config[2].talents.findIndex(t => t.fieldName === 'improvedAmbush')]).toBe(2);
+		expect(ranks[config[2].talents.findIndex(t => t.fieldName === 'dirtyTricks')]).toBe(1);
 	});
 
 	it('drops retired Rogue investments without giving their points to a new talent', () => {

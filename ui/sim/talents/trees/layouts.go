@@ -9,7 +9,7 @@ import (
 	"github.com/wowsims/forever/sim/core/proto"
 )
 
-//go:embed rogue.json warrior.json shaman.json history/prelaunch.json
+//go:embed rogue.json warrior.json shaman.json history/prelaunch.json history/launch.json
 var files embed.FS
 
 type Talent struct {
@@ -22,6 +22,7 @@ type Layout struct {
 		Talents []Talent `json:"talents"`
 	}
 	previous [][]string
+	launch   [][]string
 }
 
 func decode(name string, into any) {
@@ -37,9 +38,11 @@ func decode(name string, into any) {
 var layouts = func() map[string]*Layout {
 	var previous map[string][][]string
 	decode("history/prelaunch.json", &previous)
+	var launch map[string][][]string
+	decode("history/launch.json", &launch)
 	current := make(map[string]*Layout, len(previous))
 	for class, positions := range previous {
-		layout := &Layout{previous: positions}
+		layout := &Layout{previous: positions, launch: launch[class]}
 		decode(class+".json", &layout.Current)
 		current["Class"+strings.ToUpper(class[:1])+class[1:]] = layout
 	}
@@ -49,6 +52,9 @@ var layouts = func() map[string]*Layout {
 func ForClass(class string) *Layout { return layouts[class] }
 
 func CurrentVersion(class proto.Class) proto.TalentLayout {
+	if layout := ForClass(class.String()); layout != nil && layout.launch != nil {
+		return proto.TalentLayout_TalentLayoutHotfix
+	}
 	if ForClass(class.String()) != nil {
 		return proto.TalentLayout_TalentLayoutLaunch
 	}
@@ -56,15 +62,22 @@ func CurrentVersion(class proto.Class) proto.TalentLayout {
 }
 
 // An old digit belongs to the talent's field, even when that talent moves in the new tree.
-func (l *Layout) FromLegacy(input string) string {
+func (l *Layout) Migrate(input string, version proto.TalentLayout) string {
+	previous := l.previous
+	if version == proto.TalentLayout_TalentLayoutLaunch {
+		previous = l.launch
+	}
+	if len(previous) == 0 {
+		return input
+	}
 	points := map[string]byte{}
 	for ti, digits := range strings.Split(input, "-") {
-		if ti >= len(l.previous) {
+		if ti >= len(previous) {
 			break
 		}
-		for i := 0; i < len(digits) && i < len(l.previous[ti]); i++ {
+		for i := 0; i < len(digits) && i < len(previous[ti]); i++ {
 			if digits[i] >= '1' && digits[i] <= '9' {
-				points[l.previous[ti][i]] = digits[i] - '0'
+				points[previous[ti][i]] = digits[i] - '0'
 			}
 		}
 	}

@@ -91,6 +91,62 @@ func TestRaceSourceRevisions(t *testing.T) {
 	}
 }
 
+func TestPairedRaceMeasurements(t *testing.T) {
+	t.Setenv("RACE_ARENA_COMMIT", "new")
+	dir := t.TempDir()
+	in := filepath.Join(dir, "raw")
+	if err := os.Mkdir(in, 0755); err != nil {
+		t.Fatal(err)
+	}
+	raw := []rawList{
+		{BuildID: "arms", Spec: "warrior", Class: "Warrior", Build: "Arms", Seconds: 180, Target: "Mechanical", ComputedAt: "2026-10-28T00:00:00Z",
+			Iterations: 50000, Setup: json.RawMessage(`{}`), Races: []rawRow{{Race: "Human", Dps: 123.4, Error: 0.2, Commit: "old"}}},
+		{BuildID: "fury", Spec: "warrior", Class: "Warrior", Build: "Fury", Seconds: 180, Target: "Mechanical", ComputedAt: "2026-11-03T00:00:00Z",
+			Iterations: 50000, Setup: json.RawMessage(`{}`), Races: []rawRow{{Race: "Human", Dps: 127.5, Error: 0.4, Commit: "new"}}},
+	}
+	paired := pairedPublication{VerifiedCommit: "new", Iterations: 50000, Sources: []json.RawMessage{
+		json.RawMessage(`{"id":"october","commit":"old","computedAt":"2026-10-28T00:00:00Z","reused":true}`),
+		json.RawMessage(`{"id":"november","commit":"new","computedAt":"2026-11-03T00:00:00Z","reused":false}`),
+	}, Rows: []pairedRow{
+		{matchup{"arms", 180, "Mechanical", "Human"}, "october", 123.4, 0.2},
+		{matchup{"fury", 180, "Mechanical", "Human"}, "november", 127.5, 0.4},
+	}}
+	write := func(path string, value any) {
+		t.Helper()
+		data, err := json.Marshal(value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, data, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rawPath, pairedPath, outPath := filepath.Join(in, "presets.json"), filepath.Join(dir, "build.json"), filepath.Join(dir, "race.json")
+	write(rawPath, raw)
+	write(pairedPath, paired)
+	run := func() ([]byte, error) {
+		return exec.Command("go", "run", ".", in, outPath, pairedPath).CombinedOutput()
+	}
+	if log, err := run(); err != nil {
+		t.Fatalf("scoring failed: %v\n%s", err, log)
+	}
+	var result output
+	read(outPath, &result)
+	if len(result.RaceCommits) != 0 || len(result.Lists) != 2 || len(result.Sources) != 2 ||
+		result.Lists[0].Races[0].SourceID != "october" || result.Lists[1].Races[0].SourceID != "november" {
+		t.Fatalf("wrong matchup sources: %+v", result.Lists)
+	}
+	var source struct{ ComputedAt string }
+	if err := json.Unmarshal(result.Sources[0], &source); err != nil || source.ComputedAt != raw[0].ComputedAt {
+		t.Fatalf("missing computation date: %s", result.Sources[0])
+	}
+	raw[0].Races[0].Dps = raw[1].Races[0].Dps
+	write(rawPath, raw)
+	if log, err := run(); err == nil || !strings.Contains(string(log), "differs from its paired source") {
+		t.Fatalf("accepted a changed measurement: %v\n%s", err, log)
+	}
+}
+
 // The tier edges are the published ones: S within 0.5% of the best, A to 1.0%, B to 1.5%, C to
 // 2.5%, D beyond. Each edge belongs to the tier below it in the list ("within 0.5%" includes
 // 0.5%), and a race is scored on the two-decimal figure the page prints.

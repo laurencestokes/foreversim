@@ -30,11 +30,7 @@ func (rogue *Rogue) registerImprovedSinisterStrike() {
 		return
 	}
 
-	// Efficient Strikes discounts both abilities by the amounts in the November 2 development notes.
-	rogue.AddStaticMod(core.SpellModConfig{
-		Kind: core.SpellMod_PowerCost_Flat, ClassMask: RogueSpellSinisterStrike | RogueSpellHemorrhage,
-		IntValue: []int32{0, -3, -5}[rogue.Talents.ImprovedSinisterStrike],
-	})
+	spelldata.ParseStatic(&rogue.Character, spellData.EfficientStrikes.Rank(rogue.Talents.ImprovedSinisterStrike))
 }
 
 func (rogue *Rogue) registerLightningReflexes() {
@@ -124,8 +120,7 @@ func (rogue *Rogue) registerFlawlessExecution() {
 		return
 	}
 
-	// The November 2 development notes state a fifteen-Energy reduction.
-	rogue.AddStaticMod(core.SpellModConfig{Kind: core.SpellMod_PowerCost_Flat, ClassMask: RogueSpellEviscerate, IntValue: -15})
+	spelldata.ParseStatic(&rogue.Character, spellData.FlawlessExecution.Highest())
 }
 
 func (rogue *Rogue) registerDualWieldSpecialization() {
@@ -133,11 +128,7 @@ func (rogue *Rogue) registerDualWieldSpecialization() {
 		return
 	}
 
-	// The November 2 development notes give the two-rank talent twenty-five percent per point.
-	rogue.AddStaticMod(core.SpellModConfig{
-		Kind: core.SpellMod_DamageDone_Pct, ProcMask: core.ProcMaskMeleeOH,
-		FloatValue: []float64{0, 0.25, 0.5}[rogue.Talents.DualWieldSpecialization],
-	})
+	spelldata.ParseStatic(&rogue.Character, spellData.DualWieldSpecialization.Rank(rogue.Talents.DualWieldSpecialization))
 }
 
 var bladeFlurryRank = spellData.BladeFlurry.Highest()
@@ -308,11 +299,7 @@ func (rogue *Rogue) registerAggression() {
 		return
 	}
 
-	// The November 2 development notes name Sinister Strike and Eviscerate at five percent per point.
-	rogue.AddStaticMod(core.SpellModConfig{
-		Kind: core.SpellMod_DamageDone_Flat, ClassMask: RogueSpellSinisterStrike | RogueSpellEviscerate,
-		FloatValue: []float64{0, 0.05, 0.1, 0.15}[rogue.Talents.Aggression],
-	})
+	spelldata.ParseStatic(&rogue.Character, spellData.Aggression.Rank(rogue.Talents.Aggression))
 }
 
 var adrenalineRushRank = spellData.AdrenalineRush.Highest()

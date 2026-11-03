@@ -4,7 +4,7 @@
 
 Results marked **November 4, 2026 launch projection** include the Hunter hotfix, upstream Feral and Shaman drafts and the fork’s November 2 class changes. Each build holds its setup fixed across races. Rogue, Warrior and Shaman use legal launch talent allocations, and Elemental uses its ordinary mana pool. The class coverage report identifies which values come from the game files and which still need measurements. Skyborne base attributes remain unverified.
 
-The source links on both pages identify [upstream master](https://github.com/wowsims/forever/commit/6e69a7f4f239c591e9dec4124a93fca6329c240f) and the nine preview revisions listed in the [Build Arena method](build-arena.md). Wrack and Destruction keep the same pre-raid equipment as the other Warlock builds.
+The source links on both pages identify [upstream master](https://github.com/wowsims/forever/commit/41862b31e34782e2ffc7fe8be49322812de71ed6) and the preview revisions listed in the [Build Arena method](build-arena.md). Wrack and Destruction keep the same pre-raid equipment as the other Warlock builds.
 The launch-preview notice appears only on results with recorded `launchPreview` metadata. The launch
 date is separate from computation dates. Historical results keep their original labels and sources.
 
@@ -73,9 +73,7 @@ balances shards independently for each fight length using a bounded timing run, 
 coverage and fingerprints, and stages both results before committing them together. Smoke results
 cannot pass publication's 50,000-iteration requirement.
 
-The current refresh recomputes every legal race, build and encounter at 50,000 iterations. Its
-presets, game data and support ranks differ from the earlier inputs, so those computations cannot
-be reused. The generated results record the actual engine revision and computation dates.
+Both arenas share the same complete matrix at 50,000 iterations per matchup. The November 3 refresh runs the affected builds and keeps results whose recorded setup and combat behavior match. Each score retains its original simulation revision and date. [Selection and compatibility checks](november-3-arena-reuse.md)
 
 The Shadow Priest preset includes all its racial conditions in the same recorded rotation. Its
 saved default race does not restrict the arena: the runner replaces the race for each legal matchup,

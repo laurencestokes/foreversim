@@ -23,10 +23,10 @@ message RogueTalents {
     bool cold_blood = 11 [(talent_spell_id) = 14177];
     int32 improved_poisons = 12 [(talent_spell_id) = 14113];
     int32 vigor = 13 [(talent_spell_id) = 14983];
-    bool mutilate = 14 [(talent_spell_id) = 1310707];
+    bool mutilate = 14 [(talent_spell_id) = 399956];
     int32 improved_kidney_shot = 15 [(talent_spell_id) = 14174];
     int32 seal_fate = 16 [(talent_spell_id) = 14186];
-    bool venom = 17 [(talent_spell_id) = 1310703];
+    bool venom = 17 [(talent_spell_id) = 1329328];
     // Combat
     int32 improved_eviscerate = 18 [(talent_spell_id) = 14162];
     int32 improved_sinister_strike = 19 [(talent_spell_id) = 13732];
@@ -68,11 +68,11 @@ message RogueTalents {
 
     // Talent field numbers remain stable across tree layouts.
     int32 relentless_strikes_points = 54 [(talent_spell_id) = 14179];
-    bool blood_splatter = 55 [(talent_other_action) = OtherActionBloodSplatter];
-    int32 composure = 56 [(talent_other_action) = OtherActionComposure];
-    int32 flash_of_steel = 57 [(talent_other_action) = OtherActionFlashOfSteel];
-    int32 quick_getaway = 58 [(talent_other_action) = OtherActionQuickGetaway];
-    int32 boot_knife = 59 [(talent_other_action) = OtherActionBootKnife];
+    bool blood_splatter = 55 [(talent_spell_id) = 1329256, (talent_other_action) = OtherActionBloodSplatter];
+    int32 composure = 56 [(talent_spell_id) = 1329265, (talent_other_action) = OtherActionComposure];
+    int32 flash_of_steel = 57 [(talent_spell_id) = 1329284, (talent_other_action) = OtherActionFlashOfSteel];
+    int32 quick_getaway = 58 [(talent_spell_id) = 1310728, (talent_other_action) = OtherActionQuickGetaway];
+    int32 boot_knife = 59 [(talent_spell_id) = 1329286, (talent_other_action) = OtherActionBootKnife];
     bool death_mark = 60 [(talent_spell_id) = 1316709];
 }
 

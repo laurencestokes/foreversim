@@ -828,16 +828,16 @@ func (character *Character) setTalentRank(data protoreflect.Message, fd protoref
 	if rank == 0 {
 		return
 	}
-	id := ActionID{SpellID: googleproto.GetExtension(fd.Options(), proto.E_TalentSpellId).(int32)}
-	if id.SpellID == 0 {
-		id.OtherID = googleproto.GetExtension(fd.Options(), proto.E_TalentOtherAction).(proto.OtherAction)
+	for _, id := range []ActionID{
+		{SpellID: googleproto.GetExtension(fd.Options(), proto.E_TalentSpellId).(int32)},
+		{OtherID: googleproto.GetExtension(fd.Options(), proto.E_TalentOtherAction).(proto.OtherAction)},
+	} {
+		if !id.IsEmptyAction() {
+			talent := id.ToProto()
+			talent.Rank = rank
+			character.talents = append(character.talents, talent)
+		}
 	}
-	if id.IsEmptyAction() {
-		return
-	}
-	talent := id.ToProto()
-	talent.Rank = rank
-	character.talents = append(character.talents, talent)
 }
 
 // The points held in the talent whose field carries this talent_spell_id, or 0.

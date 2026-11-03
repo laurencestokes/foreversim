@@ -108,10 +108,8 @@ func (rogue *Rogue) ApplyFinisher(sim *core.Simulation, spell *core.Spell) {
 	rogue.SpendComboPoints(sim, spell.ComboPointMetrics())
 
 	// Relentless Strikes
-	// The November 2 development notes state a four-percent chance per point in the talent and per
-	// combo point spent. The captured row carries the one-point talent's chance.
-	if chance := 0.04 * float64(rogue.Talents.RelentlessStrikesPoints*numPoints); chance > 0 && sim.Proc(chance, "Relentless Strikes") {
-		rogue.AddEnergy(sim, spellData.RelentlessStrikesTriggered.Highest().EnergizeEffect().Average(), rogue.relentlessStrikesMetrics)
+	if chance := spellData.RelentlessStrikes.FractionAt(rogue.Talents.RelentlessStrikesPoints) * float64(numPoints); chance > 0 && sim.Proc(chance, "Relentless Strikes") {
+		rogue.AddEnergy(sim, spellData.RelentlessStrikesTriggered.Highest().EffectN(1).Average(), rogue.relentlessStrikesMetrics)
 	}
 
 	// Ruthlessness
@@ -188,6 +186,11 @@ func NewRogue(character *core.Character, options *proto.Player, talents string) 
 	}
 
 	rogue.FillTalentsProtoFromTree(rogue.Talents.ProtoReflect(), talents)
+	rogue.RegisterRotationTransformation(func(_ *proto.Raid, rotation *proto.APLRotation) {
+		if rotation != nil {
+			normalizeMutilateRanks(rotation.ProtoReflect())
+		}
+	})
 
 	// Passive rogue threat reduction: https://wotlk.wowhead.com/spell=21184/rogue-passive-dnd
 	rogue.PseudoStats.ThreatMultiplier *= 1 + spellData.RoguePassive.Highest().EffectN(1).Percent()

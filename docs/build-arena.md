@@ -2,21 +2,23 @@
 
 [November 2 patch coverage by class](november-2-coverage.md) records which launch changes these results include and where the model still differs.
 
-Results marked **November 4, 2026 launch projection** use the Hunter hotfix, Feral and Shaman draft tuning and the fork’s changes for the November 2 class notes. The Rogue, Warrior and Shaman presets spend 51 points in their revised trees. The setup inspector shows the actual allocation and rotation. Shank, Reckless Swings and other actions without captured spell rows use their simulator names.
+Results marked **November 4, 2026 launch projection** use the Hunter hotfix, Feral and Shaman draft tuning and the fork’s changes for the November 2 class notes. The Rogue, Warrior and Shaman presets spend 51 points in their revised trees. The setup inspector shows the actual allocation and rotation. Shank retains its saved simulator identifier and uses the captured rank for its effects. Reckless Swings uses its game spell identifier.
 
 Both arenas link the official notes, the fork commit behind the scores and these upstream revisions.
 
-- [Upstream baseline `6e69a7f4f`](https://github.com/wowsims/forever/commit/6e69a7f4f239c591e9dec4124a93fca6329c240f).
-- [Hunter #824](https://github.com/wowsims/forever/pull/824), at [`a6b9f132c`](https://github.com/wowsims/forever/commit/a6b9f132c9cece3a44ac093d61659c9951fcf62c).
+- [Upstream baseline `41862b31e`](https://github.com/wowsims/forever/commit/41862b31e34782e2ffc7fe8be49322812de71ed6).
+- [Hunter #824](https://github.com/wowsims/forever/pull/824), at [`7d6a9fcf3`](https://github.com/wowsims/forever/commit/7d6a9fcf367a7a1f3d01dec294112e1d9800cc06).
 - [Partial Feral #823](https://github.com/wowsims/forever/pull/823), at [`ac807d93b`](https://github.com/wowsims/forever/commit/ac807d93bb80bf50d379066b2fb0c131321b7277).
 - [Bear threat #822](https://github.com/wowsims/forever/pull/822), at [`c8a275b33`](https://github.com/wowsims/forever/commit/c8a275b336d5537404c7156a574324dd5008f91e).
 - [Provisional Shaman #821](https://github.com/wowsims/forever/pull/821), at [`2fa331700`](https://github.com/wowsims/forever/commit/2fa33170006905ea188b1f9835a2bee89e90c874).
 
 - [Mage Clearcasting #803](https://github.com/wowsims/forever/pull/803), at [`393c297a9`](https://github.com/wowsims/forever/commit/393c297a9d0433d97d7ef33dbb53bb8f82385ad1).
-- [Target deaths and execute phases #826](https://github.com/wowsims/forever/pull/826), at [`8243f47db`](https://github.com/wowsims/forever/commit/8243f47db2ea68fdce907bc22fab12b682d584c6).
+- [Target deaths and execute phases #826](https://github.com/wowsims/forever/pull/826), at [`73e914a6c`](https://github.com/wowsims/forever/commit/73e914a6cca322ab7553bdd36bd80f719792d419).
 - [Warlock presets #827](https://github.com/wowsims/forever/pull/827), at [`b8cbeea80`](https://github.com/wowsims/forever/commit/b8cbeea8043357e84d6bafaeac86ad527b3ec4f6).
 - [Remaining cast time #828](https://github.com/wowsims/forever/pull/828), at [`abcfd33da`](https://github.com/wowsims/forever/commit/abcfd33da90e0b8a7cbbf0ddeb549acae3f9d372).
-- [Target activity #830](https://github.com/wowsims/forever/pull/830), at [`13813515e`](https://github.com/wowsims/forever/commit/13813515eac567fc37b48d9a06801f767296ebb4).
+- [Target activity #830](https://github.com/wowsims/forever/pull/830), at [`47acdeee4`](https://github.com/wowsims/forever/commit/47acdeee47f1815f5104a11be4d09ae390d57e21).
+
+The class hotfix revisions are [Mage #833](https://github.com/wowsims/forever/commit/974d83db37098aa8d99e51c63acf4bd33ea82993), [Paladin #834](https://github.com/wowsims/forever/commit/7b070596cfe5f8090313055c4d9d8ea469ab8868), [Priest #835](https://github.com/wowsims/forever/commit/948e5750bd277594f4ce82532bb714e9ae750fa3), [Druid #836](https://github.com/wowsims/forever/commit/d87fc5791502d8abb78601a468bfe2ba4622b0c6), [Hunter #838](https://github.com/wowsims/forever/commit/194f58d5c8c595cd79869e2145eb985e1d13107c), [Shaman #839](https://github.com/wowsims/forever/commit/197b72cbf70a323ca2e6f46d217cd220f7977204), [Rogue #840](https://github.com/wowsims/forever/commit/6dcd42dc1fb18e1a289fbbaf1989ad867012bd09), [Warrior #841](https://github.com/wowsims/forever/commit/630618c443167737571436e8af7ccf04837057b7), [Warlock #842](https://github.com/wowsims/forever/commit/4972a1d52d0c25d4d00ccbe143314a7689f23f0b).
 
 Both arenas show these source links only when the recorded results carry `launchPreview` metadata.
 The launch date describes the projection. Each source's computation date and simulator revision
@@ -41,16 +43,15 @@ arena’s setup inspector to see the equipped items, or replay its downloaded re
 
 ## Live game data and preset limitations
 
-The projection combines captured game data with the draft and fork changes listed in the coverage report. Shaman's
-store uses patched values on build 1.60.1.70707, hotfix push 113562, which cannot be reproduced from
-that unmodified game data. A missing simulator database entry does not establish that an item is
+The projection combines captured game data with the draft and fork changes listed in the coverage report. The class spell data comes from game build 1.60.1.70755 with hotfix push 113583.
+The generated Shaman spells retain the earlier preview’s tuning where that build still contains the older numbers. A missing simulator database entry does not establish that an item is
 unavailable in game. Later data updates can restore entries, while preset replacements may remain.
 
 [Upstream's preset substitutions](https://github.com/wowsims/forever/pull/725) use available items
 with the same name where possible, or a suitable slot, type and source otherwise. They have not
 been gear-optimized. Some same-name replacements use vanilla item IDs whose set IDs differ from
 the registered Forever sets. This affects the Soulforge, Sorcerer's, Heroism and Five Thunders
-replacements. All six Rogue presets wear four pieces of the original Darkmantle set (512).
+replacements. All eleven Rogue presets wear four pieces of the original Darkmantle set (512).
 Both it and the reissue (1676) grant the four-piece Energy proc. The simulator uses a 1 PPM
 estimate for both versions because the game files do not give a rate.
 
@@ -119,22 +120,20 @@ matching input fingerprints and finite results at 50,000 iterations. Duplicate o
 invalid provenance and smoke results fail validation. The same raw matrix supplies both arenas.
 
 The manual **Build Arenas** workflow exports once and creates the manifest without simulating it.
-A separate eight-iteration benchmark measures each build at every fight length, summing elapsed
+A separate eight-iteration benchmark measures each selected build at every fight length, summing elapsed
 times across all legal races and target types. For each fight length, the workflow assigns the
 largest estimated build costs first to the least-loaded of 16 shards. These measurements include
 concurrent CPU contention and are estimates; eight iterations do not predict every long-run cost.
 Benchmark output is kept outside the publication inputs.
 
-The workflow computes the full matrix once at 50,000 iterations per cell. Each shard records its
+The workflow publishes a complete matrix at 50,000 iterations per cell. Each shard records its
 simulator revision and computation date. After validation, both scorers write into a staging
 directory. Only a complete successful pair is copied into the checkout and committed together. A
 branch that has moved from the simulated revision fails publication, and a rejected push is never
 retried by merging unrelated work. A successful publication on `master` starts Pages deployment.
 Runs on other branches only commit their results there.
 
-The current refresh recomputes every legal race, build and encounter using the updated game data,
-presets, support ranks and launch-preview changes. Earlier computations cannot be reused across those changes. The generated
-source records identify the simulator revision and actual computation dates for the fresh run.
+A full run computes every build. A selective run takes a checked-in selection file that names every build, the previous verified engine and the compatibility evidence. Only selected builds are benchmarked and simulated. The publisher verifies the old requests and combines their original scores and sources with the fresh rows. [November 3 selection and checks](november-3-arena-reuse.md)
 
 ## Rebuild locally
 

@@ -15,7 +15,7 @@ const ARMS = '3030500130';
 const FURY = '-0505000540501';
 const LIVE = '30305001302';
 
-const saved = (talentsString: string) => SavedTalents.create({ talentsString, talentLayout: TalentLayout.TalentLayoutLaunch });
+const saved = (talentsString: string) => SavedTalents.create({ talentsString, talentLayout: TalentLayout.TalentLayoutHotfix });
 
 const writeSaved = (player: ReturnType<typeof makeBulkPlayer>, record: Record<string, string>) =>
 	player.sim.env.storage.setItem(

@@ -183,7 +183,7 @@ func (warrior *Warrior) registerTwoHandedWeaponSpecialization() {
 	}
 
 	spelldata.ParseStatic(&warrior.Character,
-		launchTalent(spellData.TwoHandedWeaponSpecialization.Rank(warrior.Talents.TwoHandedWeaponSpecialization), warrior.Talents.TwoHandedWeaponSpecialization))
+		spellData.TwoHandedWeaponSpecialization.Rank(warrior.Talents.TwoHandedWeaponSpecialization))
 }
 
 func (warrior *Warrior) registerImpale() {
@@ -250,7 +250,7 @@ func (warrior *Warrior) registerBloodthrill() {
 		return
 	}
 
-	talent := launchTalent(spellData.Bloodthrill.Rank(warrior.Talents.Bloodthrill), warrior.Talents.Bloodthrill)
+	talent := spellData.Bloodthrill.Rank(warrior.Talents.Bloodthrill)
 
 	// The proc opens Overpower's window as a dodge would, for the window's own duration, and the
 	// cast consumes it. The tooltip's $s1 names an effect, so the row's own ProcChanceEffectN
@@ -400,7 +400,7 @@ func (warrior *Warrior) registerImprovedSlam() {
 
 	// The five rank-swap effects the row states past the cast time, the global cooldown and Slam's
 	// cooldown have no sim kind and are reported as skipped.
-	spelldata.ParseStatic(&warrior.Character, launchTalent(spellData.ImprovedSlam.Rank(warrior.Talents.ImprovedSlam), warrior.Talents.ImprovedSlam))
+	spelldata.ParseStatic(&warrior.Character, spellData.ImprovedSlam.Rank(warrior.Talents.ImprovedSlam))
 }
 
 var sweepingStrikesRank = spellData.SweepingStrikes.Highest()

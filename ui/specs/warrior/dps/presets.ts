@@ -73,7 +73,7 @@ export const PreBiSFuryGear = PresetUtils.makePresetGear('Pre-BiS', PreBiSFuryGe
 // with no tank assigned the boss attacks no one, so the sim gives it no value.
 export const FuryTalents = PresetUtils.makePresetTalents(
 	'Fury',
-	SavedTalents.create({ talentsString: '30303213002-2505310051122100321', talentLayout: TalentLayout.TalentLayoutLaunch }),
+	SavedTalents.create({ talentsString: '30303213002-350531005122100231', talentLayout: TalentLayout.TalentLayoutHotfix }),
 );
 
 // Measured on the Pre-BiS Fury gear with the Fury talents.
@@ -106,7 +106,7 @@ export const PreBiSArmsGear = PresetUtils.makePresetGear('Pre-BiS', PreBiSArmsGe
 // global cooldowns Mortal Strike and Slam leave.
 export const ArmsTalents = PresetUtils.makePresetTalents(
 	'Arms',
-	SavedTalents.create({ talentsString: '30323213132215201-25050120011', talentLayout: TalentLayout.TalentLayoutLaunch }),
+	SavedTalents.create({ talentsString: '30323213132215201-3505012001', talentLayout: TalentLayout.TalentLayoutHotfix }),
 );
 
 // Measured on the Pre-BiS Arms gear with the Arcanite Reaper (12784) in the main hand and the Arms talents. Hit is

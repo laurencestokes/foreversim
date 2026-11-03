@@ -12,14 +12,6 @@ var improvedSlamRank = slamRank.OverriddenBy(spellData.ImprovedSlam.Highest())
 func (warrior *Warrior) registerSlam() {
 	rank := core.Ternary(warrior.Talents.ImprovedSlam > 0, improvedSlamRank, slamRank)
 
-	// The launch notes give Slam a 15-second base cooldown.
-	// TODO: Read the raw category cooldown when the game files carry the launch value.
-	if rank.CategoryCooldownMs == 18000 {
-		copy := *rank
-		copy.CategoryCooldownMs = 15000
-		rank = &copy
-	}
-
 	config := spelldata.SpellConfig(&warrior.Unit, rank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
 	// The APL names Slam by the spell the talent replaces.
 	config.ActionID = core.ActionID{SpellID: slamRank.ID}

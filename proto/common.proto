@@ -147,6 +147,7 @@ enum Class {
 enum TalentLayout {
 	TalentLayoutLegacy = 0;
 	TalentLayoutLaunch = 1;
+	TalentLayoutHotfix = 2;
 }
 
 enum Profession {
@@ -786,7 +787,7 @@ enum OtherAction {
 	OtherActionResourcePotion = 24;
 	OtherActionDefensivePotion = 25;
 	OtherActionOffensivePotion = 26;
-	// November 2 abilities whose game spell IDs are missing from the captured rows.
+	// Identifiers retained by saved launch builds and rotations.
 	OtherActionRecklessSwings = 27;
 	OtherActionImprovedWhirlwind = 28;
 	OtherActionShank = 29;
