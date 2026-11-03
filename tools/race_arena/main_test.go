@@ -57,6 +57,38 @@ func TestRaceSourceRevisions(t *testing.T) {
 	if err == nil || !strings.Contains(string(output), "different simulator revisions") {
 		t.Fatalf("an incomplete race update should fail: %v\n%s", err, output)
 	}
+
+	rows[0].Races[1].Commit = ""
+	write()
+	paired := filepath.Join(dir, "build.json")
+	source := `{"launchDate":"2026-11-04"}`
+	if err := os.WriteFile(paired, []byte(`{"verifiedCommit":"original","iterations":50000,"launchPreview":`+source+`}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if output, err := exec.Command("go", "run", ".", in, outPath, paired).CombinedOutput(); err != nil {
+		t.Fatalf("paired scoring failed: %v\n%s", err, output)
+	}
+	data, err = os.ReadFile(outPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = json.Unmarshal(data, &result); err != nil {
+		t.Fatal(err)
+	}
+	var preview struct {
+		LaunchDate string `json:"launchDate"`
+	}
+	if err := json.Unmarshal(result.LaunchPreview, &preview); err != nil || preview.LaunchDate != "2026-11-04" {
+		t.Fatalf("missing paired launch metadata: %s", result.LaunchPreview)
+	}
+	for i := range rows {
+		rows[i].Iterations = 8
+	}
+	write()
+	output, err = exec.Command("go", "run", ".", in, outPath, paired).CombinedOutput()
+	if err == nil || !strings.Contains(string(output), "iterations") {
+		t.Fatalf("a smoke run must not inherit the publication's preview: %v\n%s", err, output)
+	}
 }
 
 // The tier edges are the published ones: S within 0.5% of the best, A to 1.0%, B to 1.5%, C to

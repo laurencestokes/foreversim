@@ -49,6 +49,7 @@ jobs:
             - name: Prepare coverage and estimate simulation costs
               env:
                   SOURCE_REVISION: ${{ steps.source.outputs.revision }}
+                  UPSTREAM_REVISION: ${{ steps.source.outputs.upstream }}
               run: |
                   node tools/race_arena/snapshot.mjs "$RUNNER_TEMP/arena-input.json"
                   mkdir -p "$RUNNER_TEMP/arena-job"
@@ -59,7 +60,21 @@ jobs:
                   node --input-type=module <<'NODE'
                   import fs from 'node:fs';
                   import assert from 'node:assert/strict';
+                  import { execFileSync } from 'node:child_process';
                   const root = process.env.RUNNER_TEMP;
+                  const previewPath = 'tools/build_arena/launch-preview.json';
+                  if (fs.existsSync(previewPath)) {
+                    const preview = JSON.parse(fs.readFileSync(previewPath));
+                    assert.equal(preview.upstreamCommit, process.env.UPSTREAM_REVISION, 'Update the launch preview sources for this upstream revision');
+                    for (const {commit} of preview.drafts) {
+                      assert.match(commit, /^[a-f0-9]{40}$/);
+                      execFileSync('git', ['merge-base', '--is-ancestor', commit, process.env.SOURCE_REVISION]);
+                    }
+                    const path = `${root}/arena-job/manifest.json`;
+                    const manifest = JSON.parse(fs.readFileSync(path));
+                    manifest.launchPreview = preview;
+                    fs.writeFileSync(path, JSON.stringify(manifest));
+                  }
                   const builds = JSON.parse(fs.readFileSync(`${root}/arena-input.json`, 'utf8'));
                   const measurements = JSON.parse(fs.readFileSync(`${root}/arena-benchmark/presets.json`, 'utf8'));
                   for (const seconds of [90, 180, 360]) {
@@ -191,7 +206,7 @@ jobs:
                   npm ci
                   mkdir -p "$RUNNER_TEMP/arena-publish"
                   node tools/build_arena/publish.mjs --manifest "$RUNNER_TEMP/arena-job/manifest.json" --raw "$RUNNER_TEMP/arena-raw.json" --provenance "$RUNNER_TEMP/arena-sources.json" --upstream "$UPSTREAM_REVISION" --verified "$SOURCE_REVISION" --out "$RUNNER_TEMP/arena-publish/build-results.json"
-                  go run ./tools/race_arena "$RUNNER_TEMP/arena-raw" "$RUNNER_TEMP/arena-publish/race-results.json"
+                  go run ./tools/race_arena "$RUNNER_TEMP/arena-raw" "$RUNNER_TEMP/arena-publish/race-results.json" "$RUNNER_TEMP/arena-publish/build-results.json"
                   npx oxfmt "$RUNNER_TEMP/arena-publish/build-results.json" "$RUNNER_TEMP/arena-publish/race-results.json"
                   mkdir -p ui/app/build_arena
                   cp "$RUNNER_TEMP/arena-publish/build-results.json" ui/app/build_arena/results.json

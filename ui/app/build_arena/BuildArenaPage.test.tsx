@@ -1,5 +1,6 @@
 import i18n from '@i18n/config';
 import { buildArenaFixture } from '@testing/build_arena_fixture';
+import { launchPreviewFixture } from '@testing/launch_preview_fixture';
 import { fireEvent, render, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -18,6 +19,36 @@ const pick = async (root: HTMLElement, label: string, option: string) => {
 };
 
 describe('Build Arena', () => {
+	it('labels recorded launch projections and links their exact source versions', () => {
+		const { getByRole } = render(<BuildArenaPageView data={{ ...buildArenaFixture, launchPreview: launchPreviewFixture }} />);
+		const notice = getByRole('complementary', { name: 'November 4, 2026 launch projection' });
+		expect(notice.textContent).toContain('Hunter uses live hotfix data');
+		expect(notice.textContent).toContain('Feral includes partial changes');
+		expect(notice.textContent).toContain('Shaman uses a provisional model');
+		expect(notice.textContent).toContain('Skyborne base attributes remain unverified');
+		expect(
+			within(notice)
+				.getByRole('link', { name: `Upstream baseline ${launchPreviewFixture.upstreamCommit.slice(0, 7)}` })
+				.getAttribute('href'),
+		).toBe(`https://github.com/wowsims/forever/commit/${launchPreviewFixture.upstreamCommit}`);
+		for (const source of launchPreviewFixture.drafts) {
+			expect(
+				within(notice)
+					.getByRole('link', { name: `Draft #${source.pullRequest}` })
+					.getAttribute('href'),
+			).toBe(`https://github.com/wowsims/forever/pull/${source.pullRequest}`);
+			expect(
+				within(notice)
+					.getByRole('link', { name: source.commit.slice(0, 7) })
+					.getAttribute('href'),
+			).toBe(`https://github.com/wowsims/forever/commit/${source.commit}`);
+		}
+		expect(getByRole('region', { name: 'Method and recorded sources' }).textContent).toContain(`Published ${buildArenaFixture.publishedAt}.`);
+	});
+	it('keeps historical results free of launch-preview labels', () => {
+		const { queryByRole } = render(<BuildArenaPageView data={buildArenaFixture} />);
+		expect(queryByRole('complementary', { name: /launch projection/ })).toBeNull();
+	});
 	it('distinguishes shared preset labels by spec and exposes Hunter melee assumptions beside the result', () => {
 		const data = {
 			...buildArenaFixture,

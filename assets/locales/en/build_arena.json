@@ -135,5 +135,14 @@
   },
   "computedWindow": "{{start}} to {{end}}",
   "compatibilityEvidence": "Compatibility evidence",
-  "recordedLabel": "Recorded preset label: {{name}}"
+  "recordedLabel": "Recorded preset label: {{name}}",
+  "launchPreviewTitle": "{{date}} launch projection",
+  "launchPreviewSummary": "Hunter uses live hotfix data and retuned presets. Feral includes partial changes from the development notes, with approximate damage increases still awaiting game data. Shaman uses a provisional model of the patch notes, built from game build 1.60.1.70707 and hotfix push 113562.",
+  "launchPreviewStatus": "Skyborne base attributes remain unverified. These are launch projections under fixed arena assumptions; later game data and preset tuning can change the order. The launch date is separate from when the simulations ran or the results were published.",
+  "launchPreviewSources": "Launch projection source versions",
+  "launchPreviewBase": "Upstream baseline",
+  "launchPreviewDraft": "Draft #{{number}}",
+  "launchPreviewLimitations": "These level-60 presets have unequal gear levels and replacement items that have not been gear-optimized. Missing simulator database entries do not establish unavailability in game. Some vanilla-ID replacements do not activate the registered Forever set bonuses. Rankings measure personal single-target DPS, including pets, for these exact setups; they do not establish absolute class balance.",
+  "launchPreviewShamanSlot": "In the Shaman talent inspector, the Lava Burst slot models Call of Thunder: +5% crit to Lightning Bolt, Chain Lightning and their overloads. The preview keeps the old tree and saved talent ranks.",
+  "launchPreviewLimitationsTitle": "Preset and model limitations"
 }

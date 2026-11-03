@@ -4,7 +4,7 @@ import path from 'node:path';
 import { applyBuild } from '@features/settings/model/apply_build';
 import { applyIndividualDefaults } from '@features/settings/model/apply_defaults';
 import { Player as PlayerProto } from '@generated/proto/api';
-import { Class, EquipmentSpec, Spec } from '@generated/proto/common';
+import { Class, EquipmentSpec, Spec, Stat } from '@generated/proto/common';
 import { UIDatabase } from '@generated/proto/ui';
 import { LaunchStatus } from '@sim/constants/other';
 import { PlayerSpecs } from '@sim/player/specs';
@@ -83,6 +83,8 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 			// Warlock presets contain no gear; its regression suites use this upstream preraid set.
 			if (key === 'warlock') player.setGear(host.sim.db.lookupEquipmentSpec(EquipmentSpec.fromJson(warlockGear)));
 			const exported = player.toProto(false, true);
+			// The Elemental preview file has extra mana for rotation testing. Ranked fights use the preset's normal mana pool.
+			expect(exported.bonusStats?.stats[Stat.StatMana] ?? 0, `${key} / ${build.name} bonus mana`).toBe(0);
 			const label = [build.group, build.name].filter(Boolean).join(' / ');
 			const gear = build.gear ?? config.presets.gear.find(gear => gear.gear === config.defaults.gear);
 			const rotation = build.rotation ?? config.presets.rotations.find(preset => preset.rotation.rotation === config.defaults.aplRotation);

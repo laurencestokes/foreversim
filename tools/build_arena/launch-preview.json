@@ -1,0 +1,10 @@
+{
+	"launchDate": "2026-11-04",
+	"upstreamCommit": "137665be41ec5277d8f12e9793a76420f5211557",
+	"drafts": [
+		{ "pullRequest": 824, "commit": "a6b9f132c9cece3a44ac093d61659c9951fcf62c" },
+		{ "pullRequest": 823, "commit": "ac807d93bb80bf50d379066b2fb0c131321b7277" },
+		{ "pullRequest": 822, "commit": "c8a275b336d5537404c7156a574324dd5008f91e" },
+		{ "pullRequest": 821, "commit": "2fa33170006905ea188b1f9835a2bee89e90c874" }
+	]
+}

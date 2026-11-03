@@ -84,6 +84,7 @@ const feralPawVariance = 0.4
 
 // The paw uses the weapon's table DPS and form variance, with single-precision endpoints
 // rounded before AP and flat enchant or stone damage.
+// TODO: Ingame test needed -- whether the paw also takes the QualityModifier the table DPS leaves out.
 func (druid *Druid) feralWeapon(swingSpeed float64) core.Weapon {
 	paw := core.Weapon{
 		BaseDamageMin:        1,
@@ -137,10 +138,9 @@ func (druid *Druid) RegisterCatFormAura() {
 	})
 }
 
-// Bear Form (Passive2) 21178 is the bear forms' threat: A_MOD_THREAT on every school, 50 in the hotfixed
-// game files. The spell store does not carry the row, as neither form's row names it.
+// The November 2 notes give both bear forms 115% additional threat. Their passive (21178) is missing from the store.
 // TODO: Read 21178 from the spell store once tools/database takes it for the druid.
-const bearFormThreatMultiplier = 1.5
+const bearFormThreatMultiplier = 2.15
 
 func (druid *Druid) RegisterBearFormAura() {
 	druid.BearFormAura = druid.registerBearAura(spellData.BearForm.Highest(), spellData.BearFormTriggered.Highest(), Bear, druid.StartingForm == Bear)

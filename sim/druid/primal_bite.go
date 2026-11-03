@@ -11,8 +11,8 @@ func (druid *Druid) registerPrimalBiteSpell() {
 	}
 	rank := spellData.PrimalBite.Highest()
 	config := spelldata.SpellConfig(&druid.Unit, rank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
-	// TODO: Ingame research needed -- the tooltip's "generating a high amount of threat"; the row states no
-	// threat effect, so the cast threatens only for its damage.
+	config.ThreatMultiplier = 3
+	// The preview assumes triple threat. The game files give no multiplier for this strike.
 	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 		result := spell.CalcAndDealDamage(sim, target, druid.weaponSpecialDamage(sim, spell, target, rank), spell.OutcomeMeleeWeaponSpecialHitAndCrit)
 		druid.refundOnMiss(sim, spell, result)

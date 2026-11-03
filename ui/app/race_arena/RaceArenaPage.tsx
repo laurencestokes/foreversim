@@ -5,6 +5,7 @@ import { Button } from '@ui-kit/Button';
 import clsx from 'clsx';
 import { useState } from 'react';
 
+import { LaunchPreviewNotice } from '../arena/LaunchPreviewNotice';
 import { LandingFooter } from '../landing/LandingFooter';
 import { LandingHeader } from '../landing/LandingHeader';
 import { durationsOf, fightLabel, type RaceArenaResults, type RaceList, type RaceResult, secondsOf, specName, TARGETS, type Tier } from './raceArenaData';
@@ -218,18 +219,24 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 					upstream simulator.
 				</p>
 			</header>
+			{data.launchPreview && <LaunchPreviewNotice preview={data.launchPreview} />}
 			<section className="flex flex-col gap-2 border border-surface-border p-4">
 				<h2 className="m-0 text-xl">Method</h2>
 				<p className="m-0">
-					This is a live-game baseline for choosing a race at level 60. Each build holds gear, enchants, talents, rotation, consumables and buffs
-					constant across every legal race. Changing the race includes its racial abilities, base attributes and effects on pets. Gear and rotations
-					are not individually optimized for each race.
+					{data.launchPreview
+						? 'This is a launch projection for choosing a race at level 60. '
+						: 'This is a live-game baseline for choosing a race at level 60. '}
+					Each build holds gear, enchants, talents, rotation, consumables and buffs constant across every legal race. Changing the race includes its
+					racial abilities, base attributes and effects on pets. Gear and rotations are not individually optimized for each race.
 				</p>
 				<p className="m-0">
-					We use upstream level-60 presets with unequal gear levels. The game files are from live wowf build 1.60.1.70707 with hotfixes through push
-					113562. Missing simulator database entries do not establish that an item is unavailable in game. Upstream's replacement preset items have
-					not been gear-optimized. Some vanilla-ID replacements do not activate the registered Forever set bonuses. Warlock uses upstream's preraid
-					test set. View setup shows the equipment, enchants, weapon swaps and talent ranks saved with each result.
+					We use upstream level-60 presets with unequal gear levels.{' '}
+					{data.launchPreview
+						? 'The source versions above include Hunter hotfix data and partial Feral and provisional Shaman changes from the development notes. '
+						: 'The game files are from live wowf build 1.60.1.70707 with hotfixes through push 113562. '}
+					Missing simulator database entries do not establish that an item is unavailable in game. Upstream's replacement preset items have not been
+					gear-optimized. Some vanilla-ID replacements do not activate the registered Forever set bonuses. Warlock uses upstream's preraid test set.
+					View setup shows the equipment, enchants, weapon swaps and talent ranks saved with each result.
 				</p>
 				<p className="m-0">
 					Every simulation is a fixed-length fight ({durationsOf(data).map(fightLabel).join(', ')}; {fightLabel(data.fight.seconds)} is the main view)
