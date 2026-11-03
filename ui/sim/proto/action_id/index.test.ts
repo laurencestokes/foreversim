@@ -4,8 +4,44 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Database } from '../database';
 import { ActionId } from '.';
+import { actionIdWowheadTooltipData } from './tooltip_data';
 
 afterEach(() => vi.restoreAllMocks());
+
+describe('launch actions', () => {
+	const names = [
+		'Reckless Swings',
+		'Improved Whirlwind',
+		'Shank',
+		'Blood Splatter',
+		'Composure',
+		'Flash of Steel',
+		'Boot Knife',
+		'Quick Getaway',
+		'Call of Thunder',
+	];
+	it('fills synthetic names and icons without asking for a game spell', async () => {
+		const lookup = vi.spyOn(ActionId, 'getTooltipData');
+		const tooltip = vi.spyOn(ActionId, 'makeSpellTooltipData');
+		for (const [index, name] of names.entries()) {
+			const action = await ActionId.fromOtherId((27 + index) as OtherAction).fill();
+			expect(action.name).toBe(name);
+			expect(action.iconUrl).toMatch(/^https:\/\/.+\.jpg$/);
+			expect(action.spellId).toBe(0);
+			expect(await actionIdWowheadTooltipData(action)).toBe('');
+		}
+		expect(lookup).not.toHaveBeenCalled();
+		expect(tooltip).not.toHaveBeenCalled();
+	});
+
+	it('round-trips a synthetic talent rank and keeps its identity when the rank is removed', () => {
+		const talent = ActionId.fromTalent(0, 3, 0, OtherAction.OtherActionRecklessSwings);
+		expect(talent.name).toContain('Reckless Swings');
+		expect(ActionId.fromProto(talent.toProto()).equalsAtRank(talent)).toBe(true);
+		expect(talent.withoutRank().otherId).toBe(OtherAction.OtherActionRecklessSwings);
+		expect(talent.withoutRank().rank).toBe(0);
+	});
+});
 
 const filledName = async (actionId: ActionId, name: string) => {
 	vi.spyOn(ActionId, 'getTooltipData').mockImplementation(async () => ({ name, icon: '' }) as never);

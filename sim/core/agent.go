@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/ui/sim/talents/trees"
+	gp "google.golang.org/protobuf/proto"
 )
 
 // Agent can be thought of as the 'Player', i.e. the thing controlling the Character.
@@ -192,6 +194,11 @@ func RegisterAgentFactory(emptyOptions interface{}, spec proto.Spec, factory Age
 
 // Constructs a new Agent.
 func NewAgent(party *Party, partyIndex int, player *proto.Player, raidConfig *proto.Raid) Agent {
+	if layout := trees.ForClass(player.Class.String()); layout != nil && player.TalentLayout == proto.TalentLayout_TalentLayoutLegacy && player.TalentsString != "" {
+		player = gp.Clone(player).(*proto.Player)
+		player.TalentsString = layout.FromLegacy(player.TalentsString)
+		player.TalentLayout = proto.TalentLayout_TalentLayoutLaunch
+	}
 	typeName := reflect.TypeOf(player.GetSpec()).Elem().Name()
 
 	factory, ok := agentFactories[typeName]

@@ -21,8 +21,6 @@ const (
 	DDBC_Total
 )
 
-var TalentTreeSizes = [3]int{17, 17, 19}
-
 const RogueBleedTag = "RogueBleed"
 
 type Rogue struct {
@@ -55,6 +53,8 @@ type Rogue struct {
 	Vanish         *core.Spell
 	AdrenalineRush *core.Spell
 	InstantPoison  *core.Spell
+	Shank          *core.Spell
+	DeathMark      *core.Spell
 
 	ExposeArmor  *core.Spell
 	Rupture      *core.Spell
@@ -67,7 +67,9 @@ type Rogue struct {
 	MasterOfSubtletyAura *core.Aura
 	ShadowstepAura       *core.Aura
 	StealthAura          *core.Aura
-	CutthroatAura        *core.Aura
+	GhostlyStrikeAura    *core.Aura
+	PoisedAura           *core.Aura
+	VenomAura            *core.Aura
 
 	WoundPoisonDebuffAuras core.AuraArray
 
@@ -105,8 +107,10 @@ func (rogue *Rogue) ApplyFinisher(sim *core.Simulation, spell *core.Spell) {
 	rogue.SpendComboPoints(sim, spell.ComboPointMetrics())
 
 	// Relentless Strikes
-	if rogue.Talents.RelentlessStrikes && sim.Proc(0.2*float64(numPoints), "Relentless Strikes") {
-		rogue.AddEnergy(sim, 25, rogue.relentlessStrikesMetrics)
+	// The November 2 development notes state a four-percent chance per point in the talent and per
+	// combo point spent. The captured row carries the one-point talent's chance.
+	if chance := 0.04 * float64(rogue.Talents.RelentlessStrikesPoints*numPoints); chance > 0 && sim.Proc(chance, "Relentless Strikes") {
+		rogue.AddEnergy(sim, spellData.RelentlessStrikesTriggered.Highest().EnergizeEffect().Average(), rogue.relentlessStrikesMetrics)
 	}
 
 	// Ruthlessness
@@ -132,6 +136,8 @@ func (rogue *Rogue) Initialize() {
 	rogue.registerStealthAura()
 	rogue.registerKickSpell()
 	rogue.registerFeintSpell()
+	rogue.registerShank()
+	rogue.registerPoised()
 
 	ruthRank := spellData.Ruthlessness.Rank(rogue.Talents.Ruthlessness)
 	if ruthRank != nil {
@@ -152,9 +158,24 @@ func (rogue *Rogue) ApplyAdditiveEnergyRegenBonus(sim *core.Simulation, incremen
 
 func (rogue *Rogue) Reset(sim *core.Simulation) {
 	rogue.MultiplyEnergyRegenSpeed(sim, 1.0+rogue.AdditiveEnergyRegenBonus)
+	rogue.activatePoised(sim)
+	// Energy can refill between prepull casts. Check until the pull, when combat prevents Poised.
+	if start := rogue.Env.PrepullStartTime(); start < 0 {
+		check := &core.PendingAction{NextActionAt: start, Priority: core.ActionPriorityPrePull + 100}
+		check.OnAction = func(sim *core.Simulation) {
+			if sim.CurrentTime >= 0 {
+				return
+			}
+			rogue.activatePoised(sim)
+			check.NextActionAt = sim.CurrentTime + rogue.EnergyTickDuration
+			sim.AddPendingAction(check)
+		}
+		sim.AddPendingAction(check)
+	}
 }
 
 func (rogue *Rogue) OnEncounterStart(sim *core.Simulation) {
+	rogue.activatePoised(sim)
 }
 
 func NewRogue(character *core.Character, options *proto.Player, talents string) *Rogue {
@@ -165,7 +186,7 @@ func NewRogue(character *core.Character, options *proto.Player, talents string) 
 		Options:   rogueOptions.Options.ClassOptions,
 	}
 
-	rogue.FillTalentsProto(rogue.Talents.ProtoReflect(), talents, TalentTreeSizes)
+	rogue.FillTalentsProtoFromTree(rogue.Talents.ProtoReflect(), talents)
 
 	// Passive rogue threat reduction: https://wotlk.wowhead.com/spell=21184/rogue-passive-dnd
 	rogue.PseudoStats.ThreatMultiplier *= 1 + spellData.RoguePassive.Highest().EffectN(1).Percent()
@@ -281,14 +302,15 @@ const (
 	RogueSpellInstantPoison
 	RogueSpellWoundPoison
 	RogueSpellDeadlyPoison
+	RogueSpellShank
+	RogueSpellDeathMark
 
 	RogueSpellLast
 	RogueSpellsAll    = RogueSpellLast<<1 - 1
-	RogueSpellActives = RogueSpellGhostlyStrike<<1 - 1
+	RogueSpellActives = RogueSpellGhostlyStrike<<1 - 1 | RogueSpellShank | RogueSpellDeathMark
 
 	RogueSpellPoisons        = RogueSpellWoundPoison | RogueSpellDeadlyPoison | RogueSpellInstantPoison
 	RogueSpellLethality      = RogueSpellSinisterStrike | RogueSpellGouge | RogueSpellBackstab | RogueSpellGhostlyStrike | RogueSpellMutilateHit | RogueSpellHemorrhage
 	RogueSpellDirectFinisher = RogueSpellEviscerate
 	RogueSpellFinisher       = RogueSpellDirectFinisher | RogueSpellSliceAndDice | RogueSpellRupture | RogueSpellExposeArmor
-	RogueSpellQuietus        = RogueSpellSinisterStrike | RogueSpellHemorrhage | RogueSpellGhostlyStrike
 )

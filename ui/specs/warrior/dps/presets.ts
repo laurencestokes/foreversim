@@ -1,7 +1,7 @@
 import * as PresetUtils from '@app/preset_utils';
 import * as Consumables from '@features/settings/model/consumables_auto_gen';
 import { makeSpecChangeWarningToast } from '@features/settings/utils/spec_change_warning_toast';
-import { ConsumesSpec, HandType, ItemSlot, Profession, PseudoStat, Race, Spec, Stat } from '@generated/proto/common';
+import { ConsumesSpec, HandType, ItemSlot, Profession, PseudoStat, Race, Spec, Stat, TalentLayout } from '@generated/proto/common';
 import { SavedTalents } from '@generated/proto/ui';
 import { DpsWarrior_Options as WarriorOptions, DpsWarrior_Rotation, DpsWarriorSpec, WarriorStance, WarriorSunder } from '@generated/proto/warrior';
 import { Player } from '@sim/player/player';
@@ -69,9 +69,12 @@ const ARMS_PRESET_OPTIONS = {
 // the second ring have no known source.
 export const PreBiSFuryGear = PresetUtils.makePresetGear('Pre-BiS', PreBiSFuryGearJson, { ...FURY_PRESET_OPTIONS, devOnly: true });
 
-// The best build on the Pre-BiS Fury gear over fights of 60 to 240 s. Enrage takes no points: with no tank
-// assigned the boss attacks no one, so the sim gives it no value.
-export const FuryTalents = PresetUtils.makePresetTalents('Fury', SavedTalents.create({ talentsString: '30305213002-15053105102210501' }));
+// A 51-point launch build with Reckless Swings and Improved Whirlwind. Enrage takes no points:
+// with no tank assigned the boss attacks no one, so the sim gives it no value.
+export const FuryTalents = PresetUtils.makePresetTalents(
+	'Fury',
+	SavedTalents.create({ talentsString: '30303213002-2505310051122100321', talentLayout: TalentLayout.TalentLayoutLaunch }),
+);
 
 // Measured on the Pre-BiS Fury gear with the Fury talents.
 export const PreBiSFuryEpWeights = PresetUtils.makePresetEpWeights(
@@ -101,7 +104,10 @@ export const PreBiSArmsGear = PresetUtils.makePresetGear('Pre-BiS', PreBiSArmsGe
 
 // The Battle Stance build: Rend keeps Bloodthrill's Overpower procs coming, and Spearing Strike fills the
 // global cooldowns Mortal Strike and Slam leave.
-export const ArmsTalents = PresetUtils.makePresetTalents('Arms', SavedTalents.create({ talentsString: '30325213132515201-0505-2' }));
+export const ArmsTalents = PresetUtils.makePresetTalents(
+	'Arms',
+	SavedTalents.create({ talentsString: '30323213132215201-25050120011', talentLayout: TalentLayout.TalentLayoutLaunch }),
+);
 
 // Measured on the Pre-BiS Arms gear with the Arcanite Reaper (12784) in the main hand and the Arms talents. Hit is
 // its value below the 8% cap.

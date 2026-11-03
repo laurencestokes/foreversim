@@ -204,6 +204,7 @@ const mount = ({
 		storeKey: STORE_KEY,
 		getGear: () => CURRENT_GEAR,
 		getPlayerSpec: () => PlayerSpecs.DpsWarrior,
+		getClass: () => PlayerSpecs.DpsWarrior.classID,
 		aplRotation: LIVE_ROTATION,
 		getResolvedAplRotationForBuild: resolveBuild,
 	} as unknown as Player<any>;

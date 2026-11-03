@@ -1,4 +1,4 @@
-import { Class, Spec } from '@generated/proto/common';
+import { Class, Spec, TalentLayout } from '@generated/proto/common';
 
 import { PlayerSpec } from '../player/player_spec';
 import { specTypeFunctions } from '../proto/spec_functions';
@@ -13,6 +13,7 @@ import { priestTalentsConfig } from './priest';
 import { rogueTalentsConfig } from './rogue';
 import { shamanTalentsConfig } from './shaman';
 import { parseTalentsString, serializeTalentsString } from './talents_string';
+import previousLayouts from './trees/history/prelaunch.json';
 import { warlockTalentsConfig } from './warlock';
 import { warriorTalentsConfig } from './warrior';
 
@@ -34,6 +35,30 @@ export const classTalentsConfig: Record<Class, TalentsConfig<any>> = {
 	[Class.ClassWarlock]: warlockTalentsConfig,
 	[Class.ClassWarrior]: warriorTalentsConfig,
 } as const;
+
+const previousPositions: Partial<Record<Class, string[][]>> = {
+	[Class.ClassRogue]: previousLayouts.rogue,
+	[Class.ClassWarrior]: previousLayouts.warrior,
+	[Class.ClassShaman]: previousLayouts.shaman,
+};
+
+export const currentTalentLayout = (classID: Class): TalentLayout =>
+	previousPositions[classID] ? TalentLayout.TalentLayoutLaunch : TalentLayout.TalentLayoutLegacy;
+
+export function loadSavedTalentString(classID: Class, digits: string, layout: TalentLayout): string {
+	const previous = previousPositions[classID];
+	if (!previous || layout !== TalentLayout.TalentLayoutLegacy || !digits) return digits;
+	const points = new Map<string, number>();
+	digits.split('-').forEach((tree, ti) => {
+		for (const [i, rank] of Array.from(tree).entries()) {
+			const field = previous[ti]?.[i];
+			if (field && /^[1-9]$/.test(rank)) points.set(field, Number(rank));
+		}
+	});
+	return serializeTalentsString(
+		classTalentsConfig[classID].map(tree => tree.talents.map(talent => Math.min(talent.maxPoints, points.get(String(talent.fieldName)) ?? 0))),
+	);
+}
 
 export function playerTalentStringToProto<SpecType extends Spec>(playerSpec: PlayerSpec<SpecType>, talentString: string): SpecTalents<SpecType> {
 	const specFunctions = specTypeFunctions[playerSpec.specID];

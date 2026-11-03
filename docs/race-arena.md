@@ -1,12 +1,8 @@
 # Race arena
 
-Results marked **November 4, 2026 launch projection** combine live Hunter hotfix data and retuned
-presets with partial Feral changes and provisional Shaman patch-note values. Feral's approximate
-damage increases still need game data. Shaman's preview is based on a patched copy of build
-1.60.1.70707, hotfix push 113562, and cannot be reproduced from the unmodified game files.
-Skyborne base attributes remain unverified, so their race comparisons carry that additional uncertainty.
-Shaman's talent inspector retains the Lava Burst slot and its saved rank; in this preview it models
-Call of Thunder, adding 5% crit to Lightning Bolt, Chain Lightning and their overloads.
+[November 2 patch coverage by class](november-2-coverage.md) records which launch changes these results include and where the model still differs.
+
+Results marked **November 4, 2026 launch projection** include the Hunter hotfix, upstream Feral and Shaman drafts and the fork’s November 2 class changes. Each build holds its setup fixed across races. Rogue, Warrior and Shaman use legal launch talent allocations, and Elemental uses its ordinary mana pool. The class coverage report identifies which values come from the game files and which still need measurements. Skyborne base attributes remain unverified.
 
 Both arena pages link to the exact [upstream baseline `137665be4`](https://github.com/wowsims/forever/commit/137665be41ec5277d8f12e9793a76420f5211557),
 [Hunter #824 at `a6b9f132c`](https://github.com/wowsims/forever/commit/a6b9f132c9cece3a44ac093d61659c9951fcf62c),
@@ -14,12 +10,15 @@ Both arena pages link to the exact [upstream baseline `137665be4`](https://githu
 [Bear threat #822 at `c8a275b33`](https://github.com/wowsims/forever/commit/c8a275b336d5537404c7156a574324dd5008f91e), and
 [Shaman #821 at `2fa331700`](https://github.com/wowsims/forever/commit/2fa33170006905ea188b1f9835a2bee89e90c874).
 The launch-preview notice appears only on results with recorded `launchPreview` metadata. The launch
-date is separate from computation dates; historical results keep their original labels and sources.
+date is separate from computation dates. Historical results keep their original labels and sources.
 
-The Race Arena compares every legal race on each upstream DPS build. Within a build, gear, talents,
+The Race Arena compares every legal race on each recorded DPS build. Within a build, gear, talents,
 resolved rotation, consumables and class options stay fixed. The [Build Arena](build-arena.md)
 compares the complete presets against each other and explains the shared inputs, publication checks
 and source provenance.
+
+Some presets use development gear that the public class simulator omits from its build selector.
+The race comparison equips that gear for every race. The setup inspector lists the actual items.
 
 The simulator, game files and presets follow [wowsims/forever](https://github.com/wowsims/forever),
 including the [October 26 racial tuning](https://www.wowhead.com/forever/news/racial-ability-tuning-pass-for-wow-forever-383597)

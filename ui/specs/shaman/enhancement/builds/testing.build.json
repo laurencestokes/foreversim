@@ -144,7 +144,8 @@
         }
       }
     },
-    "talentsString": "053303102-053030031005102251-03",
+    "talentsString": "053303102-053030310051002251-03",
+    "talentLayout": "TalentLayoutLaunch",
     "profession1": "Engineering",
     "profession2": "Leatherworking",
     "cooldowns": {

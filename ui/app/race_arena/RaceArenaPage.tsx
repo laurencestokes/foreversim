@@ -219,7 +219,7 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 					upstream simulator.
 				</p>
 			</header>
-			{data.launchPreview && <LaunchPreviewNotice preview={data.launchPreview} />}
+			{data.launchPreview && <LaunchPreviewNotice preview={data.launchPreview} commit={data.commit} />}
 			<section className="flex flex-col gap-2 border border-surface-border p-4">
 				<h2 className="m-0 text-xl">Method</h2>
 				<p className="m-0">
@@ -230,10 +230,12 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 					racial abilities, base attributes and effects on pets. Gear and rotations are not individually optimized for each race.
 				</p>
 				<p className="m-0">
-					We use upstream level-60 presets with unequal gear levels.{' '}
-					{data.launchPreview
-						? 'The source versions above include Hunter hotfix data and partial Feral and provisional Shaman changes from the development notes. '
-						: 'The game files are from live wowf build 1.60.1.70707 with hotfixes through push 113562. '}
+					The level-60 presets use unequal gear levels.{' '}
+					{data.launchPreview?.notesUrl
+						? 'We adapted upstream talents and rotations for the November 2 class changes. The class coverage report records the game data and assumptions used. '
+						: data.launchPreview
+							? 'The sources above include the Hunter hotfix and Feral and Shaman draft changes. '
+							: 'The game files are from live wowf build 1.60.1.70707 with hotfixes through push 113562. '}
 					Missing simulator database entries do not establish that an item is unavailable in game. Upstream's replacement preset items have not been
 					gear-optimized. Some vanilla-ID replacements do not activate the registered Forever set bonuses. Warlock uses upstream's preraid test set.
 					View setup shows the equipment, enchants, weapon swaps and talent ranks saved with each result.

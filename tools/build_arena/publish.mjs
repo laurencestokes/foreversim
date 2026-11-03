@@ -69,6 +69,10 @@ export function publish({ manifest, raw, provenance, catalog, upstreamCommit, ve
 	const preview = manifest.launchPreview;
 	if (preview) {
 		assert.equal(preview.upstreamCommit, upstreamCommit, 'Launch preview upstream revision differs');
+		if (preview.notesUrl) {
+			const source = new URL(preview.notesUrl);
+			assert.equal(source.origin, 'https://us.forums.blizzard.com', 'Launch notes require a Blizzard source');
+		}
 		assert.match(preview.launchDate, /^\d{4}-\d{2}-\d{2}$/);
 		assert.ok(preview.drafts?.length, 'Launch preview requires draft revisions');
 		const pulls = new Set();

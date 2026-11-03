@@ -30,6 +30,9 @@ type Mage struct {
 	WintersChillAuras   core.AuraArray
 
 	Ignite *core.Spell
+
+	missileBarrageAura        *core.Aura
+	arcaneMissilesWithBarrage bool
 }
 
 func (mage *Mage) GetCharacter() *core.Character {

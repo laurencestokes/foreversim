@@ -1,8 +1,10 @@
+import { Class } from '@generated/proto/common';
 import { BulkTalentRef, SavedTalents } from '@generated/proto/ui';
 import i18n from '@i18n/config';
 import type { BulkTalentSetup } from '@sim/bulk/types';
 import type { PresetTalents } from '@sim/presets/types';
 import type { IndividualSimHost } from '@sim/sim_host';
+import { loadSavedTalentString } from '@sim/talents/factory';
 
 import { storedSavedData } from './saved_refs';
 
@@ -22,13 +24,14 @@ const entry = (name: string, preset: boolean, talentsString: string): BulkTalent
 export const bulkTalentEntries = (
 	presets: ReadonlyArray<Pick<PresetTalents, 'name' | 'data'>> | undefined,
 	saved: ReadonlyArray<{ name: string; data: SavedTalents }>,
+	classID = Class.ClassUnknown,
 ): BulkTalentEntry[] => [
 	...(presets ?? []).map(({ name, data }) => entry(name, true, data.talentsString)),
-	...saved.map(({ name, data }) => entry(name, false, data.talentsString)),
+	...saved.map(({ name, data }) => entry(name, false, loadSavedTalentString(classID, data.talentsString, data.talentLayout))),
 ];
 
 export const pickableBulkTalents = (host: IndividualSimHost<any>): BulkTalentEntry[] =>
-	bulkTalentEntries(host.individualConfig.presets.talents, storedSavedData(host, host.getSavedTalentsStorageKey(), SavedTalents));
+	bulkTalentEntries(host.individualConfig.presets.talents, storedSavedData(host, host.getSavedTalentsStorageKey(), SavedTalents), host.player.getClass());
 
 // The current talents run unnamed; every view calls them "Current talents".
 export const talentsLabel = ({ isCurrent, name }: Pick<BulkTalentSetup, 'isCurrent' | 'name'>): string =>

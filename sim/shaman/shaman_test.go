@@ -1,6 +1,7 @@
 package shaman_test
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -12,11 +13,65 @@ import (
 	"github.com/wowsims/forever/sim/core/stats"
 	"github.com/wowsims/forever/sim/shaman"
 	"github.com/wowsims/forever/sim/shaman/enhancement"
+	gp "google.golang.org/protobuf/proto"
 )
+
+func TestLaunchChainLightningOverloadsOncePerPrimaryHit(t *testing.T) {
+	for _, n := range []int{1, 3} {
+		encounter := core.MakeSingleTargetEncounter(0)
+		for len(encounter.Targets) < n {
+			encounter.Targets = append(encounter.Targets, core.FreshDefaultTargetConfig())
+		}
+		sim := core.NewSim(&proto.RaidSimRequest{
+			Raid: enhancementRaid("00000000000003"), Encounter: encounter, SimOptions: &proto.SimOptions{RandomSeed: 1},
+		}, simsignals.CreateSignals())
+		sim.Reset()
+		caster := sim.Raid.Parties[0].Players[0].(shaman.ShamanAgent).GetShaman()
+		id := core.ActionID{SpellID: 10605}
+		chain, copy := caster.GetSpell(id), caster.GetSpell(id.WithTag(shaman.CastTagLightningOverload))
+		target := sim.Encounter.AllTargetUnits[0]
+		for range 3000 {
+			chain.SkipCastAndApplyEffects(sim, target)
+		}
+		primary := chain.SpellMetrics[target.UnitIndex]
+		landed := primary.Hits + primary.Crits
+		if landed == 0 {
+			t.Fatal("no primary Chain Lightning hits")
+		}
+		rate := float64(copy.SpellMetrics[target.UnitIndex].Casts) / float64(landed)
+		t.Logf("%d targets: %d copies on %d primary hits (%.3f)", n, copy.SpellMetrics[target.UnitIndex].Casts, landed, rate)
+		if math.Abs(rate-caster.GetOverloadChance()) > 0.04 {
+			t.Errorf("%d targets: primary-target overload rate %.3f, want %.3f", n, rate, caster.GetOverloadChance())
+		}
+		for _, secondary := range sim.Encounter.AllTargetUnits[1:] {
+			if casts := copy.SpellMetrics[secondary.UnitIndex].Casts; casts != 0 {
+				t.Errorf("a secondary jump started %d extra chains", casts)
+			}
+		}
+	}
+}
 
 func init() {
 	enhancement.RegisterEnhancementShaman()
 	common.RegisterAllEffects()
+}
+
+func TestLegacyEnhancementBuildKeepsItsTalents(t *testing.T) {
+	read := func(digits string, layout proto.TalentLayout) *proto.ShamanTalents {
+		raid := enhancementRaid(digits)
+		p := raid.Parties[0].Players[0]
+		p.TalentLayout = layout
+		sim := core.NewSim(&proto.RaidSimRequest{Raid: raid, Encounter: core.MakeSingleTargetEncounter(0), SimOptions: &proto.SimOptions{RandomSeed: 1}}, simsignals.CreateSignals())
+		if p.TalentsString != digits || p.TalentLayout != layout {
+			t.Fatal("loading the build mutated the saved player")
+		}
+		return sim.Raid.Parties[0].Players[0].(shaman.ShamanAgent).GetShaman().Talents
+	}
+	before := read("053303102-053030031005102251-03", proto.TalentLayout_TalentLayoutLegacy)
+	after := read("053303102-053030310051002251-03", proto.TalentLayout_TalentLayoutLaunch)
+	if !before.Stormstrike || before.Flurry != 5 || before.ImprovedGhostWolf != 0 || !gp.Equal(before, after) {
+		t.Fatalf("legacy and launch layouts gave different builds: %v / %v", before, after)
+	}
 }
 
 // The Enhancement suite's talents, which take Elemental Devastation.

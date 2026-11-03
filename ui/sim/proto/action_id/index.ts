@@ -19,6 +19,18 @@ const UNSEALED_WRATH_ECHO_TAGS: Record<string, number> = {
 	'Seal of Righteousness': 1311704,
 };
 
+const launchActions: Partial<Record<OtherAction, { name: string; icon: string }>> = {
+	[OtherAction.OtherActionRecklessSwings]: { name: 'Reckless Swings', icon: 'ability_warrior_improveddisciplines' },
+	[OtherAction.OtherActionImprovedWhirlwind]: { name: 'Improved Whirlwind', icon: 'ability_whirlwind' },
+	[OtherAction.OtherActionShank]: { name: 'Shank', icon: 'inv_weapon_shortblade_05' },
+	[OtherAction.OtherActionBloodSplatter]: { name: 'Blood Splatter', icon: 'ability_rogue_rupture' },
+	[OtherAction.OtherActionComposure]: { name: 'Composure', icon: 'ability_rogue_nervesofsteel' },
+	[OtherAction.OtherActionFlashOfSteel]: { name: 'Flash of Steel', icon: 'ability_warrior_punishingblow' },
+	[OtherAction.OtherActionBootKnife]: { name: 'Boot Knife', icon: 'inv_weapon_shortblade_01' },
+	[OtherAction.OtherActionQuickGetaway]: { name: 'Quick Getaway', icon: 'ability_rogue_quickrecovery' },
+	[OtherAction.OtherActionCallOfThunder]: { name: 'Call of Thunder', icon: 'spell_nature_callstorm' },
+};
+
 type ActionIdOptions = {
 	itemId?: number;
 	spellId?: number;
@@ -76,6 +88,11 @@ export class ActionId {
 		this.rank = rank ?? 0;
 		this.definitionId = definitionId ?? 0;
 		this.isEmptyPlaceholder = isEmptyPlaceholder ?? false;
+		const launchAction = launchActions[this.otherId];
+		if (launchAction) {
+			baseName = launchAction.name;
+			iconUrl = wowheadIconUrl(launchAction.icon);
+		}
 
 		switch (otherId) {
 			case OtherAction.OtherActionNone:
@@ -783,6 +800,7 @@ export class ActionId {
 				oneofKind: 'otherId',
 				otherId: this.otherId,
 			};
+			protoId.rank = this.rank;
 		}
 
 		return protoId;
@@ -845,8 +863,8 @@ export class ActionId {
 		return new ActionId({ spellId, rank, tag });
 	}
 
-	static fromTalent(spellId: number, rank: number, definitionId: number): ActionId {
-		return new ActionId({ spellId, rank, definitionId });
+	static fromTalent(spellId: number, rank: number, definitionId: number, otherId?: OtherAction): ActionId {
+		return otherId ? new ActionId({ otherId, rank }) : new ActionId({ spellId, rank, definitionId });
 	}
 
 	static fromOtherId(otherId: OtherAction, tag?: number): ActionId {
@@ -877,7 +895,7 @@ export class ActionId {
 		} else if (protoId.rawId.oneofKind == 'itemId') {
 			return ActionId.fromItemId(protoId.rawId.itemId, protoId.tag);
 		} else if (protoId.rawId.oneofKind == 'otherId') {
-			return ActionId.fromOtherId(protoId.rawId.otherId, protoId.tag);
+			return new ActionId({ otherId: protoId.rawId.otherId, rank: protoId.rank, tag: protoId.tag });
 		} else {
 			return ActionId.fromEmpty();
 		}

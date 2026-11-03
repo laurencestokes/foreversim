@@ -94,13 +94,17 @@
 		"recordedLabel",
 		"launchPreviewTitle",
 		"launchPreviewSummary",
+		"launchPreviewGaps",
+		"launchPreviewCoverageLink",
 		"launchPreviewStatus",
 		"launchPreviewSources",
 		"launchPreviewBase",
 		"launchPreviewDraft",
 		"launchPreviewLimitations",
 		"launchPreviewShamanSlot",
-		"launchPreviewLimitationsTitle"
+		"launchPreviewLimitationsTitle",
+		"launchPreviewEngine",
+		"launchPreviewNotes"
 	],
 	"properties": {
 		"title": {
@@ -566,6 +570,12 @@
 		"launchPreviewSummary": {
 			"type": "string"
 		},
+		"launchPreviewGaps": {
+			"type": "string"
+		},
+		"launchPreviewCoverageLink": {
+			"type": "string"
+		},
 		"launchPreviewStatus": {
 			"type": "string"
 		},
@@ -585,6 +595,12 @@
 			"type": "string"
 		},
 		"launchPreviewLimitationsTitle": {
+			"type": "string"
+		},
+		"launchPreviewEngine": {
+			"type": "string"
+		},
+		"launchPreviewNotes": {
 			"type": "string"
 		}
 	}

@@ -1,3 +1,4 @@
+import { Class, TalentLayout } from '@generated/proto/common';
 import { SavedTalents as SavedTalentsProto } from '@generated/proto/ui';
 import { createSimStore, patchKeyed, PLAYER_FIELDS, type PlayerSlice, seedKeyed, type SimStore, zeroVersions } from '@sim/state/sim_store';
 import { renderWithHost } from '@testing/react';
@@ -29,7 +30,7 @@ vi.mock('../../../../tracking/utils', () => ({ trackEvent }));
 
 const STORAGE_KEY = 'tbc-warrior-savedTalents';
 
-const talentsWith = (talentsString: string) => SavedTalentsProto.create({ talentsString });
+const talentsWith = (talentsString: string) => SavedTalentsProto.create({ talentsString, talentLayout: TalentLayout.TalentLayoutLaunch });
 const storedJson = (talentsString: string) => SavedTalentsProto.toJson(talentsWith(talentsString));
 
 class FakePlayer {
@@ -54,6 +55,9 @@ class FakePlayer {
 	}
 	getTalentsString() {
 		return this.talentsString;
+	}
+	getClass() {
+		return Class.ClassWarrior;
 	}
 	setTalentsString = vi.fn((next: string) => {
 		this.talentsString = next;

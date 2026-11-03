@@ -53,6 +53,12 @@ test('keeps an empty middle talent tree and records selected ranks', () => {
 	assert.equal(setup.talentsString, '2--1');
 });
 
+test('records synthetic talent identity without inventing a game spell', () => {
+	const previewTrees = [{ name: 'Preview tree', talents: [{ fancyName: 'Call of Thunder', spellId: 0, otherAction: 35, maxPoints: 1 }] }];
+	const setup = snapshotBuild({ ...player(), talentsString: '1' }, previewTrees);
+	assert.deepEqual(setup.talents[0].talents, [{ id: 0, otherAction: 35, name: 'Call of Thunder', rank: 1, maxRank: 1 }]);
+});
+
 test('rejects missing equipment data and ranks that cannot match the recorded trees', () => {
 	assert.throws(() => snapshotBuild({ ...player(), database: { items: [] } }, trees), /Missing equipped item/);
 	assert.throws(() => snapshotBuild({ ...player(), talentsString: '9' }, trees), /Invalid rank/);

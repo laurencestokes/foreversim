@@ -1,6 +1,7 @@
 package warlock
 
 import (
+	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/wowsims/forever/sim/core/buffs"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/simsignals"
+	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
@@ -248,10 +250,8 @@ func TestDecimationGrantedOnLandedCast(t *testing.T) {
 	}
 }
 
-// Bane of Agony's ticks are set at cast: the base ramps in thirds, the spell power share is the spell power at
-// cast on every tick alike, and Amplify Curse (talent 9) raises both. Each tick leaves its base and share in
-// the dot's snapshot base, which the last tick clears as the dot ends, so the test reads the first 11.
-func TestBaneOfAgonyTicksSetAtCast(t *testing.T) {
+// Every tick follows spell power, while the cast keeps the Amplify Curse bonus it spent.
+func TestBaneOfAgonyTicksFollowSpellPower(t *testing.T) {
 	encounter := core.MakeSingleTargetEncounter(0)
 	encounter.Duration = 600
 	sim, warlock := newWarlockSim("000000001", &proto.WarlockOptions{}, encounter)
@@ -260,7 +260,7 @@ func TestBaneOfAgonyTicksSetAtCast(t *testing.T) {
 	dot := agony.Dot(target)
 	warlock.AddStatsDynamic(sim, stats.Stats{stats.SpellDamage: 300, stats.SpellHitPercent: 100})
 
-	// The snapshot base of the first 11 ticks of one cast, with spellPower more spell power from the fifth on.
+	// The last tick clears the dot's snapshot, so read the first eleven.
 	castTicks := func(amplified bool, spellPower float64) []float64 {
 		if amplified {
 			warlock.AmplifyCurseAura.Activate(sim)
@@ -283,27 +283,98 @@ func TestBaneOfAgonyTicksSetAtCast(t *testing.T) {
 	}
 
 	plain := castTicks(false, 500)
-	for i, want := range []float64{plain[0], plain[4], plain[8]} {
-		for _, got := range plain[4*i : min(4*i+4, len(plain))] {
-			if math.Abs(got-want) > 1e-6 {
-				t.Fatalf("third %d ticks %v, want each the same with 500 spell power gained mid-dot", i+1, plain)
-			}
+	base := spelldata.MustFind(11713).PeriodicEffect().Average()
+	coefficient := dot.BonusCoefficient
+	for i, got := range plain {
+		power := 300.0
+		if i >= 4 {
+			power += 500
+		}
+		want := base*baneOfAgonyRamp(int32(i+1), dot.BaseTickCount) + coefficient*power
+		if math.Abs(got-want) > 1e-6 {
+			t.Errorf("tick %d dealt a base of %g, want %g with current spell power", i+1, got, want)
 		}
 	}
-	base := 2 * (plain[4] - plain[0])
-	if step := plain[8] - plain[4]; base <= 0 || math.Abs(step-base/2) > 1e-6 {
-		t.Fatalf("thirds %.3f, %.3f, %.3f do not ramp at half, one and one and a half of a base", plain[0], plain[4], plain[8])
-	}
-	share := plain[0] - base/2
-
 	amplified := castTicks(true, 0)
-	coefficient := dot.BonusCoefficient
-	ampShare := share + 500*coefficient
 	for i, ramp := range []float64{0.5, 1, 1.5} {
-		want := (base*ramp + ampShare) * warlock.AmplifyCurseMultiplier
+		want := (base*ramp + 800*coefficient) * warlock.AmplifyCurseMultiplier
 		if got := amplified[4*i]; math.Abs(got-want) > 1e-6 {
-			t.Errorf("amplified third %d tick %.3f, want %.3f: the base %.3f plus the share at cast %.3f, amplified",
-				i+1, got, want, base*ramp, ampShare)
+			t.Errorf("amplified third %d tick %g, want %g", i+1, got, want)
+		}
+	}
+	t.Logf("dynamic Bane ticks=%v amplified=%v", plain, amplified)
+}
+
+func TestDemonHealthFollowsOwnerStamina(t *testing.T) {
+	sim, warlock := newWarlockSim("", &proto.WarlockOptions{Summon: proto.WarlockOptions_Succubus}, core.MakeSingleTargetEncounter(0))
+	pet := warlock.ActivePet
+	before := pet.MaxHealth()
+	warlock.AddStatDynamic(sim, stats.Stamina, 40)
+	stepFor(sim, core.PetUpdateInterval)
+	if gained := pet.MaxHealth() - before; math.Abs(gained-80) > 1e-6 {
+		t.Errorf("demon health gained %g, want twice its owner's added Stamina", gained)
+	}
+	t.Logf("demon health from 40 owner Stamina=%g", pet.MaxHealth()-before)
+}
+
+func TestWrackPreviewDamageFollowsLevelAndSpellPower(t *testing.T) {
+	stored := *spelldata.MustFind(1316697).PeriodicEffect()
+	sim, warlock := newWarlockSim("00000000000000001", &proto.WarlockOptions{}, core.MakeSingleTargetEncounter(0))
+	after := spelldata.MustFind(1316697).PeriodicEffect()
+	if after.BasePoints != stored.BasePoints || after.PPL != stored.PPL || after.SPCoef != stored.SPCoef {
+		t.Fatal("the channel changed the shared spell row")
+	}
+	target := warlock.CurrentTarget
+	wrack := warlock.Wrack
+	dot := wrack.Dot(target)
+	if math.Abs(dot.BonusCoefficient-0.286) > 1e-6 {
+		t.Errorf("Wrack tick coefficient=%g, want the launch preview coefficient", dot.BonusCoefficient)
+	}
+	warlock.AddStatDynamic(sim, stats.SpellCritPercent, -100)
+	damage := func(level int32) float64 {
+		warlock.Level = level
+		return wrack.ExpectedTickDamage(sim, target)
+	}
+	low, high := damage(50), damage(60)
+	if math.Abs((high-low)-25) > 1e-6 || math.Abs(high-86) > 1e-6 {
+		t.Errorf("Wrack expected ticks at two levels=%g/%g, want launch preview scaling", low, high)
+	}
+	warlock.AddStatDynamic(sim, stats.SpellDamage, 100)
+	powered := damage(60)
+	if math.Abs((powered-high)-28.6) > 1e-6 {
+		t.Errorf("Wrack tick gained %g from spell power, want the launch preview scaling", powered-high)
+	}
+	t.Logf("Wrack ticks: level50=%g level60=%g level60+100SP=%g", low, high, powered)
+}
+
+func TestShadowAndFlamePreviewDamageByRank(t *testing.T) {
+	stored := map[int32]float64{}
+	for _, id := range []int32{1293816, 426311} {
+		stored[id] = spelldata.MustFind(id).EffectN(1).BaseValue()
+	}
+	for points := 1; points <= 5; points++ {
+		talents := "--00000000000000" + fmt.Sprint(points)
+		sim, warlock := newWarlockSim(talents, &proto.WarlockOptions{}, core.MakeSingleTargetEncounter(0))
+		for _, id := range []int32{1293816, 426311} {
+			aura := warlock.GetAuraByID(core.ActionID{SpellID: id})
+			school := stats.SchoolIndexShadow
+			if id == 426311 {
+				school = stats.SchoolIndexFire
+			}
+			before := warlock.PseudoStats.SchoolDamageDealtMultiplier[school]
+			aura.Activate(sim)
+			got := warlock.PseudoStats.SchoolDamageDealtMultiplier[school] / before
+			want := 1 + 0.04*float64(points)
+			if math.Abs(got-want) > 1e-6 {
+				t.Errorf("rank %d school %v multiplier=%g, want %g", points, school, got, want)
+			}
+			t.Logf("Shadow and Flame rank=%d school=%v multiplier=%g", points, school, got)
+			aura.Deactivate(sim)
+		}
+	}
+	for id, before := range stored {
+		if spelldata.MustFind(id).EffectN(1).BaseValue() != before {
+			t.Errorf("buff %d changed its shared spell row", id)
 		}
 	}
 }

@@ -11,7 +11,7 @@ const meta = {
 	beforeEach: () => {
 		i18n.addResourceBundle('en', 'build_arena', english, true, true);
 	},
-	args: { preview: launchPreviewFixture },
+	args: { preview: launchPreviewFixture, commit: 'a'.repeat(40) },
 	parameters: { spec: 'none' },
 } satisfies Meta<typeof LaunchPreviewNotice>;
 export default meta;

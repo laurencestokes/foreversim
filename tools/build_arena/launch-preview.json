@@ -1,5 +1,6 @@
 {
 	"launchDate": "2026-11-04",
+	"notesUrl": "https://us.forums.blizzard.com/en/wow/t/2360696/9",
 	"upstreamCommit": "137665be41ec5277d8f12e9793a76420f5211557",
 	"drafts": [
 		{ "pullRequest": 824, "commit": "a6b9f132c9cece3a44ac093d61659c9951fcf62c" },

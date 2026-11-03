@@ -318,7 +318,9 @@ export const actionIdSets: Record<
 		getActionIDs: async metadata => {
 			const perTalent = await Promise.all(
 				metadata.getTalents().map(async held => {
-					const lowerRanks = await Promise.all(Array.from({ length: held.rank - 1 }, (_, i) => ActionId.fromSpellId(held.spellId, i + 1).fill()));
+					const lowerRanks = await Promise.all(
+						Array.from({ length: held.rank - 1 }, (_, i) => ActionId.fromTalent(held.spellId, i + 1, held.definitionId, held.otherId).fill()),
+					);
 					return [{ value: held }, ...lowerRanks.map(value => ({ value, submenu: [held] }))];
 				}),
 			);

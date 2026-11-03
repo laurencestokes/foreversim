@@ -8,7 +8,7 @@ import (
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-var TalentTreeSizes = [3]int{17, 17, 18}
+var TalentTreeSizes = [3]int{17, 19, 18}
 
 type WarriorInputs struct {
 	UseBattleShout bool
@@ -150,7 +150,7 @@ func NewWarrior(character *core.Character, options *proto.WarriorOptions, talent
 		Talents:       &proto.WarriorTalents{},
 		WarriorInputs: inputs,
 	}
-	warrior.FillTalentsProto(warrior.Talents.ProtoReflect(), talents, TalentTreeSizes)
+	warrior.FillTalentsProtoFromTree(warrior.Talents.ProtoReflect(), talents)
 
 	warrior.EnableRageBar(core.RageBarOptions{
 		MaxRage:            100,

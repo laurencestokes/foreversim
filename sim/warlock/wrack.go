@@ -10,7 +10,14 @@ import (
 // Agony (0x2 | 0x400); Siphon Life, a leech rather than periodic damage, and the drains are not named.
 func (warlock *Warlock) registerWrackSpell() {
 	rankedSpell := spellData.Wrack.ByID(1316697)
-	wrackTick := rankedSpell.PeriodicEffect()
+	wrackTick := *rankedSpell.PeriodicEffect()
+	// TODO: patch preview: the notes give 86 damage a second at level 60, gaining 2.5 per level,
+	// and 0.286 spell damage a second. The row still has 36 at level 40 with no level gain and 0.143.
+	// Only this channel's effect copy changes; a refreshed row with level scaling needs no fallback.
+	if wrackTick.BaseValue() == 36 && wrackTick.PPL == 0 {
+		wrackTick.PPL = 2.5 * wrackTick.Period().Seconds()
+		wrackTick.SPCoef = 0.286 * wrackTick.Period().Seconds()
+	}
 	wrackAmplify := rankedSpell.Effect(dbcenums.A_MOD_SPELL_DAMAGE_FROM_CASTER, 0)
 
 	ampMult := 1 + wrackAmplify.Percent()
@@ -23,7 +30,7 @@ func (warlock *Warlock) registerWrackSpell() {
 		return 1
 	}
 
-	config := warlock.soulSiphonChannelConfig(rankedSpell, wrackTick, nil)
+	config := warlock.soulSiphonChannelConfig(rankedSpell, &wrackTick, nil)
 	config.ClassSpellMask = WarlockSpellWrack
 
 	// While the channel is on the target, this warlock's damage from the named spells is raised there.

@@ -1,16 +1,10 @@
 # Build arena
 
-Results marked **November 4, 2026 launch projection** include changes intended for launch. Hunter
-uses live hotfix data and retuned presets. Feral includes a partial implementation of the development
-notes, with approximate damage increases awaiting game data. Shaman uses provisional values from
-the patch notes in a patched copy of build 1.60.1.70707, hotfix push 113562. These projections can
-change when the real game data, mechanics or presets change. Skyborne base attributes remain unverified.
+[November 2 patch coverage by class](november-2-coverage.md) records which launch changes these results include and where the model still differs.
 
-In the Shaman talent inspector, the slot labeled Lava Burst models Call of Thunder: +5% crit to
-Lightning Bolt, Chain Lightning and their overloads. The preview keeps the old talent tree and
-saved ranks so existing talent strings still load.
+Results marked **November 4, 2026 launch projection** use the Hunter hotfix, Feral and Shaman draft tuning and the fork’s changes for the November 2 class notes. The Rogue, Warrior and Shaman presets spend 51 points in their revised trees. The setup inspector shows the actual allocation and rotation. Shank, Reckless Swings and other actions without captured spell rows use their simulator names.
 
-The preview's exact sources are:
+Both arenas link the official notes, the fork commit behind the scores and these upstream revisions.
 
 - [Upstream baseline `137665be4`](https://github.com/wowsims/forever/commit/137665be41ec5277d8f12e9793a76420f5211557).
 - [Hunter #824](https://github.com/wowsims/forever/pull/824), at [`a6b9f132c`](https://github.com/wowsims/forever/commit/a6b9f132c9cece3a44ac093d61659c9951fcf62c).
@@ -19,11 +13,11 @@ The preview's exact sources are:
 - [Provisional Shaman #821](https://github.com/wowsims/forever/pull/821), at [`2fa331700`](https://github.com/wowsims/forever/commit/2fa33170006905ea188b1f9835a2bee89e90c874).
 
 Both arenas show these source links only when the recorded results carry `launchPreview` metadata.
-The launch date describes the projection; each source's computation date and simulator revision
+The launch date describes the projection. Each source's computation date and simulator revision
 still describe the actual run. Earlier results retain their original provenance and receive no
 launch-preview label.
 
-The Build Arena compares complete upstream DPS presets at level 60. A result includes the preset's
+The Build Arena compares complete DPS presets based on upstream setups at level 60. A result includes the preset's
 gear, enchants, talents, resolved rotation, consumables and class options. Changing the build can change
 all of them. These results help choose a setup to investigate; they do not isolate the value of a
 single talent or compare classes in equal gear.
@@ -35,9 +29,13 @@ status and caveats belong beside its score; coverage alone does not establish th
 The saved setup shows the equipment, suffixes, enchants, weapon swaps and selected talent ranks.
 Links open current item and spell descriptions, which can differ from the saved snapshot.
 
+Rows labeled **Development gear** include the upstream test gear in the recorded fight. On the
+public class simulator, selecting the same build leaves those gear slots as they were. Use the
+arena’s setup inspector to see the equipped items, or replay its downloaded request for a like-for-like comparison.
+
 ## Live game data and preset limitations
 
-The projection combines captured game data with the explicit draft changes linked above. Shaman's
+The projection combines captured game data with the draft and fork changes listed in the coverage report. Shaman's
 store uses patched values on build 1.60.1.70707, hotfix push 113562, which cannot be reproduced from
 that unmodified game data. A missing simulator database entry does not establish that an item is
 unavailable in game. Later data updates can restore entries, while preset replacements may remain.

@@ -51,7 +51,7 @@ export const useBulkBundles = (): {
 		[gear, bonusStats, talentsString, rotation, settings],
 	);
 	const gearSets = useMemo(() => (ready ? bulkGearSetEntries(presets.gear, savedGear, player) : NO_GEAR_SETS), [ready, presets, savedGear, player]);
-	const talents = useMemo(() => bulkTalentEntries(presets.talents, savedTalents), [presets, savedTalents]);
+	const talents = useMemo(() => bulkTalentEntries(presets.talents, savedTalents, player.getClass()), [presets, savedTalents, player]);
 	const rotations = useMemo(() => bulkRotationEntries(presets.rotations, savedRotations), [presets, savedRotations]);
 	const settingsEntries = useMemo(() => bulkSettingsEntries(presets, savedSettings, host), [presets, savedSettings, host]);
 	const parts = useMemo(

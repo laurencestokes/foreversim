@@ -8,6 +8,7 @@
 	{"action":{"groupReference":{"groupName":"Pre-pull: Move"}},"doAtValue":{"const":{"val":"-0.9s"}}}
 	],
 	"priorityList": [
+	{"action":{"condition":{"and":{"vals":[{"talentIsKnown":{"talentId":{"otherId":"OtherActionRecklessSwings"}}},{"cmp":{"op":"OpLe","lhs":{"currentRage":{}},"rhs":{"const":{"val":"75"}}}}]}},"castSpell":{"spellId":{"otherId":"OtherActionRecklessSwings"}}}},
 	{"hide":true,"action":{"groupReference":{"groupName":"Recklessness ON/OFF"}}},
 	{"hide":true,"action":{"groupReference":{"groupName":"Stance Dance ON/OFF"}}},
 	{"action":{"groupReference":{"groupName":"Hamstring Weave ON/OFF"}}},

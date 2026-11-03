@@ -283,7 +283,7 @@ export const BuildArenaPageView = ({ data }: { data: BuildArenaResults }) => {
 					<h1 className="m-0 text-3xl font-bold text-brand">{t('title')}</h1>
 					<p className="mb-0">{t('intro', { count: data.builds.length })}</p>
 				</header>
-				{data.launchPreview && <LaunchPreviewNotice preview={data.launchPreview} />}
+				{data.launchPreview && <LaunchPreviewNotice preview={data.launchPreview} commit={data.verifiedCommit} />}
 				<aside
 					className="flex flex-col gap-2 border border-orange bg-orange/10 p-4"
 					aria-label={t(data.launchPreview ? 'launchPreviewLimitationsTitle' : 'limitationsTitle')}>

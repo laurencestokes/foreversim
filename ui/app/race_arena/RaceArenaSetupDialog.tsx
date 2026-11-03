@@ -10,7 +10,11 @@ export type RaceArenaSetup = {
 	equipment: Array<EquipmentSlot>;
 	itemSwap?: Array<EquipmentSlot>;
 	talentsString: string;
-	talents: Array<{ name: string; points: number; talents: Array<{ id: number; definitionId?: number; name: string; rank: number; maxRank: number }> }>;
+	talents: Array<{
+		name: string;
+		points: number;
+		talents: Array<{ id: number; otherAction?: number; definitionId?: number; name: string; rank: number; maxRank: number }>;
+	}>;
 };
 
 const Equipment = ({ slots }: { slots: Array<EquipmentSlot> }) => (
@@ -90,14 +94,20 @@ export const RaceArenaSetupDialog = ({
 									{tree.talents.length ? (
 										<ul className="m-0 flex list-none flex-col gap-2 p-0 pt-2">
 											{tree.talents.map(talent => (
-												<li key={talent.id} className="flex items-baseline justify-between gap-2 text-sm">
-													<Button
-														variant="link"
-														className="text-left"
-														href={ActionId.makeSpellUrl(talent.id, talent.rank, talent.definitionId)}
-														target="_blank">
-														{talent.name}
-													</Button>
+												<li
+													key={talent.otherAction ? `preview-${talent.otherAction}` : talent.id}
+													className="flex items-baseline justify-between gap-2 text-sm">
+													{talent.id && !talent.otherAction ? (
+														<Button
+															variant="link"
+															className="text-left"
+															href={ActionId.makeSpellUrl(talent.id, talent.rank, talent.definitionId)}
+															target="_blank">
+															{talent.name}
+														</Button>
+													) : (
+														<span>{talent.name}</span>
+													)}
 													<span className="shrink-0 text-white/70 tabular-nums">
 														{talent.rank}/{talent.maxRank}
 													</span>

@@ -8,6 +8,8 @@ import (
 
 // Only the highest rank is registered: the mage casts the rank configured here, not every rank
 // spellData.Blizzard lists.
+// TODO: Lower ranks learned more than 12 levels ago retain reduced Arcane Concentration, Frostbite
+// and Fingers of Frost chances. The notes give no penalty formula, so those ranks stay unregistered.
 func (mage *Mage) registerBlizzardSpell() {
 	mage.registerBlizzardRank(spellData.Blizzard.Len(), spellData.Blizzard.Highest())
 }

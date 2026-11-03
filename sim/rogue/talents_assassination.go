@@ -1,44 +1,24 @@
 package rogue
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
 
 func (rogue *Rogue) registerAssassinationTalents() {
-	// Tier 1
-	// Gouge NYI
-	// Remorseless Attacks NYI
 	rogue.registerMalice()
-
-	// Tier 2
-	// Ruthlessness modeled in rogue.go ApplyFinisher
-	rogue.registerMurder()
-	// Improved Slice modeled in Slice and Dice directly
-
-	// Tier 3
-	// Relentless Strikes modeled in rogue.go ApplyFinisher
 	rogue.registerImprovedExposeArmor()
 	rogue.registerLethality()
-
-	// Tier 4
 	rogue.registerVilePoisons()
 	rogue.registerColdBlood()
 	rogue.registerImprovedPoisons()
-
-	// Tier 5
-	// Vigor modeled in rogue.go during initialization
-	rogue.registerMutilate()
-	// Kidney Shot NYI
-
-	// Tier 6
-	rogue.registerSealFate()
-
-	// Tier 7
 	rogue.registerVenom()
+	rogue.registerSealFate()
+	rogue.registerMutilate()
+	// Ruthlessness and Relentless Strikes run in ApplyFinisher; Vigor sets maximum Energy.
+	// Blood Splatter extends the bleed registrations. Gouge, Remorseless Attacks and Kidney Shot
+	// are outside the damage rotation.
 }
 
 func (rogue *Rogue) registerImprovedEviscerate() {
@@ -59,15 +39,6 @@ func (rogue *Rogue) registerMalice() {
 		spellData.Malice.Rank(rogue.Talents.Malice))
 }
 
-func (rogue *Rogue) registerMurder() {
-	if rogue.Talents.Murder == 0 {
-		return
-	}
-
-	spelldata.ParseStatic(&rogue.Character,
-		spellData.Murder.Rank(rogue.Talents.Murder))
-}
-
 func (rogue *Rogue) registerImprovedExposeArmor() {
 	if rogue.Talents.ImprovedExposeArmor == 0 {
 		return
@@ -82,8 +53,11 @@ func (rogue *Rogue) registerLethality() {
 		return
 	}
 
-	spelldata.ParseStatic(&rogue.Character,
-		spellData.Lethality.Rank(rogue.Talents.Lethality))
+	// The November 2 development notes give the two-rank talent ten percent per point.
+	rogue.AddStaticMod(core.SpellModConfig{
+		Kind: core.SpellMod_CritMultiplier_Flat, ClassMask: RogueSpellLethality,
+		FloatValue: []float64{0, 0.1, 0.2}[rogue.Talents.Lethality],
+	})
 }
 
 func (rogue *Rogue) registerVilePoisons() {
@@ -147,7 +121,7 @@ func (rogue *Rogue) registerSealFate() {
 			if result.Outcome.Matches(core.OutcomeCrit) {
 				rogue.AddComboPoints(sim, 1, sfMetrics)
 			}
-		})
+		}, spelldata.Chance([]float64{0, 0.33, 0.66, 1}[rogue.Talents.SealFate]))
 	trigger.Name = "Seal Fate - Trigger"
 	trigger.SpellFlags = SpellFlagBuilder
 	trigger.TriggerImmediately = true
@@ -167,6 +141,8 @@ func (rogue *Rogue) registerMutilate() {
 
 	// TODO: Verify if Mutilate (Cast) can proc MH poisons itself (detected as a double MH poison proc)
 	config := spelldata.SpellConfig(&rogue.Unit, mutilateCastRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
+	config.ProcMask = core.ProcMaskEmpty // Only the two weapon strikes apply poisons.
+	config.ClassSpellMask = RogueSpellMutilate
 	pointGen := mutilateCastRank.EnergizeEffect().Average()
 	config.ExtraCastCondition = func(sim *core.Simulation, target *core.Unit) bool {
 		return rogue.HasDagger(core.MainHand) && rogue.HasDagger(core.OffHand)
@@ -202,12 +178,15 @@ func (rogue *Rogue) newMutilateHitSpell(isMH bool) *core.Spell {
 	// TODO: Ingame test needed: whether Eureka! raises Mutilate's strikes.
 	config.Flags |= SpellFlagBuilder | SpellFlagColdBlooded | core.SpellFlagPassiveSpell
 	config.Flags &^= core.SpellFlagAPL
+	config.ClassSpellMask = RogueSpellMutilateHit
 	config.SpellID = mutilateCastRank.ID
 	config.ActionID = config.ActionID.WithHand(core.Ternary(isMH, proto.ItemSlot_ItemSlotMainHand, proto.ItemSlot_ItemSlotOffHand))
 	for i := range config.ClassFlags.Mask {
 		config.ClassFlags.Mask[i] |= mutilateCastRank.ClassFlags.Mask[i]
 	}
-	config.DamageMultiplier = hitRank.EffectN(2).Percent()
+	// The November 2 development notes set the weapon share to ninety percent. They do not state
+	// the flat increase, so the captured rank's flat damage remains until that amount is known.
+	config.DamageMultiplier = 0.9
 
 	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 		baseDamage := mutilateHitBaseDamage
@@ -237,17 +216,11 @@ func (rogue *Rogue) registerVenom() {
 		return
 	}
 
-	config := spelldata.SpellConfig(&rogue.Unit, venomRank, spelldata.Melee(core.ProcMaskEmpty))
-	venomAura := rogue.RegisterAura(spelldata.AuraConfig(venomRank))
-	spelldata.ParseEffects(&rogue.Character, venomAura, venomRank)
-	config.ExtraCastCondition = rogue.FinisherExtraCastCondition
-
-	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
-		rogue.BreakStealth(sim) // As this finisher deals no damage, it may or may not break stealth. To be tested.
-		venomAura.Duration = venomRank.Duration() + time.Second*3*time.Duration(rogue.ComboPoints())
-		rogue.ApplyFinisher(sim, spell)
-		venomAura.Activate(sim)
-	}
-
-	rogue.RegisterSpell(config)
+	rogue.VenomAura = rogue.RegisterAura(spelldata.AuraConfig(venomRank))
+	spelldata.ParseEffects(&rogue.Character, rogue.VenomAura, venomRank, spelldata.Effects(2, 3))
+	// The November 2 development notes make Venom a Shank buff with twenty percentage points of
+	// poison application chance. Its captured row still names ten.
+	rogue.VenomAura.AttachSpellMod(core.SpellModConfig{
+		Kind: core.SpellMod_ProcChance_Flat, ClassFlags: venomRank.EffectN(4).ClassFlags, FloatValue: 20,
+	})
 }

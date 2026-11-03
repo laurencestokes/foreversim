@@ -179,6 +179,25 @@ describe('RaceArenaPage', () => {
 		await waitFor(() => expect(queryByRole('dialog')).toBeNull());
 	});
 
+	it('shows separate synthetic talents without linking them to game spells', async () => {
+		const data = structuredClone(fixture);
+		const tree = data.setups['warrior|Fury 17/34/0'].talents[0];
+		tree.points = 3;
+		tree.talents = [
+			{ id: 0, otherAction: 27, name: 'Reckless Swings', rank: 2, maxRank: 5 },
+			{ id: 0, otherAction: 28, name: 'Improved Whirlwind', rank: 1, maxRank: 2 },
+		];
+		const { getByRole, findByRole } = render(<RaceArenaPage data={data} />);
+		fireEvent.click(getByRole('button', { name: 'View setup for Warrior: Fury 17/34/0' }));
+		const dialog = await findByRole('dialog', { name: 'Warrior: Fury 17/34/0' });
+		fireEvent.click(within(dialog).getByRole('tab', { name: 'Talents (3/0)' }));
+		const talents = within(dialog).getByRole('tabpanel', { name: 'Talents (3/0)' });
+		for (const name of ['Reckless Swings', 'Improved Whirlwind']) {
+			expect(within(talents).getByText(name)).toBeTruthy();
+			expect(within(talents).queryByRole('link', { name })).toBeNull();
+		}
+	});
+
 	it('puts every race in its tier row, grouped by class, on the neutral target first', () => {
 		const { getAllByTestId } = render(<RaceArenaPage data={fixture} />);
 		expect(getAllByTestId('race-class').map(group => group.querySelector('h2')!.textContent)).toEqual(['Warrior', 'Mage']);

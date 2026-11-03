@@ -1,6 +1,7 @@
 package balance
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -9,7 +10,59 @@ import (
 	"github.com/wowsims/forever/sim/core/buffs"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/simsignals"
+	"github.com/wowsims/forever/sim/core/spelldata"
+	"github.com/wowsims/forever/sim/core/stats"
 )
+
+func TestLaunchStarfireRaisesBasePointsOnly(t *testing.T) {
+	player := &proto.Player{
+		Class: proto.Class_ClassDruid, Race: proto.Race_RaceNightElf, Equipment: &proto.EquipmentSpec{},
+		Spec:     &proto.Player_BalanceDruid{BalanceDruid: &proto.BalanceDruid{Options: &proto.BalanceDruid_Options{ClassOptions: &proto.DruidOptions{}}}},
+		Rotation: &proto.APLRotation{},
+	}
+	encounter := core.MakeSingleTargetEncounter(0)
+	encounter.Targets[0].Level = 60
+	sim := core.NewSim(&proto.RaidSimRequest{Raid: core.SinglePlayerRaidProto(player, nil, nil, nil),
+		Encounter: encounter, SimOptions: &proto.SimOptions{RandomSeed: 1}}, simsignals.CreateSignals())
+	sim.Reset()
+	druid := sim.Raid.Parties[0].Players[0].GetCharacter()
+	target := sim.Encounter.AllTargetUnits[0]
+	for id, old := range map[int32]float64{9876: 337, 25298: 381} {
+		row := spelldata.MustFind(id).DamageEffect()
+		spell := druid.GetSpell(core.ActionID{SpellID: id})
+		spell.DirectVariance = 0
+		spell.BonusCritPercent = -100
+		spell.BonusHitPercent = 100
+		for _, bonus := range []float64{0, 100} {
+			druid.AddStatDynamic(sim, stats.SpellDamage, bonus)
+			landed := false
+			for i := 0; i < 100; i++ {
+				before := spell.SpellMetrics[target.UnitIndex]
+				spell.SkipCastAndApplyEffects(sim, target)
+				after := spell.SpellMetrics[target.UnitIndex]
+				if after.Hits == before.Hits || after.ResistedHits != before.ResistedHits {
+					continue
+				}
+				dealt := after.TotalDamage - before.TotalDamage
+				base := row.Average()
+				if row.BasePoints == old {
+					base += old * 0.4
+				}
+				want := base + spell.SpellDamage(target)*spell.BonusCoefficient
+				t.Logf("Starfire %d with %.0f bonus spell power: %.2f on an unresisted hit", id, bonus, dealt)
+				if math.Abs(dealt-want) > 1e-6 {
+					t.Errorf("Starfire %d dealt %.2f, want %.2f", id, dealt, want)
+				}
+				landed = true
+				break
+			}
+			if !landed {
+				t.Fatal("Starfire never hit the target")
+			}
+			druid.AddStatDynamic(sim, stats.SpellDamage, -bonus)
+		}
+	}
+}
 
 func init() {
 	RegisterBalanceDruid()

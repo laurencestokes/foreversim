@@ -25,7 +25,7 @@ func NewShaman(character *core.Character, talents string, selfBuffs SelfBuffs) *
 		SelfBuffs: selfBuffs,
 	}
 
-	shaman.FillTalentsProto(shaman.Talents.ProtoReflect(), talents, TalentTreeSizes)
+	shaman.FillTalentsProtoFromTree(shaman.Talents.ProtoReflect(), talents)
 
 	// Add Shaman stat dependencies
 	shaman.AddStatDependency(stats.BonusArmor, stats.Armor, 1)

@@ -1,7 +1,10 @@
 package warrior
 
 import (
+	"time"
+
 	"github.com/wowsims/forever/sim/core"
+	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/spelldata"
 	"github.com/wowsims/forever/sim/core/stats"
 )
@@ -19,21 +22,23 @@ func (warrior *Warrior) registerFuryTalents() {
 	warrior.registerFuriousPrecision()
 	warrior.registerPiercingHowl()
 	warrior.registerBloodCraze()
+	warrior.registerEnrage()
 
 	// Tier 4
 	warrior.registerDualWieldSpecialization()
 	warrior.registerRagingBlows()
-	warrior.registerEnrage()
+	warrior.registerRecklessSwings()
 	warrior.registerImprovedExecute()
 
 	// Tier 5
 	// Improved Berserker Rage: berserker_rage.go
 	warrior.registerDeathWish()
+	warrior.registerGoreDrinker()
 	warrior.registerImprovedIntercept()
 
 	// Tier 6
 	warrior.registerFlurry()
-	warrior.registerGoreDrinker()
+	// Improved Whirlwind: whirlwind.go
 
 	// Tier 7
 	warrior.registerBloodthirst()
@@ -44,8 +49,13 @@ func (warrior *Warrior) registerBoomingVoice() {
 		return
 	}
 
-	// The shout radius has no sim kind, so only the shouts' rage cost comes off the row.
-	spelldata.ParseStatic(&warrior.Character, spellData.BoomingVoice.Rank(warrior.Talents.BoomingVoice))
+	rank := spellData.BoomingVoice.Rank(warrior.Talents.BoomingVoice)
+	// The launch notes include Piercing Howl in the rage-cost reduction.
+	// TODO: Read its class flags directly when the game files include it.
+	copy := *rank
+	copy.Effects = append([]spelldata.Effect(nil), rank.Effects...)
+	copy.EffectN(2).ClassFlags.Mask[1] |= piercingHowlRank.ClassFlags.Mask[1]
+	spelldata.ParseStatic(&warrior.Character, &copy)
 }
 
 func (warrior *Warrior) registerCruelty() {
@@ -145,11 +155,10 @@ func (warrior *Warrior) registerFlurry() {
 		return
 	}
 
-	// 12966 supplies the duration and the three charges. The haste is the talent's 5% per point,
-	// which 12319 reads as "Increases your melee attack speed by $m1% for your next $12966n swings";
-	// the buff row's flat 30% does not apply.
+	// 12966 supplies the duration and the three charges; the talent supplies the haste.
+	talent := launchTalent(spellData.Flurry.Rank(warrior.Talents.Flurry), warrior.Talents.Flurry)
 	flurryAura := warrior.RegisterAura(spelldata.AuraConfig(flurryBuff)).
-		AttachMultiplyMeleeSpeed(spellData.Flurry.MultiplierAt(warrior.Talents.Flurry))
+		AttachMultiplyMeleeSpeed(1 + talent.EffectN(1).Percent())
 
 	// The proc shape with no roll: 12319 states its rate as "always" and the crit is the
 	// condition, which this handler reads off the result because the same listener hears every
@@ -159,7 +168,7 @@ func (warrior *Warrior) registerFlurry() {
 	//
 	// TODO: Ingame test needed: the Cleave miss follows the measured Heroic Strike miss; no log
 	// holds a missed Cleave yet.
-	trigger := spelldata.ProcTrigger(&warrior.Character, spellData.Flurry.Rank(warrior.Talents.Flurry),
+	trigger := spelldata.ProcTrigger(&warrior.Character, talent,
 		func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
 			if spellData.Whirlwind.Contains(spell) && spell.ProcMask.Matches(core.ProcMaskMeleeOH) {
 				return
@@ -206,7 +215,7 @@ func (warrior *Warrior) registerGoreDrinker() {
 	healConfig := spelldata.SpellConfig(&warrior.Unit, goreDrinkerHeal, spelldata.Proc())
 	healConfig.ProcMask = core.ProcMaskSpellHealing
 	healConfig.DamageMultiplier = 1
-	healConfig.ThreatMultiplier = 1
+	healConfig.ThreatMultiplier = 0
 	healConfig.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 		spell.CalcAndDealHealing(sim, target, warrior.MaxHealth()*healthFraction, spell.OutcomeAlwaysHit)
 	}
@@ -323,7 +332,7 @@ func (warrior *Warrior) registerBloodCraze() {
 	config := spelldata.SpellConfig(&warrior.Unit, bloodCrazeHot, spelldata.Proc())
 	config.ProcMask = core.ProcMaskSpellHealing
 	config.DamageMultiplier = 1
-	config.ThreatMultiplier = 1
+	config.ThreatMultiplier = 0
 
 	config.Hot = spelldata.DotConfig(bloodCrazeHot, tick)
 	config.Hot.SelfOnly = true
@@ -394,4 +403,47 @@ func (warrior *Warrior) registerImprovedIntercept() {
 	}
 
 	spelldata.ParseStatic(&warrior.Character, spellData.ImprovedIntercept.Rank(warrior.Talents.ImprovedIntercept))
+}
+
+func (warrior *Warrior) registerRecklessSwings() {
+	if !warrior.Talents.RecklessSwings {
+		return
+	}
+
+	// The launch notes specify the cost, charges, rage, duration and cooldown. No game row is available.
+	// TODO: Confirm the off-GCD activation and charge consumption on missed attacks in game.
+	actionID := core.ActionID{OtherID: proto.OtherAction_OtherActionRecklessSwings}
+	rageMetrics := warrior.NewRageMetrics(actionID)
+	healthCost := warrior.GetBaseStats()[stats.Health] * 0.25
+	firstHit, resetFirstHit := core.OncePerCast()
+	aura := warrior.RegisterAura(core.Aura{
+		Label: "Reckless Swings", ActionID: actionID,
+		Duration: 8 * time.Second, MaxStacks: 4,
+		OnReset: func(_ *core.Aura, _ *core.Simulation) { resetFirstHit() },
+		OnSpellHitDealt: func(aura *core.Aura, sim *core.Simulation, spell *core.Spell, _ *core.SpellResult) {
+			if !spell.ProcMask.Matches(core.ProcMaskMelee) || spell.Flags.Matches(core.SpellFlagPassiveSpell) {
+				return
+			}
+			// Both weapons and every cleave target belong to the same special attack.
+			if spell.ProcMask.Matches(core.ProcMaskMeleeSpecial) && !firstHit(sim, spell) {
+				return
+			}
+			warrior.AddRage(sim, 5, rageMetrics)
+			aura.RemoveStack(sim)
+		},
+	})
+	warrior.RegisterSpell(core.SpellConfig{
+		ActionID: actionID,
+		Flags:    core.SpellFlagAPL,
+		Cast:     core.CastConfig{CD: core.Cooldown{Timer: warrior.NewTimer(), Duration: 15 * time.Second}},
+		ExtraCastCondition: func(_ *core.Simulation, _ *core.Unit) bool {
+			return warrior.CurrentHealth() > healthCost
+		},
+		ApplyEffects: func(sim *core.Simulation, _ *core.Unit, _ *core.Spell) {
+			warrior.RemoveHealth(sim, healthCost)
+			aura.Activate(sim)
+			aura.SetStacks(sim, aura.MaxStacks)
+		},
+		RelatedSelfBuff: aura,
+	})
 }

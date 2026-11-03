@@ -106,6 +106,7 @@ func TestSectionsMapEveryField(t *testing.T) {
 	lines := map[protoreflect.FullName]string{ // SPEC.md §3.3
 		"proto.Player.class":          "spec",
 		"proto.Player.talents_string": "talents",
+		"proto.Player.talent_layout":  "talents",
 	}
 	unheld := map[protoreflect.FullName]bool{}
 	for _, spec := range Specs() {

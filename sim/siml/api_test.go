@@ -59,6 +59,25 @@ func TestParseRequestSetup(t *testing.T) {
 	}
 }
 
+func TestTalentsOnlyExportKeepsLayout(t *testing.T) {
+	names := readNames(t, "names.json")
+	for _, tc := range []struct {
+		prefix string
+		layout proto.TalentLayout
+	}{{"", proto.TalentLayout_TalentLayoutLegacy}, {"launch:", proto.TalentLayout_TalentLayoutLaunch}} {
+		text := "siml 1\nspec dps_warrior\ntalents \"" + tc.prefix + "0053\"\n"
+		parsed := ParseRequest(&proto.SimlParseRequest{Path: "warrior.siml", Text: text}, names)
+		player := parsed.GetSettings().GetPlayer()
+		if len(parsed.Diagnostics) > 0 || parsed.Error != "" || player.GetTalentsString() != "0053" || player.GetTalentLayout() != tc.layout || strings.Join(parsed.Categories, "") != "t" {
+			t.Fatalf("reading %q gave %v", text, parsed)
+		}
+		printed := PrintRequest(&proto.SimlPrintRequest{Spec: proto.Spec_SpecDpsWarrior, Settings: parsed.Settings, Categories: []string{"t"}}, names)
+		if printed.Text != text {
+			t.Errorf("printing %q gave %v", text, printed)
+		}
+	}
+}
+
 func TestParseRequestError(t *testing.T) {
 	text := "siml 1\nspec hunter\n\npriority:\n  cast multi_shto\n"
 	r := ParseRequest(&proto.SimlParseRequest{Path: "rotation.apl.siml", Text: text}, readNames(t, "names.json"))

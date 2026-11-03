@@ -103,6 +103,11 @@ func (mage *Mage) registerArcaneConcentration() {
 		if !spell.MatchesFlags(costEffect.ClassFlags) || spell.Cost == nil || spell.Cost.BaseCost == 0 {
 			return
 		}
+		// Missile Barrage is consumed by the channel before this callback runs; its state at the
+		// channel's start decides whether Clearcasting pays for it.
+		if spell.Matches(MageSpellArcaneMissilesCast) && mage.arcaneMissilesWithBarrage {
+			return
+		}
 		aura.Deactivate(sim)
 	}
 	mage.ClearCasting = mage.RegisterAura(config)
@@ -123,10 +128,9 @@ func (mage *Mage) registerArcaneConcentration() {
 	mage.RegisterResetEffect(func(_ *core.Simulation) {
 		rolledSpell = nil
 	})
-	// Arcane Missiles never rolls: the channel lands an outcome with no damage, and its missiles do
-	// not roll either.
+	// The channel's application has no damage; its landed missiles each qualify for the roll.
 	trigger.ExtraCondition = func(sim *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
-		if spellData.ArcaneMissiles.Contains(spell) || spellData.ArcaneMissilesTriggered.Contains(spell) ||
+		if spellData.ArcaneMissiles.Contains(spell) ||
 			(spell == rolledSpell && sim.CurrentTime == rolledAt) {
 			return false
 		}
@@ -241,6 +245,7 @@ func (mage *Mage) registerMissileBarrage() {
 		}
 	}
 	buffAura := mage.RegisterAura(config)
+	mage.missileBarrageAura = buffAura
 
 	// Missiles every 0.5 sec (effect 2) and the mana cost (effect 3). The sim counts a DoT's
 	// duration as its ticks times their length, so the halved tick alone halves the channel and

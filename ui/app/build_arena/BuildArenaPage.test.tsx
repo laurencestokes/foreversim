@@ -26,6 +26,12 @@ describe('Build Arena', () => {
 		expect(notice.textContent).toContain('Feral includes partial changes');
 		expect(notice.textContent).toContain('Shaman uses a provisional model');
 		expect(notice.textContent).toContain('Skyborne base attributes remain unverified');
+		expect(within(notice).getByRole('link', { name: 'Blizzard’s November 2 notes' }).getAttribute('href')).toBe(launchPreviewFixture.notesUrl);
+		expect(
+			within(notice)
+				.getByRole('link', { name: /patch coverage by class/i })
+				.getAttribute('href'),
+		).toContain(buildArenaFixture.verifiedCommit);
 		expect(
 			within(notice)
 				.getByRole('link', { name: `Upstream baseline ${launchPreviewFixture.upstreamCommit.slice(0, 7)}` })

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/wowsims/forever/sim/core/proto"
+	"github.com/wowsims/forever/ui/sim/talents/trees"
 	googleProto "google.golang.org/protobuf/proto"
 )
 
@@ -198,6 +199,7 @@ func (combos *SettingsCombos) GetTest(testIdx int) (string, *proto.ComputeStatsR
 				Class:              combos.Class,
 				Equipment:          gearSetCombo.GearSet,
 				TalentsString:      talentSetCombo.Talents,
+				TalentLayout:       trees.CurrentVersion(combos.Class),
 				Consumables:        buffsCombo.Consumables,
 				Buffs:              buffsCombo.Player,
 				Profession1:        combos.Profession1,
@@ -517,6 +519,7 @@ func (config CharacterSuiteConfig) defaultPlayerAndRaid() (*proto.Player, *proto
 			Consumables:    config.Consumables,
 			Buffs:          individualBuffs,
 			TalentsString:  config.Talents,
+			TalentLayout:   trees.CurrentVersion(config.Class),
 			Profession1:    Ternary(config.Profession1 != proto.Profession_ProfessionUnknown, config.Profession1, proto.Profession_Engineering),
 			Profession2:    config.Profession2,
 			Rotation:       config.Rotation.Rotation,

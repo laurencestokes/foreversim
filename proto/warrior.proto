@@ -44,6 +44,8 @@ message WarriorTalents {
     int32 flurry = 32 [(talent_spell_id) = 12319];
     int32 gore_drinker = 33 [(talent_spell_id) = 1323967];
     bool bloodthirst = 34 [(talent_spell_id) = 23881];
+    bool reckless_swings = 53 [(talent_other_action) = OtherActionRecklessSwings];
+    int32 improved_whirlwind = 54 [(talent_other_action) = OtherActionImprovedWhirlwind];
     // Protection
     int32 improved_bloodrage = 35 [(talent_spell_id) = 12301];
     int32 shield_specialization = 36 [(talent_spell_id) = 12298];
