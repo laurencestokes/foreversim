@@ -43,9 +43,10 @@ unavailable in game. Later data updates can restore entries, while preset replac
 [Upstream's preset substitutions](https://github.com/wowsims/forever/pull/725) use available items
 with the same name where possible, or a suitable slot, type and source otherwise. They have not
 been gear-optimized. Some same-name replacements use vanilla item IDs whose set IDs differ from
-the registered Forever sets. Darkmantle, Soulforge, Sorcerer's, Heroism and Five Thunders replacements
-therefore do not activate those Forever set bonuses. This affects the presets' damage and limits
-what their rankings say about class balance.
+the registered Forever sets. This affects the Soulforge, Sorcerer's, Heroism and Five Thunders
+replacements. All six Rogue presets wear four pieces of the original Darkmantle set (512).
+Both it and the reissue (1676) grant the four-piece Energy proc. The simulator uses a 1 PPM
+estimate for both versions because the game files do not give a rate.
 
 ## Choosing a comparison
 

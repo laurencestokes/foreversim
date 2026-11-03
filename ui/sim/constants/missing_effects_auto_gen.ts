@@ -2915,35 +2915,6 @@ export const MISSING_SET_BONUSES = new Map<number, Map<number, string[]>>([
 		]),
 	],
 	[
-		512, // Darkmantle Armor
-		new Map([
-			[
-				2,
-				[
-					"+8 All Resistances.", // 18679 - https://www.wowhead.com/forever/spell=18679
-				],
-			],
-			[
-				4,
-				[
-					"Chance on melee attack to restore 20 Energy.", // 27787 - https://www.wowhead.com/forever/spell=27787
-				],
-			],
-			[
-				6,
-				[
-					"+40 Attack Power.", // 14049 - https://www.wowhead.com/forever/spell=14049
-				],
-			],
-			[
-				8,
-				[
-					"+200 Armor.", // 14803 - https://www.wowhead.com/forever/spell=14803
-				],
-			],
-		]),
-	],
-	[
 		513, // Feralheart Raiment
 		new Map([
 			[
@@ -4529,6 +4500,12 @@ export const UNVALIDATED_RATE_SET_BONUSES = new Map<number, Map<number, Unvalida
 		184, // Shadowcraft Armor
 		new Map([
 			[5, { kind: 'ppm', origin: 'unknown' }],
+		]),
+	],
+	[
+		512, // Darkmantle Armor
+		new Map([
+			[4, { kind: 'ppm', origin: 'unknown' }],
 		]),
 	],
 ])

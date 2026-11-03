@@ -24,6 +24,8 @@ An older saved Rogue, Warrior or Shaman talent string keeps its surviving ranks 
 
 The major DPS racials in this post were already in the engine. Dwarf has 1% physical and spell hit. Human has 1% crit and 10% Spirit. Orc has its pet damage bonus and two-minute Blood Fury. Skyborne has 2% haste, Troll Berserking lasts 15 seconds, and Undead Touch of the Grave has a 15-second internal cooldown. Tauren Endurance gives 5% health. The Tauren Warrior’s base Strength is five points above the Human Warrior’s. Skyborne base attributes still use earlier observations. The raid presets use ordinary Read Leyline and Skysight. [Racial effects](../sim/core/racials.go) · [Base stats](../sim/core/base_stats.go)
 
+The Rogue rotation uses Shank at 60 Energy or less. With any rank of Boot Knife, it also waits for three or fewer combo points so both new points fit. All six Rogue presets wear four pieces of the original Darkmantle set and receive its Energy proc.
+
 The 35 level-60 builds fight one target for 90, 180 or 360 seconds. Each build keeps the same equipment, talents, rotation and support when comparing its races. Builds may use different gear quality and unoptimized replacements. A small separation between two means can disappear with a different setup or a correction to one of the assumptions above. [Race Arena method](race-arena.md) · [Build Arena method](build-arena.md)
 
 World health, leveling, PvP, movement, controller behavior and the Throw windup do not affect these preset fights. The arenas measure personal DPS, including pets. Healing spells such as Druid Bloom, Swiftmend and Wild Growth and Shaman Riptide remain incomplete. These results do not measure healing or tank performance.

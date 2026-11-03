@@ -401,16 +401,25 @@
 								}
 							},
 							{
-								"cmp": {
-									"op": "OpLe",
-									"lhs": {
-										"currentComboPoints": {}
-									},
-									"rhs": {
-										"const": {
-											"val": "3"
+								"or": {
+									"vals": [
+										{
+											"not": {
+												"val": {
+													"talentIsKnown": {
+														"talentId": { "otherId": "OtherActionBootKnife", "rank": 1 }
+													}
+												}
+											}
+										},
+										{
+											"cmp": {
+												"op": "OpLe",
+												"lhs": { "currentComboPoints": {} },
+												"rhs": { "const": { "val": "3" } }
+											}
 										}
-									}
+									]
 								}
 							}
 						]
