@@ -439,6 +439,19 @@ var ItemSetShadowcraftArmor = core.NewItemSet(core.ItemSet{
 	},
 })
 
+// The original Darkmantle set and its reissue each count their own pieces.
+var ItemSetDarkmantleArmor = core.NewItemSet(core.ItemSet{
+	ID:    512,
+	Name:  "Darkmantle Armor",
+	Slots: shared.EightPieceSlots,
+	Bonuses: map[int32]core.ApplySetBonus{
+		2: shared.ParsedSetBonus(dungeonResistances),
+		4: rogueArmorEnergize("Darkmantle Armor - 4PC"),
+		6: shared.ParsedSetBonus(dungeonTwoAttack),
+		8: shared.ParsedSetBonus(spelldata.MustFind(14803)),
+	},
+})
+
 // Dungeon Set 2, Season of Discovery reissue
 //
 // The 3-piece bonus restores health over time and the 5-piece bonus removes a snare when struck,

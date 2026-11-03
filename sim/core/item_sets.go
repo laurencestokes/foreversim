@@ -105,6 +105,8 @@ func MissingItemSets() []string { return missingItemSets }
 func ItemSets() []*ItemSet { return sets }
 
 type SetBonus struct {
+	ID int32
+
 	// Name of the set.
 	Name string
 
@@ -159,6 +161,7 @@ func (equipment *Equipment) getSetBonuses() SetBonusCollection {
 			setItemCount[foundSet]++
 			if bonusEffect, ok := foundSet.Bonuses[setItemCount[foundSet]]; ok {
 				activeBonuses = append(activeBonuses, SetBonus{
+					ID:                 foundSet.ID,
 					Name:               foundSet.Name,
 					NumPieces:          setItemCount[foundSet],
 					BonusEffect:        bonusEffect,
@@ -177,12 +180,27 @@ func (character *Character) getActiveSetBonuses() SetBonusCollection {
 }
 
 func (character *Character) getUnequippedSetBonuses() SetBonusCollection {
-	return character.ItemSwap.unEquippedItems.getSetBonuses()
+	// Unchanged pieces count alongside the selected slots in the alternate set.
+	equipment := character.Equipment
+	for _, slot := range character.ItemSwap.slots {
+		equipment[slot] = character.ItemSwap.unEquippedItems[slot]
+	}
+	return equipment.getSetBonuses()
 }
 
 func (collection SetBonusCollection) ContainsBonus(setName string, count int32) bool {
+	return collection.containsBonus(0, setName, count)
+}
+
+// Identified sets keep separate bonuses even when their display names match. Name-only callers
+// and sets without an id retain the name match.
+func (collection SetBonusCollection) containsBonus(setID int32, setName string, count int32) bool {
 	for _, bonus := range collection {
-		if (bonus.Name == setName) && (bonus.NumPieces >= count) {
+		matches := bonus.Name == setName
+		if setID > 0 && bonus.ID > 0 {
+			matches = bonus.ID == setID
+		}
+		if matches && bonus.NumPieces >= count {
 			return true
 		}
 	}
@@ -191,12 +209,12 @@ func (collection SetBonusCollection) ContainsBonus(setName string, count int32) 
 }
 
 // Checks whether the character has an equipped set bonus
-func (character *Character) hasActiveSetBonus(setName string, count int32) bool {
-	return character.getActiveSetBonuses().ContainsBonus(setName, count)
+func (character *Character) hasActiveSetBonus(setID int32, setName string, count int32) bool {
+	return character.getActiveSetBonuses().containsBonus(setID, setName, count)
 }
 
-func (character *Character) hasUnequippedSetBonus(setName string, count int32) bool {
-	return character.getUnequippedSetBonuses().ContainsBonus(setName, count)
+func (character *Character) hasUnequippedSetBonus(setID int32, setName string, count int32) bool {
+	return character.getUnequippedSetBonuses().containsBonus(setID, setName, count)
 }
 
 func (character *Character) CouldHaveSetBonus(set *ItemSet, numItems int32) bool {
@@ -208,12 +226,12 @@ func (character *Character) CouldHaveSetBonus(set *ItemSet, numItems int32) bool
 		panic(fmt.Sprintf("Item set %s does not have a bonus with %d pieces.", set.Name, numItems))
 	}
 
-	if character.hasActiveSetBonus(set.Name, numItems) {
+	if character.hasActiveSetBonus(set.ID, set.Name, numItems) {
 		return true
 	}
 
 	if character.ItemSwap.IsEnabled() {
-		return character.hasUnequippedSetBonus(set.Name, numItems)
+		return character.hasUnequippedSetBonus(set.ID, set.Name, numItems)
 	}
 
 	return false
@@ -227,27 +245,34 @@ func (character *Character) applyItemSetBonusEffects(agent Agent) {
 		if !character.MeetsProfession(activeSetBonus.RequiredProfession, 0) {
 			continue
 		}
-		setBonusAura := character.makeSetBonusStatusAura(activeSetBonus.Name, activeSetBonus.NumPieces, activeSetBonus.Slots, true)
+		setBonusAura := character.makeSetBonusStatusAura(activeSetBonus, true)
 		activeSetBonus.BonusEffect(agent, setBonusAura)
 	}
 
 	if character.ItemSwap.IsEnabled() {
 		for _, unequippedSetBonus := range character.getUnequippedSetBonuses() {
-			if activeSetBonuses.ContainsBonus(unequippedSetBonus.Name, unequippedSetBonus.NumPieces) {
+			if activeSetBonuses.containsBonus(unequippedSetBonus.ID, unequippedSetBonus.Name, unequippedSetBonus.NumPieces) {
 				continue
 			}
 			if !character.MeetsProfession(unequippedSetBonus.RequiredProfession, 0) {
 				continue
 			}
-			setBonusAura := character.makeSetBonusStatusAura(unequippedSetBonus.Name, unequippedSetBonus.NumPieces, unequippedSetBonus.Slots, false)
+			setBonusAura := character.makeSetBonusStatusAura(unequippedSetBonus, false)
 			unequippedSetBonus.BonusEffect(agent, setBonusAura)
 		}
 	}
 }
 
-func (character *Character) makeSetBonusStatusAura(setName string, numPieces int32, slots []proto.ItemSlot, activeAtStart bool) *Aura {
+func (character *Character) makeSetBonusStatusAura(bonus SetBonus, activeAtStart bool) *Aura {
+	label := fmt.Sprintf("%s %dP", bonus.Name, bonus.NumPieces)
+	for _, set := range sets {
+		if bonus.ID > 0 && set.ID > 0 && set.ID != bonus.ID && set.Name == bonus.Name {
+			label += fmt.Sprintf(" (Set %d)", bonus.ID)
+			break
+		}
+	}
 	statusAura := character.GetOrRegisterAura(Aura{
-		Label:      fmt.Sprintf("%s %dP", setName, numPieces),
+		Label:      label,
 		BuildPhase: Ternary(activeAtStart, CharacterBuildPhaseGear, CharacterBuildPhaseNone),
 		Duration:   NeverExpires,
 	})
@@ -256,8 +281,8 @@ func (character *Character) makeSetBonusStatusAura(setName string, numPieces int
 		statusAura = MakePermanent(statusAura)
 	}
 
-	character.RegisterItemSwapCallback(slots, func(sim *Simulation, _ proto.ItemSlot) {
-		if character.hasActiveSetBonus(setName, numPieces) {
+	character.RegisterItemSwapCallback(bonus.Slots, func(sim *Simulation, _ proto.ItemSlot) {
+		if character.hasActiveSetBonus(bonus.ID, bonus.Name, bonus.NumPieces) {
 			if !statusAura.IsActive() {
 				statusAura.Activate(sim)
 			}

@@ -206,6 +206,14 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestElemental-AllItems-DarkmantleArmor"
+ value: {
+  dps: 577.44212
+  tps: 534.63726
+  dtps: 9.2091
+ }
+}
+dps_results: {
  key: "TestElemental-AllItems-DarkmoonCard:BlueDragon-19288"
  value: {
   dps: 732.95275

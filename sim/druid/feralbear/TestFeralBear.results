@@ -217,6 +217,15 @@ dps_results: {
  }
 }
 dps_results: {
+ key: "TestFeralBear-AllItems-DarkmantleArmor"
+ value: {
+  dps: 505.56751
+  tps: 1919.17407
+  dtps: 393.09574
+  hps: 83.45135
+ }
+}
+dps_results: {
  key: "TestFeralBear-AllItems-DarkmoonCard:BlueDragon-19288"
  value: {
   dps: 499.31039

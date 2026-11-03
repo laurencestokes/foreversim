@@ -105,6 +105,54 @@ func TestShankUsesTheOffHandAndLaunchPassives(t *testing.T) {
 	}
 }
 
+func TestPresetShankLeavesRoomForBootKnife(t *testing.T) {
+	preset := core.GetAplRotation("../../ui/specs/rogue/dps/apls", "default").Rotation
+	var shank *proto.APLListItem
+	for _, item := range preset.GetPriorityList() {
+		if item.GetAction().GetCastSpell().GetSpellId().GetOtherId() == proto.OtherAction_OtherActionShank {
+			shank = item
+			break
+		}
+	}
+	if shank == nil {
+		t.Fatal("the Rogue preset has no Shank action")
+	}
+	const bootKnife = "005302212-32-005230311321021151"
+	for _, tc := range []struct {
+		name, talents string
+		points        int32
+		energy        float64
+		wantCast      bool
+	}{
+		{"no Boot Knife at five points", DefaultTalents, 5, 60, true},
+		{"Boot Knife at three points", bootKnife, 3, 60, true},
+		{"Boot Knife at four points", bootKnife, 4, 60, false},
+		{"one rank of Boot Knife at four points", "005302212-32-005230311321021111", 4, 60, false},
+		{"no Boot Knife above the Energy limit", DefaultTalents, 5, 61, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			player := core.WithSpec(&proto.Player{
+				Class: proto.Class_ClassRogue, Race: proto.Race_RaceHuman,
+				Equipment:     core.GetGearSet("../../ui/specs/rogue/dps/gear_sets", "p1_muti").GearSet,
+				TalentsString: tc.talents, TalentLayout: proto.TalentLayout_TalentLayoutLaunch,
+				Rotation: &proto.APLRotation{Type: proto.APLRotation_TypeAPL, PriorityList: []*proto.APLListItem{shank}},
+			}, DefaultOptions)
+			sim := core.NewSim(&proto.RaidSimRequest{
+				Raid: core.SinglePlayerRaidProto(player, nil, nil, nil), Encounter: core.MakeSingleTargetEncounter(0),
+				SimOptions: &proto.SimOptions{RandomSeed: 1},
+			}, simsignals.CreateSignals())
+			sim.Reset()
+			rogue := sim.Raid.Parties[0].Players[0].(*Rogue)
+			rogue.SpendEnergy(sim, rogue.CurrentEnergy()-tc.energy, rogue.NewEnergyMetrics(core.ActionID{}))
+			rogue.AddComboPoints(sim, tc.points, rogue.NewComboPointMetrics(core.ActionID{}))
+			rogue.Rotation.DoNextAction(sim)
+			if cast := !rogue.Shank.IsReady(sim); cast != tc.wantCast {
+				t.Errorf("Shank cast = %t at %d combo points and %g Energy, want %t", cast, tc.points, tc.energy, tc.wantCast)
+			}
+		})
+	}
+}
+
 func TestVenomComesFromShankWithoutSpendingPoints(t *testing.T) {
 	sim, rogue := newLaunchRogue(t, "00530221250551031--0052303003", &proto.ConsumesSpec{MhWeaponImbueId: 8928, OhWeaponImbueId: 8985})
 	rogue.PoisedAura.Deactivate(sim)
