@@ -1,6 +1,6 @@
 # November 2 launch tuning
 
-The arenas use the November 2 development notes for their November 4 launch projection. Each result links to the fork commit used to calculate it. The fork combines upstream master at `137665be4`, four upstream drafts and local changes for mechanics those drafts did not cover. [Blizzard’s notes](https://us.forums.blizzard.com/en/wow/t/2360696/9) · [Upstream master](https://github.com/wowsims/forever/commit/137665be41ec5277d8f12e9793a76420f5211557) · [Hunter](https://github.com/wowsims/forever/pull/824) · [Feral](https://github.com/wowsims/forever/pull/823) · [Bear](https://github.com/wowsims/forever/pull/822) · [Shaman](https://github.com/wowsims/forever/pull/821)
+The arenas use the November 2 development notes for their November 4 launch projection. Each result links to the fork commit used to calculate it. The fork combines upstream master at `6e69a7f4f`, nine upstream previews and the fork’s launch tuning. The [Build Arena method](build-arena.md) records the exact revisions. [Blizzard’s notes](https://us.forums.blizzard.com/en/wow/t/2360696/9) · [Upstream master](https://github.com/wowsims/forever/commit/6e69a7f4f239c591e9dec4124a93fca6329c240f) · [Hunter](https://github.com/wowsims/forever/pull/824) · [Feral](https://github.com/wowsims/forever/pull/823) · [Bear](https://github.com/wowsims/forever/pull/822) · [Shaman](https://github.com/wowsims/forever/pull/821)
 
 ## What changed in the ranked builds
 
@@ -25,6 +25,12 @@ An older saved Rogue, Warrior or Shaman talent string keeps its surviving ranks 
 The major DPS racials in this post were already in the engine. Dwarf has 1% physical and spell hit. Human has 1% crit and 10% Spirit. Orc has its pet damage bonus and two-minute Blood Fury. Skyborne has 2% haste, Troll Berserking lasts 15 seconds, and Undead Touch of the Grave has a 15-second internal cooldown. Tauren Endurance gives 5% health. The Tauren Warrior’s base Strength is five points above the Human Warrior’s. Skyborne base attributes still use earlier observations. The raid presets use ordinary Read Leyline and Skysight. [Racial effects](../sim/core/racials.go) · [Base stats](../sim/core/base_stats.go)
 
 The Rogue rotation uses Shank at 60 Energy or less. With any rank of Boot Knife, it also waits for three or fewer combo points so both new points fit. All six Rogue presets wear four pieces of the original Darkmantle set and receive its Energy proc.
+
+Riposte and the dodge bonus from Ghostly Strike apply to Rogue tank setups. Setup models a 15%, 30% or 45% chance to gain a combo point on a dodge. The engine cannot distinguish every fully resisted attack from a miss for this talent. None of the ranked Rogue builds spends points in Setup.
+
+The encounter engine now tracks execute phases per target and dispatches death and kill effects when an encounter removes a dying target. Dynamic Adds can credit a despawn as a kill. The published encounters have one continuously active enemy and a fixed duration.
+
+Wrack and Destruction use the updated upstream rotations on their existing pre-raid equipment. Upstream tests those two builds with its new raid gear set, which is available in the simulator.
 
 The 35 level-60 builds fight one target for 90, 180 or 360 seconds. Each build keeps the same equipment, talents, rotation and support when comparing its races. Builds may use different gear quality and unoptimized replacements. A small separation between two means can disappear with a different setup or a correction to one of the assumptions above. [Race Arena method](race-arena.md) · [Build Arena method](build-arena.md)
 

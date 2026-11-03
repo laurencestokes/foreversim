@@ -4,11 +4,7 @@
 
 Results marked **November 4, 2026 launch projection** include the Hunter hotfix, upstream Feral and Shaman drafts and the fork’s November 2 class changes. Each build holds its setup fixed across races. Rogue, Warrior and Shaman use legal launch talent allocations, and Elemental uses its ordinary mana pool. The class coverage report identifies which values come from the game files and which still need measurements. Skyborne base attributes remain unverified.
 
-Both arena pages link to the exact [upstream baseline `137665be4`](https://github.com/wowsims/forever/commit/137665be41ec5277d8f12e9793a76420f5211557),
-[Hunter #824 at `a6b9f132c`](https://github.com/wowsims/forever/commit/a6b9f132c9cece3a44ac093d61659c9951fcf62c),
-[Feral #823 at `ac807d93b`](https://github.com/wowsims/forever/commit/ac807d93bb80bf50d379066b2fb0c131321b7277),
-[Bear threat #822 at `c8a275b33`](https://github.com/wowsims/forever/commit/c8a275b336d5537404c7156a574324dd5008f91e), and
-[Shaman #821 at `2fa331700`](https://github.com/wowsims/forever/commit/2fa33170006905ea188b1f9835a2bee89e90c874).
+The source links on both pages identify [upstream master](https://github.com/wowsims/forever/commit/6e69a7f4f239c591e9dec4124a93fca6329c240f) and the nine preview revisions listed in the [Build Arena method](build-arena.md). Wrack and Destruction keep the same pre-raid equipment as the other Warlock builds.
 The launch-preview notice appears only on results with recorded `launchPreview` metadata. The launch
 date is separate from computation dates. Historical results keep their original labels and sources.
 

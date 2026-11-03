@@ -219,7 +219,7 @@ func (warlock *Warlock) applyShadowAndFlame() {
 			buffRow = &preview
 		}
 		buff := warlock.RegisterAura(spelldata.AuraConfig(buffRow))
-		// The buff rows state the 5/5 value; the talent's effects 3 and 4 price it at each rank.
+		// The buff row states the five-point value; each selected point grants a fifth of it.
 		spelldata.ParseEffects(&warlock.Character, buff, buffRow,
 			spelldata.ScaledByRanks(warlock.Talents.ShadowAndFlame, spellData.ShadowAndFlame.Len()))
 

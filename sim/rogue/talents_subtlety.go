@@ -10,6 +10,7 @@ import (
 
 func (rogue *Rogue) registerSubtletyTalents() {
 	rogue.registerOpportunity()
+	rogue.registerSetup()
 	rogue.registerDirtyDeeds()
 	rogue.registerImprovedAmbush()
 	rogue.registerInitiative()
@@ -20,8 +21,7 @@ func (rogue *Rogue) registerSubtletyTalents() {
 	rogue.registerPreparation()
 	rogue.registerHemorrhage()
 	rogue.registerDeathMark()
-	// Boot Knife runs on Shank. Setup, stealth, movement and detection talents are outside the
-	// damage rotation against a boss that does not attack the Rogue.
+	// Boot Knife runs on Shank. Stealth, movement and detection talents are outside the damage rotation.
 }
 
 func (rogue *Rogue) registerOpportunity() {
@@ -67,8 +67,16 @@ func (rogue *Rogue) registerGhostlyStrike() {
 	config.ClassSpellMask = RogueSpellGhostlyStrike
 	config.DamageMultiplier = core.TernaryFloat64(rogue.HasDagger(core.MainHand), ghostlyStrikeRank.EffectN(4).Percent(), ghostlyStrikeRank.EffectN(1).Percent())
 
+	// Dodge lasts for the full duration even after an opener consumes its permission.
+	// The untagged aura remains the opener window read by the rotation.
+	dodgeConfig := spelldata.AuraConfig(ghostlyStrikeRank)
+	dodgeConfig.ActionID = dodgeConfig.ActionID.WithTag(1)
+	dodgeBuff := rogue.RegisterAura(dodgeConfig)
+	spelldata.ParseEffects(&rogue.Character, dodgeBuff, ghostlyStrikeRank, spelldata.Effects(2))
+	config.RelatedSelfBuff = dodgeBuff
+
 	// The next Ambush or Garrote in the seven-second window can be cast outside Stealth.
-	rogue.GhostlyStrikeAura = rogue.RegisterAura(spelldata.AuraConfig(ghostlyStrikeRank)).
+	rogue.GhostlyStrikeAura = rogue.RegisterAura(spelldata.AuraConfig(ghostlyStrikeRank, spelldata.Label("Ghostly Strike - Opener"))).
 		ApplyOnGain(func(_ *core.Aura, _ *core.Simulation) {
 			rogue.Ambush.CastRequirement.CasterForm = true
 			rogue.Garrote.CastRequirement.CasterForm = true
@@ -89,7 +97,9 @@ func (rogue *Rogue) registerGhostlyStrike() {
 
 		result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
 
+		// An avoided strike grants no buff, as it grants no combo point.
 		if result.Landed() {
+			dodgeBuff.Activate(sim)
 			rogue.AddComboPoints(sim, int32(ghostlyStrikeRank.ProcEnergizeEffect().Roll(sim)), spell.ComboPointMetrics())
 			rogue.GhostlyStrikeAura.Activate(sim)
 		} else {
@@ -157,6 +167,9 @@ func (rogue *Rogue) registerPreparation() {
 		}
 		if rogue.AdrenalineRush != nil {
 			rogue.AdrenalineRush.CD.Set(0)
+		}
+		if rogue.Riposte != nil {
+			rogue.Riposte.CD.Set(0)
 		}
 	}
 
@@ -241,4 +254,29 @@ func (rogue *Rogue) registerPremeditation() {
 		Spell: rogue.Premeditation,
 		Type:  core.CooldownTypeDPS,
 	})
+}
+
+var setupTriggered = spellData.SetupTriggered.Highest()
+
+func (rogue *Rogue) registerSetup() {
+	if rogue.Talents.Setup == 0 {
+		return
+	}
+
+	setupRank := spellData.Setup.Rank(rogue.Talents.Setup)
+	setupMetrics := rogue.NewComboPointMetrics(core.ActionID{SpellID: setupRank.ID})
+
+	trigger := spelldata.ProcTrigger(&rogue.Character, setupRank,
+		func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+			rogue.AddComboPoints(sim, int32(setupTriggered.ProcEnergizeEffect().Roll(sim)), setupMetrics)
+		}, spelldata.Chance([]float64{0, 0.15, 0.30, 0.45}[rogue.Talents.Setup]))
+	// The November 2 development notes give a fifteen-percent chance per point.
+	// TODO: Fully resisted spells become indistinguishable from misses in core, so only dodges trigger Setup.
+	trigger.Outcome = core.OutcomeDodge
+	trigger.RequireDamageDealt = false
+	// The tooltip limits it to your target's attacks.
+	trigger.ExtraCondition = func(_ *core.Simulation, spell *core.Spell, _ *core.SpellResult) bool {
+		return spell.Unit == rogue.CurrentTarget
+	}
+	rogue.MakeProcTriggerAura(trigger)
 }

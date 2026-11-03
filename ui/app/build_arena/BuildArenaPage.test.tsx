@@ -40,7 +40,7 @@ describe('Build Arena', () => {
 		for (const source of launchPreviewFixture.drafts) {
 			expect(
 				within(notice)
-					.getByRole('link', { name: `Draft #${source.pullRequest}` })
+					.getByRole('link', { name: `PR #${source.pullRequest}` })
 					.getAttribute('href'),
 			).toBe(`https://github.com/wowsims/forever/pull/${source.pullRequest}`);
 			expect(

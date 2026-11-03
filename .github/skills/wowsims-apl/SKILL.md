@@ -83,8 +83,9 @@ A value or action reaches the rotation and the kind picker in five places, all i
 
 ## Presets
 
-- **One file serves the UI and the suite, in one of two layouts.** `<spec>/apls/<name>.apl.json` is imported by the
-  spec's `presets.ts` and loaded by `core.GetAplRotation` (`sim/warrior/dps/dps_test.go`); `<spec>/builds/<name>.build.json`
+- **One file serves the UI and the suite, in one of two layouts.** `<spec>/apls/<name>.apl.json` (`.apl.siml` for
+  the specs on SIML) is imported by the spec's `presets.ts` and loaded by `core.GetAplRotation`
+  (`sim/warrior/dps/dps_test.go`); `<spec>/builds/<name>.build.json`
   holds it in `player.rotation`, passed to `makePresetAPLRotation` and loaded by `core.GetTestBuildFromJSON`
   (`sim/warlock/warlock_test.go`). Priest, elemental shaman and warlock use builds only, enhancement shaman both.
 - **An option is a hidden group.** The priority list holds a Group Reference with `hide: true`, and the spec's
@@ -150,6 +151,12 @@ with `core.SinglePlayerRaidProto` and the rotation from the suite's loader (`cor
   A Change Target to the current target is not ready (`APLActionChangeTarget.IsReady`).
 - **`GCD Is Ready` is true from 400 ms before the GCD ends** (`MaxSpellQueueWindow`, `APLValueGCDIsReady`), so a
   line gated on it fires on every look in that window. `GCD Time To Ready` ≤ `0ms` holds only at the GCD's end.
+- **`Is Execute Phase` takes a target**, the current target when none is set (`sim/core/apl_values_encounter.go`). An
+  enemy has no health bar, so `Current Health` and `Current Health %` on one warn and do not resolve. Fights are
+  time-based: a fight lasts its rolled duration, and every target of a plain encounter crosses 35% and 20% at the
+  encounter's execute proportions.
+- **Multidot and Strict Multidot count active targets**: a disabled or dead target is skipped, so `max_dots` dots the
+  first targets still up (`sim/core/apl_actions_casting.go`).
 
 ## Traps
 

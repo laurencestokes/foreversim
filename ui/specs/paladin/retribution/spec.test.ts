@@ -1,19 +1,20 @@
 import { APLGroup, APLRotation } from '@generated/proto/apl';
 import { Cooldowns, Spec } from '@generated/proto/common';
-import { PaladinAura, PaladinJudgement, RetributionPaladin_Rotation } from '@generated/proto/paladin';
+import { PaladinAura, PaladinJudgement, PaladinSeal, PaladinTalents, RetributionPaladin_Rotation } from '@generated/proto/paladin';
 import type { Player } from '@sim/player/player';
 import { describe, expect, it } from 'vitest';
 
-import DefaultApl from './apls/default.apl.json';
-import HolyShockApl from './apls/holy_shock.apl.json';
-import { DefaultSimpleRotation } from './presets';
+import DefaultApl from './apls/default.apl.siml';
+import HolyShockApl from './apls/holy_shock.apl.siml';
+import { Defaults } from './presets';
 import spec from './spec';
 
-// The generator reads nothing from the player but the Holy Shock talent.
-const player = (holyShock: boolean) => ({ getTalents: () => ({ holyShock }) }) as unknown as Player<Spec.SpecRetributionPaladin>;
+// Only the talents are read from the player.
+const player = (holyShock: boolean, talents: Partial<PaladinTalents> = {}) =>
+	({ getTalents: () => PaladinTalents.create({ holyShock, ...talents }) }) as unknown as Player<Spec.SpecRetributionPaladin>;
 
 const generate = (simple: Partial<RetributionPaladin_Rotation>, holyShock = false, cooldowns = Cooldowns.create()) =>
-	spec.simpleRotation!(player(holyShock), RetributionPaladin_Rotation.create({ ...DefaultSimpleRotation, ...simple }), cooldowns);
+	spec.simpleRotation!(player(holyShock), RetributionPaladin_Rotation.create({ ...Defaults.simpleRotation, ...simple }), cooldowns);
 
 const variable = (rotation: APLRotation, name: string) => {
 	const value = rotation.valueVariables.find(v => v.name === name)?.value?.value;
@@ -28,8 +29,8 @@ const aplGroup = (apl: any, name: string) => APLGroup.toJson(APLGroup.fromJson(a
 
 describe('Retribution simple rotation', () => {
 	it('builds on the Holy Shock APL with the talent and the Default APL without it', () => {
-		expect(generate({}, true).groups.map(g => g.name)).toEqual(HolyShockApl.groups.map(g => g.name));
-		expect(generate({}, false).groups.map(g => g.name)).toEqual(DefaultApl.groups.map(g => g.name));
+		expect(generate({}, true).groups.map(g => g.name)).toEqual(HolyShockApl.groups.map((g: { name: string }) => g.name));
+		expect(generate({}, false).groups.map(g => g.name)).toEqual(DefaultApl.groups.map((g: { name: string }) => g.name));
 	});
 
 	it.each([
@@ -76,6 +77,25 @@ describe('Retribution simple rotation', () => {
 	it('sets Delay Major CDs in seconds', () => {
 		expect(variable(generate({ delayMajorCds: 11 }), 'Delay Major CDs')).toBe('11s');
 	});
+
+	it.each([
+		[false, false, PaladinSeal.SealOfCommand, 'false', 'true'],
+		[false, true, PaladinSeal.SealOfCommand, 'true', 'false'],
+		[false, true, PaladinSeal.SealOfRighteousness, 'false', 'true'],
+		[true, true, PaladinSeal.SealOfCommand, 'true', 'true'],
+		[true, true, PaladinSeal.SealOfRighteousness, 'true', 'true'],
+	] as const)(
+		'sets seal choices for Unsealed Wrath %s, Seal of Command %s and selected seal %i',
+		(unsealedWrath, sealOfCommand, seal, command, righteousness) => {
+			const rotation = spec.simpleRotation!(
+				player(false, { unsealedWrath, sealOfCommand }),
+				RetributionPaladin_Rotation.create({ ...Defaults.simpleRotation, seal }),
+				Cooldowns.create(),
+			);
+			expect(variable(rotation, 'Use Seal of Command')).toBe(command);
+			expect(variable(rotation, 'Use Seal of Righteousness')).toBe(righteousness);
+		},
+	);
 
 	it('puts the scheduled cooldowns ahead of the priority list', () => {
 		const cooldowns = Cooldowns.create({ cooldowns: [{ id: { rawId: { oneofKind: 'spellId', spellId: 1310905 } }, timings: [10] }] });
