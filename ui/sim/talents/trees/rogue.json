@@ -140,7 +140,7 @@
         "maxPoints": 5
       },
       {
-        "fieldName": "relentlessStrikesPoints",
+        "fieldName": "relentlessStrikes",
         "fancyName": "Relentless Strikes",
         "location": {
           "rowIdx": 4,
@@ -205,7 +205,7 @@
     "backgroundUrl": "https://wow.zamimg.com/images/wow/talents/backgrounds/tbc/181.jpg",
     "talents": [
       {
-        "fieldName": "improvedEviscerate",
+        "fieldName": "coupDeGrace",
         "fancyName": "Coup de Grace",
         "location": {
           "rowIdx": 0,
@@ -216,7 +216,7 @@
         "maxPoints": 3
       },
       {
-        "fieldName": "improvedSinisterStrike",
+        "fieldName": "efficientStrikes",
         "fancyName": "Efficient Strikes",
         "location": {
           "rowIdx": 0,

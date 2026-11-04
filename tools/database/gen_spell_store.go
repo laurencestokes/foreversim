@@ -309,7 +309,6 @@ func renderStore(in *storeInputs, namer *rankEnumNamer) ([]byte, error) {
 		return nil, err
 	}
 
-	applyLaunchShaman(in, rows, curves)
 	return renderStoreFile(rows, curves, hand, namer)
 }
 

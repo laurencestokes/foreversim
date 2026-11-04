@@ -223,15 +223,15 @@ func (paladin *Paladin) applySacredArbiter() {
 	})
 }
 
-// Two-Handed Weapon Specialization - Increases the Physical and Holy damage you deal by 2/4/6%, and reduces
-// all threat you generate by 7/14/20% while a two-handed melee weapon is equipped.
+// Two-Handed Weapon Specialization - Increases the Physical and Holy damage you deal by 2/4/6%, and
+// reduces all threat you generate by 7/14/20% while a two-handed melee weapon is equipped.
 func (paladin *Paladin) applyTwoHandedWeaponSpecialization() {
 	if paladin.Talents.TwoHandedWeaponSpecialization == 0 {
 		return
 	}
 
-	rank := spellData.TwoHandedWeaponSpecialization.Rank(paladin.Talents.TwoHandedWeaponSpecialization)
-	spelldata.ParseStatic(&paladin.Character, rank)
+	spelldata.ParseStatic(&paladin.Character,
+		spellData.TwoHandedWeaponSpecialization.Rank(paladin.Talents.TwoHandedWeaponSpecialization))
 }
 
 // Vengeance - Increases your Physical and Holy damage dealt by 1/2/3% for 30 sec after landing a
@@ -243,7 +243,6 @@ func (paladin *Paladin) applyVengeance() {
 
 	rank := spellData.VengeanceTriggered.Highest()
 	perStack := spellData.Vengeance.FractionAt(paladin.Talents.Vengeance)
-	maxStacks := int32(rank.MaxStack)
 
 	damageMod := paladin.AddDynamicMod(core.SpellModConfig{
 		School:     core.SpellSchoolHoly | core.SpellSchoolPhysical,
@@ -255,7 +254,7 @@ func (paladin *Paladin) applyVengeance() {
 		Label:     "Vengeance" + paladin.Label,
 		ActionID:  core.ActionID{SpellID: rank.ID},
 		Duration:  rank.Duration(),
-		MaxStacks: maxStacks,
+		MaxStacks: int32(rank.MaxStack),
 		OnGain: func(_ *core.Aura, _ *core.Simulation) {
 			damageMod.Activate()
 		},

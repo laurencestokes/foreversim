@@ -16,7 +16,7 @@ import (
 	gp "google.golang.org/protobuf/proto"
 )
 
-func TestLaunchChainLightningOverloadsOncePerPrimaryHit(t *testing.T) {
+func TestChainLightningRollsOverloadsAtEachJump(t *testing.T) {
 	for _, n := range []int{1, 3} {
 		encounter := core.MakeSingleTargetEncounter(0)
 		for len(encounter.Targets) < n {
@@ -40,12 +40,12 @@ func TestLaunchChainLightningOverloadsOncePerPrimaryHit(t *testing.T) {
 		}
 		rate := float64(copy.SpellMetrics[target.UnitIndex].Casts) / float64(landed)
 		t.Logf("%d targets: %d copies on %d primary hits (%.3f)", n, copy.SpellMetrics[target.UnitIndex].Casts, landed, rate)
-		if math.Abs(rate-caster.GetOverloadChance()) > 0.04 {
-			t.Errorf("%d targets: primary-target overload rate %.3f, want %.3f", n, rate, caster.GetOverloadChance())
+		if math.Abs(rate-caster.GetOverloadChance()/3) > 0.04 {
+			t.Errorf("%d targets: primary-target overload rate %.3f, want %.3f", n, rate, caster.GetOverloadChance()/3)
 		}
 		for _, secondary := range sim.Encounter.AllTargetUnits[1:] {
-			if casts := copy.SpellMetrics[secondary.UnitIndex].Casts; casts != 0 {
-				t.Errorf("a secondary jump started %d extra chains", casts)
+			if casts := copy.SpellMetrics[secondary.UnitIndex].Casts; casts == 0 {
+				t.Error("a secondary jump started no overload chains")
 			}
 		}
 	}

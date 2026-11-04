@@ -430,6 +430,7 @@
 				"summon",
 				"petUptime",
 				"reactionTimeMs",
+				"reactionTimeMaxMs",
 				"distanceFromTarget",
 				"profession1",
 				"profession2"
@@ -553,6 +554,9 @@
 					"type": "string"
 				},
 				"reactionTimeMs": {
+					"type": "string"
+				},
+				"reactionTimeMaxMs": {
 					"type": "string"
 				},
 				"distanceFromTarget": {

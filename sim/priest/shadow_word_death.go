@@ -18,7 +18,7 @@ func (priest *Priest) registerShadowWordDeathSpell(_ int32, rank *spelldata.Spel
 		killed := target.HasHealthBar() && result.Damage >= target.CurrentHealth()
 		spell.DealDamage(sim, result)
 		if landed && !killed {
-			priest.RemoveHealth(sim, priest.MaxHealth()*backlash)
+			priest.SpendHealth(sim, priest.MaxHealth()*backlash, spell.HealthMetrics(&priest.Unit))
 		}
 	}
 

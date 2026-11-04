@@ -2,28 +2,37 @@
 
 [November 2 patch coverage by class](november-2-coverage.md) records which launch changes these results include and where the model still differs.
 
-Results marked **November 4, 2026 launch projection** use the Hunter hotfix, Feral and Shaman draft tuning and the fork’s changes for the November 2 class notes. The Rogue, Warrior and Shaman presets spend 51 points in their revised trees. The setup inspector shows the actual allocation and rotation. Shank retains its saved simulator identifier and uses the captured rank for its effects. Reckless Swings uses its game spell identifier.
+Results marked **November 4, 2026 launch projection** use the Hunter reactive-weaving presets, Feral and Shaman draft changes and the fork’s changes for the November 2 class notes. The Rogue, Warrior and Shaman presets spend 51 points in their revised trees. The setup inspector shows the actual allocation and rotation. Saved Shank identifiers resolve to its game spell. Reckless Swings uses its game spell identifier.
 
-Both arenas link the official notes, the fork commit behind the scores and these upstream revisions.
+Both arenas show the official notes, the verified fork engine and the upstream source pins when their results carry `launchPreview` metadata. The pins below match [the projection source record](../tools/build_arena/launch-preview.json). A recorded proposal remains in that history after its changes enter master; the list is not a list of open drafts.
 
-- [Upstream baseline `41862b31e`](https://github.com/wowsims/forever/commit/41862b31e34782e2ffc7fe8be49322812de71ed6).
-- [Hunter #824](https://github.com/wowsims/forever/pull/824), at [`7d6a9fcf3`](https://github.com/wowsims/forever/commit/7d6a9fcf367a7a1f3d01dec294112e1d9800cc06).
-- [Partial Feral #823](https://github.com/wowsims/forever/pull/823), at [`ac807d93b`](https://github.com/wowsims/forever/commit/ac807d93bb80bf50d379066b2fb0c131321b7277).
-- [Bear threat #822](https://github.com/wowsims/forever/pull/822), at [`c8a275b33`](https://github.com/wowsims/forever/commit/c8a275b336d5537404c7156a574324dd5008f91e).
-- [Provisional Shaman #821](https://github.com/wowsims/forever/pull/821), at [`2fa331700`](https://github.com/wowsims/forever/commit/2fa33170006905ea188b1f9835a2bee89e90c874).
+The upstream baseline is [`92c4c35b9`](https://github.com/wowsims/forever/commit/92c4c35b9e2364200ffb9e0f24573fb4904fac8f).
 
-- [Mage Clearcasting #803](https://github.com/wowsims/forever/pull/803), at [`393c297a9`](https://github.com/wowsims/forever/commit/393c297a9d0433d97d7ef33dbb53bb8f82385ad1).
-- [Target deaths and execute phases #826](https://github.com/wowsims/forever/pull/826), at [`73e914a6c`](https://github.com/wowsims/forever/commit/73e914a6cca322ab7553bdd36bd80f719792d419).
-- [Warlock presets #827](https://github.com/wowsims/forever/pull/827), at [`b8cbeea80`](https://github.com/wowsims/forever/commit/b8cbeea8043357e84d6bafaeac86ad527b3ec4f6).
-- [Remaining cast time #828](https://github.com/wowsims/forever/pull/828), at [`abcfd33da`](https://github.com/wowsims/forever/commit/abcfd33da90e0b8a7cbbf0ddeb549acae3f9d372).
-- [Target activity #830](https://github.com/wowsims/forever/pull/830), at [`47acdeee4`](https://github.com/wowsims/forever/commit/47acdeee47f1815f5104a11be4d09ae390d57e21).
+| Source                                                                                | Recorded revision                                                                                 | Relation to the baseline    |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | --------------------------- |
+| [#848: Reactive Hunter](https://github.com/wowsims/forever/pull/848)                  | [`5bff5deb7`](https://github.com/wowsims/forever/commit/5bff5deb7c812ce6b63b6f76b6163e4da46fdb05) | Additional patch source     |
+| [#842: Warlock hotfix](https://github.com/wowsims/forever/pull/842)                   | [`c50111ec1`](https://github.com/wowsims/forever/commit/c50111ec1f06de09a8c0f3b09e06a933fa506710) | Included in baseline master |
+| [#841: Warrior hotfix](https://github.com/wowsims/forever/pull/841)                   | [`dc46a392a`](https://github.com/wowsims/forever/commit/dc46a392a71761eed89beed6a1d7476eaf385f4e) | Included in baseline master |
+| [#840: Rogue hotfix](https://github.com/wowsims/forever/pull/840)                     | [`22a3ea632`](https://github.com/wowsims/forever/commit/22a3ea632916d65b36704cc74343610d086bad96) | Included in baseline master |
+| [#839: Shaman hotfix](https://github.com/wowsims/forever/pull/839)                    | [`bd53fce75`](https://github.com/wowsims/forever/commit/bd53fce75876b684ae2daa447a3f2956680121dd) | Included in baseline master |
+| [#838: Hunter hotfix](https://github.com/wowsims/forever/pull/838)                    | [`194f58d5c`](https://github.com/wowsims/forever/commit/194f58d5c8c595cd79869e2145eb985e1d13107c) | Included in baseline master |
+| [#836: Druid hotfix](https://github.com/wowsims/forever/pull/836)                     | [`d87fc5791`](https://github.com/wowsims/forever/commit/d87fc5791502d8abb78601a468bfe2ba4622b0c6) | Included in baseline master |
+| [#835: Priest hotfix](https://github.com/wowsims/forever/pull/835)                    | [`e3a4df96a`](https://github.com/wowsims/forever/commit/e3a4df96a356710c6baa0b0a86b58745bac04eac) | Included in baseline master |
+| [#834: Paladin hotfix](https://github.com/wowsims/forever/pull/834)                   | [`23dc9eefc`](https://github.com/wowsims/forever/commit/23dc9eefcd45950b61d8ffb835e9bc9f53da1c0e) | Included in baseline master |
+| [#833: Mage hotfix](https://github.com/wowsims/forever/pull/833)                      | [`901c5b8cf`](https://github.com/wowsims/forever/commit/901c5b8cfd3d8b0d6a24d47fa28148f21618b134) | Included in baseline master |
+| [#830: Target activity](https://github.com/wowsims/forever/pull/830)                  | [`47acdeee4`](https://github.com/wowsims/forever/commit/47acdeee47f1815f5104a11be4d09ae390d57e21) | Included in baseline master |
+| [#828: Remaining cast time](https://github.com/wowsims/forever/pull/828)              | [`abcfd33da`](https://github.com/wowsims/forever/commit/abcfd33da90e0b8a7cbbf0ddeb549acae3f9d372) | Included in baseline master |
+| [#827: Warlock presets](https://github.com/wowsims/forever/pull/827)                  | [`0d7b8145b`](https://github.com/wowsims/forever/commit/0d7b8145b7f16ee68e914c514479d048595e5ea4) | Included in baseline master |
+| [#826: Target deaths and execute phases](https://github.com/wowsims/forever/pull/826) | [`631db9290`](https://github.com/wowsims/forever/commit/631db9290d60d4cc64b1b8ea5e3a1ddd6f71a022) | Included in baseline master |
+| [#824: Hunter](https://github.com/wowsims/forever/pull/824)                           | [`7f77372e5`](https://github.com/wowsims/forever/commit/7f77372e5c314a72323f55276aba027984257921) | Included in baseline master |
+| [#823: Feral](https://github.com/wowsims/forever/pull/823)                            | [`8f05366a7`](https://github.com/wowsims/forever/commit/8f05366a72cf2256919c45aeca8991e43b50f5bb) | Additional patch source     |
+| [#822: Bear threat](https://github.com/wowsims/forever/pull/822)                      | [`c8a275b33`](https://github.com/wowsims/forever/commit/c8a275b336d5537404c7156a574324dd5008f91e) | Additional patch source     |
+| [#821: Shaman](https://github.com/wowsims/forever/pull/821)                           | [`2fa331700`](https://github.com/wowsims/forever/commit/2fa33170006905ea188b1f9835a2bee89e90c874) | Included in baseline master |
+| [#803: Mage Clearcasting](https://github.com/wowsims/forever/pull/803)                | [`393c297a9`](https://github.com/wowsims/forever/commit/393c297a9d0433d97d7ef33dbb53bb8f82385ad1) | Additional patch source     |
 
-The class hotfix revisions are [Mage #833](https://github.com/wowsims/forever/commit/974d83db37098aa8d99e51c63acf4bd33ea82993), [Paladin #834](https://github.com/wowsims/forever/commit/7b070596cfe5f8090313055c4d9d8ea469ab8868), [Priest #835](https://github.com/wowsims/forever/commit/948e5750bd277594f4ce82532bb714e9ae750fa3), [Druid #836](https://github.com/wowsims/forever/commit/d87fc5791502d8abb78601a468bfe2ba4622b0c6), [Hunter #838](https://github.com/wowsims/forever/commit/194f58d5c8c595cd79869e2145eb985e1d13107c), [Shaman #839](https://github.com/wowsims/forever/commit/197b72cbf70a323ca2e6f46d217cd220f7977204), [Rogue #840](https://github.com/wowsims/forever/commit/6dcd42dc1fb18e1a289fbbaf1989ad867012bd09), [Warrior #841](https://github.com/wowsims/forever/commit/630618c443167737571436e8af7ccf04837057b7), [Warlock #842](https://github.com/wowsims/forever/commit/4972a1d52d0c25d4d00ccbe143314a7689f23f0b).
+Warlock #842 remains in the source history. Its Wrack setup is superseded by #827, which is included in baseline master. Ranked Wrack uses #827's talents, rotation and sacrificed Imp while retaining the arena's existing pre-raid equipment.
 
-Both arenas show these source links only when the recorded results carry `launchPreview` metadata.
-The launch date describes the projection. Each source's computation date and simulator revision
-still describe the actual run. Earlier results retain their original provenance and receive no
-launch-preview label.
+The launch date describes the projection. Each measurement's source preserves the engine revision and computation date of its actual run, including reused measurements. The verified engine records the separate compatibility check. Results without projection metadata receive no launch-preview label.
 
 The Build Arena compares complete DPS presets based on upstream setups at level 60. A result includes the preset's
 gear, enchants, talents, resolved rotation, consumables and class options. Changing the build can change
@@ -43,8 +52,9 @@ arena’s setup inspector to see the equipped items, or replay its downloaded re
 
 ## Live game data and preset limitations
 
-The projection combines captured game data with the draft and fork changes listed in the coverage report. The class spell data comes from game build 1.60.1.70755 with hotfix push 113583.
-The generated Shaman spells retain the earlier preview’s tuning where that build still contains the older numbers. A missing simulator database entry does not establish that an item is
+The projection combines captured game data with the draft and fork changes listed in the coverage report. The class spell data comes from game build 1.60.1.70755 with hotfix push 113605.
+Shaman's Lightning Overload uses its own rank-paired spell rows for damage and coefficients. Those rows differ from the talent tooltip's half-damage description; this still needs in-game verification. Shank always hits in the model and suppresses poison and item procs. Its proc suppression also needs in-game verification. Death Mark's cap follows the tooltip formula, using melee crit and attack power at payout.
+A missing simulator database entry does not establish that an item is
 unavailable in game. Later data updates can restore entries, while preset replacements may remain.
 
 [Upstream's preset substitutions](https://github.com/wowsims/forever/pull/725) use available items
@@ -55,12 +65,18 @@ replacements. All eleven Rogue presets wear four pieces of the original Darkmant
 Both it and the reissue (1676) grant the four-piece Energy proc. The simulator uses a 1 PPM
 estimate for both versions because the game files do not give a rate.
 
+The Rogue roster keeps the original six alternatives and adds five updated upstream allocations, including Combat Venom. Each candidate retains its recorded gear and rotation; the two original Subtlety alternatives use the same talents with different builders.
+
+Elemental's Mana Tide alternative keeps the page's default gear and rotation. Its score counts the Shaman's own DPS; mana support for other players is outside the comparison.
+
 ## Choosing a comparison
 
 The page compares one fight length and target type at a time. It offers 90-second, 3-minute and
 6-minute fights against Mechanical, Elemental and Beast targets. The target is level 63 with 3,731
 armor. Every simulation uses seed 101 and the engine's shared raid, party and individual buff and
 debuff baseline. Each legal race receives 50,000 iterations for each build and fight.
+
+Hunter's presets draw reaction times uniformly between 150 and 350 milliseconds. Both bounds remain fixed across races and appear in the saved setup and request. The arena uses the three creature types above for every build, including Hunter; the class page's default creature type does not change this matrix.
 
 The support baseline follows upstream's `FullRaidBuffs`, `FullPartyBuffs`, `FullIndividualBuffs` and
 `FullDebuffs`. Here, "full" names that shared configuration, including support a build cannot supply
@@ -133,7 +149,7 @@ branch that has moved from the simulated revision fails publication, and a rejec
 retried by merging unrelated work. A successful publication on `master` starts Pages deployment.
 Runs on other branches only commit their results there.
 
-A full run computes every build. A selective run takes a checked-in selection file that names every build, the previous verified engine and the compatibility evidence. Only selected builds are benchmarked and simulated. The publisher verifies the old requests and combines their original scores and sources with the fresh rows. [November 3 selection and checks](november-3-arena-reuse.md)
+A full run computes every build. A selective run takes a checked-in selection file that names every build, the previous verified engine and the compatibility evidence. Only selected builds are benchmarked and simulated. The publisher verifies the old requests and combines their original scores and sources with the fresh rows. [November 4 selection and checks](november-4-arena-reuse.md)
 
 ## Rebuild locally
 

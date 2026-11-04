@@ -9,6 +9,7 @@ type EquipmentSlot = { slot: string; item?: { id: number; name: string; suffixId
 export type RaceArenaSetup = {
 	equipment: Array<EquipmentSlot>;
 	itemSwap?: Array<EquipmentSlot>;
+	reactionTime?: { minMs: number; maxMs: number };
 	talentsString: string;
 	talents: Array<{
 		name: string;
@@ -61,6 +62,11 @@ export const RaceArenaSetupDialog = ({
 			{gear} gear · {rotation} rotation. This saved setup was used for every race and target type in this build. Item and talent links open their current
 			game descriptions in a new tab.
 		</p>
+		{setup.reactionTime && (
+			<p className="m-0 text-sm text-white/70">
+				Each reaction time is drawn uniformly between {setup.reactionTime.minMs} and {setup.reactionTime.maxMs} milliseconds.
+			</p>
+		)}
 		<Tabs.Root defaultValue="gear">
 			<TabNav
 				tabs={[

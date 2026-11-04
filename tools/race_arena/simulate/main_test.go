@@ -38,6 +38,22 @@ func TestFingerprintIgnoresNamesAndStatVectorZeroTails(t *testing.T) {
 	}
 }
 
+func TestRequestsKeepReactionRangeAcrossArenaEncounters(t *testing.T) {
+	player := &proto.Player{Class: proto.Class_ClassHunter, Race: proto.Race_RaceOrc, ReactionTimeMs: 150, ReactionTimeMaxMs: 350}
+	for _, seconds := range []int{90, 180, 360} {
+		for _, target := range []proto.MobType{proto.MobType_MobTypeMechanical, proto.MobType_MobTypeElemental, proto.MobType_MobTypeBeast} {
+			request := makeRequest(player, seconds, target, 50000)
+			if request.Encounter.Duration != float64(seconds) || request.Encounter.Targets[0].MobType != target {
+				t.Fatalf("request does not use the selected arena encounter: %ds / %s", seconds, target)
+			}
+			saved := request.Raid.Parties[0].Players[0]
+			if saved.ReactionTimeMs != player.ReactionTimeMs || saved.ReactionTimeMaxMs != player.ReactionTimeMaxMs {
+				t.Fatal("request changed the preset's reaction-time range")
+			}
+		}
+	}
+}
+
 func TestRequestFingerprintChangesWithSimulationSettings(t *testing.T) {
 	request := makeRequest(&proto.Player{Class: proto.Class_ClassMage, Race: proto.Race_RaceGnome}, 180, proto.MobType_MobTypeMechanical, 50000)
 	first, err := protojson.Marshal(request)

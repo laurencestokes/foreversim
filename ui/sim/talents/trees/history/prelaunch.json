@@ -7,7 +7,7 @@
 			"ruthlessness",
 			"murder",
 			"improvedSliceAndDice",
-			"relentlessStrikesPoints",
+			"relentlessStrikes",
 			"improvedExposeArmor",
 			"lethality",
 			"vilePoisons",
@@ -20,8 +20,8 @@
 			"venom"
 		],
 		[
-			"improvedEviscerate",
-			"improvedSinisterStrike",
+			"coupDeGrace",
+			"efficientStrikes",
 			"lightningReflexes",
 			"puncturingWounds",
 			"deflection",
@@ -134,10 +134,10 @@
 			"eyeOfTheStorm",
 			"earthbound",
 			"elementalReach",
-			"lavaBurst",
+			"callOfThunder",
 			"lightningOverload",
 			"elementalFury",
-			"elementalMastery"
+			"lightningMastery"
 		],
 		[
 			"earthsGrasp",

@@ -76,6 +76,7 @@ export function snapshotBuild(player, trees) {
 	return {
 		equipment: equipment(player.equipment.items),
 		...(player.enableItemSwap ? { itemSwap: equipment(player.itemSwap?.items, true) } : {}),
+		...(player.reactionTimeMaxMs > player.reactionTimeMs ? { reactionTime: { minMs: player.reactionTimeMs, maxMs: player.reactionTimeMaxMs } } : {}),
 		talentsString: player.talentsString,
 		talents,
 	};

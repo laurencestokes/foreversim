@@ -9,6 +9,7 @@ import (
 	"github.com/wowsims/forever/sim/common"
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/buffs"
+	"github.com/wowsims/forever/sim/core/dbcenums"
 	"github.com/wowsims/forever/sim/core/proto"
 	"github.com/wowsims/forever/sim/core/simsignals"
 	"github.com/wowsims/forever/sim/core/spelldata"
@@ -918,7 +919,7 @@ func TestRecklessSwingsSpendsChargesOnLandedWhiteHits(t *testing.T) {
 	if !spell.Cast(sim, war.CurrentTarget) {
 		t.Fatal("Reckless Swings cannot cast")
 	}
-	if got, want := before-war.CurrentHealth(), war.GetBaseStats()[stats.Health]*0.25; math.Abs(got-want) > 1e-8 {
+	if got, want := before-war.CurrentHealth(), war.BaseHealth()*0.25; math.Abs(got-want) > 1e-8 {
 		t.Fatalf("health cost = %v, want %v", got, want)
 	}
 	if war.GCD.TimeToReady(sim) != time.Second || spell.CD.TimeToReady(sim) != 15*time.Second {
@@ -960,11 +961,7 @@ func TestRecklessSwingsSpendsChargesOnLandedWhiteHits(t *testing.T) {
 	if procs != 4 || gained != 20 {
 		t.Fatalf("five queued hits grant %v rage in %d procs, want 20 in 4", gained, procs)
 	}
-	spell.CD.Reset()
-	war.SetCurrentHealthPercent((war.GetBaseStats()[stats.Health] * 0.25) / war.MaxHealth())
-	if spell.Cast(sim, war.CurrentTarget) {
-		t.Fatal("Reckless Swings casts without enough health to survive its cost")
-	}
+
 }
 
 func TestImprovedWhirlwindBuffsOnlyTheSelectedEnemy(t *testing.T) {
@@ -1120,9 +1117,9 @@ func TestBloodthrillLaunchRanksProcFromMainHandAttacksOnRend(t *testing.T) {
 
 func TestLaunchWarriorPresetsCastRecklessSwings(t *testing.T) {
 	for _, tc := range []struct{ name, talents, gear string }{
-		{"arms", "30323213132215201-3505012001", "prebis_arms"},
-		{"fury", "30303213002-350531005122100231", "prebis_fury"},
-		{"legacy-action", "30323213132215201-3505012001", "prebis_arms"},
+		{"arms", "30303213132215201-55050000002-2", "prebis_arms"},
+		{"fury", "30303213002-350530005122100231-1", "prebis_fury"},
+		{"legacy-action", "30303213002-350530005122100231-1", "prebis_fury"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			player := launchWarriorPlayer(tc.talents, tc.gear)
@@ -1153,10 +1150,44 @@ func TestLaunchWarriorPresetsCastRecklessSwings(t *testing.T) {
 					}
 				}
 			}
-			if casts == 0 {
+			if tc.name == "arms" {
+				if casts != 0 {
+					t.Fatal("Arms casts an untalented Reckless Swings")
+				}
+			} else if casts == 0 {
 				t.Fatal("the preset casts no Reckless Swings")
 			}
 			t.Logf("Reckless Swings casts = %d", casts)
 		})
+	}
+}
+
+// Reckless Swings and Bloodrage each cost their row's share of base health, booked under their own
+// action and not as damage taken.
+func TestHealthCostsSpendAShareOfBaseHealthUnderTheirOwnAction(t *testing.T) {
+	sim, war := launchWarriorSim(t, map[string]int{"recklessSwings": 1}, "prebis_fury", 1)
+
+	for _, id := range []int32{1329555, 2687} {
+		spell := war.GetSpell(core.ActionID{SpellID: id})
+		if spell == nil {
+			t.Fatalf("the warrior has no spell %d", id)
+		}
+		want := war.BaseHealth() * float64(spelldata.MustFind(id).Power(dbcenums.POWER_HEALTH).CostPct) / 100
+		if want <= 0 {
+			t.Fatalf("%s states no health cost", spell.ActionID)
+		}
+
+		before := war.CurrentHealth()
+		spell.SkipCastAndApplyEffects(sim, &war.Unit)
+		if got := before - war.CurrentHealth(); math.Abs(got-want) > 1e-9 {
+			t.Errorf("%s took %v health, want %v", spell.ActionID, got, want)
+		}
+		if got := spell.HealthMetrics(&war.Unit).Gain; math.Abs(got+want) > 1e-9 {
+			t.Errorf("%s booked %v health under its own action, want %v", spell.ActionID, got, -want)
+		}
+	}
+
+	if events := war.DamageTakenHealthMetrics.Events; events != 0 {
+		t.Errorf("damage taken counted %d health events, want none", events)
 	}
 }

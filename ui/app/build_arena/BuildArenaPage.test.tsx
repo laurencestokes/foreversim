@@ -154,4 +154,21 @@ describe('Build Arena', () => {
 		await user.keyboard('{Escape}');
 		expect(document.activeElement).toBe(getByRole('button', { name: 'Inspect Warrior: Fury' }));
 	});
+	it('shows both reaction-time bounds and preserves them in a downloaded request', async () => {
+		const data = structuredClone(buildArenaFixture);
+		const player = (data.builds[0].request.raid as { parties: Array<{ players: Array<Record<string, unknown>> }> }).parties[0].players[0];
+		player.reactionTimeMs = 150;
+		player.reactionTimeMaxMs = 350;
+		const user = userEvent.setup();
+		const { getByRole } = render(<BuildArenaPageView data={data} />);
+		await user.click(getByRole('button', { name: 'Inspect Warrior: Fury' }));
+		const dialog = getByRole('dialog', { name: 'Warrior: Fury' });
+		const minimum = within(dialog).getByText('Reaction time (milliseconds)').parentElement!;
+		const maximum = within(dialog).getByText('Maximum reaction time (milliseconds)').parentElement!;
+		expect(minimum.textContent).toContain('150');
+		expect(maximum.textContent).toContain('350');
+		const download = within(dialog).getByRole('link', { name: 'Download Go RaidSimRequest' });
+		const request = JSON.parse(decodeURIComponent(download.getAttribute('href')!.split(',').slice(1).join(',')));
+		expect(request.raid.parties[0].players[0]).toMatchObject({ reactionTimeMs: 150, reactionTimeMaxMs: 350 });
+	});
 });

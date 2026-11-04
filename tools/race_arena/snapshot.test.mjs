@@ -53,6 +53,11 @@ test('keeps an empty middle talent tree and records selected ranks', () => {
 	assert.equal(setup.talentsString, '2--1');
 });
 
+test('records variable reaction-time bounds without adding a range to fixed settings', () => {
+	assert.deepEqual(snapshotBuild({ ...player(), reactionTimeMs: 50, reactionTimeMaxMs: 75 }, trees).reactionTime, { minMs: 50, maxMs: 75 });
+	assert.equal(snapshotBuild({ ...player(), reactionTimeMs: 50, reactionTimeMaxMs: 0 }, trees).reactionTime, undefined);
+});
+
 test('records synthetic talent identity without inventing a game spell', () => {
 	const previewTrees = [{ name: 'Preview tree', talents: [{ fancyName: 'Call of Thunder', spellId: 0, otherAction: 35, maxPoints: 1 }] }];
 	const setup = snapshotBuild({ ...player(), talentsString: '1' }, previewTrees);

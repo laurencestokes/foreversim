@@ -100,8 +100,7 @@ func (rogue *Rogue) registerDeadlyPoisonSpell(deadlyPoisonRank *spelldata.Spell)
 	config.ClassSpellMask = RogueSpellDeadlyPoison
 	tick := deadlyPoisonRank.PeriodicEffect()
 	numTicks := deadlyPoisonRank.Duration().Seconds() / tick.Period().Seconds()
-	// The November 2 development notes give the coefficient over the whole poison.
-	apScaling := 0.009 / numTicks
+	apScaling := 0.009 / numTicks // Confirmed by Zirene
 
 	config.Dot = spelldata.DotConfig(deadlyPoisonRank, tick)
 	config.Dot.OnTick = func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
@@ -134,7 +133,7 @@ func (rogue *Rogue) registerInstantPoisonSpell(instantPoisonRank *spelldata.Spel
 	ipBaseDamage := instantPoisonRank.DamageEffect().Average()
 	config := spelldata.SpellConfig(&rogue.Unit, instantPoisonRank, spelldata.Magic(core.ProcMaskSpellDamageProc))
 	config.ClassSpellMask = RogueSpellInstantPoison
-	apScaling := 0.01 // The November 2 development notes give the coefficient per application.
+	apScaling := 0.01 // Confirmed by Zirene
 
 	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 		spell.CalcAndDealDamage(sim, target, ipBaseDamage+apScaling*spell.MeleeAttackPower(target), spell.OutcomeMagicHitAndCrit)

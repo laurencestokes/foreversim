@@ -14,6 +14,8 @@ test('replacement presets have their own identities', () => {
 		['mage', 'Frost / Frost Incin', 'mage-frost-incin'],
 		['mage', 'Frost / Frost Med', 'mage-frost-med'],
 		['retribution_paladin', 'Unsealed Wrath', 'paladin-unsealed-wrath'],
+		['rogue', 'Combat Venom (Upstream)', 'rogue-combat-venom-upstream'],
+		['elemental_shaman', 'Mana Tide', 'shaman-elemental-mana-tide'],
 	]) {
 		assert.equal(resolveBuildId(catalog, spec, name), id);
 	}
@@ -22,6 +24,7 @@ test('replacement presets have their own identities', () => {
 		['mage', 'Arcane / Arcane Frost'],
 		['mage', 'Frost / Frost'],
 		['retribution_paladin', 'Twist of Light'],
+		['rogue', 'Subtlety BS (Upstream)'],
 	]) {
 		assert.throws(() => resolveBuildId(catalog, spec, name), /Expected one catalog entry/);
 	}

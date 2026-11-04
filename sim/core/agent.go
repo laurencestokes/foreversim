@@ -144,8 +144,12 @@ func ProtoToActionID(protoID *proto.ActionID) ActionID {
 		panic("protoID is nil")
 	}
 
-	// Saved launch rotations identify these Warrior talents and their effects by simulator action.
+	// Saved launch rotations identify these abilities by simulator action.
 	switch protoID.GetOtherId() {
+	case proto.OtherAction_OtherActionCallOfThunder:
+		return ActionID{SpellID: 16120, Tag: protoID.Tag}
+	case proto.OtherAction_OtherActionShank:
+		return ActionID{SpellID: 1329549, Tag: protoID.Tag}
 	case proto.OtherAction_OtherActionRecklessSwings:
 		return ActionID{SpellID: 1329555, Tag: protoID.Tag}
 	case proto.OtherAction_OtherActionImprovedWhirlwind:

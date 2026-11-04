@@ -14,20 +14,21 @@ import (
 	"github.com/wowsims/forever/sim/core/stats"
 )
 
-func TestLaunchStarfireRaisesBasePointsOnly(t *testing.T) {
+func TestStarfireUsesTheRowBaseAndSpellPower(t *testing.T) {
 	player := &proto.Player{
 		Class: proto.Class_ClassDruid, Race: proto.Race_RaceNightElf, Equipment: &proto.EquipmentSpec{},
 		Spec:     &proto.Player_BalanceDruid{BalanceDruid: &proto.BalanceDruid{Options: &proto.BalanceDruid_Options{ClassOptions: &proto.DruidOptions{}}}},
 		Rotation: &proto.APLRotation{},
 	}
 	encounter := core.MakeSingleTargetEncounter(0)
+	encounter.Targets[0] = core.FreshDefaultTargetConfig()
 	encounter.Targets[0].Level = 60
 	sim := core.NewSim(&proto.RaidSimRequest{Raid: core.SinglePlayerRaidProto(player, nil, nil, nil),
 		Encounter: encounter, SimOptions: &proto.SimOptions{RandomSeed: 1}}, simsignals.CreateSignals())
 	sim.Reset()
 	druid := sim.Raid.Parties[0].Players[0].GetCharacter()
 	target := sim.Encounter.AllTargetUnits[0]
-	for id, old := range map[int32]float64{9876: 337, 25298: 381} {
+	for _, id := range []int32{9876, 25298} {
 		row := spelldata.MustFind(id).DamageEffect()
 		spell := druid.GetSpell(core.ActionID{SpellID: id})
 		spell.DirectVariance = 0
@@ -45,9 +46,6 @@ func TestLaunchStarfireRaisesBasePointsOnly(t *testing.T) {
 				}
 				dealt := after.TotalDamage - before.TotalDamage
 				base := row.Average()
-				if row.BasePoints == old {
-					base += old * 0.4
-				}
 				want := base + spell.SpellDamage(target)*spell.BonusCoefficient
 				t.Logf("Starfire %d with %.0f bonus spell power: %.2f on an unresisted hit", id, bonus, dealt)
 				if math.Abs(dealt-want) > 1e-6 {

@@ -7,28 +7,46 @@ import (
 )
 
 func (rogue *Rogue) registerAssassinationTalents() {
+	// Tier 1
+	// Gouge NYI
 	rogue.registerRemorselessAttacks()
 	rogue.registerMalice()
+
+	// Tier 2
+	// Ruthlessness modeled in rogue.go ApplyFinisher
 	rogue.registerImprovedExposeArmor()
+	// Improved Slice modeled in Slice and Dice directly
+
+	// Tier 3
+	// Vigor modeled in rogue.go during initialization
+	rogue.registerBloodSplatter()
 	rogue.registerLethality()
+
+	// Tier 4
 	rogue.registerVilePoisons()
 	rogue.registerColdBlood()
 	rogue.registerImprovedPoisons()
-	rogue.registerVenom()
+
+	// Tier 5
+	// Relentless Strikes modeled in rogue.go ApplyFinisher
+	// Venom modeled in shank.go
+	// Kidney Shot NYI
+
+	// Tier 6
 	rogue.registerSealFate()
+
+	// Tier 7
 	rogue.registerMutilate()
-	// Ruthlessness and Relentless Strikes run in ApplyFinisher; Vigor sets maximum Energy.
-	// Blood Splatter extends the bleed registrations. Gouge and Kidney Shot
-	// are outside the damage rotation.
 }
 
-func (rogue *Rogue) registerImprovedEviscerate() {
-	if rogue.Talents.ImprovedEviscerate == 0 {
+func (rogue *Rogue) registerCoupDeGrace() {
+	if rogue.Talents.CoupDeGrace == 0 {
 		return
 	}
 
+	// Effect 2, on Death Mark, is read in death_mark.go.
 	spelldata.ParseStatic(&rogue.Character,
-		spellData.CoupDeGrace.Rank(rogue.Talents.ImprovedEviscerate))
+		spellData.CoupDeGrace.Rank(rogue.Talents.CoupDeGrace), spelldata.Effects(1))
 }
 
 var remorselessRank = spellData.RemorselessAttacksTriggered.Highest()
@@ -73,6 +91,15 @@ func (rogue *Rogue) registerMalice() {
 		spellData.Malice.Rank(rogue.Talents.Malice))
 }
 
+func (rogue *Rogue) registerBloodSplatter() {
+	if !rogue.Talents.BloodSplatter {
+		return
+	}
+
+	spelldata.ParseStatic(&rogue.Character,
+		spellData.BloodSplatter.Rank(1))
+}
+
 func (rogue *Rogue) registerImprovedExposeArmor() {
 	if rogue.Talents.ImprovedExposeArmor == 0 {
 		return
@@ -87,7 +114,8 @@ func (rogue *Rogue) registerLethality() {
 		return
 	}
 
-	spelldata.ParseStatic(&rogue.Character, spellData.Lethality.Rank(rogue.Talents.Lethality))
+	spelldata.ParseStatic(&rogue.Character,
+		spellData.Lethality.Rank(rogue.Talents.Lethality))
 }
 
 func (rogue *Rogue) registerVilePoisons() {
@@ -171,8 +199,6 @@ func (rogue *Rogue) registerMutilate() {
 
 	// TODO: Verify if Mutilate (Cast) can proc MH poisons itself (detected as a double MH poison proc)
 	config := spelldata.SpellConfig(&rogue.Unit, mutilateCastRank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
-	config.ProcMask = core.ProcMaskEmpty // Only the two weapon strikes apply poisons.
-	config.ClassSpellMask = RogueSpellMutilate
 	pointGen := mutilateCastRank.EnergizeEffect().Average()
 	config.ExtraCastCondition = func(sim *core.Simulation, target *core.Unit) bool {
 		return rogue.HasDagger(core.MainHand) && rogue.HasDagger(core.OffHand)
@@ -208,7 +234,6 @@ func (rogue *Rogue) newMutilateHitSpell(isMH bool) *core.Spell {
 	// TODO: Ingame test needed: whether Eureka! raises Mutilate's strikes.
 	config.Flags |= SpellFlagBuilder | SpellFlagColdBlooded | core.SpellFlagPassiveSpell
 	config.Flags &^= core.SpellFlagAPL
-	config.ClassSpellMask = RogueSpellMutilateHit
 	config.SpellID = mutilateCastRank.ID
 	config.ActionID = config.ActionID.WithHand(core.Ternary(isMH, proto.ItemSlot_ItemSlotMainHand, proto.ItemSlot_ItemSlotOffHand))
 	for i := range config.ClassFlags.Mask {
@@ -235,15 +260,4 @@ func (rogue *Rogue) newMutilateHitSpell(isMH bool) *core.Spell {
 	}
 
 	return rogue.RegisterSpell(config)
-}
-
-var venomRank = spellData.VenomTriggered.Highest()
-
-func (rogue *Rogue) registerVenom() {
-	if !rogue.Talents.Venom {
-		return
-	}
-
-	rogue.VenomAura = rogue.RegisterAura(spelldata.AuraConfig(venomRank))
-	spelldata.ParseEffects(&rogue.Character, rogue.VenomAura, venomRank)
 }

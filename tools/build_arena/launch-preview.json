@@ -1,25 +1,83 @@
 {
 	"launchDate": "2026-11-04",
 	"notesUrl": "https://us.forums.blizzard.com/en/wow/t/2360696/9",
-	"upstreamCommit": "41862b31e34782e2ffc7fe8be49322812de71ed6",
+	"upstreamCommit": "92c4c35b9e2364200ffb9e0f24573fb4904fac8f",
 	"drafts": [
-		{ "pullRequest": 842, "commit": "4972a1d52d0c25d4d00ccbe143314a7689f23f0b" },
-		{ "pullRequest": 841, "commit": "630618c443167737571436e8af7ccf04837057b7" },
-		{ "pullRequest": 840, "commit": "6dcd42dc1fb18e1a289fbbaf1989ad867012bd09" },
-		{ "pullRequest": 839, "commit": "197b72cbf70a323ca2e6f46d217cd220f7977204" },
-		{ "pullRequest": 838, "commit": "194f58d5c8c595cd79869e2145eb985e1d13107c" },
-		{ "pullRequest": 836, "commit": "d87fc5791502d8abb78601a468bfe2ba4622b0c6" },
-		{ "pullRequest": 835, "commit": "948e5750bd277594f4ce82532bb714e9ae750fa3" },
-		{ "pullRequest": 834, "commit": "7b070596cfe5f8090313055c4d9d8ea469ab8868" },
-		{ "pullRequest": 833, "commit": "974d83db37098aa8d99e51c63acf4bd33ea82993" },
-		{ "pullRequest": 830, "commit": "47acdeee47f1815f5104a11be4d09ae390d57e21" },
-		{ "pullRequest": 828, "commit": "abcfd33da90e0b8a7cbbf0ddeb549acae3f9d372" },
-		{ "pullRequest": 827, "commit": "b8cbeea8043357e84d6bafaeac86ad527b3ec4f6" },
-		{ "pullRequest": 826, "commit": "73e914a6cca322ab7553bdd36bd80f719792d419" },
-		{ "pullRequest": 824, "commit": "7d6a9fcf367a7a1f3d01dec294112e1d9800cc06" },
-		{ "pullRequest": 823, "commit": "ac807d93bb80bf50d379066b2fb0c131321b7277" },
-		{ "pullRequest": 822, "commit": "c8a275b336d5537404c7156a574324dd5008f91e" },
-		{ "pullRequest": 821, "commit": "2fa33170006905ea188b1f9835a2bee89e90c874" },
-		{ "pullRequest": 803, "commit": "393c297a9d0433d97d7ef33dbb53bb8f82385ad1" }
+		{
+			"pullRequest": 848,
+			"commit": "5bff5deb7c812ce6b63b6f76b6163e4da46fdb05"
+		},
+		{
+			"pullRequest": 842,
+			"commit": "c50111ec1f06de09a8c0f3b09e06a933fa506710"
+		},
+		{
+			"pullRequest": 841,
+			"commit": "dc46a392a71761eed89beed6a1d7476eaf385f4e"
+		},
+		{
+			"pullRequest": 840,
+			"commit": "22a3ea632916d65b36704cc74343610d086bad96"
+		},
+		{
+			"pullRequest": 839,
+			"commit": "bd53fce75876b684ae2daa447a3f2956680121dd"
+		},
+		{
+			"pullRequest": 838,
+			"commit": "194f58d5c8c595cd79869e2145eb985e1d13107c"
+		},
+		{
+			"pullRequest": 836,
+			"commit": "d87fc5791502d8abb78601a468bfe2ba4622b0c6"
+		},
+		{
+			"pullRequest": 835,
+			"commit": "e3a4df96a356710c6baa0b0a86b58745bac04eac"
+		},
+		{
+			"pullRequest": 834,
+			"commit": "23dc9eefcd45950b61d8ffb835e9bc9f53da1c0e"
+		},
+		{
+			"pullRequest": 833,
+			"commit": "901c5b8cfd3d8b0d6a24d47fa28148f21618b134"
+		},
+		{
+			"pullRequest": 830,
+			"commit": "47acdeee47f1815f5104a11be4d09ae390d57e21"
+		},
+		{
+			"pullRequest": 828,
+			"commit": "abcfd33da90e0b8a7cbbf0ddeb549acae3f9d372"
+		},
+		{
+			"pullRequest": 827,
+			"commit": "0d7b8145b7f16ee68e914c514479d048595e5ea4"
+		},
+		{
+			"pullRequest": 826,
+			"commit": "631db9290d60d4cc64b1b8ea5e3a1ddd6f71a022"
+		},
+		{
+			"pullRequest": 824,
+			"commit": "7f77372e5c314a72323f55276aba027984257921"
+		},
+		{
+			"pullRequest": 823,
+			"commit": "8f05366a72cf2256919c45aeca8991e43b50f5bb"
+		},
+		{
+			"pullRequest": 822,
+			"commit": "c8a275b336d5537404c7156a574324dd5008f91e"
+		},
+		{
+			"pullRequest": 821,
+			"commit": "2fa33170006905ea188b1f9835a2bee89e90c874"
+		},
+		{
+			"pullRequest": 803,
+			"commit": "393c297a9d0433d97d7ef33dbb53bb8f82385ad1"
+		}
 	]
 }

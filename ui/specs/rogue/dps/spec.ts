@@ -24,8 +24,7 @@ export default defineSpec<Spec.SpecRogue>({
 	cssScheme: PlayerClasses.getCssScheme(PlayerClasses.Rogue),
 	// List any known bugs / issues here and they'll be shown on the site.
 	knownIssues: [
-		'Shank uses its game-file cost, cooldown, off-hand damage and weapon-proc suppression. Energy and Venom on cast, and Boot Knife on a landed strike, still await in-game verification.',
-		'Death Mark uses its tooltip cap, including the player’s melee critical strike chance before target suppression. The cap is captured when the mark is applied and still awaits in-game verification.',
+		'The APL is in constant flux due to bug fixes and new findings; if your DPS drops dramatically, reset it back to "Auto" in the Rotation tab!',
 	],
 
 	// All stats for which EP should be calculated.
@@ -120,6 +119,10 @@ export default defineSpec<Spec.SpecRogue>({
 	rotationInputs: {
 		inputs: [
 			InputHelpers.makeRotationBooleanInput<Spec.SpecRogue>({
+				fieldName: 'startInStealth',
+				label: i18n.t('rotation_tab.options.rogue.start_in_stealth.label'),
+			}),
+			InputHelpers.makeRotationBooleanInput<Spec.SpecRogue>({
 				fieldName: 'useBackstab',
 				label: i18n.t('rotation_tab.options.rogue.use_backstab.label'),
 			}),
@@ -160,16 +163,16 @@ export default defineSpec<Spec.SpecRogue>({
 		// Preset talents that the user can quickly select.
 		talents: [
 			Presets.TALENTS_MUTILATE_ASN,
-			Presets.TALENTS_MUTILATE_ASN_UPSTREAM,
 			Presets.TALENTS_MUTILATE_COM,
 			Presets.TALENTS_COMBAT_SS,
-			Presets.TALENTS_COMBAT_SS_UPSTREAM,
 			Presets.TALENTS_COMBAT_BS,
-			Presets.TALENTS_COMBAT_BS_UPSTREAM,
 			Presets.TALENTS_SUB_HEMO,
-			Presets.TALENTS_SUB_HEMO_UPSTREAM,
 			Presets.TALENTS_SUB_BS,
-			Presets.TALENTS_SUB_BS_UPSTREAM,
+			Presets.TALENTS_MUTILATE_ASN_UPSTREAM,
+			Presets.TALENTS_COMBAT_SS_UPSTREAM,
+			Presets.TALENTS_COMBAT_BS_UPSTREAM,
+			Presets.TALENTS_SUB_HEMO_UPSTREAM,
+			Presets.TALENTS_COMBAT_VENOM_UPSTREAM,
 		],
 		// Preset rotations that the user can quickly select.
 		rotations: [Presets.SIMPLE_ROTATION, Presets.DEFAULT_APL],
@@ -177,16 +180,16 @@ export default defineSpec<Spec.SpecRogue>({
 		gear: [Presets.P1_BS_COMBAT_GEAR, Presets.P1_MUTI_GEAR, Presets.P1_SLOW_MH_GEAR, Presets.P1_BS_SUB_GEAR],
 		builds: [
 			Presets.PRESET_BUILD_MUTILATE_ASN,
-			Presets.PRESET_BUILD_MUTILATE_ASN_UPSTREAM,
 			Presets.PRESET_BUILD_MUTILATE_COM,
 			Presets.PRESET_BUILD_COMBAT_SS,
-			Presets.PRESET_BUILD_COMBAT_SS_UPSTREAM,
 			Presets.PRESET_BUILD_COMBAT_BS,
-			Presets.PRESET_BUILD_COMBAT_BS_UPSTREAM,
 			Presets.PRESET_BUILD_SUB_HEMO,
-			Presets.PRESET_BUILD_SUB_HEMO_UPSTREAM,
 			Presets.PRESET_BUILD_SUB_BS,
-			Presets.PRESET_BUILD_SUB_BS_UPSTREAM,
+			Presets.PRESET_BUILD_MUTILATE_ASN_UPSTREAM,
+			Presets.PRESET_BUILD_COMBAT_SS_UPSTREAM,
+			Presets.PRESET_BUILD_COMBAT_BS_UPSTREAM,
+			Presets.PRESET_BUILD_SUB_HEMO_UPSTREAM,
+			Presets.PRESET_BUILD_COMBAT_VENOM_UPSTREAM,
 		],
 	},
 
@@ -202,6 +205,7 @@ export default defineSpec<Spec.SpecRogue>({
 		if (simple.useEviscerateRank9) bookRanks.set(11300, 31016);
 		const rotation = AplUtils.withSpellIds(Presets.DEFAULT_APL.rotation.rotation!, bookRanks);
 		const values: Record<string, string> = {
+			'Start In Stealth': String(simple.startInStealth),
 			'Use Backstab': String(simple.useBackstab),
 			'Use Expose Armor': String(simple.useExposeArmor),
 		};
