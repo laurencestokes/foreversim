@@ -21,6 +21,8 @@ const (
 	DDBC_Total
 )
 
+var TalentTreeSizes = [3]int{17, 19, 18}
+
 const RogueBleedTag = "RogueBleed"
 
 type Rogue struct {
@@ -47,6 +49,8 @@ type Rogue struct {
 	MutilateMH     *core.Spell
 	MutilateOH     *core.Spell
 	SinisterStrike *core.Spell
+	Shank          *core.Spell
+	DeathMark      *core.Spell
 	Shadowstep     *core.Spell
 	Preparation    *core.Spell
 	Premeditation  *core.Spell
@@ -54,8 +58,6 @@ type Rogue struct {
 	Vanish         *core.Spell
 	AdrenalineRush *core.Spell
 	InstantPoison  *core.Spell
-	Shank          *core.Spell
-	DeathMark      *core.Spell
 
 	ExposeArmor  *core.Spell
 	Rupture      *core.Spell
@@ -69,13 +71,12 @@ type Rogue struct {
 	ShadowstepAura       *core.Aura
 	StealthAura          *core.Aura
 	GhostlyStrikeAura    *core.Aura
-	PoisedAura           *core.Aura
-	VenomAura            *core.Aura
 
 	WoundPoisonDebuffAuras core.AuraArray
 
 	ruthlessnessMetrics               *core.ResourceMetrics
 	ruthlessnessChance                float64
+	relentlessStrikesChance           float64 // Per combo point spent.
 	relentlessStrikesMetrics          *core.ResourceMetrics
 	puncturingWoundsComboPointMetrics *core.ResourceMetrics
 
@@ -108,8 +109,8 @@ func (rogue *Rogue) ApplyFinisher(sim *core.Simulation, spell *core.Spell) {
 	rogue.SpendComboPoints(sim, spell.ComboPointMetrics())
 
 	// Relentless Strikes
-	if chance := spellData.RelentlessStrikes.FractionAt(rogue.Talents.RelentlessStrikesPoints) * float64(numPoints); chance > 0 && sim.Proc(chance, "Relentless Strikes") {
-		rogue.AddEnergy(sim, spellData.RelentlessStrikesTriggered.Highest().EffectN(1).Average(), rogue.relentlessStrikesMetrics)
+	if rogue.Talents.RelentlessStrikes > 0 && sim.Proc(rogue.relentlessStrikesChance*float64(numPoints), "Relentless Strikes") {
+		rogue.AddEnergy(sim, relentlessStrikesEnergy, rogue.relentlessStrikesMetrics)
 	}
 
 	// Ruthlessness
@@ -130,12 +131,12 @@ func (rogue *Rogue) Initialize() {
 	rogue.registerGarrote()
 	rogue.registerRupture()
 	rogue.registerSinisterStrikeSpell()
+	rogue.registerShank()
 	rogue.registerSliceAndDice()
 	rogue.registerVanishSpell()
 	rogue.registerStealthAura()
 	rogue.registerKickSpell()
 	rogue.registerFeintSpell()
-	rogue.registerShank()
 	rogue.registerPoised()
 
 	ruthRank := spellData.Ruthlessness.Rank(rogue.Talents.Ruthlessness)
@@ -145,8 +146,12 @@ func (rogue *Rogue) Initialize() {
 	// Forever states a flat SpellAuraOptions.ProcChance of 100 on the talent spell and puts the
 	// real per-rank chance on the effect, so ProcChanceAt would read 100% at every rank.
 	rogue.ruthlessnessChance = spellData.Ruthlessness.FractionAt(rogue.Talents.Ruthlessness)
-	rogue.relentlessStrikesMetrics = rogue.NewEnergyMetrics(core.ActionID{SpellID: 14179})
+	rogue.relentlessStrikesChance = spellData.RelentlessStrikes.FractionAt(rogue.Talents.RelentlessStrikes)
+	rogue.relentlessStrikesMetrics = rogue.NewEnergyMetrics(core.ActionID{SpellID: spellData.RelentlessStrikes.Highest().ID})
 }
+
+// The restored energy is a dummy effect of the triggered spell, which the talent's tooltip quotes.
+var relentlessStrikesEnergy = spellData.RelentlessStrikesTriggered.Highest().EffectN(1).Average()
 
 func (rogue *Rogue) ApplyAdditiveEnergyRegenBonus(sim *core.Simulation, increment float64) {
 	oldBonus := rogue.AdditiveEnergyRegenBonus
@@ -157,24 +162,9 @@ func (rogue *Rogue) ApplyAdditiveEnergyRegenBonus(sim *core.Simulation, incremen
 
 func (rogue *Rogue) Reset(sim *core.Simulation) {
 	rogue.MultiplyEnergyRegenSpeed(sim, 1.0+rogue.AdditiveEnergyRegenBonus)
-	rogue.activatePoised(sim)
-	// Energy can refill between prepull casts. Check until the pull, when combat prevents Poised.
-	if start := rogue.Env.PrepullStartTime(); start < 0 {
-		check := &core.PendingAction{NextActionAt: start, Priority: core.ActionPriorityPrePull + 100}
-		check.OnAction = func(sim *core.Simulation) {
-			if sim.CurrentTime >= 0 {
-				return
-			}
-			rogue.activatePoised(sim)
-			check.NextActionAt = sim.CurrentTime + rogue.EnergyTickDuration
-			sim.AddPendingAction(check)
-		}
-		sim.AddPendingAction(check)
-	}
 }
 
 func (rogue *Rogue) OnEncounterStart(sim *core.Simulation) {
-	rogue.activatePoised(sim)
 }
 
 func NewRogue(character *core.Character, options *proto.Player, talents string) *Rogue {
@@ -307,12 +297,10 @@ const (
 	RogueSpellInstantPoison
 	RogueSpellWoundPoison
 	RogueSpellDeadlyPoison
-	RogueSpellShank
-	RogueSpellDeathMark
 
 	RogueSpellLast
 	RogueSpellsAll    = RogueSpellLast<<1 - 1
-	RogueSpellActives = RogueSpellGhostlyStrike<<1 - 1 | RogueSpellShank | RogueSpellDeathMark
+	RogueSpellActives = RogueSpellGhostlyStrike<<1 - 1
 
 	RogueSpellPoisons        = RogueSpellWoundPoison | RogueSpellDeadlyPoison | RogueSpellInstantPoison
 	RogueSpellLethality      = RogueSpellSinisterStrike | RogueSpellGouge | RogueSpellBackstab | RogueSpellGhostlyStrike | RogueSpellMutilateHit | RogueSpellHemorrhage

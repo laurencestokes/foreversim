@@ -8,29 +8,45 @@ import (
 )
 
 func (rogue *Rogue) registerCombatTalents() {
-	rogue.registerImprovedEviscerate()
-	rogue.registerImprovedSinisterStrike()
+	// Tier 1
+	rogue.registerCoupDeGrace()
+	rogue.registerEfficientStrikes()
 	rogue.registerLightningReflexes()
+
+	// Tier 2
 	rogue.registerPuncturingWounds()
 	rogue.registerDeflection()
 	rogue.registerPrecision()
+
+	// Tier 3
 	rogue.registerRiposte()
+	// Composure modeled in poised.go
+
+	// Tier 4
+	// Improved Kick NYI
 	rogue.registerFlawlessExecution()
 	rogue.registerWeaponExpertise()
 	rogue.registerAggression()
+
+	// Tier 5
 	rogue.registerDualWieldSpecialization()
 	rogue.registerBladeFlurry()
 	rogue.registerHackAndSlash()
+
+	// Tier 6
+	rogue.registerFlashOfSteel()
+
+	// Tier 7
 	rogue.registerAdrenalineRush()
-	// Composure changes Poised; Flash of Steel changes Shank. Movement talents are outside the damage rotation.
 }
 
-func (rogue *Rogue) registerImprovedSinisterStrike() {
-	if rogue.Talents.ImprovedSinisterStrike == 0 {
+func (rogue *Rogue) registerEfficientStrikes() {
+	if rogue.Talents.EfficientStrikes == 0 {
 		return
 	}
 
-	spelldata.ParseStatic(&rogue.Character, spellData.EfficientStrikes.Rank(rogue.Talents.ImprovedSinisterStrike))
+	spelldata.ParseStatic(&rogue.Character,
+		spellData.EfficientStrikes.Rank(rogue.Talents.EfficientStrikes))
 }
 
 func (rogue *Rogue) registerLightningReflexes() {
@@ -120,7 +136,18 @@ func (rogue *Rogue) registerFlawlessExecution() {
 		return
 	}
 
-	spelldata.ParseStatic(&rogue.Character, spellData.FlawlessExecution.Highest())
+	spelldata.ParseStatic(&rogue.Character,
+		spellData.FlawlessExecution.Rank(1))
+}
+
+// The cooldown only: the energy is Shank's second effect, which shank.go raises.
+func (rogue *Rogue) registerFlashOfSteel() {
+	if rogue.Talents.FlashOfSteel == 0 {
+		return
+	}
+
+	spelldata.ParseStatic(&rogue.Character,
+		spellData.FlashOfSteel.Rank(rogue.Talents.FlashOfSteel), spelldata.Effects(2))
 }
 
 func (rogue *Rogue) registerDualWieldSpecialization() {
@@ -128,7 +155,8 @@ func (rogue *Rogue) registerDualWieldSpecialization() {
 		return
 	}
 
-	spelldata.ParseStatic(&rogue.Character, spellData.DualWieldSpecialization.Rank(rogue.Talents.DualWieldSpecialization))
+	spelldata.ParseStatic(&rogue.Character,
+		spellData.DualWieldSpecialization.Rank(rogue.Talents.DualWieldSpecialization))
 }
 
 var bladeFlurryRank = spellData.BladeFlurry.Highest()
@@ -299,7 +327,8 @@ func (rogue *Rogue) registerAggression() {
 		return
 	}
 
-	spelldata.ParseStatic(&rogue.Character, spellData.Aggression.Rank(rogue.Talents.Aggression))
+	spelldata.ParseStatic(&rogue.Character,
+		spellData.Aggression.Rank(rogue.Talents.Aggression))
 }
 
 var adrenalineRushRank = spellData.AdrenalineRush.Highest()

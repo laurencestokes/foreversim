@@ -267,15 +267,17 @@ export const RaceArenaPage = ({ data = results as RaceArenaResults }: { data?: R
 							? 'The sources above include the Hunter hotfix and Feral and Shaman draft changes. '
 							: 'The game files are from live wowf build 1.60.1.70707 with hotfixes through push 113562. '}
 					Missing simulator database entries do not establish that an item is unavailable in game. Upstream's replacement preset items have not been
-					gear-optimized. Some vanilla-ID replacements do not activate the registered Forever set bonuses. Warlock uses upstream's preraid test set.
-					View setup shows the equipment, enchants, weapon swaps and talent ranks saved with each result.
+					gear-optimized. Some vanilla-ID replacements do not activate the registered Forever set bonuses. Every Warlock build retains the shared
+					preraid set, including Wrack and Destruction. View setup shows the equipment, enchants, weapon swaps and talent ranks saved with each
+					result.
 				</p>
 				<p className="m-0">
 					Every simulation is a fixed-length fight ({durationsOf(data).map(fightLabel).join(', ')}; {fightLabel(data.fight.seconds)} is the main view)
 					against one level {data.fight.targetLevel} target with {formatToNumber(data.fight.targetArmor)} armor, with the same raid, party and
 					individual buff and debuff inputs for every race. The neutral target is the main comparison; Elemental and Beast views show creature-type
 					effects. Both Skyborne races appear wherever their class is legal. Cooldown racials follow the preset rotation. Rankings measure damage,
-					including pets; survival and utility are outside this comparison.
+					including pets; survival and utility are outside this comparison. A recorded reaction-time range draws each reaction uniformly between its
+					bounds; View setup shows the saved range.
 				</p>
 				<p className="m-0">
 					The shared support baseline follows upstream's full-buff test settings, including support the build cannot supply itself. Strength of Earth

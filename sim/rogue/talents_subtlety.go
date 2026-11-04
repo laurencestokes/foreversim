@@ -7,19 +7,37 @@ import (
 )
 
 func (rogue *Rogue) registerSubtletyTalents() {
-	rogue.registerOpportunity()
+	// Tier 1
 	rogue.registerSetup()
+	// Master of Deception NYI
+	rogue.registerOpportunity()
+
+	// Tier 2
 	rogue.registerDirtyDeeds()
+	// Camouflage NYI
 	rogue.registerImprovedAmbush()
+	// Dirty Tricks NYI
+
+	// Tier 3
 	rogue.registerInitiative()
 	rogue.registerPremeditation()
 	rogue.registerSerratedBlades()
+
+	// Tier 4
 	rogue.registerElusiveness()
 	rogue.registerGhostlyStrike()
+	// Quick Getaway NYI
+
+	// Tier 5
+	// Heightened Senses NYI
 	rogue.registerPreparation()
 	rogue.registerHemorrhage()
+
+	// Tier 6
+	// Boot Knife modeled in shank.go
+
+	// Tier 7
 	rogue.registerDeathMark()
-	// Boot Knife runs on Shank. Stealth, movement and detection talents are outside the damage rotation.
 }
 
 func (rogue *Rogue) registerOpportunity() {
@@ -27,7 +45,8 @@ func (rogue *Rogue) registerOpportunity() {
 		return
 	}
 
-	spelldata.ParseStatic(&rogue.Character, spellData.Opportunity.Rank(rogue.Talents.Opportunity))
+	spelldata.ParseStatic(&rogue.Character,
+		spellData.Opportunity.Rank(rogue.Talents.Opportunity))
 }
 
 func (rogue *Rogue) registerInitiative() {
@@ -62,37 +81,47 @@ func (rogue *Rogue) registerGhostlyStrike() {
 	config.ClassSpellMask = RogueSpellGhostlyStrike
 	config.DamageMultiplier = core.TernaryFloat64(rogue.HasDagger(core.MainHand), ghostlyStrikeRank.EffectN(4).Percent(), ghostlyStrikeRank.EffectN(1).Percent())
 
-	// Dodge lasts for the full duration even after an opener consumes its permission.
+	// The dodge buff is the row's own aura: its duration and the dodge its second effect adds.
 	dodgeConfig := spelldata.AuraConfig(ghostlyStrikeRank)
 	dodgeConfig.ActionID = dodgeConfig.ActionID.WithTag(1)
 	dodgeBuff := rogue.RegisterAura(dodgeConfig)
 	spelldata.ParseEffects(&rogue.Character, dodgeBuff, ghostlyStrikeRank, spelldata.Effects(2))
 	config.RelatedSelfBuff = dodgeBuff
 
-	// Saved rotations read the untagged strike ID as the one-use opener window.
+	// Saved rotations read the strike's untagged ID as the one-use opener window.
 	legacyOpener := rogue.RegisterAura(core.Aura{
-		Label: "Ghostly Strike - Opener (Legacy)", ActionID: core.ActionID{SpellID: ghostlyStrikeRank.ID},
+		Label:    "Ghostly Strike - Opener (Legacy)",
+		ActionID: core.ActionID{SpellID: ghostlyStrikeRank.ID},
 		Duration: ghostlyStrikeTriggered.Duration(),
 	})
-	// The next Ambush or Garrote in the seven-second window can be cast outside Stealth.
-	rogue.GhostlyStrikeAura = rogue.RegisterAura(spelldata.AuraConfig(ghostlyStrikeTriggered, spelldata.Label("Ghostly Strike - Opener"))).
-		ApplyOnGain(func(_ *core.Aura, _ *core.Simulation) {
+
+	// The strike's last effect triggers a buff that lets the next Ambush or Garrote skip Stealth.
+	rogue.GhostlyStrikeAura = rogue.RegisterAura(spelldata.AuraConfig(ghostlyStrikeTriggered, spelldata.Label("Ghostly Strike - Next Ambush or Garrote"))).
+		ApplyOnGain(func(_ *core.Aura, sim *core.Simulation) {
+			legacyOpener.Activate(sim)
 			rogue.Ambush.CastRequirement.CasterForm = true
 			rogue.Garrote.CastRequirement.CasterForm = true
 		}).
 		ApplyOnExpire(func(_ *core.Aura, sim *core.Simulation) {
+			legacyOpener.Deactivate(sim)
 			rogue.Ambush.CastRequirement.CasterForm = false
 			rogue.Garrote.CastRequirement.CasterForm = false
-			legacyOpener.Deactivate(sim)
 		})
-	rogue.GhostlyStrikeAura.OnCastComplete = func(aura *core.Aura, sim *core.Simulation, spell *core.Spell) {
-		if spell.Matches(RogueSpellAmbush | RogueSpellGarrote) {
-			aura.Deactivate(sim)
-		}
-	}
+	rogue.MakeProcTriggerAura(core.ProcTrigger{
+		Name:               "Ghostly Strike - Cast Watcher",
+		ActionID:           core.ActionID{SpellID: ghostlyStrikeTriggered.ID},
+		Callback:           core.CallbackOnCastComplete,
+		ClassSpellMask:     RogueSpellAmbush | RogueSpellGarrote,
+		TriggerImmediately: true,
+		ProcChance:         1,
+		Handler: func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
+			rogue.GhostlyStrikeAura.Deactivate(sim)
+		},
+	})
 
 	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 		rogue.BreakStealth(sim)
+		// The row's E_NORMALIZED_WEAPON_DMG effect normalizes the weapon damage, as on Hemorrhage.
 		baseDamage := spell.Unit.MHNormalizedWeaponDamage(sim, spell.MeleeAttackPower(target))
 
 		result := spell.CalcAndDealDamage(sim, target, baseDamage, spell.OutcomeMeleeWeaponSpecialHitAndCrit)
@@ -100,9 +129,8 @@ func (rogue *Rogue) registerGhostlyStrike() {
 		// An avoided strike grants no buff, as it grants no combo point.
 		if result.Landed() {
 			dodgeBuff.Activate(sim)
-			rogue.AddComboPoints(sim, int32(ghostlyStrikeRank.ProcEnergizeEffect().Roll(sim)), spell.ComboPointMetrics())
 			rogue.GhostlyStrikeAura.Activate(sim)
-			legacyOpener.Activate(sim)
+			rogue.AddComboPoints(sim, int32(ghostlyStrikeRank.ProcEnergizeEffect().Roll(sim)), spell.ComboPointMetrics())
 		} else {
 			spell.IssueRefund(sim)
 		}
@@ -205,7 +233,7 @@ func (rogue *Rogue) registerHemorrhage() {
 
 	hemoAuras := rogue.NewEnemyAuraArray(func(target *core.Unit) *core.Aura {
 		hemoAura := target.GetOrRegisterAura(spelldata.AuraConfig(hemorrhageRank, spelldata.Label(hemorrhageRank.Name+" - "+rogue.Label)))
-		spelldata.ParseEffects(nil, hemoAura, hemorrhageRank,
+		spelldata.ParseEffects(nil, hemoAura, spellData.Hemorrhage.Highest(),
 			spelldata.FromCaster(&rogue.Unit, DDBC_Hemorrhage, DDBC_Total))
 		return hemoAura
 	})
@@ -265,7 +293,7 @@ func (rogue *Rogue) registerSetup() {
 		func(sim *core.Simulation, _ *core.Spell, _ *core.SpellResult) {
 			rogue.AddComboPoints(sim, int32(setupTriggered.ProcEnergizeEffect().Roll(sim)), setupMetrics)
 		})
-	// TODO: Fully resisted spells become indistinguishable from misses in core, so only dodges trigger Setup.
+	// Only the dodge half is modelled. The fully resisted spell half is not.
 	trigger.Outcome = core.OutcomeDodge
 	trigger.RequireDamageDealt = false
 	// The tooltip limits it to your target's attacks.

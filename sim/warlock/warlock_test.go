@@ -332,8 +332,8 @@ func TestWrackDamageFollowsLevelAndSpellPower(t *testing.T) {
 		return wrack.ExpectedTickDamage(sim, target)
 	}
 	low, high := damage(50), damage(60)
-	if math.Abs((high-low)-25) > 1e-6 || math.Abs(high-86) > 1e-6 {
-		t.Errorf("Wrack expected ticks at two levels=%g/%g, want launch preview scaling", low, high)
+	if want := tick.AverageAt(60) - tick.AverageAt(50); math.Abs((high-low)-want) > 1e-6 || math.Abs(high-tick.AverageAt(60)) > 1e-6 {
+		t.Errorf("Wrack expected ticks at two levels=%g/%g, want the row at each level", low, high)
 	}
 	warlock.AddStatDynamic(sim, stats.SpellDamage, 100)
 	powered := damage(60)
@@ -343,7 +343,7 @@ func TestWrackDamageFollowsLevelAndSpellPower(t *testing.T) {
 	t.Logf("Wrack ticks: level50=%g level60=%g level60+100SP=%g", low, high, powered)
 }
 
-func TestShadowAndFlamePreviewDamageByRank(t *testing.T) {
+func TestShadowAndFlameDamageByRank(t *testing.T) {
 	stored := map[int32]float64{}
 	for _, id := range []int32{1293816, 426311} {
 		stored[id] = spelldata.MustFind(id).EffectN(1).BaseValue()
@@ -360,7 +360,11 @@ func TestShadowAndFlamePreviewDamageByRank(t *testing.T) {
 			before := warlock.PseudoStats.SchoolDamageDealtMultiplier[school]
 			aura.Activate(sim)
 			got := warlock.PseudoStats.SchoolDamageDealtMultiplier[school] / before
-			want := 1 + 0.04*float64(points)
+			effect := 3
+			if id == 426311 {
+				effect = 4
+			}
+			want := 1 + spellData.ShadowAndFlame.Rank(int32(points)).EffectN(effect).Percent()
 			if math.Abs(got-want) > 1e-6 {
 				t.Errorf("rank %d school %v multiplier=%g, want %g", points, school, got, want)
 			}

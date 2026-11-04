@@ -6,6 +6,7 @@ import { applyIndividualDefaults } from '@features/settings/model/apply_defaults
 import { Player as PlayerProto } from '@generated/proto/api';
 import { Class, EquipmentSpec, Spec, Stat, TalentLayout } from '@generated/proto/common';
 import { UIDatabase } from '@generated/proto/ui';
+import { WarlockOptions_Summon } from '@generated/proto/warlock';
 import { LaunchStatus } from '@sim/constants/other';
 import { PlayerSpecs } from '@sim/player/specs';
 import type { PresetBuild } from '@sim/presets/types';
@@ -88,6 +89,10 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 			// Ranked Warlock builds, including Wrack and Destruction, use this shared pre-raid gear.
 			if (key === 'warlock') player.setGear(host.sim.db.lookupEquipmentSpec(EquipmentSpec.fromJson(warlockGear)));
 			const exported = player.toProto(false, true);
+			if (key === 'hunter') {
+				expect(exported.reactionTimeMs, `${build.name} minimum reaction time`).toBe(150);
+				expect(exported.reactionTimeMaxMs, `${build.name} maximum reaction time`).toBe(350);
+			}
 			if (['rogue', 'warrior', 'elemental_shaman', 'enhancement_shaman'].includes(key)) {
 				expect(exported.talentLayout, `${key} / ${build.name} talent layout`).toBe(
 					key === 'rogue' || key === 'warrior' ? TalentLayout.TalentLayoutHotfix : TalentLayout.TalentLayoutLaunch,
@@ -157,6 +162,11 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 				...config.defaults.specOptions,
 				...build.settings?.specOptions,
 			});
+			if (key === 'warlock' && label === 'Aff (Wrack)') {
+				expect(player.specTypeFunctions.optionsFromPlayer(exported), `${label} sacrificed demon`).toMatchObject({
+					classOptions: { sacrificedDemon: WarlockOptions_Summon.Imp },
+				});
+			}
 			expect(exported.talentsString, `${key} / ${label} talents`).toBe(build.talents?.data.talentsString ?? config.defaults.talents.talentsString);
 			const consumableIds = new Set(
 				Object.values(exported.consumables ?? {})
@@ -172,6 +182,18 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 			const caveats = [
 				...(devGear ? ['Uses an upstream gear preset marked for development.'] : []),
 				...(key === 'warlock' ? ['Ranked warlock builds use the shared pre-raid gear, including Wrack and Destruction.'] : []),
+				...(key === 'hunter' ? ['Each reaction time is drawn uniformly between 150 and 350 milliseconds.'] : []),
+				...(key === 'rogue'
+					? ['Shank always hits in the model and does not trigger poisons or item effects; its proc suppression still needs in-game verification.']
+					: []),
+				...(key === 'elemental_shaman'
+					? [
+							'Lightning Overload uses its own spell rows. Their damage differs from the tooltip’s half-damage description and still needs in-game verification.',
+						]
+					: []),
+				...(key === 'elemental_shaman' && build.name === 'Mana Tide'
+					? ['This score counts the Shaman’s own DPS; Mana Tide’s mana support for other players is outside the comparison.']
+					: []),
 				...(key === 'hunter' && build.name.includes('Weave')
 					? ['Weaving assumes uninterrupted access to melee range and the movement timing programmed in the preset.']
 					: []),
@@ -181,7 +203,7 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 			];
 			const playerJson = PlayerProto.toJson(exported);
 			if (key === 'rogue') {
-				expect(talentReferences(playerJson), `${label} Boot Knife condition`).toContainEqual({ otherId: 'OtherActionBootKnife', rank: 1 });
+				expect(talentReferences(playerJson), `${label} Boot Knife condition`).toContainEqual({ spellId: 1329286, rank: 1 });
 			}
 			expect(requestsRegionalRacial(playerJson), `${key} / ${label}: Attuned and Charged are removed on entering a raid`).toBe(false);
 			expect(exported.equipment?.items.filter(item => item.id).length, `${key} / ${label} gear`).toBeGreaterThan(10);
@@ -204,7 +226,7 @@ it('resolves every DPS preset for the race arena with its gear and rotation', as
 			});
 		}
 	}
-	expect(inputs).toHaveLength(40);
+	expect(inputs, inputs.map(input => `${input.spec} / ${input.build}`).join('\n')).toHaveLength(41);
 	expect(inputs.filter(input => input.spec === 'warlock').map(input => input.build)).toEqual(expect.arrayContaining(['Aff (Wrack)', 'Destro']));
 	const destination = process.env.RACE_ARENA_INPUT;
 	if (destination) {

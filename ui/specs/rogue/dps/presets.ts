@@ -62,41 +62,41 @@ export const TALENTS_MUTILATE_ASN_UPSTREAM = {
 	name: 'Asn Muti (Upstream)',
 	data: SavedTalents.create({
 		talentLayout: TalentLayout.TalentLayoutHotfix,
-		talentsString: '00530320251511031-30230322000103',
+		talentsString: '00530311231251031-32030302020103-001',
 	}),
 };
 export const TALENTS_COMBAT_SS_UPSTREAM = {
 	name: 'Combat SS (Upstream)',
 	data: SavedTalents.create({
 		talentLayout: TalentLayout.TalentLayoutHotfix,
-		talentsString: '005303202014-3203032201012321501',
+		talentsString: '00530320201-3200132202012321551',
 	}),
 };
 export const TALENTS_COMBAT_BS_UPSTREAM = {
 	name: 'Combat BS (Upstream)',
 	data: SavedTalents.create({
 		talentLayout: TalentLayout.TalentLayoutHotfix,
-		talentsString: '005303202012-3203032201012321501-002',
+		talentsString: '005203002-3203130202012321351-005',
 	}),
 };
 export const TALENTS_SUB_HEMO_UPSTREAM = {
 	name: 'Subtlety Hemo (Upstream)',
 	data: SavedTalents.create({
 		talentLayout: TalentLayout.TalentLayoutHotfix,
-		talentsString: '005303202014--3352330313210011',
+		talentsString: '00530301-320003-305230031321001151',
 	}),
 };
-export const TALENTS_SUB_BS_UPSTREAM = {
-	name: 'Subtlety BS (Upstream)',
+export const TALENTS_COMBAT_VENOM_UPSTREAM = {
+	name: 'Combat Venom (Upstream)',
 	data: SavedTalents.create({
 		talentLayout: TalentLayout.TalentLayoutHotfix,
-		talentsString: '005303202-3203-0352330313210011',
+		talentsString: '00530320241001-320013220201232115',
 	}),
 };
 
 export const DEFAULT_APL = PresetUtils.makePresetAPLRotation('Direct APL', DefaultAPL);
 
-export const DEFAULT_SIMPLE_ROTATION = RogueRotation.create({ useBackstab: false, useExposeArmor: false });
+export const DEFAULT_SIMPLE_ROTATION = RogueRotation.create({ useBackstab: false, useExposeArmor: false, startInStealth: false });
 export const SIMPLE_ROTATION = PresetUtils.makePresetSimpleRotation('Configurable', Spec.SpecRogue, DEFAULT_SIMPLE_ROTATION);
 const SIMPLE_BACKSTAB_BUILD_ROTATION = PresetUtils.makePresetSimpleRotation(
 	'Configurable',
@@ -308,12 +308,12 @@ export const PRESET_BUILD_SUB_HEMO_UPSTREAM = PresetUtils.makePresetBuild('Subtl
 	settings: IP_MH_Settings,
 	epWeights: EP_PRESET_SUBTLETY,
 });
-export const PRESET_BUILD_SUB_BS_UPSTREAM = PresetUtils.makePresetBuild('Subtlety BS (Upstream)', {
-	talents: TALENTS_SUB_BS_UPSTREAM,
-	rotation: SIMPLE_BACKSTAB_BUILD_ROTATION,
+export const PRESET_BUILD_COMBAT_VENOM_UPSTREAM = PresetUtils.makePresetBuild('Combat Venom (Upstream)', {
+	talents: TALENTS_COMBAT_VENOM_UPSTREAM,
+	rotation: SIMPLE_ROTATION,
 	gear: P1_BS_SUB_GEAR,
 	settings: IP_MH_Settings,
-	epWeights: EP_PRESET_SUBTLETY,
+	epWeights: EP_PRESET_COMBAT_SINISTER,
 });
 
 export const OtherDefaults = {

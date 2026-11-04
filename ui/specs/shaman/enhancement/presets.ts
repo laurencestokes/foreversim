@@ -1,7 +1,7 @@
 import * as PresetUtils from '@app/preset_utils';
 import * as Consumables from '@features/settings/model/consumables_auto_gen';
 import { Debuffs, IndividualBuffs, PartyBuffs, RaidBuffs } from '@generated/proto/buffs';
-import { ConsumesSpec, Profession, PseudoStat, Race, Spec, Stat } from '@generated/proto/common';
+import { ConsumesSpec, Profession, PseudoStat, Race, Spec, Stat, TalentLayout } from '@generated/proto/common';
 import { EnhancementShaman_Options as EnhancementShamanOptions, ShamanImbue } from '@generated/proto/shaman';
 import { SavedTalents } from '@generated/proto/ui';
 import { Stats } from '@sim/proto/stats';
@@ -18,6 +18,7 @@ export const StandardTalents = {
 	name: 'Standard',
 	data: SavedTalents.create({
 		talentsString: TestingBuildJson.player.talentsString,
+		talentLayout: TalentLayout.TalentLayoutLaunch,
 	}),
 };
 

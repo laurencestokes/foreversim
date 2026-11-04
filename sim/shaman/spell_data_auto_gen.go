@@ -8,13 +8,11 @@ import (
 
 // Not generated:
 //   Healing Grace: missing rank 1 of 3
-//   Lightning Mastery: missing rank 1 of 5
 
 // Generated with an effect held at its base points, the talent tree stating no rank value for it:
 //   Earthbound: effect 0 of spell 1222988 has no rank curve and is held at its base points
 //   Improved Ghost Wolf: effect 1, 2 of spell 16262 has no rank curve and is held at its base points
 //   Improved Stormstrike: effect 2 of spell 1223031 has no rank curve and is held at its base points
-//   Lava Burst: effect 0, 1 of spell 408490 has no rank curve and is held at its base points
 //   Maelstrom Weapon: effect 1, 2 of spell 408498 has no rank curve and is held at its base points
 //   Mental Dexterity: effect 1 of spell 415140 has no rank curve and is held at its base points
 //   Shamanistic Focus: effect 0 of spell 1223030 has no rank curve and is held at its base points
@@ -53,7 +51,6 @@ type generatedSpellData struct {
 	ElementalFocus                 spelldata.Ladder
 	ElementalFocusTriggered        spelldata.Ladder
 	ElementalFury                  spelldata.Ladder
-	ElementalMastery               spelldata.Ladder
 	ElementalReach                 spelldata.Ladder
 	ElementalWarding               spelldata.Ladder
 	ElementalWeapons               spelldata.Ladder
@@ -94,9 +91,9 @@ type generatedSpellData struct {
 	ImprovedStormstrike            spelldata.Ladder
 	ImprovedStormstrikeTriggered   spelldata.Ladder
 	ImprovedWeaponTotems           spelldata.Ladder
-	LavaBurst                      spelldata.Ladder
 	LesserHealingWave              spelldata.Ladder
 	LightningBolt                  spelldata.Ladder
+	LightningMastery               spelldata.Ladder
 	LightningOverload              spelldata.Ladder
 	LightningShield                spelldata.Ladder
 	LightningShieldTriggered       spelldata.Ladder
@@ -143,8 +140,8 @@ type generatedSpellData struct {
 	ThunderingStrikes              spelldata.Ladder
 	TidalFocus                     spelldata.Ladder
 	TidalMastery                   spelldata.Ladder
+	TotemicCall                    spelldata.Ladder
 	TotemicFocus                   spelldata.Ladder
-	TotemicProjection              spelldata.Ladder
 	TotemicRecall                  spelldata.Ladder
 	Toughness                      spelldata.Ladder
 	TremorTotem                    spelldata.Ladder
@@ -198,7 +195,6 @@ var spellData = generatedSpellData{
 	ElementalFocus:                 spelldata.Ranked(16164),
 	ElementalFocusTriggered:        spelldata.Ranked(16246),
 	ElementalFury:                  spelldata.Talent(16089, 5),
-	ElementalMastery:               spelldata.Ranked(16166),
 	ElementalReach:                 spelldata.Talent(28999, 2),
 	ElementalWarding:               spelldata.Talent(28996, 3),
 	ElementalWeapons:               spelldata.Talent(16266, 3),
@@ -239,9 +235,9 @@ var spellData = generatedSpellData{
 	ImprovedStormstrike:            spelldata.Talent(1223031, 2),
 	ImprovedStormstrikeTriggered:   spelldata.Ranked(1238931),
 	ImprovedWeaponTotems:           spelldata.Ranked(29192, 29193),
-	LavaBurst:                      spelldata.Talent(408490, 1),
 	LesserHealingWave:              spelldata.Ranked(8004, 8008, 8010, 10466, 10467, 10468),
 	LightningBolt:                  spelldata.Ranked(403, 529, 548, 915, 943, 6041, 10391, 10392, 15207, 15208),
+	LightningMastery:               spelldata.Ranked(16166),
 	LightningOverload:              spelldata.Talent(408438, 3),
 	LightningShield:                spelldata.Ranked(324, 325, 905, 945, 8134, 10431, 10432),
 	LightningShieldTriggered:       spelldata.Ranked(26363, 26364, 26365, 26366, 26367, 26369, 26370, 26545),
@@ -288,8 +284,8 @@ var spellData = generatedSpellData{
 	ThunderingStrikes:              spelldata.Talent(16255, 5),
 	TidalFocus:                     spelldata.Talent(16179, 5),
 	TidalMastery:                   spelldata.Talent(16194, 5),
+	TotemicCall:                    spelldata.Ranked(437009),
 	TotemicFocus:                   spelldata.Talent(16173, 5),
-	TotemicProjection:              spelldata.Ranked(437009),
 	TotemicRecall:                  spelldata.Ranked(36936),
 	Toughness:                      spelldata.Talent(16252, 5),
 	TremorTotem:                    spelldata.Ranked(8143),

@@ -136,15 +136,15 @@
         "maxPoints": 2
       },
       {
-        "fieldName": "lavaBurst",
+        "fieldName": "callOfThunder",
         "fancyName": "Call of Thunder",
         "location": {
           "rowIdx": 4,
           "colIdx": 1
         },
-        "spellId": 0,
-        "maxPoints": 1,
-        "otherAction": 35
+        "spellId": 16120,
+        "definitionId": 134221,
+        "maxPoints": 1
       },
       {
         "fieldName": "lightningOverload",
@@ -177,7 +177,7 @@
         }
       },
       {
-        "fieldName": "elementalMastery",
+        "fieldName": "lightningMastery",
         "fancyName": "Lightning Mastery",
         "location": {
           "rowIdx": 6,
@@ -257,7 +257,7 @@
         "fancyName": "Improved Lightning Shield",
         "location": {
           "rowIdx": 1,
-          "colIdx": 3
+          "colIdx": 2
         },
         "spellId": 16261,
         "definitionId": 134212,

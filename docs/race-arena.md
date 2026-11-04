@@ -4,7 +4,7 @@
 
 Results marked **November 4, 2026 launch projection** include the Hunter hotfix, upstream Feral and Shaman drafts and the fork’s November 2 class changes. Each build holds its setup fixed across races. Rogue, Warrior and Shaman use legal launch talent allocations, and Elemental uses its ordinary mana pool. The class coverage report identifies which values come from the game files and which still need measurements. Skyborne base attributes remain unverified.
 
-The source links on both pages identify [upstream master](https://github.com/wowsims/forever/commit/41862b31e34782e2ffc7fe8be49322812de71ed6) and the preview revisions listed in the [Build Arena method](build-arena.md). Wrack and Destruction keep the same pre-raid equipment as the other Warlock builds.
+The source links on both pages identify [upstream master](https://github.com/wowsims/forever/commit/92c4c35b9e2364200ffb9e0f24573fb4904fac8f) and the preview revisions listed in the [Build Arena method](build-arena.md). Wrack and Destruction keep the same pre-raid equipment as the other Warlock builds. Wrack uses the updated upstream talents and rotation with a sacrificed Imp.
 The launch-preview notice appears only on results with recorded `launchPreview` metadata. The launch
 date is separate from computation dates. Historical results keep their original labels and sources.
 
@@ -33,8 +33,7 @@ simulator database do not establish that those items are unavailable in game.
 Upstream substitutes preset items without gear optimization, and some vanilla-ID replacements do
 not activate the registered Forever set bonuses. See the [data limitations](build-arena.md#live-game-data-and-preset-limitations).
 
-Warlock uses upstream's `preraid` set because its presets provide no gear, matching its regression
-suites. Gear and rotations are not optimized separately for each race. DPS includes pets under full
+Every Warlock build retains the existing `preraid` set, including Wrack and Destruction. Gear and rotations are not optimized separately for each race. DPS includes pets under full
 raid, party and individual buffs and debuffs as defined by upstream's shared test baseline. That
 baseline uses trainer-rank Strength of Earth, Grace of Air, Greater Blessing of Might and Wisdom,
 and external Battle Shout rank 6. Each preset keeps its own spell-rank choices, including book ranks
@@ -44,6 +43,8 @@ each race casts. No value is assigned to survival, utility or damage a spec adds
 Every race receives 50,000 iterations with seed 101 against a level 63 target with 3,731 armor. The
 matrix covers 90-second, 3-minute and 6-minute fights against Mechanical, Elemental and Beast targets.
 Both Skyborne races are included, and weapon types stay unchanged.
+
+Hunter's reactive-weaving presets draw reaction times uniformly between 150 and 350 milliseconds, with the same bounds for every race. View setup shows the saved range. The arena keeps Mechanical, Elemental and Beast targets even when a class page chooses another default creature type.
 
 ## Reading the page
 
@@ -73,7 +74,7 @@ balances shards independently for each fight length using a bounded timing run, 
 coverage and fingerprints, and stages both results before committing them together. Smoke results
 cannot pass publication's 50,000-iteration requirement.
 
-Both arenas share the same complete matrix at 50,000 iterations per matchup. The November 3 refresh runs the affected builds and keeps results whose recorded setup and combat behavior match. Each score retains its original simulation revision and date. [Selection and compatibility checks](november-3-arena-reuse.md)
+Both arenas share the same complete matrix at 50,000 iterations per matchup. The November 4 selection recomputes 29 builds and keeps the measurements of 12 builds whose recorded setup and combat behavior match. Each score retains its original simulation revision and date. [Selection and compatibility checks](november-4-arena-reuse.md)
 
 The Shadow Priest preset includes all its racial conditions in the same recorded rotation. Its
 saved default race does not restrict the arena: the runner replaces the race for each legal matchup,

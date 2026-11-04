@@ -21,7 +21,6 @@ func (rogue *Rogue) registerEviscerateRank(rank *spelldata.Spell) {
 	config := spelldata.SpellConfig(&rogue.Unit, rank, spelldata.Melee(core.ProcMaskMeleeMHSpecial))
 	config.ExtraCastCondition = rogue.FinisherExtraCastCondition
 	config.Flags |= SpellFlagFinisher | SpellFlagColdBlooded
-	config.ClassSpellMask = RogueSpellEviscerate
 
 	config.ApplyEffects = func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
 		rogue.BreakStealth(sim)

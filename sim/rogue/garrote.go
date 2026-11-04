@@ -1,8 +1,6 @@
 package rogue
 
 import (
-	"time"
-
 	"github.com/wowsims/forever/sim/core"
 	"github.com/wowsims/forever/sim/core/spelldata"
 )
@@ -22,10 +20,6 @@ func (rogue *Rogue) registerGarrote() {
 	}
 
 	config.Dot = spelldata.DotConfig(garroteRank, tick)
-	if rogue.Talents.BloodSplatter {
-		// The duration modifier adds ticks without changing their damage.
-		config.Dot.NumberOfTicks += int32(time.Duration(spellData.BloodSplatter.Highest().EffectN(2).BaseValue()) * time.Millisecond / tick.Period())
-	}
 	config.Dot.OnTick = func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
 		dot.Spell.CalcAndDealPeriodicDamage(sim, target, tick.Average()+dot.Spell.MeleeAttackPower(target)*apScaling, garroteRank.TickOutcome(dot))
 	}

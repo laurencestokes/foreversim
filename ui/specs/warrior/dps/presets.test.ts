@@ -17,7 +17,7 @@ describe('Warrior hotfix presets', () => {
 			expect(totalPointsSpent(points)).toBe(51);
 			expect(brokenTalentNames(warriorTalentsConfig, points)).toEqual([]);
 			const talents = playerTalentStringToProto(DpsWarrior, preset.data.talentsString);
-			expect(talents.recklessSwings).toBe(true);
+			expect(talents.recklessSwings).toBe(preset === FuryTalents);
 			expect(talents.improvedTacticalMastery).toBe(3);
 		});
 	}

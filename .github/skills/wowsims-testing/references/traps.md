@@ -14,6 +14,8 @@ Numbers that move or differ for a known reason, and CI behaviour a pull request 
 
 ## Comparing runs
 
+- **Encounter targets are shared unless replaced.** `MakeSingleTargetEncounter` uses `DefaultTargetProto`.
+  Assign `FreshDefaultTargetConfig()` before changing a target in a test, or later suites inherit its changes.
 - **Seeds overlap.** Iteration i runs on `RandomSeed + i` (`sim/core/sim.go`), so runs on nearby seeds share most
   iterations; space independent seeds by at least the iteration count.
 - **The CLI drops unknown JSON fields** (`DiscardUnknown` in `cmd/wowsimcli/cmd/basic_sim.go`), so a buff under the
